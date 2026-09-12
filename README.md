@@ -1,0 +1,3 @@
+# nuten
+
+Unofficial Nushell formatter.
