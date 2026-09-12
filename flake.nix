@@ -11,6 +11,10 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -21,6 +25,20 @@
         "aarch64-linux"
         "aarch64-darwin"
       ];
+
+      rustToolchain = forAllSystems (
+        system:
+        with inputs.fenix.packages.${system};
+        combine [
+          stable.cargo
+          stable.rustc
+          stable.clippy
+          stable.rust-src
+          stable.rust-analyzer
+          latest.rustfmt
+        ]
+      );
+
       treefmtEval = forAllSystems (
         system:
         inputs.treefmt-nix.lib.evalModule inputs.nixpkgs.legacyPackages.${system} {
@@ -39,12 +57,41 @@
             };
             rustfmt = {
               enable = true;
-              package = inputs.fenix.packages.${system}.latest.rustfmt;
+              package = rustToolchain.${system};
             };
             taplo = {
               enable = true;
             };
             oxfmt = {
+              enable = true;
+            };
+          };
+        }
+      );
+      preCommit = forAllSystems (
+        system:
+        inputs.git-hooks.lib.${system}.run {
+          src = inputs.self;
+          hooks = {
+            treefmt = {
+              enable = true;
+              package = treefmtEval.${system}.config.build.wrapper;
+            };
+            clippy = {
+              enable = true;
+              packageOverrides = {
+                cargo = rustToolchain.${system};
+                clippy = rustToolchain.${system};
+              };
+              settings = {
+                denyWarnings = true;
+                extraArgs = "--all-targets";
+              };
+            };
+            typos = {
+              enable = true;
+            };
+            check-merge-conflicts = {
               enable = true;
             };
           };
@@ -60,19 +107,10 @@
         {
           default = pkgs.mkShell {
             packages = [
-              (
-                with inputs.fenix.packages.${system};
-                combine [
-                  stable.cargo
-                  stable.rustc
-                  stable.clippy
-                  stable.rust-src
-                  stable.rust-analyzer
-                  latest.rustfmt
-                ]
-              )
+              rustToolchain.${system}
               treefmtEval.${system}.config.build.wrapper
             ];
+            inherit (preCommit.${system}) shellHook;
           };
         }
       );
