@@ -15,6 +15,9 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    crane = {
+      url = "github:ipetkov/crane";
+    };
   };
 
   outputs =
@@ -37,6 +40,28 @@
           stable.rust-analyzer
           latest.rustfmt
         ]
+      );
+
+      craneLib = forAllSystems (
+        system:
+        (inputs.crane.mkLib inputs.nixpkgs.legacyPackages.${system}).overrideToolchain (
+          _: rustToolchain.${system}
+        )
+      );
+
+      craneArgs = forAllSystems (
+        system:
+        let
+          commonArgs = {
+            src = craneLib.${system}.cleanCargoSource ./.;
+            strictDeps = true;
+          };
+        in
+        commonArgs // { cargoArtifacts = craneLib.${system}.buildDepsOnly commonArgs; }
+      );
+
+      nuten = forAllSystems (
+        system: craneLib.${system}.buildPackage (craneArgs.${system} // { doCheck = false; })
       );
 
       treefmtEval = forAllSystems (
@@ -99,6 +124,10 @@
       );
     in
     {
+      packages = forAllSystems (system: {
+        default = nuten.${system};
+      });
+
       devShells = forAllSystems (
         system:
         let
@@ -108,6 +137,7 @@
           default = pkgs.mkShell {
             packages = [
               rustToolchain.${system}
+              pkgs.cargo-nextest
               treefmtEval.${system}.config.build.wrapper
             ];
             inherit (preCommit.${system}) shellHook;
@@ -116,7 +146,17 @@
       );
 
       checks = forAllSystems (system: {
+        build = nuten.${system};
         treefmt = treefmtEval.${system}.config.build.check inputs.self;
+        clippy = craneLib.${system}.cargoClippy (
+          craneArgs.${system} // { cargoClippyExtraArgs = "--all-targets -- --deny warnings"; }
+        );
+        nextest = craneLib.${system}.cargoNextest (
+          craneArgs.${system} // { cargoNextestExtraArgs = "--no-tests=pass"; }
+        );
+        doc = craneLib.${system}.cargoDoc (
+          craneArgs.${system} // { env.RUSTDOCFLAGS = "--deny warnings"; }
+        );
       });
 
       formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);

@@ -44,3 +44,6 @@ rc_mutex = "warn"
 redundant_clone = "warn"
 rest_pat_in_fully_bound_structs = "warn"
 unused_peekable = "warn"
+
+[workspace.metadata.crane]
+name = "nuten"
