@@ -8,4 +8,38 @@ edition = "2024"
 rust-version = "1.98"
 repository = "https://github.com/mst-mkt/nuten"
 
-[workspace.dependencies]
+[workspace.lints.rust]
+unsafe_code = "forbid"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+let_underscore_drop = "warn"
+missing_debug_implementations = "warn"
+redundant_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unit_bindings = "warn"
+unreachable_pub = "warn"
+unused_lifetimes = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+must_use_candidate = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+
+allow_attributes = "warn"
+dbg_macro = "warn"
+empty_drop = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+exit = "warn"
+get_unwrap = "warn"
+infinite_loop = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+redundant_clone = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+unused_peekable = "warn"
