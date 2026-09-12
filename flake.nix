@@ -7,27 +7,61 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { nixpkgs, fenix, ... }:
+    inputs:
     let
-      systems = [
+      forAllSystems = inputs.nixpkgs.lib.genAttrs [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ];
-      forAllSystems =
-        f:
-        nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system} fenix.packages.${system});
+      treefmtEval = forAllSystems (
+        system:
+        inputs.treefmt-nix.lib.evalModule inputs.nixpkgs.legacyPackages.${system} {
+          projectRootFile = "flake.nix";
+
+          programs = {
+            nixfmt = {
+              enable = true;
+              strict = true;
+            };
+            deadnix = {
+              enable = true;
+            };
+            statix = {
+              enable = true;
+            };
+            rustfmt = {
+              enable = true;
+              package = inputs.fenix.packages.${system}.latest.rustfmt;
+            };
+            taplo = {
+              enable = true;
+            };
+            oxfmt = {
+              enable = true;
+            };
+          };
+        }
+      );
     in
     {
       devShells = forAllSystems (
-        pkgs: fenixPkgs: {
+        system:
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.${system};
+        in
+        {
           default = pkgs.mkShell {
             packages = [
               (
-                with fenixPkgs;
+                with inputs.fenix.packages.${system};
                 combine [
                   stable.cargo
                   stable.rustc
@@ -37,9 +71,16 @@
                   latest.rustfmt
                 ]
               )
+              treefmtEval.${system}.config.build.wrapper
             ];
           };
         }
       );
+
+      checks = forAllSystems (system: {
+        treefmt = treefmtEval.${system}.config.build.check inputs.self;
+      });
+
+      formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);
     };
 }
