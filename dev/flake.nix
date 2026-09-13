@@ -73,6 +73,27 @@
 
       preCommit = forAllSystems (
         system:
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.${system};
+
+          commitTypes = [
+            "feat"
+            "fix"
+            "refactor"
+            "perf"
+            "test"
+            "docs"
+            "ci"
+            "chore"
+          ];
+          commitScopes = [
+            "cli"
+            "syntax"
+            "doc"
+            "format"
+            "nix"
+          ];
+        in
         inputs.git-hooks.lib.${system}.run {
           src = ./..;
           hooks = {
@@ -96,6 +117,16 @@
             };
             check-merge-conflicts = {
               enable = true;
+            };
+            convco = {
+              enable = true;
+              settings.configPath = (pkgs.formats.yaml { }).generate "convco.yaml" {
+                types = map (type: {
+                  inherit type;
+                  section = type;
+                }) commitTypes;
+                scopeRegex = "^(${pkgs.lib.concatStringsSep "|" commitScopes})$";
+              };
             };
           };
         }
