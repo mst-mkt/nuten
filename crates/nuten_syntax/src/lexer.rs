@@ -1,5 +1,7 @@
 //! Lexer ported from `lex.rs` in nu-parser.
 
+use std::ops::Range;
+
 use rowan::{TextRange, TextSize};
 
 use crate::SyntaxKind;
@@ -8,6 +10,43 @@ use crate::SyntaxKind;
 pub struct Token {
     pub kind: SyntaxKind,
     pub range: TextRange,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lexed {
+    pub tokens: Vec<Token>,
+    /// One error per `Error` token, in the same order.
+    pub errors: Vec<LexError>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LexError {
+    pub kind: LexErrorKind,
+    /// Always inside its `Error` token.
+    pub range: TextRange,
+}
+
+impl LexError {
+    fn new(kind: LexErrorKind, range: Range<usize>) -> LexError {
+        LexError {
+            kind,
+            range: text_range(range),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LexErrorKind {
+    /// A quote or bracket that never closes.
+    /// The range covers the innermost opener, such as `[`, `$"`, or `r#'`,
+    /// but in interpolation the outermost unclosed `(`.
+    Unclosed,
+    /// A closer that does not match the innermost opener,
+    /// other than `]` with nothing open.
+    UnmatchedCloser,
+    /// `r#` not followed by `'`.
+    /// The range covers `r` and the `#`s.
+    MissingRawQuote,
 }
 
 /// The part of nu's `lex` settings that decides where items end.
@@ -33,29 +72,34 @@ impl Mode {
 }
 
 /// Lexes `range` of `src` without looking at the bytes around it.
-/// Token ranges are absolute in `src` and cover `range` exactly.
+/// All ranges are absolute in `src`, and the tokens cover `range` exactly.
 ///
 /// # Panics
 ///
 /// Panics if `range` is outside `src` or splits a char.
-pub fn lex(src: &str, range: TextRange, mode: Mode) -> Vec<Token> {
+pub fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     assert!(range.end() <= TextSize::of(src), "range is outside src");
     assert!(
         src.is_char_boundary(range.start().into()) && src.is_char_boundary(range.end().into()),
         "range splits a char"
     );
-    Lexer {
+    let mut lexer = Lexer {
         src: &src.as_bytes()[..usize::from(range.end())],
         pos: usize::from(range.start()),
         mode,
+        errors: Vec::new(),
+    };
+    Lexed {
+        tokens: lexer.by_ref().collect(),
+        errors: lexer.errors,
     }
-    .collect()
 }
 
 struct Lexer<'a> {
     src: &'a [u8],
     pos: usize,
     mode: Mode,
+    errors: Vec<LexError>,
 }
 
 impl Iterator for Lexer<'_> {
@@ -72,12 +116,15 @@ impl Iterator for Lexer<'_> {
             [b'\r', b'\n', ..] => self.eat(2, SyntaxKind::Newline),
             [b' ' | b'\t' | b'\r', ..] => self.whitespace(),
             [b'#', ..] => self.comment(),
-            _ => self.item(),
+            _ => self.item().unwrap_or_else(|error| {
+                self.errors.push(error);
+                SyntaxKind::Error
+            }),
         };
         assert!(self.pos > start, "empty token at {start}");
         Some(Token {
             kind,
-            range: TextRange::new(to_size(start), to_size(self.pos)),
+            range: text_range(start..self.pos),
         })
     }
 }
@@ -116,8 +163,8 @@ impl<'a> Lexer<'a> {
 
     /// Runs to a terminator outside brackets and strings.
     /// A redirection also takes the `|` right after it.
-    /// Returns `Error` if unclosed, on a stray closer, or on `r#` without `'`.
-    fn item(&mut self) -> SyntaxKind {
+    /// On error, the item ends where nu finds it.
+    fn item(&mut self) -> Result<SyntaxKind, LexError> {
         let start = self.pos;
         let mut closers = Vec::new();
         let mut first_string_end = None;
@@ -125,46 +172,45 @@ impl<'a> Lexer<'a> {
         while let Some(byte) = self.peek()
             && !(closers.is_empty() && self.mode.is_terminator(byte))
         {
-            let prev = self.src[start..self.pos].last().copied();
+            let at = self.pos;
+            let prev = self.src[start..at].last().copied();
             self.pos += 1;
             match byte {
                 b'#' if prev.is_none_or(|b| char::from(b).is_whitespace()) => {
                     self.comment_in_item(closers.is_empty());
                 },
                 b'\'' | b'"' | b'`' => {
-                    if !self.string(byte, byte != b'`' && prev == Some(b'$')) {
-                        return SyntaxKind::Error;
-                    }
+                    self.string(byte, byte != b'`' && prev == Some(b'$'))?;
                     first_string_end.get_or_insert(self.pos);
                 },
                 b'r' if self.peek() == Some(b'#') => {
-                    if !self.raw_string() {
-                        return SyntaxKind::Error;
-                    }
+                    self.raw_string()?;
                     first_string_end.get_or_insert(self.pos);
                 },
-                b'[' => closers.push(b']'),
-                b'{' => closers.push(b'}'),
-                b'(' => closers.push(b')'),
-                b']' | b'}' | b')' if closers.last() == Some(&byte) => {
+                b'[' => closers.push((b']', at)),
+                b'{' => closers.push((b'}', at)),
+                b'(' => closers.push((b')', at)),
+                b']' | b'}' | b')' if closers.last().is_some_and(|&(closer, _)| closer == byte) => {
                     closers.pop();
                 },
                 b']' if closers.is_empty() => {},
-                b']' | b'}' | b')' => return SyntaxKind::Error,
+                b']' | b'}' | b')' => {
+                    return Err(LexError::new(LexErrorKind::UnmatchedCloser, at..at + 1));
+                },
                 _ => {},
             }
         }
 
-        if !closers.is_empty() {
-            return SyntaxKind::Error;
+        if let Some(&(_, at)) = closers.last() {
+            return Err(LexError::new(LexErrorKind::Unclosed, at..at + 1));
         }
         if self.peek() == Some(b'|') && is_redirection(&self.src[start..self.pos]) {
             self.pos += 1;
         }
-        item_kind(
+        Ok(item_kind(
             &self.src[start..self.pos],
             first_string_end == Some(self.pos),
-        )
+        ))
     }
 
     fn comment_in_item(&mut self, top_level: bool) {
@@ -182,46 +228,64 @@ impl<'a> Lexer<'a> {
         self.pos += len;
     }
 
-    /// Consumes a string after its opening quote and returns whether it closes.
+    /// Consumes a string after its opening quote.
     /// In an interpolated string, `(` opens a subexpression.
     /// Quotes and parens nest inside it.
-    fn string(&mut self, quote: u8, interpolated: bool) -> bool {
+    fn string(&mut self, quote: u8, interpolated: bool) -> Result<(), LexError> {
+        let opener = self.pos - 1 - usize::from(interpolated)..self.pos;
         let mut closers = vec![quote];
+        let mut outer_paren = None;
         while let Some(&closer) = closers.last() {
             match (closer, self.rest()) {
-                (_, []) => return false,
+                (_, []) => break,
                 // nu ends the item before a final `\` in the outermost string.
-                (b'"', [b'\\']) if closers.len() == 1 => return false,
+                (b'"', [b'\\']) if closers.len() == 1 => break,
                 (b'"', [b'\\', _, ..]) => self.pos += 1,
                 (b')', &[inner @ (b'\'' | b'"' | b'`'), ..]) => closers.push(inner),
                 (b')', [b'(', ..]) => closers.push(b')'),
                 (_, &[byte, ..]) if byte == closer => {
                     closers.pop();
                 },
-                (_, [b'(', ..]) if interpolated && closers.len() == 1 => closers.push(b')'),
+                (_, [b'(', ..]) if interpolated && closers.len() == 1 => {
+                    closers.push(b')');
+                    outer_paren = Some(self.pos);
+                },
                 _ => {},
             }
             self.pos += 1;
         }
-        true
+        let range = match (closers.as_slice(), outer_paren) {
+            ([], _) => return Ok(()),
+            ([_, _, ..], Some(at)) => at..at + 1,
+            _ => opener,
+        };
+        Err(LexError::new(LexErrorKind::Unclosed, range))
     }
 
-    /// Consumes a raw string after its `r` and returns whether it is complete.
-    fn raw_string(&mut self) -> bool {
+    /// Consumes a raw string after its `r`.
+    fn raw_string(&mut self) -> Result<(), LexError> {
+        let start = self.pos - 1;
         let hashes = self.rest().iter().take_while(|&&b| b == b'#').count();
         self.pos += hashes;
         if self.peek() != Some(b'\'') {
-            return false;
+            return Err(LexError::new(
+                LexErrorKind::MissingRawQuote,
+                start..self.pos,
+            ));
         }
+        let opener = start..self.pos + 1;
         // Like nu, search from the opening quote, so `r#'#` is complete.
         let closer = format!("'{}", "#".repeat(hashes));
-        let end = self
+        let Some(offset) = self
             .rest()
             .windows(closer.len())
             .position(|window| window == closer.as_bytes())
-            .map(|offset| self.pos + offset + closer.len());
-        self.pos = end.unwrap_or(self.src.len());
-        end.is_some()
+        else {
+            self.pos = self.src.len();
+            return Err(LexError::new(LexErrorKind::Unclosed, opener));
+        };
+        self.pos += offset + closer.len();
+        Ok(())
     }
 }
 
@@ -259,23 +323,33 @@ fn is_redirection(text: &[u8]) -> bool {
     )
 }
 
-fn to_size(offset: usize) -> TextSize {
-    TextSize::try_from(offset).expect("offset is within a TextRange")
+fn text_range(range: Range<usize>) -> TextRange {
+    let size = |offset: usize| TextSize::try_from(offset).expect("offset is within a TextRange");
+    TextRange::new(size(range.start), size(range.end))
 }
 
 #[cfg(test)]
 mod tests {
     use rowan::{TextRange, TextSize};
 
-    use super::{Mode, lex};
+    use super::{
+        LexError,
+        LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
+        Lexed, Mode, Token, lex,
+    };
     use crate::SyntaxKind::{
         self, Assign, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString, Newline, OutErrGt,
         OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString, Semicolon, Whitespace,
         Word,
     };
 
-    fn lexed(src: &str) -> Vec<(SyntaxKind, &str)> {
+    fn lex_all(src: &str) -> Lexed {
         lex(src, TextRange::up_to(TextSize::of(src)), Mode::block())
+    }
+
+    fn lexed(src: &str) -> Vec<(SyntaxKind, &str)> {
+        lex_all(src)
+            .tokens
             .iter()
             .map(|token| (token.kind, &src[token.range]))
             .collect()
@@ -283,9 +357,20 @@ mod tests {
 
     fn lexed_ranges(src: &str, range: TextRange) -> Vec<(SyntaxKind, TextRange)> {
         lex(src, range, Mode::block())
+            .tokens
             .iter()
             .map(|token| (token.kind, token.range))
             .collect()
+    }
+
+    fn error_of(src: &str) -> (LexErrorKind, &str) {
+        let errors = lex_all(src).errors;
+        assert_eq!(
+            errors.len(),
+            1,
+            "{src:?} does not have one error: {errors:?}"
+        );
+        (errors[0].kind, &src[errors[0].range])
     }
 
     /// The split nu reports, which drops whitespace.
@@ -552,6 +637,55 @@ mod tests {
         assert_eq!(lexed(r#"$"("\"#), [(Error, r#"$"("\"#)]);
     }
 
+    #[test]
+    fn unclosed_points_at_the_innermost_opener() {
+        for (src, opener) in [
+            (r#""a b"#, "\""),
+            ("'a", "'"),
+            ("$`a", "`"),
+            ("a[b", "["),
+            (r#"{a "b""#, "{"),
+            ("[a\n(b c", "("),
+            (r#"[a "b"#, "\""),
+            (r#""a\"#, "\""),
+            (r#"$"(a)b"#, r#"$""#),
+        ] {
+            assert_eq!(error_of(src), (Unclosed, opener), "{src:?}");
+        }
+    }
+
+    #[test]
+    fn unclosed_interpolation_points_at_the_outermost_paren() {
+        for (src, paren) in [
+            ("$'(a", 2),
+            (r#"$"(a" b"#, 2),
+            (r#"$"a(b(c"#, 3),
+            (r#"$"(a)(b"#, 5),
+        ] {
+            assert_eq!(
+                lex_all(src).errors,
+                [LexError {
+                    kind: Unclosed,
+                    range: range(paren, paren + 1),
+                }],
+                "{src:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn unmatched_closer_points_at_the_closer() {
+        for (src, closer) in [
+            ("a}b", "}"),
+            ("a)b", ")"),
+            ("[a)b]", ")"),
+            ("{[}]", "}"),
+            ("(a]", "]"),
+        ] {
+            assert_eq!(error_of(src), (UnmatchedCloser, closer), "{src:?}");
+        }
+    }
+
     /// How nu 0.115.1 splits each input.
     const NU_SPLITS: &[(&str, &[&str])] = &[
         ("foo#bar", &["foo#bar"]),
@@ -598,7 +732,11 @@ mod tests {
     ];
 
     /// The rows where nu reports a lexing error.
-    const NU_ERRORS: &[&str] = &[r#"echo "a\"#, "echo r#x", "echo a}b"];
+    const NU_ERRORS: &[(&str, LexErrorKind)] = &[
+        (r#"echo "a\"#, Unclosed),
+        ("echo r#x", MissingRawQuote),
+        ("echo a}b", UnmatchedCloser),
+    ];
 
     #[test]
     fn splits_match_nu() {
@@ -610,8 +748,12 @@ mod tests {
     #[test]
     fn errors_match_nu() {
         for &(src, _) in NU_SPLITS {
-            let has_error = lexed(src).iter().any(|&(kind, _)| kind == Error);
-            assert_eq!(has_error, NU_ERRORS.contains(&src), "{src:?}");
+            let kinds: Vec<_> = lex_all(src).errors.iter().map(|error| error.kind).collect();
+            let expected = NU_ERRORS
+                .iter()
+                .find(|&&(row, _)| row == src)
+                .map(|&(_, kind)| kind);
+            assert_eq!(kinds, expected.as_slice(), "{src:?}");
         }
     }
 
@@ -675,6 +817,24 @@ mod tests {
     }
 
     #[test]
+    fn unclosed_opener_includes_its_prefix() {
+        for (src, opener) in [
+            (r#"$"a"#, r#"$""#),
+            ("x$'a", "$'"),
+            ("r#'a' b", "r#'"),
+            ("r##'a'#", "r##'"),
+        ] {
+            assert_eq!(error_of(src), (Unclosed, opener), "{src:?}");
+        }
+    }
+
+    #[test]
+    fn missing_raw_quote_points_at_the_prefix() {
+        assert_eq!(error_of("r#x"), (MissingRawQuote, "r#"));
+        assert_eq!(error_of("xr##"), (MissingRawQuote, "r##"));
+    }
+
+    #[test]
     fn range_is_absolute() {
         assert_eq!(
             lexed_ranges("ab cd ef", range(3, 6)),
@@ -706,6 +866,13 @@ mod tests {
                 (Word, range(5, 6)),
             ]
         );
+        assert_eq!(
+            lex(r#"$"a"#, range(1, 3), Mode::block()).errors,
+            [LexError {
+                kind: Unclosed,
+                range: range(1, 2),
+            }]
+        );
     }
 
     #[test]
@@ -721,7 +888,10 @@ mod tests {
     }
 
     fn check_invariants(src: &str) {
-        let tokens = lex(src, TextRange::up_to(TextSize::of(src)), Mode::block());
+        let Lexed {
+            tokens,
+            errors,
+        } = lex_all(src);
 
         let mut end = TextSize::new(0);
         for token in &tokens {
@@ -748,6 +918,40 @@ mod tests {
                 "split \\r\\n in {src:?}"
             );
         }
+
+        let error_tokens: Vec<_> = tokens.iter().filter(|token| token.kind == Error).collect();
+        assert_eq!(
+            error_tokens.len(),
+            errors.len(),
+            "errors do not match Error tokens in {src:?}"
+        );
+        for (&token, &error) in error_tokens.into_iter().zip(&errors) {
+            assert!(
+                well_placed(error, token, src),
+                "misplaced {error:?} in {token:?} of {src:?}"
+            );
+        }
+    }
+
+    fn well_placed(error: LexError, token: Token, src: &str) -> bool {
+        let raw_prefix = |text: &str| {
+            text.strip_prefix('r')
+                .is_some_and(|hashes| !hashes.is_empty() && hashes.bytes().all(|b| b == b'#'))
+        };
+        let text = &src[error.range];
+        let after = &src[usize::from(token.range.end())..];
+        let ends_token = error.range.end() == token.range.end();
+        token.range.contains_range(error.range)
+            && match error.kind {
+                // Runs to the end, or before a final `\` in a `"` string.
+                Unclosed => {
+                    (matches!(text, "[" | "{" | "(" | "'" | "\"" | "`" | "$'" | "$\"")
+                        || text.strip_suffix('\'').is_some_and(raw_prefix))
+                        && (after.is_empty() || after == "\\" && text.ends_with('"'))
+                },
+                UnmatchedCloser => matches!(text, "]" | "}" | ")") && ends_token,
+                MissingRawQuote => raw_prefix(text) && ends_token,
+            }
     }
 
     fn well_formed(kind: SyntaxKind, text: &str) -> bool {
@@ -777,8 +981,8 @@ mod tests {
     /// A sample of each byte class the lexer tells apart.
     /// `à` (`C3 A0`) ends in `A0`, which nu counts as whitespace before `#`.
     const ALPHABET: &[&str] = &[
-        "e", ">", "=", "r", "$", "'", "\"", "`", "\\", "(", ")", "[", "]", "#", "|", ";", " ",
-        "\n", "\r", "à",
+        "e", ">", "=", "r", "$", "'", "\"", "`", "\\", "(", ")", "[", "]", "{", "}", "#", "|", ";",
+        " ", "\n", "\r", "à",
     ];
 
     fn every_input(len: usize) -> Vec<String> {
