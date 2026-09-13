@@ -142,6 +142,7 @@
           default = pkgs.mkShell {
             packages = [
               rustToolchain.${system}
+              pkgs.cargo-insta
               pkgs.cargo-nextest
               treefmtEval.${system}.config.build.wrapper
             ];
