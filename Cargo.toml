@@ -9,6 +9,11 @@ rust-version = "1.98"
 license = "MIT"
 repository = "https://github.com/mst-mkt/nuten"
 
+[workspace.dependencies]
+nuten_doc = { path = "crates/nuten_doc" }
+nuten_format = { path = "crates/nuten_format" }
+nuten_syntax = { path = "crates/nuten_syntax" }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 rust_2018_idioms = { level = "warn", priority = -1 }
