@@ -114,15 +114,149 @@ impl<'a> Lexer<'a> {
         SyntaxKind::Comment
     }
 
+    /// Runs to a terminator outside brackets and strings.
+    /// A redirection also takes the `|` right after it.
+    /// Returns `Error` if unclosed, on a stray closer, or on `r#` without `'`.
     fn item(&mut self) -> SyntaxKind {
+        let start = self.pos;
+        let mut closers = Vec::new();
+        let mut first_string_end = None;
+
+        while let Some(byte) = self.peek()
+            && !(closers.is_empty() && self.mode.is_terminator(byte))
+        {
+            let prev = self.src[start..self.pos].last().copied();
+            self.pos += 1;
+            match byte {
+                b'#' if prev.is_none_or(|b| char::from(b).is_whitespace()) => {
+                    self.comment_in_item(closers.is_empty());
+                },
+                b'\'' | b'"' | b'`' => {
+                    if !self.string(byte, byte != b'`' && prev == Some(b'$')) {
+                        return SyntaxKind::Error;
+                    }
+                    first_string_end.get_or_insert(self.pos);
+                },
+                b'r' if self.peek() == Some(b'#') => {
+                    if !self.raw_string() {
+                        return SyntaxKind::Error;
+                    }
+                    first_string_end.get_or_insert(self.pos);
+                },
+                b'[' => closers.push(b']'),
+                b'{' => closers.push(b'}'),
+                b'(' => closers.push(b')'),
+                b']' | b'}' | b')' if closers.last() == Some(&byte) => {
+                    closers.pop();
+                },
+                b']' if closers.is_empty() => {},
+                b']' | b'}' | b')' => return SyntaxKind::Error,
+                _ => {},
+            }
+        }
+
+        if !closers.is_empty() {
+            return SyntaxKind::Error;
+        }
+        if self.peek() == Some(b'|') && is_redirection(&self.src[start..self.pos]) {
+            self.pos += 1;
+        }
+        item_kind(
+            &self.src[start..self.pos],
+            first_string_end == Some(self.pos),
+        )
+    }
+
+    fn comment_in_item(&mut self, top_level: bool) {
         let len = self
             .rest()
             .iter()
-            .take_while(|&&b| !self.mode.is_terminator(b))
+            .take_while(|&&b| {
+                if top_level {
+                    !self.mode.is_terminator(b)
+                } else {
+                    !matches!(b, b'\n' | b'\r')
+                }
+            })
             .count();
         self.pos += len;
-        SyntaxKind::Word
     }
+
+    /// Consumes a string after its opening quote and returns whether it closes.
+    /// In an interpolated string, `(` opens a subexpression.
+    /// Quotes and parens nest inside it.
+    fn string(&mut self, quote: u8, interpolated: bool) -> bool {
+        let mut closers = vec![quote];
+        while let Some(&closer) = closers.last() {
+            match (closer, self.rest()) {
+                (_, []) => return false,
+                // nu ends the item before a final `\` in the outermost string.
+                (b'"', [b'\\']) if closers.len() == 1 => return false,
+                (b'"', [b'\\', _, ..]) => self.pos += 1,
+                (b')', &[inner @ (b'\'' | b'"' | b'`'), ..]) => closers.push(inner),
+                (b')', [b'(', ..]) => closers.push(b')'),
+                (_, &[byte, ..]) if byte == closer => {
+                    closers.pop();
+                },
+                (_, [b'(', ..]) if interpolated && closers.len() == 1 => closers.push(b')'),
+                _ => {},
+            }
+            self.pos += 1;
+        }
+        true
+    }
+
+    /// Consumes a raw string after its `r` and returns whether it is complete.
+    fn raw_string(&mut self) -> bool {
+        let hashes = self.rest().iter().take_while(|&&b| b == b'#').count();
+        self.pos += hashes;
+        if self.peek() != Some(b'\'') {
+            return false;
+        }
+        // Like nu, search from the opening quote, so `r#'#` is complete.
+        let closer = format!("'{}", "#".repeat(hashes));
+        let end = self
+            .rest()
+            .windows(closer.len())
+            .position(|window| window == closer.as_bytes())
+            .map(|offset| self.pos + offset + closer.len());
+        self.pos = end.unwrap_or(self.src.len());
+        end.is_some()
+    }
+}
+
+/// The kind of an item that lexed without errors.
+fn item_kind(text: &[u8], first_string_ends_item: bool) -> SyntaxKind {
+    match text {
+        [b'\'' | b'"' | b'`', ..] if first_string_ends_item => SyntaxKind::String,
+        [b'$', b'\'' | b'"', ..] if first_string_ends_item => SyntaxKind::InterpString,
+        [b'r', b'#', ..] if first_string_ends_item => SyntaxKind::RawString,
+        _ => operator_kind(text).unwrap_or(SyntaxKind::Word),
+    }
+}
+
+fn operator_kind(text: &[u8]) -> Option<SyntaxKind> {
+    let kind = match text {
+        b"=" | b"+=" | b"++=" | b"-=" | b"*=" | b"/=" => SyntaxKind::Assign,
+        b"o>" | b"out>" => SyntaxKind::OutGt,
+        b"o>>" | b"out>>" => SyntaxKind::OutGtGt,
+        b"e>" | b"err>" => SyntaxKind::ErrGt,
+        b"e>>" | b"err>>" => SyntaxKind::ErrGtGt,
+        b"o+e>" | b"e+o>" | b"out+err>" | b"err+out>" => SyntaxKind::OutErrGt,
+        b"o+e>>" | b"e+o>>" | b"out+err>>" | b"err+out>>" => SyntaxKind::OutErrGtGt,
+        b"e>|" | b"err>|" => SyntaxKind::ErrGtPipe,
+        b"o+e>|" | b"e+o>|" | b"out+err>|" | b"err+out>|" => SyntaxKind::OutErrGtPipe,
+        _ => return None,
+    };
+    Some(kind)
+}
+
+/// Whether `|` right after `text` joins it, as in `e>|`.
+fn is_redirection(text: &[u8]) -> bool {
+    matches!(
+        operator_kind(text),
+        Some(SyntaxKind::OutGt | SyntaxKind::ErrGt | SyntaxKind::OutErrGt)
+    )
 }
 
 fn to_size(offset: usize) -> TextSize {
@@ -134,7 +268,11 @@ mod tests {
     use rowan::{TextRange, TextSize};
 
     use super::{Mode, lex};
-    use crate::SyntaxKind::{self, Comment, Newline, Pipe, PipePipe, Semicolon, Whitespace, Word};
+    use crate::SyntaxKind::{
+        self, Assign, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString, Newline, OutErrGt,
+        OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString, Semicolon, Whitespace,
+        Word,
+    };
 
     fn lexed(src: &str) -> Vec<(SyntaxKind, &str)> {
         lex(src, TextRange::up_to(TextSize::of(src)), Mode::block())
@@ -157,6 +295,16 @@ mod tests {
             .filter(|(kind, _)| *kind != Whitespace)
             .map(|(_, text)| text)
             .collect()
+    }
+
+    fn kind_of(src: &str) -> SyntaxKind {
+        let tokens = lexed(src);
+        assert_eq!(tokens.len(), 1, "{src:?} is not one token: {tokens:?}");
+        tokens[0].0
+    }
+
+    fn assert_one_item(item: &str) {
+        assert_eq!(split(&format!("{item} z")), [item, "z"], "{item:?}");
     }
 
     fn range(start: u32, end: u32) -> TextRange {
@@ -248,18 +396,198 @@ mod tests {
         assert_eq!(lexed("a\u{85}b\u{a0}c"), [(Word, "a\u{85}b\u{a0}c")]);
     }
 
+    #[test]
+    fn terminators_do_not_end_nested_items() {
+        for item in ["[a\n| b; c]", "{a (b | c)}", "'a | b;c'"] {
+            assert_one_item(item);
+        }
+    }
+
+    #[test]
+    fn strings_inside_brackets_hide_closers() {
+        for item in [r#"[a "]" b]"#, "[r#'a']'#]"] {
+            assert_one_item(item);
+        }
+    }
+
+    #[test]
+    fn backslash_escapes_only_in_double_quotes() {
+        assert_eq!(kind_of(r#""a\"b""#), SyntaxKind::String);
+        assert_eq!(kind_of(r"'a\'"), SyntaxKind::String);
+        assert_eq!(kind_of(r"`a\`"), SyntaxKind::String);
+    }
+
+    #[test]
+    fn interpolation_nests_quotes_and_parens() {
+        for item in [
+            r#"$"a(")")b""#,
+            r#"$"((1) + ")")""#,
+            r#"$"('"')""#,
+            r#"$"(`"`)""#,
+            r#"$"('(')""#,
+            r#"$"("\"")""#,
+            r#"$"(\)""#,
+            "$'a(')')b'",
+            r#"x$"(")")""#,
+        ] {
+            assert_one_item(item);
+        }
+    }
+
+    #[test]
+    fn other_parens_in_strings_are_plain() {
+        for item in [r#""a(""#, r#"$"a\(""#, "$`a(`"] {
+            assert_one_item(item);
+        }
+    }
+
+    #[test]
+    fn comment_inside_brackets_hides_delimiters() {
+        for item in ["[a # ] b\n]", "[a # ] b\r]", "[a # b#] c\n]"] {
+            assert_one_item(item);
+        }
+        assert_eq!(split("[a#] b]"), ["[a#]", "b]"]);
+    }
+
+    /// nu reads the byte before `#` as Latin-1.
+    /// `à` (`C3 A0`) ends in whitespace, so a comment starts inside the item.
+    #[test]
+    fn hash_after_latin1_whitespace_byte_starts_comment() {
+        assert_eq!(split(r#"à#"b c"#), [r#"à#"b"#, "c"]);
+        assert_eq!(split(r#"a#"b c""#), [r#"a#"b c""#]);
+    }
+
+    #[test]
+    fn raw_string_closes_at_the_first_closer() {
+        assert_eq!(kind_of("r##'a '# b'##"), RawString);
+        assert_eq!(split("r#'a'# r#'b'#"), ["r#'a'#", "r#'b'#"]);
+        assert_eq!(kind_of("r#'#"), RawString);
+    }
+
+    #[test]
+    fn pipe_joins_a_redirection() {
+        assert_eq!(split("e>|cat"), ["e>|", "cat"]);
+        assert_eq!(split("o+e>|cat"), ["o+e>|", "cat"]);
+        assert_eq!(split("e>>|cat"), ["e>>", "|", "cat"]);
+        assert_eq!(split("xe>|cat"), ["xe>", "|", "cat"]);
+    }
+
+    #[test]
+    fn single_literal_items_get_literal_kinds() {
+        assert_eq!(kind_of("'a b'"), SyntaxKind::String);
+        assert_eq!(kind_of("`a`"), SyntaxKind::String);
+        assert_eq!(kind_of(r#"$"a(1 + ")")""#), InterpString);
+        assert_eq!(kind_of("$'a(1)'"), InterpString);
+        assert_eq!(kind_of("r#'a'#"), RawString);
+    }
+
+    #[test]
+    fn other_items_are_words() {
+        for item in [
+            r#"a"b c"d"#,
+            r#""a"b"#,
+            r#""a"'b'"#,
+            r#"$"a"b"#,
+            r#""a"r#'b'#"#,
+            r#"r#'a'#"b""#,
+            "r#'a'#b",
+            "$`a`",
+            r#"r"a""#,
+            "[a b]",
+            "(1 + 2)",
+        ] {
+            assert_eq!(kind_of(item), Word, "{item:?}");
+        }
+    }
+
+    /// Every spelling of each operator kind.
+    const OPERATORS: &[(SyntaxKind, &[&str])] = &[
+        (Assign, &["=", "+=", "++=", "-=", "*=", "/="]),
+        (OutGt, &["o>", "out>"]),
+        (OutGtGt, &["o>>", "out>>"]),
+        (ErrGt, &["e>", "err>"]),
+        (ErrGtGt, &["e>>", "err>>"]),
+        (OutErrGt, &["o+e>", "e+o>", "out+err>", "err+out>"]),
+        (OutErrGtGt, &["o+e>>", "e+o>>", "out+err>>", "err+out>>"]),
+        (ErrGtPipe, &["e>|", "err>|"]),
+        (OutErrGtPipe, &["o+e>|", "e+o>|", "out+err>|", "err+out>|"]),
+    ];
+
+    #[test]
+    fn operators_get_their_kinds() {
+        for &(expected, spellings) in OPERATORS {
+            for &text in spellings {
+                assert_eq!(kind_of(text), expected, "{text:?}");
+            }
+        }
+        // nu reports these, and nuten leaves them to the parser.
+        for text in ["o>|", "out>|", "&&", "2>", "2>&1"] {
+            assert_eq!(kind_of(text), Word, "{text:?}");
+        }
+    }
+
+    #[test]
+    fn unclosed_item_runs_to_the_end() {
+        assert_eq!(
+            lexed(r#"a "b c"#),
+            [(Word, "a"), (Whitespace, " "), (Error, r#""b c"#)]
+        );
+        assert_eq!(kind_of("[a\n(b c"), Error);
+        assert_eq!(kind_of(r#"$"(a" b"#), Error);
+        assert_eq!(kind_of("r#'a' b"), Error);
+    }
+
+    #[test]
+    fn error_ends_the_item_where_found() {
+        assert_eq!(lexed("a}b"), [(Error, "a}"), (Word, "b")]);
+        assert_eq!(lexed("a)b"), [(Error, "a)"), (Word, "b")]);
+        assert_eq!(lexed("[a)b]"), [(Error, "[a)"), (Word, "b]")]);
+        assert_eq!(lexed("{[}]"), [(Error, "{[}"), (Word, "]")]);
+        assert_eq!(lexed("r#x"), [(Error, "r#"), (Word, "x")]);
+    }
+
+    #[test]
+    fn final_backslash_splits_off_only_from_the_outermost_string() {
+        assert_eq!(lexed(r#""a\"#), [(Error, r#""a"#), (Word, r"\")]);
+        assert_eq!(lexed(r#"$"("\"#), [(Error, r#"$"("\"#)]);
+    }
+
     /// How nu 0.115.1 splits each input.
     const NU_SPLITS: &[(&str, &[&str])] = &[
         ("foo#bar", &["foo#bar"]),
         ("foo #bar", &["foo", "#bar"]),
+        ("echo [a b]#c", &["echo", "[a b]#c"]),
+        (r##"echo "a"#b"##, &["echo", r##""a"#b"##]),
         ("echo a:b", &["echo", "a:b"]),
         ("echo a,b", &["echo", "a,b"]),
         ("echo --foo=bar", &["echo", "--foo=bar"]),
+        (r#"echo a"b"c"#, &["echo", r#"a"b"c"#]),
+        (r#"echo ab"c d"e"#, &["echo", r#"ab"c d"e"#]),
+        (r#"echo "a"b"#, &["echo", r#""a"b"#]),
+        (r"echo 'a\'b", &["echo", r"'a\'b"]),
+        (r#"echo "a\"#, &["echo", r#""a"#, r"\"]),
         (r"echo a\ b", &["echo", r"a\", "b"]),
+        (r#"echo $"x(1 + 2)y""#, &["echo", r#"$"x(1 + 2)y""#]),
+        (r#"echo $"x\(1)y""#, &["echo", r#"$"x\(1)y""#]),
+        ("echo $'x(1)y'", &["echo", "$'x(1)y'"]),
+        ("echo $`x(1)y`", &["echo", "$`x(1)y`"]),
+        ("echo r#'a'b'#", &["echo", "r#'a'b'#"]),
+        ("echo r##'a'#b'##", &["echo", "r##'a'#b'##"]),
+        ("echo r#'a\nb'#", &["echo", "r#'a\nb'#"]),
+        ("echo r#x", &["echo", "r#", "x"]),
+        ("echo r#'#", &["echo", "r#'#"]),
+        ("echo xr#'a'#", &["echo", "xr#'a'#"]),
         ("echo a|b", &["echo", "a", "|", "b"]),
         ("echo a;b", &["echo", "a", ";", "b"]),
         ("echo x || y", &["echo", "x", "||", "y"]),
+        ("echo a[b]", &["echo", "a[b]"]),
+        ("echo a]b", &["echo", "a]b"]),
+        ("echo a}b", &["echo", "a}", "b"]),
+        ("echo [a]b", &["echo", "[a]b"]),
+        ("echo (1)x", &["echo", "(1)x"]),
+        ("echo {a:1}b", &["echo", "{a:1}b"]),
         ("echo o> f", &["echo", "o>", "f"]),
+        ("echo e>| cat", &["echo", "e>|", "cat"]),
         ("echo a\tb", &["echo", "a", "b"]),
         ("$x = 1", &["$x", "=", "1"]),
         ("echo a += 1", &["echo", "a", "+=", "1"]),
@@ -269,10 +597,21 @@ mod tests {
         ),
     ];
 
+    /// The rows where nu reports a lexing error.
+    const NU_ERRORS: &[&str] = &[r#"echo "a\"#, "echo r#x", "echo a}b"];
+
     #[test]
     fn splits_match_nu() {
         for &(src, expected) in NU_SPLITS {
             assert_eq!(split(src), expected, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn errors_match_nu() {
+        for &(src, _) in NU_SPLITS {
+            let has_error = lexed(src).iter().any(|&(kind, _)| kind == Error);
+            assert_eq!(has_error, NU_ERRORS.contains(&src), "{src:?}");
         }
     }
 
@@ -350,7 +689,23 @@ mod tests {
             lexed_ranges("a\r\n", range(0, 2)),
             [(Word, range(0, 1)), (Whitespace, range(1, 2))]
         );
+        assert_eq!(
+            lexed_ranges(r#""a b""#, range(0, 3)),
+            [(Error, range(0, 3))]
+        );
         assert!(lexed_ranges("abcd", range(2, 2)).is_empty());
+    }
+
+    #[test]
+    fn bytes_before_the_range_are_ignored() {
+        assert_eq!(
+            lexed_ranges(r#"$"(" x"#, range(1, 6)),
+            [
+                (SyntaxKind::String, range(1, 4)),
+                (Whitespace, range(4, 5)),
+                (Word, range(5, 6)),
+            ]
+        );
     }
 
     #[test]
@@ -396,6 +751,9 @@ mod tests {
     }
 
     fn well_formed(kind: SyntaxKind, text: &str) -> bool {
+        let quoted = |text: &str| {
+            text.len() >= 2 && text.starts_with(['\'', '"', '`']) && text.ends_with(&text[..1])
+        };
         match kind {
             Whitespace => text.bytes().all(|b| matches!(b, b' ' | b'\t' | b'\r')),
             Newline => text == "\n" || text == "\r\n",
@@ -403,14 +761,25 @@ mod tests {
             Pipe => text == "|",
             PipePipe => text == "||",
             Semicolon => text == ";",
-            Word => !text.starts_with('#') && !text.contains([' ', '\t', '\n', '\r', '|', ';']),
-            // Kinds the lexer does not emit yet.
-            _ => false,
+            SyntaxKind::String => quoted(text),
+            InterpString => text
+                .strip_prefix('$')
+                .is_some_and(|rest| rest.starts_with(['"', '\'']) && quoted(rest)),
+            RawString => text.starts_with("r#") && text.ends_with('#'),
+            Word | Error => !text.starts_with(['#', ' ', '\t', '\n', '\r', '|', ';']),
+            // Operators, or kinds the lexer does not emit yet.
+            _ => OPERATORS
+                .iter()
+                .any(|&(operator, spellings)| operator == kind && spellings.contains(&text)),
         }
     }
 
     /// A sample of each byte class the lexer tells apart.
-    const ALPHABET: &[&str] = &["a", "|", ";", "#", "\n", "\r", "\t", " ", "日"];
+    /// `à` (`C3 A0`) ends in `A0`, which nu counts as whitespace before `#`.
+    const ALPHABET: &[&str] = &[
+        "e", ">", "=", "r", "$", "'", "\"", "`", "\\", "(", ")", "[", "]", "#", "|", ";", " ",
+        "\n", "\r", "à",
+    ];
 
     fn every_input(len: usize) -> Vec<String> {
         match len {
@@ -424,7 +793,7 @@ mod tests {
 
     #[test]
     fn invariants_hold_for_all_short_inputs() {
-        (0..=5)
+        (0..=4)
             .flat_map(every_input)
             .for_each(|src| check_invariants(&src));
     }
