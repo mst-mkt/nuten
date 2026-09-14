@@ -3,3 +3,6 @@
 
 /target
 /result
+
+*.snap.new
+*.pending-snap
