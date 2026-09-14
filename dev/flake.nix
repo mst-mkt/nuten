@@ -89,6 +89,7 @@
           commitScopes = [
             "cli"
             "syntax"
+            "parser"
             "doc"
             "format"
             "nix"
