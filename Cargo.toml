@@ -12,6 +12,7 @@ repository = "https://github.com/mst-mkt/nuten"
 [workspace.dependencies]
 nuten_doc = { path = "crates/nuten_doc" }
 nuten_format = { path = "crates/nuten_format" }
+nuten_parser = { path = "crates/nuten_parser" }
 nuten_syntax = { path = "crates/nuten_syntax" }
 
 rowan = "0.17.0"

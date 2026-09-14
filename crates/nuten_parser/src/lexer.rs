@@ -2,9 +2,8 @@
 
 use std::ops::Range;
 
+use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
-
-use crate::SyntaxKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Token {
@@ -330,17 +329,17 @@ fn text_range(range: Range<usize>) -> TextRange {
 
 #[cfg(test)]
 mod tests {
+    use nuten_syntax::SyntaxKind::{
+        self, Assign, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString, Newline, OutErrGt,
+        OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString, Semicolon, Whitespace,
+        Word,
+    };
     use rowan::{TextRange, TextSize};
 
     use super::{
         LexError,
         LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
         Lexed, Mode, Token, lex,
-    };
-    use crate::SyntaxKind::{
-        self, Assign, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString, Newline, OutErrGt,
-        OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString, Semicolon, Whitespace,
-        Word,
     };
 
     fn lex_all(src: &str) -> Lexed {

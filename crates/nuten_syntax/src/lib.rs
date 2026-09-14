@@ -1,7 +1,6 @@
-//! Lexer, Parser, and lossless CST for Nushell.
+//! Lossless CST for Nushell.
 
 mod kind;
-pub mod lexer;
 
 pub use kind::SyntaxKind;
 

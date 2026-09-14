@@ -49,6 +49,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nuten_parser"
+version = "0.0.0"
+dependencies = [
+ "nuten_syntax",
+ "rowan",
+]
+
+[[package]]
 name = "nuten_syntax"
 version = "0.0.0"
 dependencies = [
