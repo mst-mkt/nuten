@@ -758,83 +758,6 @@ mod tests {
         }
     }
 
-    // Deliberate differences from nu.
-
-    #[test]
-    fn crlf_is_one_newline() {
-        assert_eq!(lexed("\r\n"), [(Newline, "\r\n")]);
-        assert_eq!(
-            lexed("a\r\nb"),
-            [(Word, "a"), (Newline, "\r\n"), (Word, "b")]
-        );
-        assert_eq!(
-            lexed("a \r\nb"),
-            [
-                (Word, "a"),
-                (Whitespace, " "),
-                (Newline, "\r\n"),
-                (Word, "b")
-            ]
-        );
-        assert_eq!(lexed("\r\r\n"), [(Whitespace, "\r"), (Newline, "\r\n")]);
-    }
-
-    #[test]
-    fn lone_cr_is_whitespace() {
-        assert_eq!(lexed("\r"), [(Whitespace, "\r")]);
-        assert_eq!(
-            lexed("a \r\tb"),
-            [(Word, "a"), (Whitespace, " \r\t"), (Word, "b")]
-        );
-        assert_eq!(
-            lexed("a\rb"),
-            [(Word, "a"), (Whitespace, "\r"), (Word, "b")]
-        );
-    }
-
-    #[test]
-    fn comment_keeps_cr_except_before_lf() {
-        assert_eq!(lexed("# c\rd"), [(Comment, "# c\rd")]);
-        assert_eq!(lexed("# c\r"), [(Comment, "# c\r")]);
-        assert_eq!(
-            lexed("# c\r\nd"),
-            [(Comment, "# c"), (Newline, "\r\n"), (Word, "d")]
-        );
-        assert_eq!(lexed("#\r\r\n"), [(Comment, "#\r"), (Newline, "\r\n")]);
-    }
-
-    #[test]
-    fn leading_pipe_is_not_rewritten() {
-        assert_eq!(
-            lexed("a\n| b"),
-            [
-                (Word, "a"),
-                (Newline, "\n"),
-                (Pipe, "|"),
-                (Whitespace, " "),
-                (Word, "b"),
-            ]
-        );
-    }
-
-    #[test]
-    fn unclosed_opener_includes_its_prefix() {
-        for (src, opener) in [
-            (r#"$"a"#, r#"$""#),
-            ("x$'a", "$'"),
-            ("r#'a' b", "r#'"),
-            ("r##'a'#", "r##'"),
-        ] {
-            assert_eq!(error_of(src), (Unclosed, opener), "{src:?}");
-        }
-    }
-
-    #[test]
-    fn missing_raw_quote_points_at_the_prefix() {
-        assert_eq!(error_of("r#x"), (MissingRawQuote, "r#"));
-        assert_eq!(error_of("xr##"), (MissingRawQuote, "r##"));
-    }
-
     #[test]
     fn range_is_absolute() {
         assert_eq!(
@@ -1001,5 +924,84 @@ mod tests {
         (0..=4)
             .flat_map(every_input)
             .for_each(|src| check_invariants(&src));
+    }
+
+    mod nu_differences {
+        use super::*;
+
+        #[test]
+        fn crlf_is_one_newline() {
+            assert_eq!(lexed("\r\n"), [(Newline, "\r\n")]);
+            assert_eq!(
+                lexed("a\r\nb"),
+                [(Word, "a"), (Newline, "\r\n"), (Word, "b")]
+            );
+            assert_eq!(
+                lexed("a \r\nb"),
+                [
+                    (Word, "a"),
+                    (Whitespace, " "),
+                    (Newline, "\r\n"),
+                    (Word, "b")
+                ]
+            );
+            assert_eq!(lexed("\r\r\n"), [(Whitespace, "\r"), (Newline, "\r\n")]);
+        }
+
+        #[test]
+        fn lone_cr_is_whitespace() {
+            assert_eq!(lexed("\r"), [(Whitespace, "\r")]);
+            assert_eq!(
+                lexed("a \r\tb"),
+                [(Word, "a"), (Whitespace, " \r\t"), (Word, "b")]
+            );
+            assert_eq!(
+                lexed("a\rb"),
+                [(Word, "a"), (Whitespace, "\r"), (Word, "b")]
+            );
+        }
+
+        #[test]
+        fn comment_keeps_cr_except_before_lf() {
+            assert_eq!(lexed("# c\rd"), [(Comment, "# c\rd")]);
+            assert_eq!(lexed("# c\r"), [(Comment, "# c\r")]);
+            assert_eq!(
+                lexed("# c\r\nd"),
+                [(Comment, "# c"), (Newline, "\r\n"), (Word, "d")]
+            );
+            assert_eq!(lexed("#\r\r\n"), [(Comment, "#\r"), (Newline, "\r\n")]);
+        }
+
+        #[test]
+        fn leading_pipe_is_not_rewritten() {
+            assert_eq!(
+                lexed("a\n| b"),
+                [
+                    (Word, "a"),
+                    (Newline, "\n"),
+                    (Pipe, "|"),
+                    (Whitespace, " "),
+                    (Word, "b"),
+                ]
+            );
+        }
+
+        #[test]
+        fn unclosed_opener_includes_its_prefix() {
+            for (src, opener) in [
+                (r#"$"a"#, r#"$""#),
+                ("x$'a", "$'"),
+                ("r#'a' b", "r#'"),
+                ("r##'a'#", "r##'"),
+            ] {
+                assert_eq!(error_of(src), (Unclosed, opener), "{src:?}");
+            }
+        }
+
+        #[test]
+        fn missing_raw_quote_points_at_the_prefix() {
+            assert_eq!(error_of("r#x"), (MissingRawQuote, "r#"));
+            assert_eq!(error_of("xr##"), (MissingRawQuote, "r##"));
+        }
     }
 }
