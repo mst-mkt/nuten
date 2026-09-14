@@ -5,7 +5,7 @@ use std::vec;
 use nuten_syntax::SyntaxKind;
 
 use crate::{
-    ParseError,
+    ParseError, grammar,
     lexer::{LexError, Lexed, Token},
 };
 
@@ -24,11 +24,11 @@ pub(crate) fn parse(lexed: Lexed) -> Vec<Event> {
         pos: 0,
         events: Vec::new(),
     };
-    root(&mut parser);
+    grammar::root(&mut parser);
     parser.events
 }
 
-struct Parser {
+pub(crate) struct Parser {
     tokens: Vec<Token>,
     lex_errors: vec::IntoIter<LexError>,
     pos: usize,
@@ -36,11 +36,11 @@ struct Parser {
 }
 
 impl Parser {
-    fn at_end(&self) -> bool {
+    pub(crate) fn at_end(&self) -> bool {
         self.pos == self.tokens.len()
     }
 
-    fn bump(&mut self) {
+    pub(crate) fn bump(&mut self) {
         let token = self.tokens[self.pos];
         self.pos += 1;
         self.events.push(Event::Token(token));
@@ -50,19 +50,11 @@ impl Parser {
         }
     }
 
-    fn start(&mut self, kind: SyntaxKind) {
+    pub(crate) fn start(&mut self, kind: SyntaxKind) {
         self.events.push(Event::Start(kind));
     }
 
-    fn finish(&mut self) {
+    pub(crate) fn finish(&mut self) {
         self.events.push(Event::Finish);
     }
-}
-
-fn root(p: &mut Parser) {
-    p.start(SyntaxKind::Root);
-    while !p.at_end() {
-        p.bump();
-    }
-    p.finish();
 }

@@ -1,5 +1,6 @@
 //! Lexer and parser for Nushell.
 
+mod grammar;
 pub mod lexer;
 mod parser;
 #[cfg(test)]
