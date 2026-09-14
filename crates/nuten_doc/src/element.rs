@@ -9,7 +9,8 @@ pub struct Document<'a> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element<'a> {
-    /// Printed as is, line breaks included. `width` is `TextWidth::of(text)`.
+    /// Printed as is, but for its line breaks, which come out as the
+    /// printer's line ending. `width` is `TextWidth::of(text)`.
     Text {
         text: &'a str,
         width: TextWidth,
@@ -55,7 +56,8 @@ pub enum TextWidth {
 
 impl TextWidth {
     /// Wide characters and emoji sequences take two columns; control
-    /// characters, tabs included, take one.
+    /// characters, tabs included, take one. A line break is a `\n`, with or
+    /// without a `\r` before it; a `\r` alone is an ordinary character.
     pub fn of(text: &str) -> TextWidth {
         if text.contains('\n') {
             TextWidth::Multiline

@@ -36,8 +36,9 @@ impl LineEnding {
 }
 
 /// Spaces and tabs before a line break of the printer's go, even those of
-/// a text; the lines inside a text stay as they are. The output never
-/// starts with a line break.
+/// a text; the lines inside a text stay as they are, but their line breaks
+/// come out as the configured line ending. The output never starts with a
+/// line break.
 pub fn print(document: &Document<'_>, options: &PrinterOptions) -> String {
     let mut printer = Printer {
         options,
@@ -264,11 +265,23 @@ impl<'a> Printer<'a> {
             };
             self.out.extend(iter::repeat_n(unit, count as usize));
         }
-        self.out.push_str(text);
-        self.column = match width {
-            TextWidth::Width(width) => self.column.saturating_add(width),
-            TextWidth::Multiline => columns(last_line(text)),
-        };
+        match width {
+            TextWidth::Width(width) => {
+                self.out.push_str(text);
+                self.column = self.column.saturating_add(width);
+            },
+            TextWidth::Multiline => {
+                let ending = self.options.line_ending.as_str();
+                let mut lines = text.split('\n');
+                let last = lines.next_back().unwrap_or_default();
+                for line in lines {
+                    self.out.push_str(without_cr(line));
+                    self.out.push_str(ending);
+                }
+                self.out.push_str(last);
+                self.column = columns(last);
+            },
+        }
     }
 
     /// Ends the line, dropping the spaces and tabs before the break, with
@@ -323,12 +336,12 @@ fn has_forced_break(elements: &[Element<'_>]) -> bool {
 }
 
 fn first_line(text: &str) -> &str {
-    let first = text.split_once('\n').map_or(text, |(first, _)| first);
-    first.strip_suffix('\r').unwrap_or(first)
+    without_cr(text.split_once('\n').map_or(text, |(first, _)| first))
 }
 
-fn last_line(text: &str) -> &str {
-    text.rsplit_once('\n').map_or(text, |(_, last)| last)
+/// `line` came before a `\n`; the `\r` of a `\r\n` is part of the break.
+fn without_cr(line: &str) -> &str {
+    line.strip_suffix('\r').unwrap_or(line)
 }
 
 #[cfg(test)]
@@ -628,7 +641,7 @@ mod tests {
             "a b\nlong line"
         );
         let then_text = vec![text("x\r\ny")];
-        assert_eq!(printed(group_then(then_text), &options(4)), "a bx\r\ny");
+        assert_eq!(printed(group_then(then_text), &options(4)), "a bx\ny");
         let then_suffix = vec![line_suffix(vec![text("# a comment")])];
         assert_eq!(
             printed(group_then(then_suffix), &options(4)),
@@ -652,6 +665,26 @@ mod tests {
             ..options(6)
         };
         assert_eq!(printed(doc, &tabs), "a\n\taa\n\tbb");
+    }
+
+    #[test]
+    fn line_breaks_inside_a_text_come_out_as_the_line_ending() {
+        let doc = || vec![text("a\r\nb\nc\rd"), hard_line_break(), text("e")];
+        assert_eq!(printed(doc(), &options(80)), "a\nb\nc\rd\ne");
+        let crlf = PrinterOptions {
+            line_ending: LineEnding::CrLf,
+            ..options(80)
+        };
+        assert_eq!(printed(doc(), &crlf), "a\r\nb\r\nc\rd\r\ne");
+        let doc = || vec![text("a\n"), hard_line_break(), text("b")];
+        assert_eq!(printed(doc(), &options(80)), "a\nb");
+        assert_eq!(printed(doc(), &crlf), "a\r\nb");
+    }
+
+    #[test]
+    fn only_the_first_line_of_a_text_is_indented() {
+        let doc = vec![text("a"), indent(vec![hard_line_break(), text("b\nc")])];
+        assert_eq!(printed(doc, &options(80)), "a\n  b\nc");
     }
 
     #[test]
