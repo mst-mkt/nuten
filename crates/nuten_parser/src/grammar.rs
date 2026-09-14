@@ -83,6 +83,12 @@ fn bump_newlines(p: &mut Parser) {
 
 fn pipeline_element(p: &mut Parser) {
     p.start(SyntaxKind::PipelineElement);
+    call(p);
+    p.finish();
+}
+
+fn call(p: &mut Parser) {
+    p.start(SyntaxKind::Call);
     while p.peek().is_some_and(|kind| !ends_element(kind)) {
         p.bump();
     }
