@@ -92,8 +92,8 @@ syntax_kinds! {
     Pipeline,
     /// An element of a `Pipeline`: a `Call` or an `ExternalCall`, then any `Redirection`s.
     /// Nu allows arguments after a redirection; they stay bare tokens.
-    /// Ends before `|`, `;`, a line break, or the end of the file.
-    /// A `|` with nothing before or after it, as in `| ls` or `ls | | first`, yields no element.
+    /// Ends before a pipe (`|`, `e>|`, or `o+e>|`), `;`, a line break, or the end of the file.
+    /// A pipe with nothing before or after it, as in `| ls` or `ls | | first`, yields no element.
     PipelineElement,
     /// A command name followed by its arguments.
     Call,

@@ -22,6 +22,8 @@ fn pipeline(p: &mut Parser<'_>) {
                 p.bump();
                 line_end_continuation(p);
             },
+            // Nu goes on to the next line only after a plain `|`.
+            kind if is_pipe(kind) => p.bump(),
             SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
             kind if ends_statement(kind) => break,
             _ => pipeline_element(p),
@@ -124,11 +126,18 @@ fn ends_statement(kind: SyntaxKind) -> bool {
 }
 
 fn ends_element(kind: SyntaxKind) -> bool {
-    kind == SyntaxKind::Pipe || ends_statement(kind)
+    is_pipe(kind) || ends_statement(kind)
 }
 
 fn ends_call(kind: SyntaxKind) -> bool {
     is_file_redirection(kind) || ends_element(kind)
+}
+
+fn is_pipe(kind: SyntaxKind) -> bool {
+    matches!(
+        kind,
+        SyntaxKind::Pipe | SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe
+    )
 }
 
 fn is_file_redirection(kind: SyntaxKind) -> bool {
