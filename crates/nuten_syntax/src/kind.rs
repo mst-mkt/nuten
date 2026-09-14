@@ -85,8 +85,10 @@ syntax_kinds! {
     /// An item with a lexing error, or a node wrapping a parse error.
     Error,
 
-    // Nodes.
+    // Nodes. Only Root starts or ends with trivia.
     Root,
+    /// A statement. Ends before `;`, a line break, or the end of the file.
+    Pipeline,
 }
 
 impl SyntaxKind {

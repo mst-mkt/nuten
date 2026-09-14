@@ -24,10 +24,18 @@ pub(crate) fn parse(lexed: Lexed) -> Vec<Event> {
         pos: 0,
         events: Vec::new(),
     };
-    grammar::root(&mut parser);
+    // Not `start`: that would put leading trivia outside Root.
+    parser.events.push(Event::Start(SyntaxKind::Root));
+    grammar::file(&mut parser);
+    parser.bump_skipped();
+    parser.events.push(Event::Finish);
     parser.events
 }
 
+/// Whitespace and comments are skipped when looking ahead and emitted
+/// just before the next token or node, or at the end of the file,
+/// so no node but Root starts or ends with them.
+/// Newlines are not skipped, since they end statements.
 pub(crate) struct Parser {
     tokens: Vec<Token>,
     lex_errors: vec::IntoIter<LexError>,
@@ -36,11 +44,45 @@ pub(crate) struct Parser {
 }
 
 impl Parser {
-    pub(crate) fn at_end(&self) -> bool {
-        self.pos == self.tokens.len()
+    /// The kind of the next token, or `None` at the end.
+    pub(crate) fn peek(&self) -> Option<SyntaxKind> {
+        self.tokens[self.pos..]
+            .iter()
+            .map(|token| token.kind)
+            .find(|&kind| !is_skipped(kind))
     }
 
+    /// Emits the next token.
+    ///
+    /// # Panics
+    ///
+    /// Panics at the end.
     pub(crate) fn bump(&mut self) {
+        self.bump_skipped();
+        assert!(self.pos < self.tokens.len(), "bump at the end");
+        self.bump_one();
+    }
+
+    pub(crate) fn start(&mut self, kind: SyntaxKind) {
+        self.bump_skipped();
+        self.events.push(Event::Start(kind));
+    }
+
+    pub(crate) fn finish(&mut self) {
+        self.events.push(Event::Finish);
+    }
+
+    fn bump_skipped(&mut self) {
+        while self
+            .tokens
+            .get(self.pos)
+            .is_some_and(|token| is_skipped(token.kind))
+        {
+            self.bump_one();
+        }
+    }
+
+    fn bump_one(&mut self) {
         let token = self.tokens[self.pos];
         self.pos += 1;
         self.events.push(Event::Token(token));
@@ -49,12 +91,8 @@ impl Parser {
             self.events.push(Event::Error(error.into()));
         }
     }
+}
 
-    pub(crate) fn start(&mut self, kind: SyntaxKind) {
-        self.events.push(Event::Start(kind));
-    }
-
-    pub(crate) fn finish(&mut self) {
-        self.events.push(Event::Finish);
-    }
+fn is_skipped(kind: SyntaxKind) -> bool {
+    matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment)
 }

@@ -71,6 +71,16 @@ mod tests {
         let root = parsed.syntax();
         assert_eq!(root.text(), src, "tree does not restore {src:?}");
 
+        for node in root.descendants().skip(1) {
+            for token in [node.first_token(), node.last_token()] {
+                assert!(
+                    token.is_some_and(|token| !token.kind().is_trivia()),
+                    "{:?} is empty or starts or ends with trivia in {src:?}",
+                    node.kind()
+                );
+            }
+        }
+
         let error_ranges: Vec<_> = root
             .descendants_with_tokens()
             .filter(|element| element.kind() == SyntaxKind::Error)

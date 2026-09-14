@@ -3,11 +3,12 @@ source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/pipeline.nu
 ---
 Root@0..14
-  Word@0..2 "ls"
-  Whitespace@2..3 " "
-  Pipe@3..4 "|"
-  Whitespace@4..5 " "
-  Word@5..8 "get"
-  Whitespace@8..9 " "
-  Word@9..13 "name"
+  Pipeline@0..13
+    Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    Word@5..8 "get"
+    Whitespace@8..9 " "
+    Word@9..13 "name"
   Newline@13..14 "\n"
