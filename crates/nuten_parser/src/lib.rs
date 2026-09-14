@@ -49,6 +49,13 @@ pub enum ParseErrorKind {
     ShellOutErrRedirect,
     /// `o>|` or `out>|`, which is the same as `|`.
     OutPipe,
+    /// `;` after a plain `|`, however many line breaks and comments come
+    /// between.
+    SemicolonAfterPipe,
+    /// A plain `|` as the last token of the file, past any comment lines right
+    /// below it. A blank line or a line break at the very end makes nu
+    /// accept it.
+    PipeAtEof,
 }
 
 impl From<LexError> for ParseError {

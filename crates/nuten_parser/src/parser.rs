@@ -56,6 +56,15 @@ impl<'a> Parser<'a> {
         self.next_token().map(|token| &self.src[token.range])
     }
 
+    /// The kind of the last token emitted, trivia aside.
+    pub(crate) fn last_kind(&self) -> Option<SyntaxKind> {
+        self.tokens[..self.pos]
+            .iter()
+            .rev()
+            .map(|token| token.kind)
+            .find(|kind| !kind.is_trivia())
+    }
+
     /// The kinds of every token ahead, whitespace and comments included.
     /// Only for deciding whether a line continues; everything else looks
     /// through `peek`.

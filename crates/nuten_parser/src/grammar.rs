@@ -6,10 +6,12 @@ use crate::{ParseErrorKind, parser::Parser};
 
 pub(crate) fn file(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
-        if ends_statement(kind) {
-            p.bump();
-        } else {
-            pipeline(p);
+        match kind {
+            SyntaxKind::Semicolon if p.last_kind() == Some(SyntaxKind::Pipe) => {
+                p.bump_error(ParseErrorKind::SemicolonAfterPipe);
+            },
+            kind if ends_statement(kind) => p.bump(),
+            _ => pipeline(p),
         }
     }
 }
@@ -18,6 +20,7 @@ fn pipeline(p: &mut Parser<'_>) {
     p.start(SyntaxKind::Pipeline);
     while let Some(kind) = p.peek() {
         match kind {
+            SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
             SyntaxKind::Pipe => {
                 p.bump();
                 line_end_continuation(p);
@@ -30,6 +33,25 @@ fn pipeline(p: &mut Parser<'_>) {
         }
     }
     p.finish();
+}
+
+/// Whether the `|` ahead is the last token of the file, past a trailing
+/// comment and comment lines right below it: `Comment? (Newline Comment)*`.
+/// A blank line or a final line break saves it; nu counts the `|` as the
+/// last token only then.
+fn pipe_ends_file(p: &Parser<'_>) -> bool {
+    let mut kinds = p
+        .remaining_kinds()
+        .filter(|&kind| kind != SyntaxKind::Whitespace)
+        .skip(1)
+        .peekable();
+    kinds.next_if_eq(&SyntaxKind::Comment);
+    while kinds.next_if_eq(&SyntaxKind::Newline).is_some() {
+        if kinds.next() != Some(SyntaxKind::Comment) {
+            return false;
+        }
+    }
+    kinds.next().is_none()
 }
 
 /// Whether a `|` starts the next line, past any comment lines.
@@ -181,4 +203,35 @@ fn is_item(kind: SyntaxKind) -> bool {
             | SyntaxKind::InterpString
             | SyntaxKind::Error
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ParseErrorKind, parse};
+
+    fn errors(src: &str) -> Vec<ParseErrorKind> {
+        parse(src).errors().iter().map(|error| error.kind).collect()
+    }
+
+    #[test]
+    fn pipe_at_eof_depends_on_a_final_line_break() {
+        assert_eq!(errors("ls |"), [ParseErrorKind::PipeAtEof]);
+        assert_eq!(errors(";|"), [ParseErrorKind::PipeAtEof]);
+        assert_eq!(errors("ls | # c"), [ParseErrorKind::PipeAtEof]);
+        assert_eq!(errors("ls |\n# c"), [ParseErrorKind::PipeAtEof]);
+        assert_eq!(errors("ls | # c\n# d"), [ParseErrorKind::PipeAtEof]);
+        assert_eq!(errors("ls |\n"), []);
+        assert_eq!(errors("ls |\n# c\n"), []);
+        assert_eq!(errors("ls |\n\n# c"), []);
+        assert_eq!(errors("ls e>|"), []);
+        assert_eq!(errors("ls | ;"), [ParseErrorKind::SemicolonAfterPipe]);
+    }
+
+    #[test]
+    fn pipe_at_eof_is_reported_at_the_last_pipe() {
+        let parsed = parse("ls | | # c");
+        assert_eq!(parsed.errors().len(), 1);
+        assert_eq!(&"ls | | # c"[parsed.errors()[0].range], "|");
+        assert_eq!(parsed.errors()[0].range.start(), 5.into());
+    }
 }
