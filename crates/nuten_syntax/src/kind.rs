@@ -106,12 +106,6 @@ impl SyntaxKind {
     }
 }
 
-impl From<SyntaxKind> for rowan::SyntaxKind {
-    fn from(kind: SyntaxKind) -> Self {
-        kind.to_raw()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::SyntaxKind;

@@ -32,11 +32,11 @@ mod tests {
     #[test]
     fn build_and_read_back() {
         let mut builder = GreenNodeBuilder::new();
-        builder.start_node(SyntaxKind::Root.into());
-        builder.token(SyntaxKind::Word.into(), "ls");
-        builder.token(SyntaxKind::Whitespace.into(), " ");
-        builder.token(SyntaxKind::Pipe.into(), "|");
-        builder.token(SyntaxKind::Newline.into(), "\n");
+        builder.start_node(SyntaxKind::Root.to_raw());
+        builder.token(SyntaxKind::Word.to_raw(), "ls");
+        builder.token(SyntaxKind::Whitespace.to_raw(), " ");
+        builder.token(SyntaxKind::Pipe.to_raw(), "|");
+        builder.token(SyntaxKind::Newline.to_raw(), "\n");
         builder.finish_node();
 
         let root = SyntaxNode::new_root(builder.finish());
