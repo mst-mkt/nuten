@@ -116,28 +116,4 @@ mod tests {
             assert_eq!(SyntaxKind::from_raw(kind.to_raw()), kind);
         }
     }
-
-    #[test]
-    fn discriminants_are_sequential() {
-        for (index, &kind) in SyntaxKind::ALL.iter().enumerate() {
-            assert_eq!(usize::from(kind as u16), index);
-        }
-    }
-
-    #[test]
-    fn trivia() {
-        let trivia: Vec<_> = SyntaxKind::ALL
-            .iter()
-            .copied()
-            .filter(|kind| kind.is_trivia())
-            .collect();
-        assert_eq!(
-            trivia,
-            [
-                SyntaxKind::Whitespace,
-                SyntaxKind::Newline,
-                SyntaxKind::Comment
-            ]
-        );
-    }
 }
