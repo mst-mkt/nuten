@@ -57,7 +57,7 @@ impl From<LexError> for ParseError {
 /// Panics if `src` is 4 GiB or longer.
 pub fn parse(src: &str) -> Parsed {
     let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::block());
-    tree::build(src, &parser::parse(lexed))
+    tree::build(src, &parser::parse(src, lexed))
 }
 
 #[cfg(test)]

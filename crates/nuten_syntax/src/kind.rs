@@ -90,12 +90,14 @@ syntax_kinds! {
     /// A statement. Ends before `;`, the end of the file,
     /// or a line break, unless a `|` ends that line or, past any comment lines, starts the next.
     Pipeline,
-    /// An element of a `Pipeline`: a `Call`.
+    /// An element of a `Pipeline`: a `Call` or an `ExternalCall`.
     /// Ends before `|`, `;`, a line break, or the end of the file.
     /// A `|` with nothing before or after it, as in `| ls` or `ls | | first`, yields no element.
     PipelineElement,
     /// A command name followed by its arguments.
     Call,
+    /// Same as `Call`, but the name starts with `^`, so the command is external.
+    ExternalCall,
 }
 
 impl SyntaxKind {

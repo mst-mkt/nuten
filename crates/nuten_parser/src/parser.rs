@@ -17,8 +17,9 @@ pub(crate) enum Event {
     Finish,
 }
 
-pub(crate) fn parse(lexed: Lexed) -> Vec<Event> {
+pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
     let mut parser = Parser {
+        src,
         tokens: lexed.tokens,
         lex_errors: lexed.errors.into_iter(),
         pos: 0,
@@ -36,20 +37,23 @@ pub(crate) fn parse(lexed: Lexed) -> Vec<Event> {
 /// just before the next token or node, or at the end of the file,
 /// so no node but Root starts or ends with them.
 /// Newlines are not skipped, since they end statements.
-pub(crate) struct Parser {
+pub(crate) struct Parser<'a> {
+    src: &'a str,
     tokens: Vec<Token>,
     lex_errors: vec::IntoIter<LexError>,
     pos: usize,
     events: Vec<Event>,
 }
 
-impl Parser {
+impl<'a> Parser<'a> {
     /// The kind of the next token, or `None` at the end.
     pub(crate) fn peek(&self) -> Option<SyntaxKind> {
-        self.tokens[self.pos..]
-            .iter()
-            .map(|token| token.kind)
-            .find(|&kind| !is_skipped(kind))
+        self.next_token().map(|token| token.kind)
+    }
+
+    /// The text of the next token, or `None` at the end.
+    pub(crate) fn peek_text(&self) -> Option<&'a str> {
+        self.next_token().map(|token| &self.src[token.range])
     }
 
     /// The kinds of every token ahead, whitespace and comments included.
@@ -77,6 +81,13 @@ impl Parser {
 
     pub(crate) fn finish(&mut self) {
         self.events.push(Event::Finish);
+    }
+
+    fn next_token(&self) -> Option<Token> {
+        self.tokens[self.pos..]
+            .iter()
+            .copied()
+            .find(|token| !is_skipped(token.kind))
     }
 
     fn bump_skipped(&mut self) {

@@ -4,7 +4,7 @@ use nuten_syntax::SyntaxKind;
 
 use crate::parser::Parser;
 
-pub(crate) fn file(p: &mut Parser) {
+pub(crate) fn file(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
         if ends_statement(kind) {
             p.bump();
@@ -14,7 +14,7 @@ pub(crate) fn file(p: &mut Parser) {
     }
 }
 
-fn pipeline(p: &mut Parser) {
+fn pipeline(p: &mut Parser<'_>) {
     p.start(SyntaxKind::Pipeline);
     while let Some(kind) = p.peek() {
         match kind {
@@ -32,7 +32,7 @@ fn pipeline(p: &mut Parser) {
 
 /// Whether a `|` starts the next line, past any comment lines.
 /// It joins the line before it, along with those comment lines.
-fn next_line_starts_with_pipe(p: &Parser) -> bool {
+fn next_line_starts_with_pipe(p: &Parser<'_>) -> bool {
     line_start(&mut next_lines(p)) == Some(SyntaxKind::Pipe)
 }
 
@@ -41,13 +41,13 @@ fn next_line_starts_with_pipe(p: &Parser) -> bool {
 /// joins that blank line. `;` ends it too; nu rejects it after `|` anyway,
 /// and this keeps the newline out of the pipeline, which must not end with
 /// trivia.
-fn line_end_continuation(p: &mut Parser) {
+fn line_end_continuation(p: &mut Parser<'_>) {
     if p.peek() == Some(SyntaxKind::Newline) && next_line_continues(p) {
         bump_newlines(p);
     }
 }
 
-fn next_line_continues(p: &Parser) -> bool {
+fn next_line_continues(p: &Parser<'_>) -> bool {
     let mut lines = next_lines(p);
     match line_start(&mut lines) {
         Some(SyntaxKind::Newline) => line_start(&mut lines) == Some(SyntaxKind::Pipe),
@@ -57,7 +57,7 @@ fn next_line_continues(p: &Parser) -> bool {
 }
 
 /// The tokens after the current line, whitespace left out.
-fn next_lines(p: &Parser) -> impl Iterator<Item = SyntaxKind> {
+fn next_lines(p: &Parser<'_>) -> impl Iterator<Item = SyntaxKind> {
     p.remaining_kinds()
         .filter(|&kind| kind != SyntaxKind::Whitespace)
         .skip_while(|&kind| kind != SyntaxKind::Newline)
@@ -75,20 +75,25 @@ fn line_start(lines: &mut impl Iterator<Item = SyntaxKind>) -> Option<SyntaxKind
     first
 }
 
-fn bump_newlines(p: &mut Parser) {
+fn bump_newlines(p: &mut Parser<'_>) {
     while p.peek() == Some(SyntaxKind::Newline) {
         p.bump();
     }
 }
 
-fn pipeline_element(p: &mut Parser) {
+fn pipeline_element(p: &mut Parser<'_>) {
     p.start(SyntaxKind::PipelineElement);
     call(p);
     p.finish();
 }
 
-fn call(p: &mut Parser) {
-    p.start(SyntaxKind::Call);
+fn call(p: &mut Parser<'_>) {
+    let kind = if p.peek_text().is_some_and(|head| head.starts_with('^')) {
+        SyntaxKind::ExternalCall
+    } else {
+        SyntaxKind::Call
+    };
+    p.start(kind);
     while p.peek().is_some_and(|kind| !ends_element(kind)) {
         p.bump();
     }
