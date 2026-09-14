@@ -1,0 +1,92 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/line_start_pipe.nu
+---
+Root@0..133
+  Pipeline@0..35
+    PipelineElement@0..2
+      Word@0..2 "ls"
+    Newline@2..3 "\n"
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..13
+      Word@5..8 "get"
+      Whitespace@8..9 " "
+      Word@9..13 "name"
+    Newline@13..14 "\n"
+    Whitespace@14..16 "  "
+    Comment@16..25 "# comment"
+    Newline@25..26 "\n"
+    Whitespace@26..28 "  "
+    Pipe@28..29 "|"
+    Whitespace@29..30 " "
+    PipelineElement@30..35
+      Word@30..35 "first"
+  Newline@35..36 "\n"
+  Newline@36..37 "\n"
+  Pipeline@37..61
+    PipelineElement@37..39
+      Word@37..39 "ls"
+    Whitespace@39..40 " "
+    Comment@40..50 "# trailing"
+    Newline@50..51 "\n"
+    Whitespace@51..53 "  "
+    Pipe@53..54 "|"
+    Whitespace@54..55 " "
+    PipelineElement@55..61
+      Word@55..61 "length"
+  Newline@61..62 "\n"
+  Newline@62..63 "\n"
+  Pipeline@63..65
+    PipelineElement@63..65
+      Word@63..65 "ls"
+  Newline@65..66 "\n"
+  Newline@66..67 "\n"
+  Pipeline@67..75
+    Pipe@67..68 "|"
+    Whitespace@68..69 " "
+    PipelineElement@69..75
+      Word@69..75 "length"
+  Newline@75..76 "\n"
+  Newline@76..77 "\n"
+  Pipeline@77..79
+    PipelineElement@77..79
+      Word@77..79 "ls"
+  Newline@79..80 "\n"
+  Comment@80..89 "# comment"
+  Newline@89..90 "\n"
+  Newline@90..91 "\n"
+  Pipeline@91..99
+    Pipe@91..92 "|"
+    Whitespace@92..93 " "
+    PipelineElement@93..99
+      Word@93..99 "length"
+  Newline@99..100 "\n"
+  Newline@100..101 "\n"
+  Pipeline@101..115
+    PipelineElement@101..103
+      Word@101..103 "ls"
+    Whitespace@103..104 " "
+    Pipe@104..105 "|"
+    Newline@105..106 "\n"
+    Newline@106..107 "\n"
+    Pipe@107..108 "|"
+    Whitespace@108..109 " "
+    PipelineElement@109..115
+      Word@109..115 "length"
+  Newline@115..116 "\n"
+  Newline@116..117 "\n"
+  Pipeline@117..121
+    PipelineElement@117..119
+      Word@117..119 "ls"
+    Whitespace@119..120 " "
+    Pipe@120..121 "|"
+  Newline@121..122 "\n"
+  Newline@122..123 "\n"
+  Newline@123..124 "\n"
+  Pipeline@124..132
+    Pipe@124..125 "|"
+    Whitespace@125..126 " "
+    PipelineElement@126..132
+      Word@126..132 "length"
+  Newline@132..133 "\n"
