@@ -166,7 +166,8 @@ impl<'a> Lexer<'a> {
     fn item(&mut self) -> Result<SyntaxKind, LexError> {
         let start = self.pos;
         let mut closers = Vec::new();
-        let mut first_string_end = None;
+        // A string that opens at `start`, with its kind and end.
+        let mut leading_string = None;
 
         while let Some(byte) = self.peek()
             && !(closers.is_empty() && self.mode.is_terminator(byte))
@@ -179,12 +180,23 @@ impl<'a> Lexer<'a> {
                     self.comment_in_item(closers.is_empty());
                 },
                 b'\'' | b'"' | b'`' => {
-                    self.string(byte, byte != b'`' && prev == Some(b'$'))?;
-                    first_string_end.get_or_insert(self.pos);
+                    let interpolated = byte != b'`' && prev == Some(b'$');
+                    let string_start = at - usize::from(interpolated);
+                    self.string(string_start, byte, interpolated)?;
+                    if string_start == start {
+                        let kind = if interpolated {
+                            SyntaxKind::InterpString
+                        } else {
+                            SyntaxKind::String
+                        };
+                        leading_string = Some((kind, self.pos));
+                    }
                 },
                 b'r' if self.peek() == Some(b'#') => {
-                    self.raw_string()?;
-                    first_string_end.get_or_insert(self.pos);
+                    self.raw_string(at)?;
+                    if at == start {
+                        leading_string = Some((SyntaxKind::RawString, self.pos));
+                    }
                 },
                 b'[' => closers.push((b']', at)),
                 b'{' => closers.push((b'}', at)),
@@ -206,10 +218,10 @@ impl<'a> Lexer<'a> {
         if self.peek() == Some(b'|') && is_redirection(&self.src[start..self.pos]) {
             self.pos += 1;
         }
-        Ok(item_kind(
-            &self.src[start..self.pos],
-            first_string_end == Some(self.pos),
-        ))
+        Ok(match leading_string {
+            Some((kind, end)) if end == self.pos => kind,
+            _ => operator_kind(&self.src[start..self.pos]).unwrap_or(SyntaxKind::Word),
+        })
     }
 
     fn comment_in_item(&mut self, top_level: bool) {
@@ -228,10 +240,11 @@ impl<'a> Lexer<'a> {
     }
 
     /// Consumes a string after its opening quote.
+    /// The opener starts at `start`, on the `$` if interpolated.
     /// In an interpolated string, `(` opens a subexpression.
     /// Quotes and parens nest inside it.
-    fn string(&mut self, quote: u8, interpolated: bool) -> Result<(), LexError> {
-        let opener = self.pos - 1 - usize::from(interpolated)..self.pos;
+    fn string(&mut self, start: usize, quote: u8, interpolated: bool) -> Result<(), LexError> {
+        let opener = start..self.pos;
         let mut closers = vec![quote];
         let mut outer_paren = None;
         while let Some(&closer) = closers.last() {
@@ -261,9 +274,8 @@ impl<'a> Lexer<'a> {
         Err(LexError::new(LexErrorKind::Unclosed, range))
     }
 
-    /// Consumes a raw string after its `r`.
-    fn raw_string(&mut self) -> Result<(), LexError> {
-        let start = self.pos - 1;
+    /// Consumes a raw string after its `r`, which is at `start`.
+    fn raw_string(&mut self, start: usize) -> Result<(), LexError> {
         let hashes = self.rest().iter().take_while(|&&b| b == b'#').count();
         self.pos += hashes;
         if self.peek() != Some(b'\'') {
@@ -285,16 +297,6 @@ impl<'a> Lexer<'a> {
         };
         self.pos += offset + closer.len();
         Ok(())
-    }
-}
-
-/// The kind of an item that lexed without errors.
-fn item_kind(text: &[u8], first_string_ends_item: bool) -> SyntaxKind {
-    match text {
-        [b'\'' | b'"' | b'`', ..] if first_string_ends_item => SyntaxKind::String,
-        [b'$', b'\'' | b'"', ..] if first_string_ends_item => SyntaxKind::InterpString,
-        [b'r', b'#', ..] if first_string_ends_item => SyntaxKind::RawString,
-        _ => operator_kind(text).unwrap_or(SyntaxKind::Word),
     }
 }
 
