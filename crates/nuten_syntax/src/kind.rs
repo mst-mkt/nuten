@@ -89,6 +89,9 @@ syntax_kinds! {
     Root,
     /// A statement. Ends before `;`, a line break, or the end of the file.
     Pipeline,
+    /// A command of a `Pipeline`. Ends before `|`, `;`, a line break, or the end of the file.
+    /// A `|` with nothing before or after it, as in `| ls` or `ls | | first`, yields no element.
+    PipelineElement,
 }
 
 impl SyntaxKind {

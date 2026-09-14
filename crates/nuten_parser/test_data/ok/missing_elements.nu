@@ -1,0 +1,7 @@
+| ls
+
+ls | | first
+
+|
+
+ls |

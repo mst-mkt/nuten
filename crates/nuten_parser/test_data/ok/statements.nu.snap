@@ -6,34 +6,40 @@ Root@0..58
   Comment@0..9 "# leading"
   Newline@9..10 "\n"
   Pipeline@10..12
-    Word@10..12 "ls"
+    PipelineElement@10..12
+      Word@10..12 "ls"
   Semicolon@12..13 ";"
   Whitespace@13..14 " "
   Pipeline@14..17
-    Word@14..17 "pwd"
+    PipelineElement@14..17
+      Word@14..17 "pwd"
   Whitespace@17..18 " "
   Semicolon@18..19 ";"
   Newline@19..20 "\n"
   Pipeline@20..22
-    Word@20..22 "ls"
+    PipelineElement@20..22
+      Word@20..22 "ls"
   Whitespace@22..23 " "
   Semicolon@23..24 ";"
   Semicolon@24..25 ";"
   Whitespace@25..26 " "
   Pipeline@26..29
-    Word@26..29 "pwd"
+    PipelineElement@26..29
+      Word@26..29 "pwd"
   Whitespace@29..30 " "
   Comment@30..40 "# trailing"
   Newline@40..41 "\n"
   Newline@41..42 "\n"
   Whitespace@42..44 "  "
   Pipeline@44..50
-    Word@44..48 "echo"
-    Whitespace@48..49 " "
-    Word@49..50 "a"
+    PipelineElement@44..50
+      Word@44..48 "echo"
+      Whitespace@48..49 " "
+      Word@49..50 "a"
   Newline@50..51 "\n"
   Pipeline@51..57
-    Word@51..55 "echo"
-    Whitespace@55..56 " "
-    Word@56..57 "b"
+    PipelineElement@51..57
+      Word@51..55 "echo"
+      Whitespace@55..56 " "
+      Word@56..57 "b"
   Newline@57..58 "\n"
