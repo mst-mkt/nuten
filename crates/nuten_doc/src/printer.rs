@@ -1,6 +1,6 @@
 //! Prints a document as text.
 
-use std::iter;
+use std::{iter, mem};
 
 use crate::{Document, Element, LineMode, TextWidth, element::columns};
 
@@ -51,6 +51,7 @@ pub fn print(document: &Document<'_>, options: &PrinterOptions) -> String {
                 element,
             })
             .collect(),
+        line_suffixes: Vec::new(),
         out: String::new(),
         pending_indent: None,
         column: 0,
@@ -65,6 +66,8 @@ struct Printer<'a> {
     options: &'a PrinterOptions,
     /// What is left to print, the next element on top.
     stack: Vec<Frame<'a>>,
+    /// Held back for the next line break, in order.
+    line_suffixes: Vec<Suffix<'a>>,
     out: String,
     pending_indent: Option<u32>,
     /// Columns taken on the current line, a pending indent included.
@@ -78,6 +81,16 @@ struct Frame<'a> {
     element: &'a Element<'a>,
 }
 
+/// The contents of a `LineSuffix`, with the indent and mode of its place.
+#[derive(Debug, Clone, Copy)]
+struct Suffix<'a> {
+    indent: u32,
+    mode: Mode,
+    elements: &'a [Element<'a>],
+}
+
+const HARD_LINE_BREAK: Element<'static> = Element::Line(LineMode::Hard);
+
 /// Whether the `Line`s of the group around print flat or broken.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
@@ -87,29 +100,51 @@ enum Mode {
 
 impl<'a> Printer<'a> {
     fn print_all(&mut self) {
-        while let Some(Frame {
-            indent,
-            mode,
-            element,
-        }) = self.stack.pop()
-        {
+        loop {
+            let Some(frame) = self.stack.pop() else {
+                if self.line_suffixes.is_empty() {
+                    break;
+                }
+                self.flush_line_suffixes(None);
+                continue;
+            };
+            let Frame {
+                indent,
+                mode,
+                element,
+            } = frame;
             match element {
                 Element::Text {
                     text,
                     width,
                 } => self.push_text(text, *width),
-                Element::Line(LineMode::Empty) => self.push_line_breaks(indent, 2),
-                Element::Line(LineMode::Hard) => self.push_line_breaks(indent, 1),
-                Element::Line(LineMode::Soft | LineMode::SoftOrSpace) if mode == Mode::Break => {
-                    self.push_line_breaks(indent, 1);
+                Element::Line(line_mode) if breaks_line(*line_mode, mode) => {
+                    if self.line_suffixes.is_empty() {
+                        let breaks = if *line_mode == LineMode::Empty { 2 } else { 1 };
+                        self.push_line_breaks(indent, breaks);
+                    } else {
+                        self.flush_line_suffixes(Some(frame));
+                    }
                 },
                 Element::Space | Element::Line(LineMode::SoftOrSpace) => {
                     self.push_text(" ", TextWidth::Width(1));
                 },
-                Element::Line(LineMode::Soft)
-                | Element::ExpandParent
-                | Element::LineSuffixBoundary => {},
-                Element::LineSuffix(elements) => self.push_elements(indent, mode, elements),
+                Element::LineSuffixBoundary if !self.line_suffixes.is_empty() => {
+                    // In break mode, so that the suffixes measure it as the
+                    // end of the line.
+                    self.flush_line_suffixes(Some(Frame {
+                        indent,
+                        mode: Mode::Break,
+                        element: &HARD_LINE_BREAK,
+                    }));
+                },
+                // Only `Soft` in flat mode reaches this arm among the lines.
+                Element::Line(_) | Element::ExpandParent | Element::LineSuffixBoundary => {},
+                Element::LineSuffix(elements) => self.line_suffixes.push(Suffix {
+                    indent,
+                    mode,
+                    elements,
+                }),
                 Element::Indent(elements) => self.push_elements(indent + 1, mode, elements),
                 Element::Group(elements) => {
                     let mode = if mode == Mode::Flat || self.fits(elements) {
@@ -129,11 +164,14 @@ impl<'a> Printer<'a> {
     /// A hard line break, `ExpandParent`, or multi-line text in `elements`
     /// never fits, even inside a `LineSuffix`, so every group around one
     /// breaks. This replaces a separate pass that marks such groups.
-    /// The width of a `LineSuffix` does not count.
+    /// The width of a `LineSuffix` does not count, and a
+    /// `LineSuffixBoundary` after one ends the line: what follows it is not
+    /// measured.
     fn fits(&self, elements: &[Element<'_>]) -> bool {
         let Some(mut remaining) = self.options.line_width.checked_sub(self.column) else {
             return false;
         };
+        let mut has_line_suffix = !self.line_suffixes.is_empty();
         let mut queue: Vec<(Mode, &Element<'_>)> =
             elements.iter().rev().map(|e| (Mode::Flat, e)).collect();
         // Every frame is in break mode here: a group inside a flat group is
@@ -175,10 +213,14 @@ impl<'a> Printer<'a> {
                     _,
                 ) => *width,
                 (Element::Space | Element::Line(LineMode::SoftOrSpace), _) => 1,
+                (Element::LineSuffix(_), _) => {
+                    has_line_suffix = true;
+                    0
+                },
+                (Element::LineSuffixBoundary, _) if has_line_suffix => return true,
                 (
                     Element::Line(LineMode::Soft)
                     | Element::ExpandParent
-                    | Element::LineSuffix(_)
                     | Element::LineSuffixBoundary,
                     _,
                 ) => 0,
@@ -191,6 +233,17 @@ impl<'a> Printer<'a> {
                 return false;
             };
             remaining = left;
+        }
+    }
+
+    /// Puts the held-back suffixes on the stack, in order, before `then`.
+    /// A `LineSuffix` among them is held back again.
+    fn flush_line_suffixes(&mut self, then: Option<Frame<'a>>) {
+        if let Some(then) = then {
+            self.stack.push(then);
+        }
+        for suffix in mem::take(&mut self.line_suffixes).into_iter().rev() {
+            self.push_elements(suffix.indent, suffix.mode, suffix.elements);
         }
     }
 
@@ -243,6 +296,11 @@ impl<'a> Printer<'a> {
     }
 }
 
+/// Whether a `Line` prints a line break in `mode`.
+fn breaks_line(line_mode: LineMode, mode: Mode) -> bool {
+    matches!(line_mode, LineMode::Hard | LineMode::Empty) || mode == Mode::Break
+}
+
 /// The same elements `fits` rejects in flat mode, through a `LineSuffix`.
 fn has_forced_break(elements: &[Element<'_>]) -> bool {
     elements.iter().any(|element| match element {
@@ -278,7 +336,7 @@ mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
     use crate::{
         Document, Element, empty_line, expand_parent, group, hard_line_break, indent, line_suffix,
-        soft_line_break, soft_line_break_or_space, space, text,
+        line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
     };
 
     fn options(line_width: u32) -> PrinterOptions {
@@ -297,6 +355,10 @@ mod tests {
             },
             options,
         )
+    }
+
+    fn comment() -> Element<'static> {
+        line_suffix(vec![space(), text("# c")])
     }
 
     #[test]
@@ -599,5 +661,116 @@ mod tests {
             group(vec![text("c"), soft_line_break_or_space(), text("d")]),
         ];
         assert_eq!(printed(doc, &options(5)), "a\nbbc d");
+    }
+
+    #[test]
+    fn a_line_suffix_keeps_the_indent_and_mode_of_its_place() {
+        let doc = vec![
+            text("a"),
+            indent(vec![line_suffix(vec![hard_line_break(), text("# c")])]),
+            hard_line_break(),
+            text("b"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a\n  # c\nb");
+        let doc = vec![
+            group(vec![
+                text("a"),
+                line_suffix(vec![space(), text("# c"), soft_line_break(), text("!")]),
+                space(),
+                text("b"),
+            ]),
+            hard_line_break(),
+            text("d"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a b # c!\nd");
+    }
+
+    #[test]
+    fn a_boundary_in_a_flat_group_keeps_a_suffix_group_flat() {
+        let doc = vec![
+            text("a"),
+            line_suffix(vec![group(vec![
+                text(" #"),
+                soft_line_break_or_space(),
+                text("c"),
+            ])]),
+            group(vec![line_suffix_boundary(), text("b")]),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a # c\nb");
+    }
+
+    #[test]
+    fn a_line_suffix_waits_for_the_next_line_break() {
+        let doc = vec![
+            text("a"),
+            comment(),
+            space(),
+            text("b"),
+            hard_line_break(),
+            text("c"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a b # c\nc");
+        let doc = vec![text("a"), comment(), empty_line(), text("b")];
+        assert_eq!(printed(doc, &options(80)), "a # c\n\nb");
+        let doc = vec![group(vec![
+            text("a"),
+            comment(),
+            soft_line_break_or_space(),
+            text("b"),
+        ])];
+        assert_eq!(printed(doc.clone(), &options(80)), "a b # c");
+        assert_eq!(printed(doc, &options(2)), "a # c\nb");
+    }
+
+    #[test]
+    fn line_suffixes_keep_their_order() {
+        let doc = vec![
+            text("a"),
+            line_suffix(vec![text(" x")]),
+            line_suffix(vec![text(" y")]),
+            hard_line_break(),
+            text("b"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a x y\nb");
+    }
+
+    #[test]
+    fn a_line_suffix_at_the_end_still_prints() {
+        let doc = vec![text("a"), comment()];
+        assert_eq!(printed(doc, &options(80)), "a # c");
+    }
+
+    #[test]
+    fn a_boundary_breaks_the_line_only_after_a_suffix() {
+        let doc = vec![text("a"), comment(), line_suffix_boundary(), text("b")];
+        assert_eq!(printed(doc, &options(80)), "a # c\nb");
+        let doc = vec![text("a"), line_suffix_boundary(), text("b")];
+        assert_eq!(printed(doc, &options(80)), "ab");
+    }
+
+    #[test]
+    fn a_line_suffix_takes_no_width() {
+        let doc = vec![group(vec![
+            text("aa"),
+            line_suffix(vec![text(" # a long comment")]),
+            soft_line_break_or_space(),
+            text("bb"),
+        ])];
+        assert_eq!(printed(doc, &options(5)), "aa bb # a long comment");
+    }
+
+    #[test]
+    fn a_boundary_after_a_suffix_ends_the_line_when_measuring() {
+        let doc = vec![
+            text("aaa"),
+            comment(),
+            group(vec![
+                line_suffix_boundary(),
+                text("bbb"),
+                soft_line_break_or_space(),
+                text("ccc"),
+            ]),
+        ];
+        assert_eq!(printed(doc, &options(7)), "aaa # c\nbbb ccc");
     }
 }

@@ -19,9 +19,10 @@ pub enum Element<'a> {
     Line(LineMode),
     /// Breaks every group around it.
     ExpandParent,
-    /// Held back until just before the next line break.
+    /// Held back until just before the next line break, or the end of the
+    /// output, then printed with the indent and mode of its own place.
     LineSuffix(Vec<Element<'a>>),
-    /// A line break here if a line suffix is held back.
+    /// A hard line break here if a line suffix is held back.
     LineSuffixBoundary,
     /// Printed flat when it fits on the line, otherwise with its own `Line`s
     /// broken.
