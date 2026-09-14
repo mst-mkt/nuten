@@ -90,7 +90,8 @@ syntax_kinds! {
     /// A statement. Ends before `;`, the end of the file,
     /// or a line break, unless a `|` ends that line or, past any comment lines, starts the next.
     Pipeline,
-    /// An element of a `Pipeline`: a `Call` or an `ExternalCall`.
+    /// An element of a `Pipeline`: a `Call` or an `ExternalCall`, then any `Redirection`s.
+    /// Nu allows arguments after a redirection; they stay bare tokens.
     /// Ends before `|`, `;`, a line break, or the end of the file.
     /// A `|` with nothing before or after it, as in `| ls` or `ls | | first`, yields no element.
     PipelineElement,
@@ -98,6 +99,8 @@ syntax_kinds! {
     Call,
     /// Same as `Call`, but the name starts with `^`, so the command is external.
     ExternalCall,
+    /// A redirection to a file: the operator, such as `o>`, and its target.
+    Redirection,
 }
 
 impl SyntaxKind {

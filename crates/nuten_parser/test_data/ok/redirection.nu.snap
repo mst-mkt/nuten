@@ -1,0 +1,70 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/redirection.nu
+---
+Root@0..117
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..2
+        Word@0..2 "ls"
+      Whitespace@2..3 " "
+      Redirection@3..13
+        OutGt@3..5 "o>"
+        Whitespace@5..6 " "
+        Word@6..13 "out.txt"
+  Newline@13..14 "\n"
+  Pipeline@14..30
+    PipelineElement@14..30
+      Call@14..16
+        Word@14..16 "ls"
+      Whitespace@16..17 " "
+      Redirection@17..30
+        ErrGtGt@17..22 "err>>"
+        Whitespace@22..23 " "
+        Word@23..30 "err.log"
+  Newline@30..31 "\n"
+  Pipeline@31..53
+    PipelineElement@31..53
+      Call@31..33
+        Word@31..33 "ls"
+      Whitespace@33..34 " "
+      Redirection@34..53
+        OutErrGt@34..38 "o+e>"
+        Whitespace@38..39 " "
+        String@39..53 "\"all logs.txt\""
+  Newline@53..54 "\n"
+  Pipeline@54..88
+    PipelineElement@54..79
+      Call@54..56
+        Word@54..56 "ls"
+      Whitespace@56..57 " "
+      Redirection@57..68
+        OutGtGt@57..60 "o>>"
+        Whitespace@60..61 " "
+        Word@61..68 "out.txt"
+      Whitespace@68..69 " "
+      Redirection@69..79
+        ErrGt@69..71 "e>"
+        Whitespace@71..72 " "
+        Word@72..79 "err.log"
+    Whitespace@79..80 " "
+    Pipe@80..81 "|"
+    Whitespace@81..82 " "
+    PipelineElement@82..88
+      Call@82..88
+        Word@82..88 "length"
+  Newline@88..89 "\n"
+  Pipeline@89..116
+    PipelineElement@89..116
+      ExternalCall@89..96
+        Word@89..94 "^echo"
+        Whitespace@94..95 " "
+        Word@95..96 "a"
+      Whitespace@96..97 " "
+      Redirection@97..114
+        OutErrGtGt@97..106 "out+err>>"
+        Whitespace@106..107 " "
+        Word@107..114 "out.txt"
+      Whitespace@114..115 " "
+      Word@115..116 "b"
+  Newline@116..117 "\n"

@@ -83,7 +83,16 @@ fn bump_newlines(p: &mut Parser<'_>) {
 
 fn pipeline_element(p: &mut Parser<'_>) {
     p.start(SyntaxKind::PipelineElement);
-    call(p);
+    if !p.peek().is_some_and(is_file_redirection) {
+        call(p);
+    }
+    while let Some(kind) = p.peek() {
+        match kind {
+            kind if ends_element(kind) => break,
+            kind if is_file_redirection(kind) => redirection(p),
+            _ => p.bump(),
+        }
+    }
     p.finish();
 }
 
@@ -94,7 +103,17 @@ fn call(p: &mut Parser<'_>) {
         SyntaxKind::Call
     };
     p.start(kind);
-    while p.peek().is_some_and(|kind| !ends_element(kind)) {
+    while p.peek().is_some_and(|kind| !ends_call(kind)) {
+        p.bump();
+    }
+    p.finish();
+}
+
+/// Nu wants an item right after the operator; anything else is left out.
+fn redirection(p: &mut Parser<'_>) {
+    p.start(SyntaxKind::Redirection);
+    p.bump();
+    if p.peek().is_some_and(is_item) {
         p.bump();
     }
     p.finish();
@@ -106,4 +125,31 @@ fn ends_statement(kind: SyntaxKind) -> bool {
 
 fn ends_element(kind: SyntaxKind) -> bool {
     kind == SyntaxKind::Pipe || ends_statement(kind)
+}
+
+fn ends_call(kind: SyntaxKind) -> bool {
+    is_file_redirection(kind) || ends_element(kind)
+}
+
+fn is_file_redirection(kind: SyntaxKind) -> bool {
+    matches!(
+        kind,
+        SyntaxKind::OutGt
+            | SyntaxKind::OutGtGt
+            | SyntaxKind::ErrGt
+            | SyntaxKind::ErrGtGt
+            | SyntaxKind::OutErrGt
+            | SyntaxKind::OutErrGtGt
+    )
+}
+
+fn is_item(kind: SyntaxKind) -> bool {
+    matches!(
+        kind,
+        SyntaxKind::Word
+            | SyntaxKind::String
+            | SyntaxKind::RawString
+            | SyntaxKind::InterpString
+            | SyntaxKind::Error
+    )
 }
