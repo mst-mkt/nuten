@@ -15,7 +15,9 @@
   outputs =
     inputs:
     let
-      forAllSystems = inputs.nixpkgs.lib.genAttrs [
+      inherit (inputs.nixpkgs) lib;
+
+      forAllSystems = lib.genAttrs [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
@@ -32,8 +34,16 @@
               "clippy"
             ]
           );
+          sourceOf =
+            fileset:
+            lib.fileset.toSource {
+              root = ./.;
+              inherit fileset;
+            };
+          cargoSources = craneLib.fileset.commonCargoSources ./.;
+          testData = lib.fileset.fileFilter (file: file.hasExt "nu" || file.hasExt "snap") ./crates;
           commonArgs = {
-            src = craneLib.cleanCargoSource ./.;
+            src = sourceOf cargoSources;
             strictDeps = true;
           };
           args = commonArgs // {
@@ -45,7 +55,13 @@
           clippy = craneLib.cargoClippy (
             args // { cargoClippyExtraArgs = "--all-targets -- --deny warnings"; }
           );
-          nextest = craneLib.cargoNextest (args // { cargoNextestExtraArgs = "--no-tests=pass"; });
+          nextest = craneLib.cargoNextest (
+            args
+            // {
+              src = sourceOf (lib.fileset.union cargoSources testData);
+              cargoNextestExtraArgs = "--no-tests=pass";
+            }
+          );
           doc = craneLib.cargoDoc (args // { env.RUSTDOCFLAGS = "--deny warnings"; });
         }
       );
