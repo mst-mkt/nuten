@@ -5,7 +5,7 @@ use std::vec;
 use nuten_syntax::SyntaxKind;
 
 use crate::{
-    ParseError, grammar,
+    ParseError, ParseErrorKind, grammar,
     lexer::{LexError, Lexed, Token},
 };
 
@@ -72,6 +72,27 @@ impl<'a> Parser<'a> {
         self.bump_skipped();
         assert!(self.pos < self.tokens.len(), "bump at the end");
         self.bump_one();
+    }
+
+    /// Emits the next token inside an `Error` node, reporting `kind` at it.
+    ///
+    /// # Panics
+    ///
+    /// Panics at the end, or at an `Error` token, which already carries an
+    /// error.
+    pub(crate) fn bump_error(&mut self, kind: ParseErrorKind) {
+        let token = self.next_token().expect("bump_error at the end");
+        assert!(
+            token.kind != SyntaxKind::Error,
+            "bump_error at an Error token"
+        );
+        self.start(SyntaxKind::Error);
+        self.bump();
+        self.events.push(Event::Error(ParseError {
+            kind,
+            range: token.range,
+        }));
+        self.finish();
     }
 
     pub(crate) fn start(&mut self, kind: SyntaxKind) {

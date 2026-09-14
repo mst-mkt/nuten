@@ -1,0 +1,94 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/shell_operators.nu
+---
+Root@0..107
+  Pipeline@0..16
+    PipelineElement@0..16
+      Call@0..16
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Word@5..6 "a"
+        Whitespace@6..7 " "
+        Error@7..9
+          PipePipe@7..9 "||"
+        Whitespace@9..10 " "
+        Word@10..14 "echo"
+        Whitespace@14..15 " "
+        Word@15..16 "b"
+  Newline@16..17 "\n"
+  Pipeline@17..33
+    PipelineElement@17..33
+      Call@17..33
+        Word@17..21 "echo"
+        Whitespace@21..22 " "
+        Word@22..23 "a"
+        Whitespace@23..24 " "
+        Error@24..26
+          Word@24..26 "&&"
+        Whitespace@26..27 " "
+        Word@27..31 "echo"
+        Whitespace@31..32 " "
+        Word@32..33 "b"
+  Newline@33..34 "\n"
+  Pipeline@34..51
+    PipelineElement@34..51
+      ExternalCall@34..51
+        Word@34..38 "^cat"
+        Whitespace@38..39 " "
+        Word@39..40 "x"
+        Whitespace@40..41 " "
+        Error@41..43
+          Word@41..43 "2>"
+        Whitespace@43..44 " "
+        Word@44..51 "err.log"
+  Newline@51..52 "\n"
+  Pipeline@52..63
+    PipelineElement@52..63
+      ExternalCall@52..63
+        Word@52..56 "^cat"
+        Whitespace@56..57 " "
+        Word@57..58 "x"
+        Whitespace@58..59 " "
+        Error@59..63
+          Word@59..63 "2>&1"
+  Newline@63..64 "\n"
+  Pipeline@64..78
+    PipelineElement@64..78
+      Call@64..78
+        Word@64..68 "echo"
+        Whitespace@68..69 " "
+        Word@69..70 "a"
+        Whitespace@70..71 " "
+        Error@71..74
+          Word@71..74 "o>|"
+        Whitespace@74..75 " "
+        Word@75..78 "cat"
+  Newline@78..79 "\n"
+  Pipeline@79..88
+    PipelineElement@79..88
+      Call@79..88
+        Error@79..81
+          PipePipe@79..81 "||"
+        Whitespace@81..82 " "
+        Word@82..86 "echo"
+        Whitespace@86..87 " "
+        Word@87..88 "a"
+  Newline@88..89 "\n"
+  Pipeline@89..106
+    PipelineElement@89..106
+      Call@89..106
+        Word@89..93 "echo"
+        Whitespace@93..94 " "
+        String@94..98 "\"&&\""
+        Whitespace@98..99 " "
+        Word@99..102 "2>>"
+        Whitespace@102..103 " "
+        Word@103..106 "x2>"
+  Newline@106..107 "\n"
+error 7..9 "||": ShellOrOr
+error 24..26 "&&": ShellAndAnd
+error 41..43 "2>": ShellErrRedirect
+error 59..63 "2>&1": ShellOutErrRedirect
+error 71..74 "o>|": OutPipe
+error 79..81 "||": ShellOrOr

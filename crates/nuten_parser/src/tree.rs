@@ -15,6 +15,7 @@ pub(crate) fn build(src: &str, events: &[Event]) -> Parsed {
             Event::Finish => builder.finish_node(),
         }
     }
+    errors.sort_by_key(|error| error.range.start());
     Parsed {
         green: builder.finish(),
         errors,

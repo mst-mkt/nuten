@@ -39,6 +39,16 @@ pub struct ParseError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParseErrorKind {
     Lex(LexErrorKind),
+    /// `||`, which nu spells `or`.
+    ShellOrOr,
+    /// `&&`, which nu spells `and` or `;`.
+    ShellAndAnd,
+    /// `2>`, which nu spells `e>`.
+    ShellErrRedirect,
+    /// `2>&1`, which nu spells `o+e>`.
+    ShellOutErrRedirect,
+    /// `o>|` or `out>|`, which is the same as `|`.
+    OutPipe,
 }
 
 impl From<LexError> for ParseError {

@@ -2,7 +2,7 @@
 
 use nuten_syntax::SyntaxKind;
 
-use crate::parser::Parser;
+use crate::{ParseErrorKind, parser::Parser};
 
 pub(crate) fn file(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
@@ -92,7 +92,7 @@ fn pipeline_element(p: &mut Parser<'_>) {
         match kind {
             kind if ends_element(kind) => break,
             kind if is_file_redirection(kind) => redirection(p),
-            _ => p.bump(),
+            _ => item(p),
         }
     }
     p.finish();
@@ -106,7 +106,7 @@ fn call(p: &mut Parser<'_>) {
     };
     p.start(kind);
     while p.peek().is_some_and(|kind| !ends_call(kind)) {
-        p.bump();
+        item(p);
     }
     p.finish();
 }
@@ -116,9 +116,16 @@ fn redirection(p: &mut Parser<'_>) {
     p.start(SyntaxKind::Redirection);
     p.bump();
     if p.peek().is_some_and(is_item) {
-        p.bump();
+        item(p);
     }
     p.finish();
+}
+
+fn item(p: &mut Parser<'_>) {
+    match p.peek_text().and_then(shell_operator) {
+        Some(kind) => p.bump_error(kind),
+        None => p.bump(),
+    }
 }
 
 fn ends_statement(kind: SyntaxKind) -> bool {
@@ -150,6 +157,19 @@ fn is_file_redirection(kind: SyntaxKind) -> bool {
             | SyntaxKind::OutErrGt
             | SyntaxKind::OutErrGtGt
     )
+}
+
+/// Nu rejects `||`, `&&`, `2>`, `2>&1`, and `o>|` wherever they stand alone.
+fn shell_operator(text: &str) -> Option<ParseErrorKind> {
+    let kind = match text {
+        "||" => ParseErrorKind::ShellOrOr,
+        "&&" => ParseErrorKind::ShellAndAnd,
+        "2>" => ParseErrorKind::ShellErrRedirect,
+        "2>&1" => ParseErrorKind::ShellOutErrRedirect,
+        "o>|" | "out>|" => ParseErrorKind::OutPipe,
+        _ => return None,
+    };
+    Some(kind)
 }
 
 fn is_item(kind: SyntaxKind) -> bool {
