@@ -35,24 +35,37 @@ fn pipeline(p: &mut Parser) {
 /// which must not end with trivia.
 fn line_end_continuation(p: &mut Parser) {
     if p.peek() == Some(SyntaxKind::Newline) && next_line_continues(p) {
-        while p.peek() == Some(SyntaxKind::Newline) {
-            p.bump();
-        }
+        bump_newlines(p);
     }
 }
 
 fn next_line_continues(p: &Parser) -> bool {
-    let mut kinds = p
-        .remaining_kinds()
-        .filter(|&kind| kind != SyntaxKind::Whitespace);
-    while kinds.any(|kind| kind == SyntaxKind::Newline) {
-        match kinds.next() {
-            Some(SyntaxKind::Comment) => {},
-            Some(kind) => return !ends_statement(kind),
-            None => return false,
-        }
+    line_start(&mut next_lines(p)).is_some_and(|kind| !ends_statement(kind))
+}
+
+/// The tokens after the current line, whitespace left out.
+fn next_lines(p: &Parser) -> impl Iterator<Item = SyntaxKind> {
+    p.remaining_kinds()
+        .filter(|&kind| kind != SyntaxKind::Whitespace)
+        .skip_while(|&kind| kind != SyntaxKind::Newline)
+        .skip(1)
+}
+
+/// The first token of a line, past any comment lines.
+/// `Newline` for a blank line, `None` at the end of the file.
+fn line_start(lines: &mut impl Iterator<Item = SyntaxKind>) -> Option<SyntaxKind> {
+    let mut first = lines.next();
+    while first == Some(SyntaxKind::Comment) {
+        lines.next();
+        first = lines.next();
     }
-    false
+    first
+}
+
+fn bump_newlines(p: &mut Parser) {
+    while p.peek() == Some(SyntaxKind::Newline) {
+        p.bump();
+    }
 }
 
 fn pipeline_element(p: &mut Parser) {
