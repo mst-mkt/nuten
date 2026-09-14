@@ -52,6 +52,13 @@ impl Parser {
             .find(|&kind| !is_skipped(kind))
     }
 
+    /// The kinds of every token ahead, whitespace and comments included.
+    /// Only for deciding whether a line continues; everything else looks
+    /// through `peek`.
+    pub(crate) fn remaining_kinds(&self) -> impl Iterator<Item = SyntaxKind> {
+        self.tokens[self.pos..].iter().map(|token| token.kind)
+    }
+
     /// Emits the next token.
     ///
     /// # Panics

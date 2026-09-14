@@ -87,7 +87,8 @@ syntax_kinds! {
 
     // Nodes. Only Root starts or ends with trivia.
     Root,
-    /// A statement. Ends before `;`, a line break, or the end of the file.
+    /// A statement. Ends before `;`, the end of the file,
+    /// or a line break, unless a `|` ends that line.
     Pipeline,
     /// A command of a `Pipeline`. Ends before `|`, `;`, a line break, or the end of the file.
     /// A `|` with nothing before or after it, as in `| ls` or `ls | | first`, yields no element.
