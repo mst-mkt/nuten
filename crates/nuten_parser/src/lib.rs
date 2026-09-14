@@ -56,6 +56,14 @@ pub enum ParseErrorKind {
     /// below it. A blank line or a line break at the very end makes nu
     /// accept it.
     PipeAtEof,
+    /// A redirection with no command before it to apply to.
+    RedirectionAtHead,
+    /// A file redirection without a target item right after it on the same
+    /// line. The operators of other shells do not count as one.
+    /// Reported at the operator, where nu points at what follows it.
+    MissingRedirectionTarget,
+    /// A redirection of a stream the element already redirects.
+    MultipleRedirections,
 }
 
 impl From<LexError> for ParseError {

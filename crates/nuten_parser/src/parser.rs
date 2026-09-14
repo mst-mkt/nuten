@@ -48,12 +48,24 @@ pub(crate) struct Parser<'a> {
 impl<'a> Parser<'a> {
     /// The kind of the next token, or `None` at the end.
     pub(crate) fn peek(&self) -> Option<SyntaxKind> {
-        self.next_token().map(|token| token.kind)
+        self.nth(0)
     }
 
     /// The text of the next token, or `None` at the end.
     pub(crate) fn peek_text(&self) -> Option<&'a str> {
-        self.next_token().map(|token| &self.src[token.range])
+        self.nth_text(0)
+    }
+
+    /// The kind of the `n`th token ahead, `0` being the next, or `None` past
+    /// the end.
+    pub(crate) fn nth(&self, n: usize) -> Option<SyntaxKind> {
+        self.nth_token(n).map(|token| token.kind)
+    }
+
+    /// The text of the `n`th token ahead, `0` being the next, or `None` past
+    /// the end.
+    pub(crate) fn nth_text(&self, n: usize) -> Option<&'a str> {
+        self.nth_token(n).map(|token| &self.src[token.range])
     }
 
     /// The kind of the last token emitted, trivia aside.
@@ -90,7 +102,7 @@ impl<'a> Parser<'a> {
     /// Panics at the end, or at an `Error` token, which already carries an
     /// error.
     pub(crate) fn bump_error(&mut self, kind: ParseErrorKind) {
-        let token = self.next_token().expect("bump_error at the end");
+        let token = self.nth_token(0).expect("bump_error at the end");
         assert!(
             token.kind != SyntaxKind::Error,
             "bump_error at an Error token"
@@ -113,11 +125,12 @@ impl<'a> Parser<'a> {
         self.events.push(Event::Finish);
     }
 
-    fn next_token(&self) -> Option<Token> {
+    fn nth_token(&self, n: usize) -> Option<Token> {
         self.tokens[self.pos..]
             .iter()
             .copied()
-            .find(|token| !is_skipped(token.kind))
+            .filter(|token| !is_skipped(token.kind))
+            .nth(n)
     }
 
     fn bump_skipped(&mut self) {

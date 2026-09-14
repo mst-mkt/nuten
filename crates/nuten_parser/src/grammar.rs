@@ -18,21 +18,36 @@ pub(crate) fn file(p: &mut Parser<'_>) {
 
 fn pipeline(p: &mut Parser<'_>) {
     p.start(SyntaxKind::Pipeline);
+    let mut element = None;
     while let Some(kind) = p.peek() {
         match kind {
-            SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
-            SyntaxKind::Pipe => {
-                p.bump();
-                line_end_continuation(p);
-            },
-            // Nu goes on to the next line only after a plain `|`.
-            kind if is_pipe(kind) => p.bump(),
+            kind if is_pipe(kind) => pipe(p, kind, element.take()),
             SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
             kind if ends_statement(kind) => break,
-            _ => pipeline_element(p),
+            _ => element = pipeline_element(p),
         }
     }
     p.finish();
+}
+
+/// `element` is what the element before the pipe redirects;
+/// `None` when it has no command.
+fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>) {
+    match kind {
+        SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
+        SyntaxKind::Pipe => {
+            p.bump();
+            line_end_continuation(p);
+        },
+        // Nu goes on to the next line only after a plain `|`.
+        _ => match element {
+            None => p.bump_error(ParseErrorKind::RedirectionAtHead),
+            Some(redirected) if redirected.overlaps(Streams::of(kind)) => {
+                p.bump_error(ParseErrorKind::MultipleRedirections);
+            },
+            Some(_) => p.bump(),
+        },
+    }
 }
 
 /// Whether the `|` ahead is the last token of the file, past a trailing
@@ -105,19 +120,23 @@ fn bump_newlines(p: &mut Parser<'_>) {
     }
 }
 
-fn pipeline_element(p: &mut Parser<'_>) {
+/// Returns the streams the element redirects; `None` when it has no command.
+fn pipeline_element(p: &mut Parser<'_>) -> Option<Streams> {
     p.start(SyntaxKind::PipelineElement);
-    if !p.peek().is_some_and(is_file_redirection) {
+    let has_call = !p.peek().is_some_and(is_file_redirection);
+    if has_call {
         call(p);
     }
+    let mut redirected = has_call.then_some(Streams::default());
     while let Some(kind) = p.peek() {
         match kind {
             kind if ends_element(kind) => break,
-            kind if is_file_redirection(kind) => redirection(p),
+            kind if is_file_redirection(kind) => redirection(p, kind, redirected.as_mut()),
             _ => item(p),
         }
     }
     p.finish();
+    redirected
 }
 
 fn call(p: &mut Parser<'_>) {
@@ -133,12 +152,33 @@ fn call(p: &mut Parser<'_>) {
     p.finish();
 }
 
-/// Nu wants an item right after the operator; anything else is left out.
-fn redirection(p: &mut Parser<'_>) {
+/// `redirected` is what the element redirects so far; `None` when it has
+/// no command for the redirection to apply to.
+///
+/// Nu wants an item right after the operator; anything else is a missing
+/// target and stays outside the node.
+fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Streams>) {
     p.start(SyntaxKind::Redirection);
-    p.bump();
-    if p.peek().is_some_and(is_item) {
-        item(p);
+    let has_target =
+        p.nth(1).is_some_and(is_item) && p.nth_text(1).and_then(shell_operator).is_none();
+    let streams = Streams::of(kind);
+    let error = match redirected {
+        None => Some(ParseErrorKind::RedirectionAtHead),
+        Some(_) if !has_target => Some(ParseErrorKind::MissingRedirectionTarget),
+        Some(redirected) if redirected.overlaps(streams) => {
+            Some(ParseErrorKind::MultipleRedirections)
+        },
+        Some(redirected) => {
+            redirected.add(streams);
+            None
+        },
+    };
+    match error {
+        Some(error) => p.bump_error(error),
+        None => p.bump(),
+    }
+    if has_target {
+        p.bump();
     }
     p.finish();
 }
@@ -167,6 +207,40 @@ fn is_pipe(kind: SyntaxKind) -> bool {
         kind,
         SyntaxKind::Pipe | SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe
     )
+}
+
+/// Stdout and stderr, as what an operator redirects or an element has
+/// redirected.
+#[derive(Debug, Clone, Copy, Default)]
+struct Streams {
+    out: bool,
+    err: bool,
+}
+
+impl Streams {
+    fn of(kind: SyntaxKind) -> Streams {
+        let (out, err) = match kind {
+            SyntaxKind::OutGt | SyntaxKind::OutGtGt => (true, false),
+            SyntaxKind::ErrGt | SyntaxKind::ErrGtGt | SyntaxKind::ErrGtPipe => (false, true),
+            SyntaxKind::OutErrGt | SyntaxKind::OutErrGtGt | SyntaxKind::OutErrGtPipe => {
+                (true, true)
+            },
+            _ => unreachable!("{kind:?} is not a redirection"),
+        };
+        Streams {
+            out,
+            err,
+        }
+    }
+
+    fn overlaps(self, other: Streams) -> bool {
+        (self.out && other.out) || (self.err && other.err)
+    }
+
+    fn add(&mut self, other: Streams) {
+        self.out |= other.out;
+        self.err |= other.err;
+    }
 }
 
 fn is_file_redirection(kind: SyntaxKind) -> bool {
@@ -225,6 +299,20 @@ mod tests {
         assert_eq!(errors("ls |\n\n# c"), []);
         assert_eq!(errors("ls e>|"), []);
         assert_eq!(errors("ls | ;"), [ParseErrorKind::SemicolonAfterPipe]);
+    }
+
+    #[test]
+    fn redirection_target_is_missing_at_eof() {
+        assert_eq!(errors("ls o>"), [ParseErrorKind::MissingRedirectionTarget]);
+    }
+
+    #[test]
+    fn a_redirection_gets_one_error_at_most() {
+        assert_eq!(errors("o>"), [ParseErrorKind::RedirectionAtHead]);
+        assert_eq!(
+            errors("ls o> a o> | x"),
+            [ParseErrorKind::MissingRedirectionTarget]
+        );
     }
 
     #[test]
