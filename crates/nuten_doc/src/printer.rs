@@ -35,6 +35,9 @@ impl LineEnding {
     }
 }
 
+/// Spaces and tabs before a line break of the printer's go, even those of
+/// a text; the lines inside a text stay as they are. The output never
+/// starts with a line break.
 pub fn print(document: &Document<'_>, options: &PrinterOptions) -> String {
     let mut printer = Printer {
         options,
@@ -95,13 +98,10 @@ impl<'a> Printer<'a> {
                     text,
                     width,
                 } => self.push_text(text, *width),
-                Element::Line(LineMode::Empty) => {
-                    self.push_line_break(indent);
-                    self.push_line_break(indent);
-                },
-                Element::Line(LineMode::Hard) => self.push_line_break(indent),
+                Element::Line(LineMode::Empty) => self.push_line_breaks(indent, 2),
+                Element::Line(LineMode::Hard) => self.push_line_breaks(indent, 1),
                 Element::Line(LineMode::Soft | LineMode::SoftOrSpace) if mode == Mode::Break => {
-                    self.push_line_break(indent);
+                    self.push_line_breaks(indent, 1);
                 },
                 Element::Space | Element::Line(LineMode::SoftOrSpace) => {
                     self.push_text(" ", TextWidth::Width(1));
@@ -218,8 +218,26 @@ impl<'a> Printer<'a> {
         };
     }
 
-    fn push_line_break(&mut self, indent: u32) {
-        self.out.push_str(self.options.line_ending.as_str());
+    /// Ends the line, dropping the spaces and tabs before the break, with
+    /// `breaks` line breaks less those the output ends with already, a
+    /// text's own included. Prints nothing at the start of the output,
+    /// which counts as an empty line.
+    fn push_line_breaks(&mut self, indent: u32, breaks: usize) {
+        let trimmed = self.out.trim_end_matches([' ', '\t']).len();
+        self.out.truncate(trimmed);
+        let ending = self.options.line_ending.as_str();
+        let mut existing = if self.out.is_empty() { breaks } else { 0 };
+        let mut rest = self.out.as_str();
+        while existing < breaks {
+            let Some(before) = rest.strip_suffix(ending) else {
+                break;
+            };
+            rest = before;
+            existing += 1;
+        }
+        for _ in existing..breaks {
+            self.out.push_str(ending);
+        }
         self.pending_indent = Some(indent);
         self.column = indent * u32::from(self.options.indent_width);
     }
@@ -315,8 +333,90 @@ mod tests {
 
     #[test]
     fn a_space_at_the_start_of_a_line_comes_after_the_indent() {
-        let doc = vec![indent(vec![hard_line_break(), space(), text("b")])];
-        assert_eq!(printed(doc, &options(80)), "\n   b");
+        let doc = vec![
+            text("a"),
+            indent(vec![hard_line_break(), space(), text("b")]),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a\n   b");
+    }
+
+    #[test]
+    fn spaces_and_tabs_at_the_end_of_a_line_go() {
+        let doc = vec![
+            text("a "),
+            space(),
+            hard_line_break(),
+            text("b\t"),
+            empty_line(),
+            text("c"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a\nb\n\nc");
+    }
+
+    #[test]
+    fn line_breaks_in_a_row_collapse() {
+        let doc = vec![
+            text("a"),
+            hard_line_break(),
+            hard_line_break(),
+            text("b"),
+            hard_line_break(),
+            empty_line(),
+            text("c"),
+            empty_line(),
+            hard_line_break(),
+            text("d"),
+            empty_line(),
+            empty_line(),
+            text("e"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a\nb\n\nc\n\nd\n\ne");
+    }
+
+    #[test]
+    fn line_breaks_collapse_with_crlf_too() {
+        let doc = vec![
+            text("a "),
+            hard_line_break(),
+            hard_line_break(),
+            text("b"),
+            empty_line(),
+            empty_line(),
+            text("c"),
+        ];
+        let crlf = PrinterOptions {
+            line_ending: LineEnding::CrLf,
+            ..options(80)
+        };
+        assert_eq!(printed(doc, &crlf), "a\r\nb\r\n\r\nc");
+    }
+
+    #[test]
+    fn only_the_last_line_of_a_text_is_trimmed() {
+        let doc = vec![text("a \nb "), hard_line_break(), text("c")];
+        assert_eq!(printed(doc, &options(80)), "a \nb\nc");
+    }
+
+    #[test]
+    fn a_line_of_spaces_alone_goes() {
+        let doc = vec![
+            text("a"),
+            hard_line_break(),
+            space(),
+            hard_line_break(),
+            text("b"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a\nb");
+    }
+
+    #[test]
+    fn the_output_never_starts_with_a_line_break() {
+        let doc = vec![hard_line_break(), empty_line(), text("a")];
+        assert_eq!(printed(doc, &options(80)), "a");
+        let doc = vec![space(), hard_line_break(), text("a")];
+        assert_eq!(printed(doc, &options(80)), "a");
+        let doc = vec![indent(vec![hard_line_break(), text("a")])];
+        assert_eq!(printed(doc, &options(80)), "  a");
     }
 
     #[test]
@@ -343,12 +443,12 @@ mod tests {
 
     #[test]
     fn indent_width_sets_the_spaces_per_level() {
-        let doc = vec![indent(vec![hard_line_break(), text("b")])];
+        let doc = vec![text("a"), indent(vec![hard_line_break(), text("b")])];
         let wide = PrinterOptions {
             indent_width: 4,
             ..options(80)
         };
-        assert_eq!(printed(doc, &wide), "\n    b");
+        assert_eq!(printed(doc, &wide), "a\n    b");
     }
 
     #[test]
@@ -476,17 +576,20 @@ mod tests {
 
     #[test]
     fn the_indent_takes_columns() {
-        let doc = vec![indent(vec![
-            hard_line_break(),
-            group(vec![text("aa"), soft_line_break_or_space(), text("bb")]),
-        ])];
-        assert_eq!(printed(doc.clone(), &options(7)), "\n  aa bb");
-        assert_eq!(printed(doc.clone(), &options(6)), "\n  aa\n  bb");
+        let doc = vec![
+            text("a"),
+            indent(vec![
+                hard_line_break(),
+                group(vec![text("aa"), soft_line_break_or_space(), text("bb")]),
+            ]),
+        ];
+        assert_eq!(printed(doc.clone(), &options(7)), "a\n  aa bb");
+        assert_eq!(printed(doc.clone(), &options(6)), "a\n  aa\n  bb");
         let tabs = PrinterOptions {
             indent_style: IndentStyle::Tab,
             ..options(6)
         };
-        assert_eq!(printed(doc, &tabs), "\n\taa\n\tbb");
+        assert_eq!(printed(doc, &tabs), "a\n\taa\n\tbb");
     }
 
     #[test]

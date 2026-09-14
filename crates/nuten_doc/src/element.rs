@@ -37,9 +37,9 @@ pub enum LineMode {
     Soft,
     /// A space, or a line break.
     SoftOrSpace,
-    /// A line break either way.
+    /// A line break either way, unless the line is empty already.
     Hard,
-    /// A line break and a blank line either way.
+    /// A line break and a blank line either way, less what is there already.
     Empty,
 }
 
