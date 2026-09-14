@@ -17,6 +17,7 @@ nuten_syntax = { path = "crates/nuten_syntax" }
 
 insta = { version = "1.48.0", features = ["glob"] }
 rowan = "0.17.0"
+unicode-width = "0.2.2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
