@@ -1,6 +1,6 @@
 //! Lexer ported from `lex.rs` in nu-parser.
 
-use std::ops::Range;
+use std::{fmt, ops::Range};
 
 use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
@@ -46,6 +46,17 @@ pub enum LexErrorKind {
     /// `r#` not followed by `'`.
     /// The range covers `r` and the `#`s.
     MissingRawQuote,
+}
+
+/// One line.
+impl fmt::Display for LexErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            LexErrorKind::Unclosed => "unclosed quote or bracket",
+            LexErrorKind::UnmatchedCloser => "unmatched closing bracket",
+            LexErrorKind::MissingRawQuote => "`r#` with no `'` after it",
+        })
+    }
 }
 
 /// The part of nu's `lex` settings that decides where items end.

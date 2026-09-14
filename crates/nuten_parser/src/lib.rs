@@ -7,6 +7,8 @@ mod parser;
 mod test_support;
 mod tree;
 
+use std::fmt;
+
 use nuten_syntax::SyntaxNode;
 use rowan::{GreenNode, TextRange, TextSize};
 
@@ -66,6 +68,32 @@ pub enum ParseErrorKind {
     MultipleRedirections,
 }
 
+/// One line.
+impl fmt::Display for ParseErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            ParseErrorKind::Lex(kind) => return fmt::Display::fmt(kind, f),
+            ParseErrorKind::ShellOrOr => {
+                "`||` is not an operator; use `or` (`try` for the shell meaning)"
+            },
+            ParseErrorKind::ShellAndAnd => {
+                "`&&` is not an operator; use `and` (`;` for the shell meaning)"
+            },
+            ParseErrorKind::ShellErrRedirect => "`2>` is not a redirection; use `e>`",
+            ParseErrorKind::ShellOutErrRedirect => "`2>&1` is not a redirection; use `o+e>`",
+            ParseErrorKind::OutPipe => "redirecting stdout to a pipe is just `|`",
+            ParseErrorKind::SemicolonAfterPipe => "no command between `|` and `;`",
+            ParseErrorKind::PipeAtEof => "no command after `|`",
+            ParseErrorKind::RedirectionAtHead => "redirection with no command before it",
+            ParseErrorKind::MissingRedirectionTarget => "redirection with no target after it",
+            ParseErrorKind::MultipleRedirections => {
+                "redirection of a stream that is already redirected"
+            },
+        };
+        f.write_str(message)
+    }
+}
+
 impl From<LexError> for ParseError {
     fn from(error: LexError) -> Self {
         Self {
@@ -89,7 +117,7 @@ pub fn parse(src: &str) -> Parsed {
 mod tests {
     use nuten_syntax::SyntaxKind;
 
-    use super::{parse, test_support::short_inputs};
+    use super::{LexErrorKind, ParseErrorKind, parse, test_support::short_inputs};
 
     fn check_invariants(src: &str) {
         let parsed = parse(src);
@@ -127,5 +155,17 @@ mod tests {
     #[test]
     fn invariants_hold_for_all_short_inputs() {
         short_inputs().for_each(|src| check_invariants(&src));
+    }
+
+    #[test]
+    fn error_kinds_print_a_message() {
+        assert_eq!(
+            ParseErrorKind::Lex(LexErrorKind::Unclosed).to_string(),
+            "unclosed quote or bracket"
+        );
+        assert_eq!(
+            ParseErrorKind::PipeAtEof.to_string(),
+            "no command after `|`"
+        );
     }
 }
