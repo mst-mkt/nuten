@@ -57,15 +57,21 @@ impl TextWidth {
     /// characters, tabs included, take one.
     pub fn of(text: &str) -> TextWidth {
         if text.contains('\n') {
-            return TextWidth::Multiline;
-        }
-        let width = if text.is_ascii() {
-            text.len()
+            TextWidth::Multiline
         } else {
-            text.width()
-        };
-        TextWidth::Width(u32::try_from(width).unwrap_or(u32::MAX))
+            TextWidth::Width(columns(text))
+        }
     }
+}
+
+/// Columns `text` takes on one line; `text` has no line break.
+pub(crate) fn columns(text: &str) -> u32 {
+    let width = if text.is_ascii() {
+        text.len()
+    } else {
+        text.width()
+    };
+    u32::try_from(width).unwrap_or(u32::MAX)
 }
 
 #[cfg(test)]

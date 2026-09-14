@@ -2,7 +2,7 @@
 
 use std::iter;
 
-use crate::{Document, Element, LineMode};
+use crate::{Document, Element, LineMode, TextWidth, element::columns};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrinterOptions {
@@ -42,10 +42,15 @@ pub fn print(document: &Document<'_>, options: &PrinterOptions) -> String {
             .elements
             .iter()
             .rev()
-            .map(|element| (0, element))
+            .map(|element| Frame {
+                indent: 0,
+                mode: Mode::Break,
+                element,
+            })
             .collect(),
         out: String::new(),
         pending_indent: None,
+        column: 0,
     };
     printer.print_all();
     printer.out
@@ -55,42 +60,150 @@ pub fn print(document: &Document<'_>, options: &PrinterOptions) -> String {
 /// line stays empty.
 struct Printer<'a> {
     options: &'a PrinterOptions,
-    /// What is left to print, the next element on top, with its indent level.
-    stack: Vec<(u32, &'a Element<'a>)>,
+    /// What is left to print, the next element on top.
+    stack: Vec<Frame<'a>>,
     out: String,
     pending_indent: Option<u32>,
+    /// Columns taken on the current line, a pending indent included.
+    column: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Frame<'a> {
+    indent: u32,
+    mode: Mode,
+    element: &'a Element<'a>,
+}
+
+/// Whether the `Line`s of the group around print flat or broken.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Flat,
+    Break,
 }
 
 impl<'a> Printer<'a> {
     fn print_all(&mut self) {
-        while let Some((indent, element)) = self.stack.pop() {
+        while let Some(Frame {
+            indent,
+            mode,
+            element,
+        }) = self.stack.pop()
+        {
             match element {
                 Element::Text {
-                    text, ..
-                } => self.push_text(text),
-                Element::Space => self.push_text(" "),
+                    text,
+                    width,
+                } => self.push_text(text, *width),
                 Element::Line(LineMode::Empty) => {
                     self.push_line_break(indent);
                     self.push_line_break(indent);
                 },
-                Element::Line(_) => self.push_line_break(indent),
-                Element::ExpandParent | Element::LineSuffixBoundary => {},
-                Element::LineSuffix(elements) | Element::Group(elements) => {
-                    self.push_elements(indent, elements);
+                Element::Line(LineMode::Hard) => self.push_line_break(indent),
+                Element::Line(LineMode::Soft | LineMode::SoftOrSpace) if mode == Mode::Break => {
+                    self.push_line_break(indent);
                 },
-                Element::Indent(elements) => {
-                    self.push_elements(indent + 1, elements);
+                Element::Space | Element::Line(LineMode::SoftOrSpace) => {
+                    self.push_text(" ", TextWidth::Width(1));
+                },
+                Element::Line(LineMode::Soft)
+                | Element::ExpandParent
+                | Element::LineSuffixBoundary => {},
+                Element::LineSuffix(elements) => self.push_elements(indent, mode, elements),
+                Element::Indent(elements) => self.push_elements(indent + 1, mode, elements),
+                Element::Group(elements) => {
+                    let mode = if mode == Mode::Flat || self.fits(elements) {
+                        Mode::Flat
+                    } else {
+                        Mode::Break
+                    };
+                    self.push_elements(indent, mode, elements);
                 },
             }
         }
     }
 
-    fn push_elements(&mut self, indent: u32, elements: &'a [Element<'a>]) {
-        self.stack
-            .extend(elements.iter().rev().map(|element| (indent, element)));
+    /// Whether `elements` fit on the rest of the line when printed flat,
+    /// along with what follows them up to the next line break.
+    ///
+    /// A hard line break, `ExpandParent`, or multi-line text in `elements`
+    /// never fits, even inside a `LineSuffix`, so every group around one
+    /// breaks. This replaces a separate pass that marks such groups.
+    /// The width of a `LineSuffix` does not count.
+    fn fits(&self, elements: &[Element<'_>]) -> bool {
+        let Some(mut remaining) = self.options.line_width.checked_sub(self.column) else {
+            return false;
+        };
+        let mut queue: Vec<(Mode, &Element<'_>)> =
+            elements.iter().rev().map(|e| (Mode::Flat, e)).collect();
+        // Every frame is in break mode here: a group inside a flat group is
+        // never measured.
+        let mut rest = self.stack.iter().rev();
+        loop {
+            let next = queue
+                .pop()
+                .or_else(|| rest.next().map(|frame| (frame.mode, frame.element)));
+            let Some((mode, element)) = next else {
+                return true;
+            };
+            let width = match (element, mode) {
+                (
+                    Element::Line(LineMode::Hard | LineMode::Empty)
+                    | Element::ExpandParent
+                    | Element::Text {
+                        width: TextWidth::Multiline,
+                        ..
+                    },
+                    Mode::Flat,
+                ) => return false,
+                (Element::LineSuffix(elements), Mode::Flat) if has_forced_break(elements) => {
+                    return false;
+                },
+                (Element::Line(_), Mode::Break) => return true,
+                (
+                    Element::Text {
+                        width: TextWidth::Multiline,
+                        text,
+                    },
+                    Mode::Break,
+                ) => return columns(first_line(text)) <= remaining,
+                (
+                    Element::Text {
+                        width: TextWidth::Width(width),
+                        ..
+                    },
+                    _,
+                ) => *width,
+                (Element::Space | Element::Line(LineMode::SoftOrSpace), _) => 1,
+                (
+                    Element::Line(LineMode::Soft)
+                    | Element::ExpandParent
+                    | Element::LineSuffix(_)
+                    | Element::LineSuffixBoundary,
+                    _,
+                ) => 0,
+                (Element::Group(elements) | Element::Indent(elements), _) => {
+                    queue.extend(elements.iter().rev().map(|e| (mode, e)));
+                    0
+                },
+            };
+            let Some(left) = remaining.checked_sub(width) else {
+                return false;
+            };
+            remaining = left;
+        }
     }
 
-    fn push_text(&mut self, text: &str) {
+    fn push_elements(&mut self, indent: u32, mode: Mode, elements: &'a [Element<'a>]) {
+        self.stack
+            .extend(elements.iter().rev().map(|element| Frame {
+                indent,
+                mode,
+                element,
+            }));
+    }
+
+    fn push_text(&mut self, text: &str, width: TextWidth) {
         if let Some(indent) = self.pending_indent.take() {
             let (unit, count) = match self.options.indent_style {
                 IndentStyle::Tab => ('\t', indent),
@@ -99,42 +212,79 @@ impl<'a> Printer<'a> {
             self.out.extend(iter::repeat_n(unit, count as usize));
         }
         self.out.push_str(text);
+        self.column = match width {
+            TextWidth::Width(width) => self.column.saturating_add(width),
+            TextWidth::Multiline => columns(last_line(text)),
+        };
     }
 
     fn push_line_break(&mut self, indent: u32) {
         self.out.push_str(self.options.line_ending.as_str());
         self.pending_indent = Some(indent);
+        self.column = indent * u32::from(self.options.indent_width);
     }
+}
+
+/// The same elements `fits` rejects in flat mode, through a `LineSuffix`.
+fn has_forced_break(elements: &[Element<'_>]) -> bool {
+    elements.iter().any(|element| match element {
+        Element::Line(LineMode::Hard | LineMode::Empty)
+        | Element::ExpandParent
+        | Element::Text {
+            width: TextWidth::Multiline,
+            ..
+        } => true,
+        Element::LineSuffix(elements) | Element::Group(elements) | Element::Indent(elements) => {
+            has_forced_break(elements)
+        },
+        Element::Text {
+            ..
+        }
+        | Element::Space
+        | Element::Line(_)
+        | Element::LineSuffixBoundary => false,
+    })
+}
+
+fn first_line(text: &str) -> &str {
+    let first = text.split_once('\n').map_or(text, |(first, _)| first);
+    first.strip_suffix('\r').unwrap_or(first)
+}
+
+fn last_line(text: &str) -> &str {
+    text.rsplit_once('\n').map_or(text, |(_, last)| last)
 }
 
 #[cfg(test)]
 mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
-    use crate::{Document, Element, empty_line, hard_line_break, indent, space, text};
+    use crate::{
+        Document, Element, empty_line, expand_parent, group, hard_line_break, indent, line_suffix,
+        soft_line_break, soft_line_break_or_space, space, text,
+    };
 
-    fn printed(
-        elements: Vec<Element<'_>>,
-        indent_style: IndentStyle,
-        line_ending: LineEnding,
-    ) -> String {
-        let options = PrinterOptions {
-            line_width: 80,
-            indent_style,
+    fn options(line_width: u32) -> PrinterOptions {
+        PrinterOptions {
+            line_width,
+            indent_style: IndentStyle::Space,
             indent_width: 2,
-            line_ending,
-        };
+            line_ending: LineEnding::Lf,
+        }
+    }
+
+    fn printed(elements: Vec<Element<'_>>, options: &PrinterOptions) -> String {
         print(
             &Document {
                 elements,
             },
-            &options,
+            options,
         )
     }
 
     #[test]
     fn text_and_space_go_out_as_they_are() {
         let doc = vec![text("echo"), space(), text("a")];
-        assert_eq!(printed(doc, IndentStyle::Space, LineEnding::Lf), "echo a");
+        assert_eq!(printed(doc, &options(80)), "echo a");
     }
 
     #[test]
@@ -149,60 +299,202 @@ mod tests {
             hard_line_break(),
             text("d"),
         ];
-        assert_eq!(
-            printed(doc.clone(), IndentStyle::Space, LineEnding::Lf),
-            "a\n  b\n    c\nd"
-        );
-        assert_eq!(
-            printed(doc, IndentStyle::Tab, LineEnding::Lf),
-            "a\n\tb\n\t\tc\nd"
-        );
+        assert_eq!(printed(doc.clone(), &options(80)), "a\n  b\n    c\nd");
+        let tabs = PrinterOptions {
+            indent_style: IndentStyle::Tab,
+            ..options(80)
+        };
+        assert_eq!(printed(doc, &tabs), "a\n\tb\n\t\tc\nd");
     }
 
     #[test]
     fn indent_without_a_line_break_prints_nothing() {
         let doc = vec![indent(vec![text("a")])];
-        assert_eq!(printed(doc, IndentStyle::Space, LineEnding::Lf), "a");
+        assert_eq!(printed(doc, &options(80)), "a");
     }
 
     #[test]
     fn a_space_at_the_start_of_a_line_comes_after_the_indent() {
         let doc = vec![indent(vec![hard_line_break(), space(), text("b")])];
-        assert_eq!(printed(doc, IndentStyle::Space, LineEnding::Lf), "\n   b");
+        assert_eq!(printed(doc, &options(80)), "\n   b");
     }
 
     #[test]
     fn empty_lines_carry_no_indent() {
         let doc = vec![text("a"), indent(vec![empty_line(), text("b")])];
-        assert_eq!(printed(doc, IndentStyle::Space, LineEnding::Lf), "a\n\n  b");
+        assert_eq!(printed(doc, &options(80)), "a\n\n  b");
     }
 
     #[test]
     fn a_final_line_break_leaves_no_indent_behind() {
         let doc = vec![indent(vec![text("a"), hard_line_break()])];
-        assert_eq!(printed(doc, IndentStyle::Space, LineEnding::Lf), "a\n");
+        assert_eq!(printed(doc, &options(80)), "a\n");
     }
 
     #[test]
     fn line_ending_is_configurable() {
         let doc = vec![text("a"), indent(vec![hard_line_break(), text("b")])];
-        assert_eq!(
-            printed(doc, IndentStyle::Space, LineEnding::CrLf),
-            "a\r\n  b"
-        );
+        let crlf = PrinterOptions {
+            line_ending: LineEnding::CrLf,
+            ..options(80)
+        };
+        assert_eq!(printed(doc, &crlf), "a\r\n  b");
     }
 
     #[test]
     fn indent_width_sets_the_spaces_per_level() {
-        let options = PrinterOptions {
-            line_width: 80,
-            indent_style: IndentStyle::Space,
+        let doc = vec![indent(vec![hard_line_break(), text("b")])];
+        let wide = PrinterOptions {
             indent_width: 4,
-            line_ending: LineEnding::Lf,
+            ..options(80)
         };
-        let doc = Document {
-            elements: vec![indent(vec![hard_line_break(), text("b")])],
+        assert_eq!(printed(doc, &wide), "\n    b");
+    }
+
+    #[test]
+    fn a_group_stays_flat_up_to_the_line_width() {
+        let doc = || {
+            vec![group(vec![
+                text("aa"),
+                soft_line_break_or_space(),
+                text("bb"),
+                soft_line_break(),
+                text("cc"),
+            ])]
         };
-        assert_eq!(print(&doc, &options), "\n    b");
+        assert_eq!(printed(doc(), &options(7)), "aa bbcc");
+        assert_eq!(printed(doc(), &options(6)), "aa\nbb\ncc");
+    }
+
+    #[test]
+    fn a_group_past_the_line_width_breaks_at_once() {
+        let doc = vec![text("aaaa"), group(vec![soft_line_break(), text("b")])];
+        assert_eq!(printed(doc, &options(3)), "aaaa\nb");
+    }
+
+    #[test]
+    fn soft_lines_outside_a_group_break() {
+        let doc = vec![text("a"), soft_line_break_or_space(), text("b")];
+        assert_eq!(printed(doc, &options(80)), "a\nb");
+    }
+
+    #[test]
+    fn a_group_inside_a_flat_group_stays_flat() {
+        let doc = vec![group(vec![
+            text("a"),
+            soft_line_break_or_space(),
+            group(vec![text("b"), soft_line_break(), text("c")]),
+        ])];
+        assert_eq!(printed(doc, &options(80)), "a bc");
+    }
+
+    #[test]
+    fn a_forced_break_breaks_the_groups_around() {
+        let hard = vec![group(vec![
+            text("a"),
+            soft_line_break_or_space(),
+            group(vec![text("b"), soft_line_break_or_space(), text("c")]),
+            soft_line_break_or_space(),
+            group(vec![text("d"), hard_line_break(), text("e")]),
+        ])];
+        assert_eq!(printed(hard, &options(80)), "a\nb c\nd\ne");
+        let empty = vec![group(vec![text("a"), empty_line(), text("b")])];
+        assert_eq!(printed(empty, &options(80)), "a\n\nb");
+        let expand = vec![group(vec![
+            text("a"),
+            soft_line_break_or_space(),
+            group(vec![text("b"), expand_parent(), text("c")]),
+        ])];
+        assert_eq!(printed(expand, &options(80)), "a\nbc");
+        let multiline = vec![group(vec![
+            text("a\nb"),
+            soft_line_break_or_space(),
+            text("c"),
+        ])];
+        assert_eq!(printed(multiline, &options(80)), "a\nb\nc");
+        let in_indent = vec![group(vec![
+            text("a"),
+            indent(vec![
+                soft_line_break_or_space(),
+                text("b"),
+                hard_line_break(),
+                text("c"),
+            ]),
+        ])];
+        assert_eq!(printed(in_indent, &options(80)), "a\n  b\n  c");
+    }
+
+    #[test]
+    fn a_forced_break_inside_a_line_suffix_breaks_the_group_around() {
+        let doc = vec![group(vec![
+            text("a"),
+            line_suffix(vec![expand_parent()]),
+            soft_line_break_or_space(),
+            text("b"),
+        ])];
+        assert_eq!(printed(doc, &options(80)), "a\nb");
+    }
+
+    #[test]
+    fn groups_inside_a_broken_group_fit_on_their_own() {
+        let doc = vec![group(vec![
+            text("call"),
+            soft_line_break_or_space(),
+            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
+            soft_line_break_or_space(),
+            group(vec![text("c"), soft_line_break_or_space(), text("d")]),
+        ])];
+        assert_eq!(printed(doc, &options(6)), "call\na b\nc d");
+    }
+
+    #[test]
+    fn what_follows_a_group_on_the_line_counts() {
+        let group_then = |rest: Vec<Element<'static>>| {
+            let mut doc = vec![group(vec![
+                text("a"),
+                soft_line_break_or_space(),
+                text("b"),
+            ])];
+            doc.extend(rest);
+            doc
+        };
+        assert_eq!(printed(group_then(vec![text(";")]), &options(4)), "a b;");
+        assert_eq!(printed(group_then(vec![text(";;")]), &options(4)), "a\nb;;");
+        let then_line = vec![hard_line_break(), text("long line")];
+        assert_eq!(
+            printed(group_then(then_line), &options(4)),
+            "a b\nlong line"
+        );
+        let then_text = vec![text("x\r\ny")];
+        assert_eq!(printed(group_then(then_text), &options(4)), "a bx\r\ny");
+        let then_suffix = vec![line_suffix(vec![text("# a comment")])];
+        assert_eq!(
+            printed(group_then(then_suffix), &options(4)),
+            "a b# a comment"
+        );
+    }
+
+    #[test]
+    fn the_indent_takes_columns() {
+        let doc = vec![indent(vec![
+            hard_line_break(),
+            group(vec![text("aa"), soft_line_break_or_space(), text("bb")]),
+        ])];
+        assert_eq!(printed(doc.clone(), &options(7)), "\n  aa bb");
+        assert_eq!(printed(doc.clone(), &options(6)), "\n  aa\n  bb");
+        let tabs = PrinterOptions {
+            indent_style: IndentStyle::Tab,
+            ..options(6)
+        };
+        assert_eq!(printed(doc, &tabs), "\n\taa\n\tbb");
+    }
+
+    #[test]
+    fn a_multiline_text_resets_the_column() {
+        let doc = vec![
+            text("a\nbb"),
+            group(vec![text("c"), soft_line_break_or_space(), text("d")]),
+        ];
+        assert_eq!(printed(doc, &options(5)), "a\nbbc d");
     }
 }
