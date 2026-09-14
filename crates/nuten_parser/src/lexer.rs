@@ -343,6 +343,7 @@ mod tests {
         LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
         Lexed, Mode, Token, lex,
     };
+    use crate::test_support::short_inputs;
 
     fn lex_all(src: &str) -> Lexed {
         lex(src, TextRange::up_to(TextSize::of(src)), Mode::block())
@@ -902,28 +903,9 @@ mod tests {
         }
     }
 
-    /// A sample of each byte class the lexer tells apart.
-    /// `à` (`C3 A0`) ends in `A0`, which nu counts as whitespace before `#`.
-    const ALPHABET: &[&str] = &[
-        "e", ">", "=", "r", "$", "'", "\"", "`", "\\", "(", ")", "[", "]", "{", "}", "#", "|", ";",
-        " ", "\n", "\r", "à",
-    ];
-
-    fn every_input(len: usize) -> Vec<String> {
-        match len {
-            0 => vec![String::new()],
-            _ => every_input(len - 1)
-                .iter()
-                .flat_map(|src| ALPHABET.iter().map(move |ch| format!("{src}{ch}")))
-                .collect(),
-        }
-    }
-
     #[test]
     fn invariants_hold_for_all_short_inputs() {
-        (0..=4)
-            .flat_map(every_input)
-            .for_each(|src| check_invariants(&src));
+        short_inputs().for_each(|src| check_invariants(&src));
     }
 
     mod nu_differences {
