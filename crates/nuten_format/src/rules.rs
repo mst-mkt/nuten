@@ -1,10 +1,11 @@
 //! Turns each node of the tree into document elements.
 
-use nuten_doc::{Element, empty_line, hard_line_break, space, text};
+use nuten_doc::{Element, empty_line, hard_line_break, line_suffix, space, text};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
 /// `root` is the tree of `src`, with no `Error` element.
-/// Blank lines between statements stay, one at most.
+/// Blank lines stay, one at most.
+/// A comment stays on its own line or at the end of its line.
 pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
     // The last child, whitespace aside.
@@ -25,8 +26,15 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
                     hard_line_break()
                 }),
                 SyntaxKind::Whitespace => continue,
-                // Dropped until the comment rules land.
-                SyntaxKind::Comment => {},
+                SyntaxKind::Comment => {
+                    out.push(if matches!(prev, None | Some(SyntaxKind::Newline)) {
+                        token(src, child)
+                    } else {
+                        // A line suffix, so that it does not count toward the
+                        // width of the line.
+                        line_suffix([space(), token(src, child)])
+                    });
+                },
                 kind => unreachable!("{kind:?} is not a child of Root"),
             },
         }
@@ -52,7 +60,8 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
 }
 
 /// The children, trivia aside, with one space between each two.
-/// A pipeline goes on one line this way until the pipeline rules land.
+/// A pipeline goes on one line this way, and loses its comments, until the
+/// pipeline rules land.
 fn spaced<'a>(src: &'a str, parent: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
     for child in parent

@@ -36,9 +36,9 @@ pub struct FormatError {
 }
 
 /// Formats a whole file. The output ends with one line break, or is empty
-/// when the file has no statement.
+/// when the file is blank.
 ///
-/// For now, comments are dropped and each pipeline goes on one line.
+/// For now, each pipeline goes on one line and loses the comments inside it.
 ///
 /// # Errors
 ///
@@ -82,10 +82,11 @@ mod tests {
     }
 
     #[test]
-    fn a_file_without_statements_comes_out_empty() {
+    fn only_a_blank_file_comes_out_empty() {
         for src in ["", "\n", "  \n\n", "\r\n"] {
             assert_eq!(format(src, &Config::default()).unwrap(), "", "{src:?}");
         }
+        assert_eq!(format("# c", &Config::default()).unwrap(), "# c\n");
     }
 
     #[test]
