@@ -63,7 +63,8 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
 }
 
 /// On one line when it fits and was on one line in the source; otherwise
-/// each pipe starts a line, at the current indent.
+/// each `|` starts a line, at the current indent, while `e>|` and `o+e>|`
+/// stay on the line of their element.
 /// A comment stays where it is among the pipes and elements, on its own
 /// line or at the end of its line. A pipe with a comment after it stays at
 /// the end of its line, and what comes next starts a line.
@@ -85,7 +86,7 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
                 out.extend(node(src, child));
             },
             SyntaxElement::Token(child) => match kind {
-                SyntaxKind::Pipe | SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
+                SyntaxKind::Pipe => {
                     if last == Some(SyntaxKind::Comment) {
                         out.push(hard_line_break());
                     } else if !out.is_empty() {
@@ -95,6 +96,12 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
                             soft_line_break_or_space()
                         });
                     }
+                    out.push(token(src, child));
+                },
+                // Nu rejects these at the start of a line, so they stay
+                // after their element, which the parser puts right before.
+                SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
+                    out.push(space());
                     out.push(token(src, child));
                 },
                 SyntaxKind::Comment => {
