@@ -1,8 +1,9 @@
 //! What formatting must keep, asked of any input.
 //!
 //! A fixture has an expected output; any other input has only these: that
-//! the tree restores the source, that the output keeps every token and every
-//! comment, and that formatting the output changes nothing.
+//! the output keeps every token and every comment, and that formatting the
+//! output changes nothing. What the parser must keep is in
+//! `nuten_parser::invariants`.
 
 use std::fmt;
 
@@ -11,11 +12,9 @@ use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
 use crate::{Config, FormatError, format_parsed};
 
-/// One property of the parser or the formatter.
+/// One property of the formatter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
-    /// The tree restores the source byte for byte.
-    Roundtrip,
     /// The output has the tokens of the source, trivia aside, in order.
     /// Line endings inside a token do not count, since the printer rewrites
     /// them.
@@ -32,32 +31,14 @@ pub enum Invariant {
 }
 
 impl Invariant {
-    /// Whose defect a violation of it is.
-    pub fn subject(self) -> Subject {
-        match self {
-            Invariant::Roundtrip => Subject::Parser,
-            Invariant::Tokens | Invariant::Comments | Invariant::Idempotency => Subject::Formatter,
-        }
-    }
-
     /// The name in reports.
     pub fn name(self) -> &'static str {
         match self {
-            Invariant::Roundtrip => "roundtrip",
             Invariant::Tokens => "token preservation",
             Invariant::Comments => "comment preservation",
             Invariant::Idempotency => "idempotency",
         }
     }
-}
-
-/// Whose defect a violation is, for a report over a corpus.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Subject {
-    /// The parser: the invariant is asked of the source alone.
-    Parser,
-    /// The formatter: it is asked of the source against its output.
-    Formatter,
 }
 
 /// An invariant that does not hold for one input.
@@ -88,29 +69,21 @@ impl fmt::Display for Violation {
 ///
 /// # Errors
 ///
-/// When the source has syntax errors, unless its tree does not restore it,
-/// which is reported alone.
+/// When the source has syntax errors.
+///
+/// # Panics
+///
+/// When the parser breaks its invariants on `src`, since the rules rely on
+/// them.
 pub fn violations(src: &str, config: &Config) -> Result<Vec<Violation>, FormatError> {
     let parsed = parse(src);
-    let tree = parsed.syntax();
-    if let Some(violation) = roundtrip(src, &tree) {
-        // The rules slice the source by the ranges of the tree, so the
-        // output of a lossy tree means nothing.
-        return Ok(vec![violation]);
-    }
+    let broken = nuten_parser::invariants::violations(src, &parsed);
+    assert!(
+        broken.is_empty(),
+        "the parser breaks its invariants: {broken:?}"
+    );
     let output = format_parsed(src, &parsed, config)?;
-    Ok(against_output(&tree, &output, config))
-}
-
-fn roundtrip(src: &str, tree: &SyntaxNode) -> Option<Violation> {
-    if tree.text() == src {
-        return None;
-    }
-    let offset = mismatch(src.as_bytes(), tree.text().to_string().as_bytes());
-    Some(Violation::new(
-        Invariant::Roundtrip,
-        format!("the tree differs from the source from byte {offset}"),
-    ))
+    Ok(against_output(&parsed.syntax(), &output, config))
 }
 
 /// The invariants of the formatter, asked of the tree of the source against
@@ -287,7 +260,7 @@ fn mismatch<T: PartialEq>(a: &[T], b: &[T]) -> usize {
 mod tests {
     use nuten_parser::parse;
 
-    use super::{Invariant, Subject, Violation, against_output, roundtrip, violations};
+    use super::{Invariant, Violation, against_output, violations};
     use crate::{Config, LineEnding, ParseErrorKind};
 
     /// The violations of the formatter's invariants for `output` as the
@@ -326,17 +299,6 @@ mod tests {
     fn a_file_with_syntax_errors_has_no_output_to_ask_about() {
         let error = violations("ls |", &Config::default()).unwrap_err();
         assert_eq!(error.errors[0].kind, ParseErrorKind::PipeAtEof);
-    }
-
-    #[test]
-    fn the_tree_must_restore_the_source() {
-        let violation = roundtrip("ls | first", &parse("ls | get").syntax()).unwrap();
-        assert_eq!(violation.invariant, Invariant::Roundtrip);
-        assert_eq!(
-            violation.detail,
-            "the tree differs from the source from byte 5"
-        );
-        assert_eq!(roundtrip("ls", &parse("ls").syntax()), None);
     }
 
     #[test]
@@ -463,17 +425,5 @@ mod tests {
             violation.to_string(),
             "comment preservation: comment 1, \"# c\" at the end of a line, is not in the source"
         );
-    }
-
-    #[test]
-    fn only_roundtrip_is_asked_of_the_parser() {
-        assert_eq!(Invariant::Roundtrip.subject(), Subject::Parser);
-        for invariant in [
-            Invariant::Tokens,
-            Invariant::Comments,
-            Invariant::Idempotency,
-        ] {
-            assert_eq!(invariant.subject(), Subject::Formatter);
-        }
     }
 }
