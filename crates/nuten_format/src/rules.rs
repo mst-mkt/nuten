@@ -64,31 +64,73 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
 
 /// On one line when it fits and was on one line in the source; otherwise
 /// each pipe starts a line, at the current indent.
+/// A comment stays where it is among the pipes and elements, on its own
+/// line or at the end of its line. A pipe with a comment after it stays at
+/// the end of its line, and what comes next starts a line.
 fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
+    // The last child, whitespace aside.
+    let mut prev = None;
+    // The last pipe, element, or comment.
+    let mut last = None;
     for child in pipeline.children_with_tokens() {
+        let kind = child.kind();
         match &child {
             SyntaxElement::Node(child) => {
-                if !out.is_empty() {
+                if last == Some(SyntaxKind::Comment) {
+                    out.push(hard_line_break());
+                } else if !out.is_empty() {
                     out.push(space());
                 }
                 out.extend(node(src, child));
             },
-            SyntaxElement::Token(child) => match child.kind() {
+            SyntaxElement::Token(child) => match kind {
                 SyntaxKind::Pipe | SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
-                    if !out.is_empty() {
-                        out.push(soft_line_break_or_space());
+                    if last == Some(SyntaxKind::Comment) {
+                        out.push(hard_line_break());
+                    } else if !out.is_empty() {
+                        out.push(if comment_follows(child) {
+                            space()
+                        } else {
+                            soft_line_break_or_space()
+                        });
                     }
                     out.push(token(src, child));
                 },
+                SyntaxKind::Comment => {
+                    if prev == Some(SyntaxKind::Newline) {
+                        out.push(hard_line_break());
+                        out.push(token(src, child));
+                    } else {
+                        // A line suffix, so that it does not count toward the
+                        // width of the line.
+                        out.push(line_suffix([space(), token(src, child)]));
+                    }
+                },
                 SyntaxKind::Newline => out.push(expand_parent()),
-                // Comments are dropped until their rules land.
-                SyntaxKind::Whitespace | SyntaxKind::Comment => {},
+                SyntaxKind::Whitespace => continue,
                 kind => unreachable!("{kind:?} is not a child of Pipeline"),
             },
         }
+        prev = Some(kind);
+        if kind != SyntaxKind::Newline {
+            last = Some(kind);
+        }
     }
     vec![group(out)]
+}
+
+/// Whether a comment comes before the next pipe or element after `pipe`.
+fn comment_follows(pipe: &SyntaxToken) -> bool {
+    let mut next = pipe.next_sibling_or_token();
+    while let Some(sibling) = &next {
+        match sibling.kind() {
+            SyntaxKind::Comment => return true,
+            SyntaxKind::Whitespace | SyntaxKind::Newline => next = sibling.next_sibling_or_token(),
+            _ => return false,
+        }
+    }
+    false
 }
 
 /// The children, trivia aside, with one space between each two.
