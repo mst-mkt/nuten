@@ -8,6 +8,7 @@ repository.workspace = true
 
 [dependencies]
 nuten_doc = { workspace = true }
+nuten_parser = { workspace = true }
 nuten_syntax = { workspace = true }
 
 [lints]
