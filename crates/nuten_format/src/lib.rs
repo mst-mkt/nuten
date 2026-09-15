@@ -1,9 +1,11 @@
 //! Formatting rules for Nushell.
 
+pub mod invariants;
 mod rules;
 
 use nuten_doc::{Document, PrinterOptions};
 pub use nuten_doc::{IndentStyle, LineEnding};
+use nuten_parser::Parsed;
 pub use nuten_parser::{ParseError, ParseErrorKind};
 use nuten_syntax::SyntaxNode;
 
@@ -42,7 +44,11 @@ pub struct FormatError {
 ///
 /// When the file has syntax errors.
 pub fn format(src: &str, config: &Config) -> Result<String, FormatError> {
-    let parsed = nuten_parser::parse(src);
+    format_parsed(src, &nuten_parser::parse(src), config)
+}
+
+/// `parsed` is the tree of `src`.
+fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, FormatError> {
     if !parsed.errors().is_empty() {
         return Err(FormatError {
             errors: parsed.errors().to_vec(),
