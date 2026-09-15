@@ -5,7 +5,7 @@
 
 use std::{fmt::Write, fs, path::Path};
 
-use nuten_parser::{Parsed, parse};
+use nuten_parser::{Parsed, invariants, parse};
 use rowan::WalkEvent;
 
 #[test]
@@ -40,12 +40,8 @@ fn check_input(path: &Path) -> Parsed {
         let name = path.file_name().unwrap().to_str().unwrap();
         insta::assert_snapshot!(name, dump(&src, &parsed));
     });
-    assert_eq!(
-        parsed.syntax().text(),
-        src.as_str(),
-        "{} does not roundtrip",
-        path.display()
-    );
+    let violations = invariants::violations(&src, &parsed);
+    assert!(violations.is_empty(), "{}: {violations:?}", path.display());
     parsed
 }
 
