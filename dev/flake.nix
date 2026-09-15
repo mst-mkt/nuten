@@ -15,6 +15,10 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nu_scripts = {
+      url = "github:nushell/nu_scripts";
+      flake = false;
+    };
   };
 
   outputs =
@@ -147,6 +151,9 @@
               pkgs.cargo-nextest
               treefmtEval.${system}.config.build.wrapper
             ];
+            env = {
+              NUTEN_CORPUS = "${inputs.nu_scripts}";
+            };
             inherit (preCommit.${system}) shellHook;
           };
         }
