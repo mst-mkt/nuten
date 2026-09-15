@@ -180,10 +180,18 @@ dependencies = [
 name = "nuten_format"
 version = "0.0.0"
 dependencies = [
- "jsonc-parser",
  "nuten_doc",
  "nuten_parser",
  "nuten_syntax",
+]
+
+[[package]]
+name = "nuten_oracle"
+version = "0.0.0"
+dependencies = [
+ "jsonc-parser",
+ "nuten_format",
+ "usage-rs",
 ]
 
 [[package]]

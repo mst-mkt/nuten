@@ -11,8 +11,5 @@ nuten_doc = { workspace = true }
 nuten_parser = { workspace = true }
 nuten_syntax = { workspace = true }
 
-[dev-dependencies]
-jsonc-parser = { workspace = true }
-
 [lints]
 workspace = true
