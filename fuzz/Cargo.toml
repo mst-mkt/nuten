@@ -1,0 +1,31 @@
+[package]
+name = "nuten_fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+nuten_parser = { path = "../crates/nuten_parser" }
+nuten_syntax = { path = "../crates/nuten_syntax" }
+
+libfuzzer-sys = "0.4"
+rowan = "0.17.0"
+
+[[bin]]
+name = "lex"
+path = "fuzz_targets/lex.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse"
+path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
