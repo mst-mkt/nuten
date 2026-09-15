@@ -156,6 +156,19 @@
             };
             inherit (preCommit.${system}) shellHook;
           };
+
+          fuzz = pkgs.mkShell {
+            packages = [
+              (inputs.fenix.packages.${system}.latest.withComponents [
+                "cargo"
+                "rustc"
+              ])
+              pkgs.cargo-fuzz
+            ];
+            env = {
+              LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+            };
+          };
         }
       );
 
