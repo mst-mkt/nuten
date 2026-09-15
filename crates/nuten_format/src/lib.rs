@@ -38,7 +38,7 @@ pub struct FormatError {
 /// Formats a whole file. The output ends with one line break, or is empty
 /// when the file is blank.
 ///
-/// For now, each pipeline goes on one line and loses the comments inside it.
+/// For now, a pipeline loses the comments inside it.
 ///
 /// # Errors
 ///

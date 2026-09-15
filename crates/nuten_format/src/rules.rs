@@ -1,6 +1,9 @@
 //! Turns each node of the tree into document elements.
 
-use nuten_doc::{Element, empty_line, hard_line_break, line_suffix, space, text};
+use nuten_doc::{
+    Element, empty_line, expand_parent, group, hard_line_break, line_suffix,
+    soft_line_break_or_space, space, text,
+};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
 /// `root` is the tree of `src`, with no `Error` element.
@@ -50,8 +53,8 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
 /// The entry for every node but Root.
 fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
     match node.kind() {
-        SyntaxKind::Pipeline
-        | SyntaxKind::PipelineElement
+        SyntaxKind::Pipeline => pipeline(src, node),
+        SyntaxKind::PipelineElement
         | SyntaxKind::Call
         | SyntaxKind::ExternalCall
         | SyntaxKind::Redirection => spaced(src, node),
@@ -59,9 +62,36 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
     }
 }
 
+/// On one line when it fits and was on one line in the source; otherwise
+/// each pipe starts a line, at the current indent.
+fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut out = Vec::new();
+    for child in pipeline.children_with_tokens() {
+        match &child {
+            SyntaxElement::Node(child) => {
+                if !out.is_empty() {
+                    out.push(space());
+                }
+                out.extend(node(src, child));
+            },
+            SyntaxElement::Token(child) => match child.kind() {
+                SyntaxKind::Pipe | SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
+                    if !out.is_empty() {
+                        out.push(soft_line_break_or_space());
+                    }
+                    out.push(token(src, child));
+                },
+                SyntaxKind::Newline => out.push(expand_parent()),
+                // Comments are dropped until their rules land.
+                SyntaxKind::Whitespace | SyntaxKind::Comment => {},
+                kind => unreachable!("{kind:?} is not a child of Pipeline"),
+            },
+        }
+    }
+    vec![group(out)]
+}
+
 /// The children, trivia aside, with one space between each two.
-/// A pipeline goes on one line this way, and loses its comments, until the
-/// pipeline rules land.
 fn spaced<'a>(src: &'a str, parent: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
     for child in parent
