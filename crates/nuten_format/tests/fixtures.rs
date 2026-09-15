@@ -1,9 +1,10 @@
 //! Each `test_data/<name>.nu` must format to `test_data/<name>.expected.nu`,
-//! which must format to itself.
+//! which must format to itself, and formatting either must keep every
+//! invariant in `nuten_format::invariants`.
 
 use std::{fs, path::Path};
 
-use nuten_format::{Config, format};
+use nuten_format::{Config, format, invariants};
 
 #[test]
 fn fixtures_format_as_expected() {
@@ -33,11 +34,21 @@ fn fixtures_format_as_expected() {
 }
 
 fn check(name: &str, src: &str, expected: &str) {
-    let actual = format(src, &Config::default())
-        .unwrap_or_else(|error| panic!("{name}: {:?}", error.errors));
+    let config = Config::default();
+    let actual = format(src, &config).unwrap_or_else(|error| panic!("{name}: {:?}", error.errors));
     assert!(
         actual == expected,
         "{name}\n--- expected\n{expected}--- actual\n{actual}--- as strings\n{expected:?}\n\
          {actual:?}"
+    );
+    let violations = invariants::violations(src, &config).expect("the source formatted above");
+    assert!(
+        violations.is_empty(),
+        "{name}\n{}",
+        violations
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n")
     );
 }
