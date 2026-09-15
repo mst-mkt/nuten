@@ -61,6 +61,19 @@ fn formats_each_file_in_place() {
 }
 
 #[test]
+fn leaves_a_formatted_file_alone() {
+    let dir = TempDir::new();
+    let path = dir.file("a.nu", "ls | first\n");
+    // Writing would fail.
+    let mut permissions = fs::metadata(&path).unwrap().permissions();
+    permissions.set_readonly(true);
+    fs::set_permissions(&path, permissions).unwrap();
+    let output = nuten(&[&path]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
 fn reports_syntax_errors_with_their_position_and_goes_on() {
     let dir = TempDir::new();
     let bad = dir.file("bad.nu", "ls\n\n  ls || x\n");

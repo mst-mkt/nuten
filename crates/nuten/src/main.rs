@@ -39,6 +39,7 @@ fn main() -> ExitCode {
 }
 
 /// Reports every problem to stderr; returns whether the file is formatted.
+/// Leaves the file alone when it is formatted already.
 fn format_file(path: &Path, config: &Config) -> bool {
     let src = match fs::read_to_string(path) {
         Ok(src) => src,
@@ -57,6 +58,9 @@ fn format_file(path: &Path, config: &Config) -> bool {
             return false;
         },
     };
+    if formatted == src {
+        return true;
+    }
     if let Err(error) = fs::write(path, formatted) {
         eprintln!("{}: {error}", path.display());
         return false;
