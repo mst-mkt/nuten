@@ -19,6 +19,10 @@
       url = "github:nushell/nu_scripts";
       flake = false;
     };
+    nixpkgs-nushell = {
+      # nushell 0.115
+      url = "github:NixOS/nixpkgs/aff8a0b28396750446e5537a96461bc4facdb287";
+    };
   };
 
   outputs =
@@ -150,6 +154,7 @@
               pkgs.cargo-insta
               pkgs.cargo-nextest
               treefmtEval.${system}.config.build.wrapper
+              inputs.nixpkgs-nushell.legacyPackages.${system}.nushell
             ];
             env = {
               NUTEN_CORPUS = "${inputs.nu_scripts}";

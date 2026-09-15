@@ -74,6 +74,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-nushell": {
+      "locked": {
+        "lastModified": 1789073787,
+        "narHash": "sha256-xfX/toC2QV707s06GbP4II/TxYF0fNQj7s5/LClNDKc=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "aff8a0b28396750446e5537a96461bc4facdb287",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "aff8a0b28396750446e5537a96461bc4facdb287",
+        "type": "github"
+      }
+    },
     "nu_scripts": {
       "flake": false,
       "locked": {
@@ -95,6 +111,7 @@
         "fenix": "fenix",
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs",
+        "nixpkgs-nushell": "nixpkgs-nushell",
         "nu_scripts": "nu_scripts",
         "treefmt-nix": "treefmt-nix"
       }
