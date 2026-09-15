@@ -101,6 +101,7 @@
             "doc"
             "format"
             "nix"
+            "oracle"
           ];
         in
         inputs.git-hooks.lib.${system}.run {
