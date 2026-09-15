@@ -51,7 +51,13 @@
           };
         in
         {
-          package = craneLib.buildPackage (args // { doCheck = false; });
+          package = craneLib.buildPackage (
+            args
+            // {
+              doCheck = false;
+              cargoExtraArgs = "--locked --package nuten";
+            }
+          );
           clippy = craneLib.cargoClippy (
             args // { cargoClippyExtraArgs = "--all-targets -- --deny warnings"; }
           );
