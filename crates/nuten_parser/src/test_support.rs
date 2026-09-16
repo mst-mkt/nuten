@@ -4,7 +4,7 @@
 /// `à` (`C3 A0`) ends in `A0`, which nu counts as whitespace before `#`.
 const ALPHABET: &[&str] = &[
     "e", ">", "=", "r", "$", "'", "\"", "`", "\\", "(", ")", "[", "]", "{", "}", "#", "|", ";",
-    " ", "\n", "\r", "à",
+    ",", " ", "\n", "\r", "à",
 ];
 
 pub(crate) fn short_inputs() -> impl Iterator<Item = String> {

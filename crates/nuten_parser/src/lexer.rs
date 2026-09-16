@@ -60,7 +60,7 @@ impl fmt::Display for LexErrorKind {
 }
 
 /// The part of nu's `lex` settings that decides where items end.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Mode {
     /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with
     /// the kind of the token it makes on its own at the start of an item.
@@ -70,6 +70,8 @@ pub struct Mode {
 }
 
 impl Mode {
+    pub const ALL: &[Mode] = &[Mode::block(), Mode::list()];
+
     /// Statements in the top level, `{ }` blocks, closures, and modules.
     /// Also the right-hand side of `let` and assignments.
     pub const fn block() -> Mode {
@@ -94,6 +96,17 @@ impl Mode {
         self.special
             .iter()
             .find_map(|&(special, kind)| (special == byte).then_some(kind))
+    }
+}
+
+/// The special bytes, as in `Mode(",")`.
+impl fmt::Debug for Mode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Mode {
+            special,
+        } = self;
+        let bytes: String = special.iter().map(|&(byte, _)| char::from(byte)).collect();
+        f.debug_tuple("Mode").field(&bytes).finish()
     }
 }
 
@@ -924,35 +937,43 @@ mod tests {
         lex("ab", range(1, 3), Mode::block());
     }
 
-    fn check_invariants(src: &str) {
+    fn check_invariants(src: &str, mode: Mode) {
         let Lexed {
             tokens,
             errors,
-        } = lex_all(src);
+        } = lex_all_in(src, mode);
 
         let mut end = TextSize::new(0);
         for token in &tokens {
-            assert_eq!(token.range.start(), end, "gap or overlap in {src:?}");
-            assert!(!token.range.is_empty(), "empty token in {src:?}");
+            assert_eq!(
+                token.range.start(),
+                end,
+                "{mode:?}: gap or overlap in {src:?}"
+            );
+            assert!(!token.range.is_empty(), "{mode:?}: empty token in {src:?}");
             let text = &src[token.range];
             assert!(
-                well_formed(token.kind, text),
-                "malformed {:?} {text:?} in {src:?}",
+                well_formed(token.kind, text, mode),
+                "{mode:?}: malformed {:?} {text:?} in {src:?}",
                 token.kind
             );
             end = token.range.end();
         }
-        assert_eq!(end, TextSize::of(src), "tokens end early in {src:?}");
+        assert_eq!(
+            end,
+            TextSize::of(src),
+            "{mode:?}: tokens end early in {src:?}"
+        );
 
         for pair in tokens.windows(2) {
             let (left, right) = (pair[0], pair[1]);
             assert!(
                 left.kind != Whitespace || right.kind != Whitespace,
-                "adjacent whitespace in {src:?}"
+                "{mode:?}: adjacent whitespace in {src:?}"
             );
             assert!(
                 !(src[left.range].ends_with('\r') && src[right.range].starts_with('\n')),
-                "split \\r\\n in {src:?}"
+                "{mode:?}: split \\r\\n in {src:?}"
             );
         }
 
@@ -960,12 +981,12 @@ mod tests {
         assert_eq!(
             error_tokens.len(),
             errors.len(),
-            "errors do not match Error tokens in {src:?}"
+            "{mode:?}: errors do not match Error tokens in {src:?}"
         );
         for (&token, &error) in error_tokens.into_iter().zip(&errors) {
             assert!(
                 well_placed(error, token, src),
-                "misplaced {error:?} in {token:?} of {src:?}"
+                "{mode:?}: misplaced {error:?} in {token:?} of {src:?}"
             );
         }
     }
@@ -991,7 +1012,7 @@ mod tests {
             }
     }
 
-    fn well_formed(kind: SyntaxKind, text: &str) -> bool {
+    fn well_formed(kind: SyntaxKind, text: &str, mode: Mode) -> bool {
         let quoted = |text: &str| {
             text.len() >= 2 && text.starts_with(['\'', '"', '`']) && text.ends_with(&text[..1])
         };
@@ -1007,17 +1028,27 @@ mod tests {
                 .strip_prefix('$')
                 .is_some_and(|rest| rest.starts_with(['"', '\'']) && quoted(rest)),
             RawString => text.starts_with("r#") && text.ends_with('#'),
-            Word | Error => !text.starts_with(['#', ' ', '\t', '\n', '\r', '|', ';']),
-            // Operators, or kinds the lexer does not emit yet.
-            _ => OPERATORS
-                .iter()
-                .any(|&(operator, spellings)| operator == kind && spellings.contains(&text)),
+            Word | Error => {
+                !text.starts_with(['#', ' ', '\t', '\n', '\r', '|', ';'])
+                    && mode.special_kind(text.as_bytes()[0]).is_none()
+            },
+            // Special tokens, operators, or kinds not emitted yet.
+            _ => {
+                (text.len() == 1 && mode.special_kind(text.as_bytes()[0]) == Some(kind))
+                    || OPERATORS
+                        .iter()
+                        .any(|&(operator, spellings)| operator == kind && spellings.contains(&text))
+            },
         }
     }
 
     #[test]
     fn invariants_hold_for_all_short_inputs() {
-        short_inputs().for_each(|src| check_invariants(&src));
+        for src in short_inputs() {
+            for &mode in Mode::ALL {
+                check_invariants(&src, mode);
+            }
+        }
     }
 
     mod nu_differences {
