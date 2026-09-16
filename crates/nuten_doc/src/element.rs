@@ -41,8 +41,9 @@ pub enum LineMode {
     SoftOrSpace,
     /// A line break either way, unless the line is empty already.
     Hard,
-    /// A line break and a blank line either way, less what is there already.
-    Empty,
+    /// A line break and that many blank lines either way, less what is
+    /// there already.
+    Empty(u32),
 }
 
 /// Columns a text takes on the line.

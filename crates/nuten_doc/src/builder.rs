@@ -26,7 +26,11 @@ pub fn hard_line_break() -> Element<'static> {
 }
 
 pub fn empty_line() -> Element<'static> {
-    Element::Line(LineMode::Empty)
+    empty_lines(1)
+}
+
+pub fn empty_lines(blank_lines: u32) -> Element<'static> {
+    Element::Line(LineMode::Empty(blank_lines))
 }
 
 pub fn expand_parent() -> Element<'static> {

@@ -121,7 +121,10 @@ impl<'a> Printer<'a> {
                 } => self.push_text(text, *width),
                 Element::Line(line_mode) if breaks_line(*line_mode, mode) => {
                     if self.line_suffixes.is_empty() {
-                        let breaks = if *line_mode == LineMode::Empty { 2 } else { 1 };
+                        let breaks = match *line_mode {
+                            LineMode::Empty(blank_lines) => blank_lines + 1,
+                            _ => 1,
+                        };
                         self.push_line_breaks(indent, breaks);
                     } else {
                         self.flush_line_suffixes(Some(frame));
@@ -187,7 +190,7 @@ impl<'a> Printer<'a> {
             };
             let width = match (element, mode) {
                 (
-                    Element::Line(LineMode::Hard | LineMode::Empty)
+                    Element::Line(LineMode::Hard | LineMode::Empty(_))
                     | Element::ExpandParent
                     | Element::Text {
                         width: TextWidth::Multiline,
@@ -288,7 +291,7 @@ impl<'a> Printer<'a> {
     /// `breaks` line breaks less those the output ends with already, a
     /// text's own included. Prints nothing at the start of the output,
     /// which counts as an empty line.
-    fn push_line_breaks(&mut self, indent: u32, breaks: usize) {
+    fn push_line_breaks(&mut self, indent: u32, breaks: u32) {
         let trimmed = self.out.trim_end_matches([' ', '\t']).len();
         self.out.truncate(trimmed);
         let ending = self.options.line_ending.as_str();
@@ -311,13 +314,13 @@ impl<'a> Printer<'a> {
 
 /// Whether a `Line` prints a line break in `mode`.
 fn breaks_line(line_mode: LineMode, mode: Mode) -> bool {
-    matches!(line_mode, LineMode::Hard | LineMode::Empty) || mode == Mode::Break
+    matches!(line_mode, LineMode::Hard | LineMode::Empty(_)) || mode == Mode::Break
 }
 
 /// The same elements `fits` rejects in flat mode, through a `LineSuffix`.
 fn has_forced_break(elements: &[Element<'_>]) -> bool {
     elements.iter().any(|element| match element {
-        Element::Line(LineMode::Hard | LineMode::Empty)
+        Element::Line(LineMode::Hard | LineMode::Empty(_))
         | Element::ExpandParent
         | Element::Text {
             width: TextWidth::Multiline,
@@ -348,8 +351,8 @@ fn without_cr(line: &str) -> &str {
 mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
     use crate::{
-        Document, Element, empty_line, expand_parent, group, hard_line_break, indent, line_suffix,
-        line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
+        Document, Element, empty_line, empty_lines, expand_parent, group, hard_line_break, indent,
+        line_suffix, line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
     };
 
     fn options(line_width: u32) -> PrinterOptions {
@@ -464,6 +467,20 @@ mod tests {
             ..options(80)
         };
         assert_eq!(printed(doc, &crlf), "a\r\nb\r\n\r\nc");
+    }
+
+    #[test]
+    fn an_empty_line_prints_the_blank_lines_it_carries() {
+        let doc = vec![
+            text("a"),
+            empty_lines(2),
+            empty_lines(2),
+            text("b"),
+            empty_line(),
+            empty_lines(2),
+            text("c"),
+        ];
+        assert_eq!(printed(doc, &options(80)), "a\n\n\nb\n\n\nc");
     }
 
     #[test]
