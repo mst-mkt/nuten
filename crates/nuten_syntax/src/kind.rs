@@ -44,7 +44,9 @@ syntax_kinds! {
     LBracket,
     /// The parser emits this, not the lexer.
     RBracket,
+    /// The parser emits this, not the lexer.
     LBrace,
+    /// The parser emits this, not the lexer.
     RBrace,
     LParen,
     RParen,
@@ -109,6 +111,17 @@ syntax_kinds! {
     /// It stays a `Word` when its `[` closes before its end, when lexing what
     /// it holds gives an `Error` or `;` token, or when brackets nest too deep.
     List,
+    /// A `Word` enclosed in `{ }` that nu reads as a record where it takes
+    /// any value: `{`, its fields and spreads, and `}`. Elsewhere, such as a
+    /// `def` body or an argument of an external command, nu may read it
+    /// otherwise. It stays a `Word` as an argument of a `^` command that
+    /// starts a pipeline element, when its `{` closes before its end, when
+    /// lexing what it holds as a record gives an `Error`, when its fields
+    /// cannot be split as nu splits them, or when brackets nest too deep.
+    Record,
+    /// A key, then the token nu takes as its `:`, then its value, each while
+    /// the record lasts. A value of several touching tokens is one `Word`.
+    RecordField,
 }
 
 impl SyntaxKind {

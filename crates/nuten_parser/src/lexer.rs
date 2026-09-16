@@ -70,7 +70,13 @@ pub struct Mode {
 }
 
 impl Mode {
-    pub const ALL: &[Mode] = &[Mode::block(), Mode::list(), Mode::record(), Mode::brace()];
+    pub const ALL: &[Mode] = &[
+        Mode::block(),
+        Mode::list(),
+        Mode::record(),
+        Mode::record_value(),
+        Mode::brace(),
+    ];
 
     /// Statements in the top level, `{ }` blocks, closures, and modules.
     /// Also the right-hand side of `let` and assignments.
@@ -87,11 +93,17 @@ impl Mode {
         }
     }
 
-    /// The inside of `{ }` read as a record. nu lexes a value with no special
-    /// byte, which the parser makes up for where it can.
+    /// The keys, spreads, and `:` of a record, in the inside of `{ }`.
     pub const fn record() -> Mode {
         Mode {
             special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
+        }
+    }
+
+    /// A value of a record, where nu does not treat `:` as special.
+    pub const fn record_value() -> Mode {
+        Mode {
+            special: &[(b',', SyntaxKind::Comma)],
         }
     }
 
@@ -133,21 +145,21 @@ impl fmt::Debug for Mode {
 ///
 /// Panics if `range` is outside `src` or splits a char.
 pub fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
-    assert!(range.end() <= TextSize::of(src), "range is outside src");
-    assert!(
-        src.is_char_boundary(range.start().into()) && src.is_char_boundary(range.end().into()),
-        "range splits a char"
-    );
-    let mut lexer = Lexer {
-        src: &src.as_bytes()[..usize::from(range.end())],
-        pos: usize::from(range.start()),
-        mode,
-        errors: Vec::new(),
-    };
+    let mut lexer = Lexer::new(src, range, mode);
     Lexed {
         tokens: lexer.by_ref().collect(),
         errors: lexer.errors,
     }
+}
+
+/// The first token of lexing `range` of `src`, without lexing the rest. An
+/// `Error` token comes without its error.
+///
+/// # Panics
+///
+/// Panics if `range` is outside `src` or splits a char.
+pub fn lex_first(src: &str, range: TextRange, mode: Mode) -> Option<Token> {
+    Lexer::new(src, range, mode).next()
 }
 
 struct Lexer<'a> {
@@ -185,6 +197,20 @@ impl Iterator for Lexer<'_> {
 }
 
 impl<'a> Lexer<'a> {
+    fn new(src: &'a str, range: TextRange, mode: Mode) -> Lexer<'a> {
+        assert!(range.end() <= TextSize::of(src), "range is outside src");
+        assert!(
+            src.is_char_boundary(range.start().into()) && src.is_char_boundary(range.end().into()),
+            "range splits a char"
+        );
+        Lexer {
+            src: &src.as_bytes()[..usize::from(range.end())],
+            pos: usize::from(range.start()),
+            mode,
+            errors: Vec::new(),
+        }
+    }
+
     fn rest(&self) -> &'a [u8] {
         &self.src[self.pos..]
     }
@@ -463,6 +489,16 @@ mod tests {
     /// breaks as whitespace and skips comments.
     fn split_brace(src: &str) -> Vec<&str> {
         split_skipping(src, Mode::brace(), &[Whitespace, Newline, Comment])
+    }
+
+    /// The split nu reports where it reads a value of a record, reading `,`
+    /// and line breaks as whitespace and skipping comments.
+    fn split_record_value(src: &str) -> Vec<&str> {
+        split_skipping(
+            src,
+            Mode::record_value(),
+            &[Whitespace, Newline, Comment, Comma],
+        )
     }
 
     fn split_skipping<'a>(src: &'a str, mode: Mode, skipped: &[SyntaxKind]) -> Vec<&'a str> {
@@ -909,6 +945,22 @@ mod tests {
     fn brace_splits_match_nu() {
         for &(src, expected) in NU_BRACE_SPLITS {
             assert_eq!(split_brace(src), expected, "{src:?}");
+        }
+    }
+
+    /// How nu 0.115.1 splits a value of a record.
+    const NU_RECORD_VALUE_SPLITS: &[(&str, &[&str])] = &[
+        ("b:c", &["b:c"]),
+        ("b:c,d", &["b:c", "d"]),
+        ("x:#c", &["x:#c"]),
+        ("b:c #x\nd", &["b:c", "d"]),
+        ("b\r\nc", &["b", "c"]),
+    ];
+
+    #[test]
+    fn record_value_splits_match_nu() {
+        for &(src, expected) in NU_RECORD_VALUE_SPLITS {
+            assert_eq!(split_record_value(src), expected, "{src:?}");
         }
     }
 

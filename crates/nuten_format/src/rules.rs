@@ -102,7 +102,7 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         | SyntaxKind::Call
         | SyntaxKind::ExternalCall
         | SyntaxKind::Redirection => spaced(src, node),
-        SyntaxKind::List => vec![text(&src[node.text_range()])],
+        SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],
         kind => unreachable!("{kind:?} is not formatted as a node"),
     }
 }

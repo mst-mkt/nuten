@@ -116,6 +116,48 @@ impl<'a> Parser<'a> {
         self.tokens[self.pos..].iter().map(|token| token.kind)
     }
 
+    /// As `remaining_kinds`, with each token and its text.
+    pub(crate) fn remaining_tokens(&self) -> impl Iterator<Item = (Token, &'a str)> {
+        self.tokens[self.pos..]
+            .iter()
+            .map(|&token| (token, &self.src[token.range]))
+    }
+
+    /// The first token of lexing again in `mode`, from `start` to where the
+    /// tokens end.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `start` is past where the tokens end.
+    pub(crate) fn lex_first(&self, start: TextSize, mode: Mode) -> Option<Token> {
+        let end = self.tokens.last()?.range.end();
+        lexer::lex_first(self.src, TextRange::new(start, end), mode)
+    }
+
+    /// Emits the next `count` tokens, which touch one another, as one `Word`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `count` is 0 or more than are left, when they do not touch,
+    /// or when one is trivia or an `Error`.
+    pub(crate) fn bump_joined(&mut self, count: usize) {
+        self.bump_skipped();
+        let tokens = &self.tokens[self.pos..self.pos + count];
+        assert!(
+            !tokens.is_empty()
+                && tokens
+                    .windows(2)
+                    .all(|pair| pair[0].range.end() == pair[1].range.start())
+                && tokens
+                    .iter()
+                    .all(|token| !token.kind.is_trivia() && token.kind != SyntaxKind::Error),
+            "bump_joined of tokens that do not make one word"
+        );
+        let range = TextRange::new(tokens[0].range.start(), tokens[count - 1].range.end());
+        self.pos += count;
+        self.push_token(SyntaxKind::Word, range);
+    }
+
     /// What the next token holds inside `brackets`, lexed in `mode`.
     /// `None` when the token is not a word enclosed in them, or when brackets
     /// nest too deep.
