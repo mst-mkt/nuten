@@ -6,35 +6,67 @@ use nuten_doc::{
 };
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
+/// A child of a container: neither whitespace nor a line break.
+struct Child {
+    element: SyntaxElement,
+    /// Line breaks right before it; two or more make a blank line.
+    newlines: u32,
+}
+
+/// The children of `parent` in source order. Line breaks at its end, which
+/// only Root has, belong to no child, so nothing is printed for them.
+fn children(parent: &SyntaxNode) -> impl Iterator<Item = Child> {
+    let mut newlines = 0;
+    parent
+        .children_with_tokens()
+        .filter_map(move |element| match element.kind() {
+            SyntaxKind::Whitespace => None,
+            SyntaxKind::Newline => {
+                newlines += 1;
+                None
+            },
+            _ => {
+                let child = Child {
+                    element,
+                    newlines,
+                };
+                newlines = 0;
+                Some(child)
+            },
+        })
+}
+
 /// `root` is the tree of `src`, with no `Error` element.
 /// Blank lines stay, one at most, or two after a statement ending in `|`.
 /// A comment stays on its own line or at the end of its line.
 pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
-    // The last child, whitespace aside.
     let mut prev = None;
-    // Line breaks in a row, the current child included; two make a blank line.
-    let mut newlines = 0u32;
     // Whether a `|` at the end of the last statement still reaches what
     // comes next.
     let mut open_pipe = false;
-    for child in root.children_with_tokens() {
-        let kind = child.kind();
-        if kind == SyntaxKind::Whitespace {
-            continue;
-        }
-        if kind == SyntaxKind::Newline {
-            newlines += 1;
-        } else {
+    for child in children(root) {
+        let Child {
+            element,
+            newlines,
+        } = child;
+        let kind = element.kind();
+        if newlines > 0 {
+            out.push(match newlines {
+                1 => hard_line_break(),
+                // With one blank line, a `|` at the start of the next line
+                // would join the statement above, so two stay.
+                3.. if open_pipe => empty_lines(2),
+                _ => empty_line(),
+            });
+            // A blank line closes the pipe above, as it did in the source.
             if newlines > 1 {
-                // A blank line closes the pipe above, as it did in the source.
                 open_pipe = false;
             }
-            newlines = 0;
         }
-        match &child {
+        match &element {
             SyntaxElement::Node(child) => {
-                if prev == Some(SyntaxKind::Semicolon) {
+                if prev == Some(SyntaxKind::Semicolon) && newlines == 0 {
                     out.push(space());
                 }
                 out.extend(node(src, child));
@@ -42,29 +74,11 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
             },
             SyntaxElement::Token(child) => match kind {
                 SyntaxKind::Semicolon => out.push(token(src, child)),
-                SyntaxKind::Newline => out.push(match newlines {
-                    1 => hard_line_break(),
-                    // With one blank line, a `|` at the start of the next
-                    // line would join the statement above, so two stay.
-                    3.. if open_pipe => empty_lines(2),
-                    _ => empty_line(),
-                }),
-                SyntaxKind::Comment => {
-                    out.push(if matches!(prev, None | Some(SyntaxKind::Newline)) {
-                        token(src, child)
-                    } else {
-                        // A line suffix, so that it does not count toward the
-                        // width of the line.
-                        line_suffix([space(), token(src, child)])
-                    });
-                },
-                _ => unreachable!("{kind:?} is not a child of Root"),
+                SyntaxKind::Comment => out.extend(comment(src, child, newlines, prev.is_none())),
+                kind => unreachable!("{kind:?} is not a child of Root"),
             },
         }
         prev = Some(kind);
-    }
-    while matches!(out.last(), Some(Element::Line(_))) {
-        out.pop();
     }
     out.push(hard_line_break());
     out
@@ -98,61 +112,58 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
 /// the end of its line, and what comes next starts a line.
 fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
-    // The last child, whitespace aside.
     let mut prev = None;
-    // The last pipe, element, or comment.
-    let mut last = None;
-    for child in pipeline.children_with_tokens() {
-        let kind = child.kind();
-        match &child {
+    for child in children(pipeline) {
+        let Child {
+            element,
+            newlines,
+        } = child;
+        let kind = element.kind();
+        if newlines > 0 {
+            out.push(expand_parent());
+        }
+        match &element {
             SyntaxElement::Node(child) => {
-                if last == Some(SyntaxKind::Comment) {
-                    out.push(hard_line_break());
-                } else if !out.is_empty() {
-                    out.push(space());
-                }
+                out.extend(separator(prev, space));
                 out.extend(node(src, child));
             },
             SyntaxElement::Token(child) => match kind {
                 SyntaxKind::Pipe => {
-                    if last == Some(SyntaxKind::Comment) {
-                        out.push(hard_line_break());
-                    } else if !out.is_empty() {
-                        out.push(if comment_follows(child) {
+                    out.extend(separator(prev, || {
+                        if comment_follows(child) {
                             space()
                         } else {
                             soft_line_break_or_space()
-                        });
-                    }
+                        }
+                    }));
                     out.push(token(src, child));
                 },
                 // Nu rejects these at the start of a line, so they stay
                 // after their element, which the parser puts right before.
                 SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
-                    out.push(space());
+                    out.extend(separator(prev, space));
                     out.push(token(src, child));
                 },
-                SyntaxKind::Comment => {
-                    if prev == Some(SyntaxKind::Newline) {
-                        out.push(hard_line_break());
-                        out.push(token(src, child));
-                    } else {
-                        // A line suffix, so that it does not count toward the
-                        // width of the line.
-                        out.push(line_suffix([space(), token(src, child)]));
-                    }
-                },
-                SyntaxKind::Newline => out.push(expand_parent()),
-                SyntaxKind::Whitespace => continue,
+                SyntaxKind::Comment => out.extend(comment(src, child, newlines, prev.is_none())),
                 kind => unreachable!("{kind:?} is not a child of Pipeline"),
             },
         }
         prev = Some(kind);
-        if kind != SyntaxKind::Newline {
-            last = Some(kind);
-        }
     }
     vec![group(out)]
+}
+
+/// What separates the child after `prev` from it. A comment runs to the end
+/// of its line, so a line break follows one.
+fn separator(
+    prev: Option<SyntaxKind>,
+    plain: impl FnOnce() -> Element<'static>,
+) -> Option<Element<'static>> {
+    match prev {
+        None => None,
+        Some(SyntaxKind::Comment) => Some(hard_line_break()),
+        Some(_) => Some(plain()),
+    }
 }
 
 /// Whether a comment comes before the next pipe or element after `pipe`.
@@ -168,22 +179,45 @@ fn comment_follows(pipe: &SyntaxToken) -> bool {
     false
 }
 
-/// The children, trivia aside, with one space between each two.
+/// The children with one space between each two. No line break falls among
+/// them and no node ends with trivia, so a comment, which runs to the end of
+/// its line, cannot be here either.
 fn spaced<'a>(src: &'a str, parent: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
-    for child in parent
-        .children_with_tokens()
-        .filter(|child| !child.kind().is_trivia())
-    {
+    for child in children(parent) {
+        debug_assert!(
+            child.newlines == 0 && child.element.kind() != SyntaxKind::Comment,
+            "{:?} holds a line break or a comment",
+            parent.kind()
+        );
         if !out.is_empty() {
             out.push(space());
         }
-        match &child {
+        match &child.element {
             SyntaxElement::Node(child) => out.extend(node(src, child)),
             SyntaxElement::Token(child) => out.push(token(src, child)),
         }
     }
     out
+}
+
+/// The one place a comment is printed. `at_start` is whether it is the
+/// first child of its container.
+fn comment<'a>(
+    src: &'a str,
+    comment: &SyntaxToken,
+    newlines: u32,
+    at_start: bool,
+) -> Vec<Element<'a>> {
+    if newlines > 0 || at_start {
+        // The container may have pushed a line break already; the printer
+        // keeps the longer of the two.
+        vec![hard_line_break(), token(src, comment)]
+    } else {
+        // A line suffix, so that it does not count toward the width of the
+        // line.
+        vec![line_suffix([space(), token(src, comment)])]
+    }
 }
 
 /// As it is in the source.

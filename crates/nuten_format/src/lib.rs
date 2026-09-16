@@ -109,8 +109,11 @@ mod tests {
     #[test]
     fn two_blank_lines_after_a_line_end_pipe_stay() {
         // With one, the `|` below would join the statement above.
-        let expected = "ls |\n\n\n| length\n";
-        for src in [expected, "ls |\n\n\n\n| length\n"] {
+        for (src, expected) in [
+            ("ls |\n\n\n| length\n", "ls |\n\n\n| length\n"),
+            ("ls |\n\n\n\n| length\n", "ls |\n\n\n| length\n"),
+            ("ls |\n\n\n# c\n| length\n", "ls |\n\n\n# c\n| length\n"),
+        ] {
             assert_eq!(
                 format(src, &Config::default()).unwrap(),
                 expected,
