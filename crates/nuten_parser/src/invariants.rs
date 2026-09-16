@@ -4,8 +4,12 @@
 use std::fmt;
 
 use nuten_syntax::{SyntaxKind, SyntaxNode};
+use rowan::{TextRange, TextSize};
 
-use crate::{ParseError, Parsed};
+use crate::{
+    ParseError, Parsed,
+    lexer::{self, Mode},
+};
 
 /// One property of the parser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -18,6 +22,9 @@ pub enum Invariant {
     /// The errors match the `Error` elements one to one, in order, each
     /// inside its element.
     ErrorPlacement,
+    /// Every error of lexing the source is among the errors, so no error is
+    /// lost when a token is split.
+    LexErrorsReported,
 }
 
 impl Invariant {
@@ -27,6 +34,7 @@ impl Invariant {
             Invariant::Roundtrip => "roundtrip",
             Invariant::NodeBounds => "node bounds",
             Invariant::ErrorPlacement => "error placement",
+            Invariant::LexErrorsReported => "lex errors reported",
         }
     }
 }
@@ -63,6 +71,7 @@ pub fn violations(src: &str, parsed: &Parsed) -> Vec<Violation> {
         roundtrip(src, &tree),
         node_bounds(&tree),
         error_placement(&tree, parsed.errors()),
+        lex_errors_reported(src, parsed.errors()),
     ]
     .into_iter()
     .flatten()
@@ -132,6 +141,19 @@ fn error_placement(tree: &SyntaxNode, errors: &[ParseError]) -> Option<Violation
     Some(Violation::new(Invariant::ErrorPlacement, detail))
 }
 
+fn lex_errors_reported(src: &str, errors: &[ParseError]) -> Option<Violation> {
+    let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::block());
+    let missing = lexed
+        .errors
+        .into_iter()
+        .map(ParseError::from)
+        .find(|error| !errors.contains(error))?;
+    Some(Violation::new(
+        Invariant::LexErrorsReported,
+        format!("{} at {:?} is not reported", missing.kind, missing.range),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use nuten_syntax::SyntaxKind::{
@@ -140,7 +162,9 @@ mod tests {
     use rowan::{GreenNodeBuilder, TextRange};
 
     use super::{Invariant, Violation, violations};
-    use crate::{ParseError, ParseErrorKind, Parsed, parse, test_support::short_inputs};
+    use crate::{
+        ParseError, ParseErrorKind, Parsed, lexer::LexErrorKind, parse, test_support::short_inputs,
+    };
 
     /// Root with one node of `kind` that holds `tokens`.
     fn one_node(
@@ -263,6 +287,28 @@ mod tests {
                 "error 1 at 2..3 is outside its Error element at 0..2"
             )]
         );
+    }
+
+    #[test]
+    fn every_lexing_error_must_be_reported() {
+        let lex_error = |kind, start: u32, end: u32| ParseError {
+            kind: ParseErrorKind::Lex(kind),
+            range: TextRange::new(start.into(), end.into()),
+        };
+        for (token, errors) in [
+            (Word, vec![]),
+            (Error, vec![lex_error(LexErrorKind::Unclosed, 1, 2)]),
+            (Error, vec![lex_error(LexErrorKind::UnmatchedCloser, 0, 1)]),
+        ] {
+            let parsed = one_node(Pipeline, &[(token, "\"a")], errors);
+            assert_eq!(
+                violations("\"a", &parsed),
+                [violation(
+                    Invariant::LexErrorsReported,
+                    "unclosed quote or bracket at 0..1 is not reported"
+                )]
+            );
+        }
     }
 
     #[test]
