@@ -23,8 +23,7 @@ pub enum Invariant {
     /// line or at the end of a line as it was, and, between statements, with
     /// a blank line after it or not as it was. Spaces and tabs at the end of
     /// a comment do not count, since the printer trims them, nor do blank
-    /// lines at the end of the file, since the output ends with one line
-    /// break.
+    /// lines at the end of the file or a block, which the formatter drops.
     Comments,
     /// Formatting the output succeeds and changes nothing.
     Idempotency,
@@ -164,7 +163,7 @@ struct Comment {
     /// Without the spaces and tabs at its end.
     text: String,
     own_line: bool,
-    /// False inside a statement and at the end of the file.
+    /// False inside a statement and at the end of the file or a block.
     blank_line_after: bool,
 }
 
@@ -197,14 +196,16 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
             let own_line = index == 0 || tokens[index - 1].kind() == SyntaxKind::Newline;
             // Inside a statement the formatter drops blank lines, and nu
             // reads no documentation there.
-            let between_statements = token
-                .parent()
-                .is_some_and(|parent| parent.kind() == SyntaxKind::Root);
+            let between_statements = token.parent().is_some_and(|parent| {
+                matches!(parent.kind(), SyntaxKind::Root | SyntaxKind::Block)
+            });
             let mut after = tokens[index + 1..].iter().map(SyntaxToken::kind);
             let blank_line_after = between_statements
                 && after.next() == Some(SyntaxKind::Newline)
                 && after.next() == Some(SyntaxKind::Newline)
-                && after.any(|kind| kind != SyntaxKind::Newline);
+                && after
+                    .find(|&kind| kind != SyntaxKind::Newline)
+                    .is_some_and(|kind| kind != SyntaxKind::RBrace);
             Comment {
                 text: token.text().trim_end_matches([' ', '\t']).to_string(),
                 own_line,
@@ -369,6 +370,16 @@ mod tests {
         assert_eq!(check("ls # c  \n", "ls # c\n"), []);
         assert_eq!(check("# c\n\n\n", "# c\n"), []);
         assert_eq!(check("# a\n\n\n# b\n", "# a\n\n# b\n"), []);
+        assert_eq!(
+            check("echo {\nls\n# c\n\n}\nls\n", "echo {\nls\n# c\n}\nls\n"),
+            []
+        );
+    }
+
+    #[test]
+    fn blank_lines_between_statements_of_a_block_count() {
+        let violations = check("echo {\n# c\n\nls\n}\n", "echo {\n# c\nls\n}\n");
+        assert_eq!(invariants(&violations), [Invariant::Comments]);
     }
 
     #[test]
