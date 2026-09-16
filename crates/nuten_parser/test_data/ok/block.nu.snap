@@ -1,0 +1,346 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block.nu
+---
+Root@0..448
+  Pipeline@0..24
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..24
+      Call@5..24
+        Word@5..9 "each"
+        Whitespace@9..10 " "
+        Block@10..24
+          LBrace@10..11 "{"
+          ClosureParams@11..14
+            Pipe@11..12 "|"
+            Word@12..13 "x"
+            Pipe@13..14 "|"
+          Whitespace@14..15 " "
+          Pipeline@15..22
+            PipelineElement@15..22
+              Call@15..22
+                Word@15..22 "$x.name"
+          Whitespace@22..23 " "
+          RBrace@23..24 "}"
+  Newline@24..25 "\n"
+  Pipeline@25..58
+    PipelineElement@25..27
+      Call@25..27
+        Word@25..27 "ls"
+    Whitespace@27..28 " "
+    Pipe@28..29 "|"
+    Whitespace@29..30 " "
+    PipelineElement@30..58
+      Call@30..58
+        Word@30..34 "each"
+        Whitespace@34..35 " "
+        Block@35..58
+          LBrace@35..36 "{"
+          Whitespace@36..37 " "
+          ClosureParams@37..43
+            Pipe@37..38 "|"
+            Word@38..40 "x,"
+            Whitespace@40..41 " "
+            Word@41..42 "y"
+            Pipe@42..43 "|"
+          Newline@43..44 "\n"
+          Whitespace@44..48 "    "
+          Pipeline@48..56
+            PipelineElement@48..56
+              Call@48..56
+                Word@48..53 "print"
+                Whitespace@53..54 " "
+                Word@54..56 "$x"
+          Newline@56..57 "\n"
+          RBrace@57..58 "}"
+  Newline@58..59 "\n"
+  Pipeline@59..74
+    PipelineElement@59..65
+      Call@59..65
+        Block@59..65
+          LBrace@59..60 "{"
+          Whitespace@60..61 " "
+          Pipeline@61..63
+            PipelineElement@61..63
+              Call@61..63
+                Word@61..63 "ls"
+          Whitespace@63..64 " "
+          RBrace@64..65 "}"
+    Whitespace@65..66 " "
+    Pipe@66..67 "|"
+    Whitespace@67..68 " "
+    PipelineElement@68..74
+      Call@68..74
+        Word@68..74 "length"
+  Newline@74..75 "\n"
+  Pipeline@75..109
+    PipelineElement@75..109
+      Call@75..109
+        Word@75..79 "echo"
+        Whitespace@79..80 " "
+        Block@80..86
+          LBrace@80..81 "{"
+          ClosureParams@81..83
+            PipePipe@81..83 "||"
+          Whitespace@83..84 " "
+          Pipeline@84..85
+            PipelineElement@84..85
+              Call@84..85
+                Word@84..85 "1"
+          RBrace@85..86 "}"
+        Whitespace@86..87 " "
+        Block@87..92
+          LBrace@87..88 "{"
+          ClosureParams@88..91
+            Pipe@88..89 "|"
+            Word@89..90 "x"
+            Pipe@90..91 "|"
+          RBrace@91..92 "}"
+        Whitespace@92..93 " "
+        Block@93..97
+          LBrace@93..94 "{"
+          ClosureParams@94..96
+            PipePipe@94..96 "||"
+          RBrace@96..97 "}"
+        Whitespace@97..98 " "
+        Block@98..109
+          LBrace@98..99 "{"
+          ClosureParams@99..105
+            Pipe@99..100 "|"
+            Word@100..102 "x,"
+            Newline@102..103 "\n"
+            Word@103..104 "y"
+            Pipe@104..105 "|"
+          Whitespace@105..106 " "
+          Pipeline@106..108
+            PipelineElement@106..108
+              Call@106..108
+                Word@106..108 "$x"
+          RBrace@108..109 "}"
+  Newline@109..110 "\n"
+  Pipeline@110..164
+    PipelineElement@110..164
+      Call@110..164
+        Word@110..114 "echo"
+        Whitespace@114..115 " "
+        Block@115..164
+          LBrace@115..116 "{"
+          Newline@116..117 "\n"
+          Whitespace@117..121 "    "
+          Comment@121..130 "# comment"
+          Newline@130..131 "\n"
+          Whitespace@131..135 "    "
+          Pipeline@135..137
+            PipelineElement@135..137
+              Call@135..137
+                Word@135..137 "ls"
+          Semicolon@137..138 ";"
+          Whitespace@138..139 " "
+          Pipeline@139..142
+            PipelineElement@139..142
+              Call@139..142
+                Word@139..142 "pwd"
+          Newline@142..143 "\n"
+          Whitespace@143..147 "    "
+          Pipeline@147..162
+            PipelineElement@147..149
+              Call@147..149
+                Word@147..149 "ls"
+            Newline@149..150 "\n"
+            Whitespace@150..154 "    "
+            Pipe@154..155 "|"
+            Whitespace@155..156 " "
+            PipelineElement@156..162
+              Call@156..162
+                Word@156..162 "length"
+          Newline@162..163 "\n"
+          RBrace@163..164 "}"
+  Newline@164..165 "\n"
+  Pipeline@165..184
+    PipelineElement@165..184
+      Call@165..184
+        Word@165..169 "echo"
+        Whitespace@169..170 " "
+        Word@170..173 "{ }"
+        Whitespace@173..174 " "
+        Word@174..176 "{}"
+        Whitespace@176..177 " "
+        Word@177..184 "{ # c\n}"
+  Newline@184..185 "\n"
+  Pipeline@185..222
+    PipelineElement@185..222
+      Call@185..222
+        Word@185..189 "echo"
+        Whitespace@189..190 " "
+        Word@190..196 "{|x 1}"
+        Whitespace@196..197 " "
+        Word@197..203 "{ls |}"
+        Whitespace@203..204 " "
+        Word@204..212 "{a && b}"
+        Whitespace@212..213 " "
+        Word@213..222 "{|x|; ls}"
+  Newline@222..223 "\n"
+  Pipeline@223..242
+    PipelineElement@223..242
+      ExternalCall@223..233
+        Word@223..228 "^echo"
+        Whitespace@228..229 " "
+        Word@229..233 "{ls}"
+      Whitespace@233..234 " "
+      Redirection@234..242
+        OutGt@234..236 "o>"
+        Whitespace@236..237 " "
+        Block@237..242
+          LBrace@237..238 "{"
+          Pipeline@238..241
+            PipelineElement@238..241
+              Call@238..241
+                Word@238..241 "pwd"
+          RBrace@241..242 "}"
+  Newline@242..243 "\n"
+  Pipeline@243..256
+    PipelineElement@243..256
+      Call@243..256
+        Word@243..247 "echo"
+        Whitespace@247..248 " "
+        Block@248..256
+          LBrace@248..249 "{"
+          Newline@249..250 "\n"
+          ClosureParams@250..253
+            Pipe@250..251 "|"
+            Word@251..252 "x"
+            Pipe@252..253 "|"
+          Whitespace@253..254 " "
+          Pipeline@254..255
+            PipelineElement@254..255
+              Call@254..255
+                Word@254..255 "x"
+          RBrace@255..256 "}"
+  Newline@256..257 "\n"
+  Pipeline@257..292
+    PipelineElement@257..292
+      Call@257..292
+        Word@257..261 "echo"
+        Whitespace@261..262 " "
+        Block@262..270
+          LBrace@262..263 "{"
+          Pipeline@263..269
+            PipelineElement@263..269
+              Call@263..269
+                Record@263..269
+                  LBrace@263..264 "{"
+                  RecordField@264..268
+                    Word@264..265 "a"
+                    Colon@265..266 ":"
+                    Whitespace@266..267 " "
+                    Word@267..268 "1"
+                  RBrace@268..269 "}"
+          RBrace@269..270 "}"
+        Whitespace@270..271 " "
+        Block@271..278
+          LBrace@271..272 "{"
+          Pipeline@272..277
+            PipelineElement@272..277
+              Call@272..277
+                List@272..277
+                  LBracket@272..273 "["
+                  Word@273..274 "1"
+                  Whitespace@274..275 " "
+                  Word@275..276 "2"
+                  RBracket@276..277 "]"
+          RBrace@277..278 "}"
+        Whitespace@278..279 " "
+        Block@279..285
+          LBrace@279..280 "{"
+          Pipeline@280..284
+            PipelineElement@280..284
+              Call@280..284
+                Block@280..284
+                  LBrace@280..281 "{"
+                  Pipeline@281..283
+                    PipelineElement@281..283
+                      Call@281..283
+                        Word@281..283 "ls"
+                  RBrace@283..284 "}"
+          RBrace@284..285 "}"
+        Whitespace@285..286 " "
+        Word@286..292 "{ls}.a"
+  Newline@292..293 "\n"
+  Pipeline@293..402
+    PipelineElement@293..402
+      Call@293..402
+        Word@293..297 "echo"
+        Whitespace@297..298 " "
+        Word@298..304 "{|x||}"
+        Whitespace@304..305 " "
+        Word@305..312 "{|a ||}"
+        Whitespace@312..313 " "
+        Word@313..325 "{|x && y| 1}"
+        Whitespace@325..326 " "
+        Word@326..335 "{|; x| 1}"
+        Whitespace@335..336 " "
+        Word@336..349 "{|x o>| y| 1}"
+        Whitespace@349..350 " "
+        Word@350..358 "{|2>| x}"
+        Whitespace@358..359 " "
+        Word@359..371 "{|a || b| 1}"
+        Whitespace@371..372 " "
+        Word@372..386 "{|x 2>&1 y| 1}"
+        Whitespace@386..387 " "
+        Word@387..402 "{|x out>| y| 1}"
+  Newline@402..403 "\n"
+  Pipeline@403..414
+    PipelineElement@403..414
+      Call@403..414
+        Word@403..407 "echo"
+        Whitespace@407..408 " "
+        Word@408..414 "{#\"\n\"}"
+  Newline@414..415 "\n"
+  Pipeline@415..429
+    PipelineElement@415..429
+      Call@415..429
+        Word@415..419 "echo"
+        Whitespace@419..420 " "
+        Block@420..429
+          LBrace@420..421 "{"
+          Newline@421..422 "\n"
+          Newline@422..423 "\n"
+          Pipeline@423..428
+            Pipe@423..424 "|"
+            PipelineElement@424..425
+              Call@424..425
+                Word@424..425 "x"
+            Pipe@425..426 "|"
+            Whitespace@426..427 " "
+            PipelineElement@427..428
+              Call@427..428
+                Word@427..428 "x"
+          RBrace@428..429 "}"
+  Newline@429..430 "\n"
+  Pipeline@430..447
+    PipelineElement@430..447
+      Call@430..447
+        Word@430..434 "echo"
+        Whitespace@434..435 " "
+        Block@435..447
+          LBrace@435..436 "{"
+          Whitespace@436..437 " "
+          Comment@437..440 "# c"
+          Newline@440..441 "\n"
+          Pipeline@441..446
+            Pipe@441..442 "|"
+            PipelineElement@442..443
+              Call@442..443
+                Word@442..443 "x"
+            Pipe@443..444 "|"
+            Whitespace@444..445 " "
+            PipelineElement@445..446
+              Call@445..446
+                Word@445..446 "x"
+          RBrace@446..447 "}"
+  Newline@447..448 "\n"

@@ -122,6 +122,18 @@ syntax_kinds! {
     /// A key, then the token nu takes as its `:`, then its value, each while
     /// the record lasts. A value of several touching tokens is one `Word`.
     RecordField,
+    /// A `Word` enclosed in `{ }` that is no record, read as a closure where
+    /// nu takes any value: `{`, its parameters if any, its statements, and
+    /// `}`. Elsewhere, such as a `match` or `if` body, nu may read it
+    /// otherwise. It stays a `Word` as an argument of a `^` command that
+    /// starts a pipeline element, when it holds nothing but trivia, when its
+    /// `{` closes before its end, when its parameters meet a `;`, a shell
+    /// operator, or the end before a closing `|`, when what it holds reports
+    /// an error, or when brackets nest too deep.
+    Block,
+    /// The parameters of a closure as unchecked tokens: `|` to the next `|`,
+    /// or `||`.
+    ClosureParams,
 }
 
 impl SyntaxKind {

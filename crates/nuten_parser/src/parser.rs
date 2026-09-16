@@ -65,6 +65,8 @@ pub(crate) struct Parser<'a> {
     events: Vec<Event>,
     /// Brackets around the tokens.
     depth: usize,
+    /// Whether bracketed words are read into; not while checking for errors.
+    expand: bool,
 }
 
 impl<'a> Parser<'a> {
@@ -76,6 +78,7 @@ impl<'a> Parser<'a> {
             pos: 0,
             events: Vec::new(),
             depth,
+            expand: true,
         }
     }
 
@@ -134,6 +137,25 @@ impl<'a> Parser<'a> {
         lexer::lex_first(self.src, TextRange::new(start, end), mode)
     }
 
+    /// Whether `items` reports an error on the tokens ahead. Bracketed words
+    /// are left unread, since what they hold reports no error.
+    pub(crate) fn reports_error(&self, items: fn(&mut Parser<'a>)) -> bool {
+        let mut check = Parser {
+            src: self.src,
+            tokens: self.tokens.clone(),
+            lex_errors: self.lex_errors.clone(),
+            pos: self.pos,
+            events: Vec::new(),
+            depth: self.depth,
+            expand: false,
+        };
+        items(&mut check);
+        check
+            .events
+            .iter()
+            .any(|event| matches!(event, Event::Error(_)))
+    }
+
     /// Emits the next `count` tokens, which touch one another, as one `Word`.
     ///
     /// # Panics
@@ -159,15 +181,16 @@ impl<'a> Parser<'a> {
     }
 
     /// What the next token holds inside `brackets`, lexed in `mode`.
-    /// `None` when the token is not a word enclosed in them, or when brackets
-    /// nest too deep.
+    /// `None` when the token is not a word enclosed in them, when brackets
+    /// nest too deep, or while checking for errors.
     pub(crate) fn bracketed(
         &self,
         brackets: &'static Brackets,
         mode: Mode,
     ) -> Option<Bracketed<'a>> {
         let token = self.nth_token(0)?;
-        if token.kind != SyntaxKind::Word
+        if !self.expand
+            || token.kind != SyntaxKind::Word
             || self.depth == MAX_DEPTH
             || !encloses(self.src, token.range, brackets)
         {

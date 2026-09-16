@@ -211,17 +211,24 @@ const CURLY: Brackets = Brackets {
 /// `external` is whether the token is an argument of a `^` command that
 /// starts the pipeline element, where nu keeps a word in braces whole.
 fn token_or_bracketed(p: &mut Parser<'_>, external: bool) {
+    let record = !external
+        && p.bracketed(&CURLY, Mode::brace())
+            .is_some_and(|bracketed| is_record(bracketed.inner()));
     if let Some(bracketed) = p.bracketed(&SQUARE, Mode::list())
         && is_list(bracketed.inner())
     {
         p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
-    } else if !external
-        && p.bracketed(&CURLY, Mode::brace())
-            .is_some_and(|bracketed| is_record(bracketed.inner()))
+    } else if record
         && let Some(bracketed) = p.bracketed(&CURLY, Mode::record())
         && split_record(bracketed.inner()).is_some()
     {
         p.bump_bracketed(SyntaxKind::Record, bracketed, record_items);
+    } else if !external
+        && !record
+        && let Some(bracketed) = p.bracketed(&CURLY, Mode::block())
+        && is_block(bracketed.inner())
+    {
+        p.bump_bracketed(SyntaxKind::Block, bracketed, block_items);
     } else {
         p.bump();
     }
@@ -244,8 +251,7 @@ fn list_items(p: &mut Parser<'_>) {
 
 /// Whether nu reads `{ }` as a record where it takes any value, given its
 /// inside in brace mode: a `:` second or a spread first, unless a pipe comes
-/// first. nu reads the rest, and an empty one, by the position, so they stay
-/// words.
+/// first.
 fn is_record(inner: &Parser<'_>) -> bool {
     let mut tokens = inner
         .remaining_tokens()
@@ -381,6 +387,68 @@ fn bump_separators(p: &mut Parser<'_>) {
     while matches!(p.peek(), Some(SyntaxKind::Newline | SyntaxKind::Comma)) {
         p.bump();
     }
+}
+
+/// Whether `{ }` that is no record reads as a block or a closure, given its
+/// inside in block mode: something but trivia, parameters that close at a
+/// `|` with no `;` or shell operator before it, and statements that report
+/// no error, since nothing inside may be reported.
+fn is_block(inner: &Parser<'_>) -> bool {
+    if !inner.remaining_kinds().any(|kind| !kind.is_trivia()) {
+        return false;
+    }
+    if params_start(inner) == Some(SyntaxKind::Pipe) {
+        let closes = inner
+            .remaining_tokens()
+            .skip_while(|(token, _)| token.kind != SyntaxKind::Pipe)
+            .skip(1)
+            .find(|&(token, text)| {
+                matches!(token.kind, SyntaxKind::Semicolon | SyntaxKind::Pipe)
+                    || shell_operator(text).is_some()
+            })
+            .is_some_and(|(token, _)| token.kind == SyntaxKind::Pipe);
+        if !closes {
+            return false;
+        }
+    }
+    !inner.reports_error(block_items)
+}
+
+/// The `|` or `||` that starts parameters where nu finds it: first past
+/// whitespace, or a `|` past one line break, which nu's lexer makes that `|`.
+fn params_start(p: &Parser<'_>) -> Option<SyntaxKind> {
+    let mut kinds = p
+        .remaining_kinds()
+        .filter(|&kind| kind != SyntaxKind::Whitespace);
+    match kinds.next() {
+        Some(SyntaxKind::Newline) => kinds.next().filter(|&kind| kind == SyntaxKind::Pipe),
+        first => first.filter(|&kind| matches!(kind, SyntaxKind::Pipe | SyntaxKind::PipePipe)),
+    }
+}
+
+/// Parameters, if any, closing at the next `|`, then statements.
+fn block_items(p: &mut Parser<'_>) {
+    match params_start(p) {
+        Some(SyntaxKind::PipePipe) => {
+            p.start(SyntaxKind::ClosureParams);
+            p.bump();
+            p.finish();
+        },
+        Some(SyntaxKind::Pipe) => {
+            if p.peek() == Some(SyntaxKind::Newline) {
+                p.bump();
+            }
+            p.start(SyntaxKind::ClosureParams);
+            p.bump();
+            while p.peek() != Some(SyntaxKind::Pipe) {
+                p.bump();
+            }
+            p.bump();
+            p.finish();
+        },
+        _ => {},
+    }
+    file(p);
 }
 
 fn ends_statement(kind: SyntaxKind) -> bool {
@@ -549,6 +617,21 @@ mod tests {
             tree.descendants_with_tokens()
                 .any(|element| element.kind() == SyntaxKind::Word
                     && element.to_string() == "{a: {a: 1}}")
+        );
+    }
+
+    #[test]
+    fn blocks_nested_too_deep_stay_a_word() {
+        let src = format!("{}ls{}", "{".repeat(130), "}".repeat(130));
+        let tree = parse(&src).syntax();
+        let blocks = tree
+            .descendants()
+            .filter(|node| node.kind() == SyntaxKind::Block);
+        assert_eq!(blocks.count(), 128);
+        assert!(
+            tree.descendants_with_tokens().any(
+                |element| element.kind() == SyntaxKind::Word && element.to_string() == "{{ls}}"
+            )
         );
     }
 }
