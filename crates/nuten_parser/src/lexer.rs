@@ -70,7 +70,7 @@ pub struct Mode {
 }
 
 impl Mode {
-    pub const ALL: &[Mode] = &[Mode::block(), Mode::list()];
+    pub const ALL: &[Mode] = &[Mode::block(), Mode::list(), Mode::record(), Mode::brace()];
 
     /// Statements in the top level, `{ }` blocks, closures, and modules.
     /// Also the right-hand side of `let` and assignments.
@@ -84,6 +84,22 @@ impl Mode {
     pub const fn list() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
+        }
+    }
+
+    /// The inside of `{ }` read as a record. nu lexes a value with no special
+    /// byte, which the parser makes up for where it can.
+    pub const fn record() -> Mode {
+        Mode {
+            special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
+        }
+    }
+
+    /// The inside of `{ }` looked into to tell a record from a closure or a
+    /// block.
+    pub const fn brace() -> Mode {
+        Mode {
+            special: &[(b':', SyntaxKind::Colon)],
         }
     }
 
@@ -375,9 +391,9 @@ fn text_range(range: Range<usize>) -> TextRange {
 #[cfg(test)]
 mod tests {
     use nuten_syntax::SyntaxKind::{
-        self, Assign, Comma, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString, Newline,
-        OutErrGt, OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString, Semicolon,
-        Whitespace, Word,
+        self, Assign, Colon, Comma, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString,
+        Newline, OutErrGt, OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString,
+        Semicolon, Whitespace, Word,
     };
     use rowan::{TextRange, TextSize};
 
@@ -435,6 +451,18 @@ mod tests {
     /// as whitespace too.
     fn split_list(src: &str) -> Vec<&str> {
         split_skipping(src, Mode::list(), &[Whitespace, Newline, Comma])
+    }
+
+    /// The split nu reports inside a record where it reads a key or its `:`,
+    /// reading `,` and line breaks as whitespace and skipping comments.
+    fn split_record(src: &str) -> Vec<&str> {
+        split_skipping(src, Mode::record(), &[Whitespace, Newline, Comment, Comma])
+    }
+
+    /// The split nu reports when it looks into `{ }`, where it reads line
+    /// breaks as whitespace and skips comments.
+    fn split_brace(src: &str) -> Vec<&str> {
+        split_skipping(src, Mode::brace(), &[Whitespace, Newline, Comment])
     }
 
     fn split_skipping<'a>(src: &'a str, mode: Mode, skipped: &[SyntaxKind]) -> Vec<&'a str> {
@@ -837,6 +865,61 @@ mod tests {
     fn list_splits_match_nu() {
         for &(src, expected) in NU_LIST_SPLITS {
             assert_eq!(split_list(src), expected, "{src:?}");
+        }
+    }
+
+    /// How nu 0.115.1 splits the inside of a record where it reads a key or
+    /// its `:`.
+    const NU_RECORD_SPLITS: &[(&str, &[&str])] = &[
+        ("a: 1", &["a", ":", "1"]),
+        ("a:1,b:2", &["a", ":", "1", "b", ":", "2"]),
+        (r#""a:b": 1"#, &[r#""a:b""#, ":", "1"]),
+        (r#"a: "x:y""#, &["a", ":", r#""x:y""#]),
+        (":a", &[":", "a"]),
+        ("a#b: 1", &["a#b", ":", "1"]),
+        ("à#b:c", &["à#b", ":", "c"]),
+        ("a: [1, 2]", &["a", ":", "[1, 2]"]),
+        ("a: {b: 1}", &["a", ":", "{b: 1}"]),
+        ("a: 1\nb: 2", &["a", ":", "1", "b", ":", "2"]),
+        ("a: 1 # c: d\nb: 2", &["a", ":", "1", "b", ":", "2"]),
+        ("a=b.c?d!", &["a=b.c?d!"]),
+    ];
+
+    #[test]
+    fn record_splits_match_nu() {
+        for &(src, expected) in NU_RECORD_SPLITS {
+            assert_eq!(split_record(src), expected, "{src:?}");
+        }
+    }
+
+    /// How nu 0.115.1 splits the inside of `{ }` to tell a record from a
+    /// closure or a block.
+    const NU_BRACE_SPLITS: &[(&str, &[&str])] = &[
+        ("a: 1", &["a", ":", "1"]),
+        ("a :b", &["a", ":", "b"]),
+        ("a,b: 1", &["a,b", ":", "1"]),
+        ("a\n: 1", &["a", ":", "1"]),
+        ("a # b: c\n: 1", &["a", ":", "1"]),
+        ("|x| a", &["|", "x", "|", "a"]),
+        ("...$x, a: 1", &["...$x,", "a", ":", "1"]),
+        ("a=b.c?d!", &["a=b.c?d!"]),
+    ];
+
+    #[test]
+    fn brace_splits_match_nu() {
+        for &(src, expected) in NU_BRACE_SPLITS {
+            assert_eq!(split_brace(src), expected, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn a_colon_is_a_token_in_record_and_brace_modes() {
+        for mode in [Mode::record(), Mode::brace()] {
+            assert_eq!(
+                lexed_in("a:b", mode),
+                [(Word, "a"), (Colon, ":"), (Word, "b")],
+                "{mode:?}"
+            );
         }
     }
 
