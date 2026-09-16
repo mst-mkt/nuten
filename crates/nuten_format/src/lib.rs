@@ -105,4 +105,17 @@ mod tests {
         let src = "ls |\n\nlength\n";
         assert_eq!(format(src, &Config::default()).unwrap(), src);
     }
+
+    #[test]
+    fn two_blank_lines_after_a_line_end_pipe_stay() {
+        // With one, the `|` below would join the statement above.
+        let expected = "ls |\n\n\n| length\n";
+        for src in [expected, "ls |\n\n\n\n| length\n"] {
+            assert_eq!(
+                format(src, &Config::default()).unwrap(),
+                expected,
+                "{src:?}"
+            );
+        }
+    }
 }
