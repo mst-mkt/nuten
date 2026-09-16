@@ -1,5 +1,7 @@
 //! Turns each node of the tree into document elements.
 
+use std::iter;
+
 use nuten_doc::{
     Element, empty_line, empty_lines, expand_parent, group, hard_line_break, line_suffix,
     soft_line_break_or_space, space, text,
@@ -105,15 +107,19 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
     }
 }
 
-/// On one line when it fits and was on one line in the source; otherwise
-/// each `|` starts a line, at the current indent, while `e>|` and `o+e>|`
-/// stay on the line of their element.
+/// On one line when no line break came before a pipe or element in the
+/// source and it fits, counting only the first line of an element that ends
+/// it; otherwise each `|` starts a line, at the current indent, while `e>|`
+/// and `o+e>|` stay on the line of their element.
 /// A comment stays where it is among the pipes and elements, on its own
 /// line or at the end of its line. A pipe with a comment after it stays at
 /// the end of its line, and what comes next starts a line.
 fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
     let mut prev = None;
+    // Where an element that ends the pipeline, with its separator, starts in
+    // `out`.
+    let mut tail = None;
     for child in children(pipeline) {
         let Child {
             element,
@@ -123,8 +129,10 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
         if newlines > 0 {
             out.push(expand_parent());
         }
+        tail = None;
         match &element {
             SyntaxElement::Node(child) => {
+                tail = Some(out.len());
                 out.extend(separator(prev, space));
                 out.extend(node(src, child));
             },
@@ -151,7 +159,13 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
         }
         prev = Some(kind);
     }
-    vec![group(out)]
+    // The tail is measured in break mode, so its first line break ends the
+    // measure instead of breaking the group.
+    let tail = out.split_off(tail.unwrap_or(out.len()));
+    if out.is_empty() {
+        return tail;
+    }
+    iter::once(group(out)).chain(tail).collect()
 }
 
 /// What separates the child after `prev` from it. A comment runs to the end
