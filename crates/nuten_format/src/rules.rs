@@ -100,6 +100,7 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         | SyntaxKind::Call
         | SyntaxKind::ExternalCall
         | SyntaxKind::Redirection => spaced(src, node),
+        SyntaxKind::List => vec![text(&src[node.text_range()])],
         kind => unreachable!("{kind:?} is not formatted as a node"),
     }
 }
@@ -201,8 +202,8 @@ fn spaced<'a>(src: &'a str, parent: &SyntaxNode) -> Vec<Element<'a>> {
     out
 }
 
-/// The one place a comment is printed. `at_start` is whether it is the
-/// first child of its container.
+/// The one place a comment outside a list is printed. `at_start` is whether
+/// it is the first child of its container.
 fn comment<'a>(
     src: &'a str,
     comment: &SyntaxToken,

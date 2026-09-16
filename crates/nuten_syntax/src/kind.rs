@@ -40,7 +40,9 @@ syntax_kinds! {
     Question,
     /// `!` when the mode treats it as a special token.
     Bang,
+    /// The parser emits this, not the lexer.
     LBracket,
+    /// The parser emits this, not the lexer.
     RBracket,
     LBrace,
     RBrace,
@@ -80,7 +82,7 @@ syntax_kinds! {
     RawString,
     /// Exactly one `$"..."` or `$'...'`.
     InterpString,
-    /// Any other item, such as `[a b]` or a mixture like `a"b"c`.
+    /// Any other item, such as `ls` or a mixture like `a"b"c`.
     Word,
     /// An item with a lexing error, or a node wrapping a parse error.
     Error,
@@ -103,6 +105,10 @@ syntax_kinds! {
     /// A redirection to a file: the operator, such as `o>`, and its target.
     /// Has no target only when the operator is an `Error`.
     Redirection,
+    /// A `Word` enclosed in `[ ]`: `[`, what it holds, and `]`.
+    /// It stays a `Word` when its `[` closes before its end, when lexing what
+    /// it holds gives an `Error` or `;` token, or when brackets nest too deep.
+    List,
 }
 
 impl SyntaxKind {

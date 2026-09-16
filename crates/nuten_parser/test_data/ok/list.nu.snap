@@ -1,0 +1,254 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list.nu
+---
+Root@0..336
+  Pipeline@0..17
+    PipelineElement@0..17
+      Call@0..17
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        List@5..10
+          LBracket@5..6 "["
+          Word@6..7 "a"
+          Whitespace@7..8 " "
+          Word@8..9 "b"
+          RBracket@9..10 "]"
+        Whitespace@10..11 " "
+        List@11..17
+          LBracket@11..12 "["
+          Word@12..13 "1"
+          Comma@13..14 ","
+          Whitespace@14..15 " "
+          Word@15..16 "2"
+          RBracket@16..17 "]"
+  Newline@17..18 "\n"
+  Pipeline@18..36
+    PipelineElement@18..27
+      Call@18..27
+        List@18..27
+          LBracket@18..19 "["
+          Word@19..20 "a"
+          Whitespace@20..21 " "
+          List@21..26
+            LBracket@21..22 "["
+            Word@22..23 "b"
+            Whitespace@23..24 " "
+            Word@24..25 "c"
+            RBracket@25..26 "]"
+          RBracket@26..27 "]"
+    Whitespace@27..28 " "
+    Pipe@28..29 "|"
+    Whitespace@29..30 " "
+    PipelineElement@30..36
+      Call@30..36
+        Word@30..36 "length"
+  Newline@36..37 "\n"
+  Pipeline@37..49
+    PipelineElement@37..49
+      ExternalCall@37..49
+        Word@37..42 "^echo"
+        Whitespace@42..43 " "
+        List@43..49
+          LBracket@43..44 "["
+          Word@44..45 "a"
+          Comma@45..46 ","
+          Whitespace@46..47 " "
+          Word@47..48 "b"
+          RBracket@48..49 "]"
+  Newline@49..50 "\n"
+  Pipeline@50..63
+    PipelineElement@50..63
+      Call@50..52
+        Word@50..52 "ls"
+      Whitespace@52..53 " "
+      Redirection@53..59
+        OutGt@53..55 "o>"
+        Whitespace@55..56 " "
+        List@56..59
+          LBracket@56..57 "["
+          Word@57..58 "a"
+          RBracket@58..59 "]"
+      Whitespace@59..60 " "
+      List@60..63
+        LBracket@60..61 "["
+        Word@61..62 "b"
+        RBracket@62..63 "]"
+  Newline@63..64 "\n"
+  Pipeline@64..75
+    PipelineElement@64..75
+      Call@64..75
+        Word@64..68 "echo"
+        Whitespace@68..69 " "
+        List@69..71
+          LBracket@69..70 "["
+          RBracket@70..71 "]"
+        Whitespace@71..72 " "
+        List@72..75
+          LBracket@72..73 "["
+          Whitespace@73..74 " "
+          RBracket@74..75 "]"
+  Newline@75..76 "\n"
+  Pipeline@76..100
+    PipelineElement@76..100
+      Call@76..100
+        Word@76..80 "echo"
+        Whitespace@80..81 " "
+        List@81..100
+          LBracket@81..82 "["
+          Newline@82..83 "\n"
+          Whitespace@83..87 "    "
+          Word@87..88 "a"
+          Whitespace@88..89 " "
+          Comment@89..92 "# c"
+          Newline@92..93 "\n"
+          Whitespace@93..97 "    "
+          Word@97..98 "b"
+          Newline@98..99 "\n"
+          RBracket@99..100 "]"
+  Newline@100..101 "\n"
+  Pipeline@101..130
+    PipelineElement@101..130
+      Call@101..130
+        Word@101..105 "echo"
+        Whitespace@105..106 " "
+        List@106..114
+          LBracket@106..107 "["
+          Word@107..108 "a"
+          Whitespace@108..109 " "
+          Word@109..111 "&&"
+          Whitespace@111..112 " "
+          Word@112..113 "b"
+          RBracket@113..114 "]"
+        Whitespace@114..115 " "
+        List@115..130
+          LBracket@115..116 "["
+          Word@116..117 "a"
+          Whitespace@117..118 " "
+          PipePipe@118..120 "||"
+          Whitespace@120..121 " "
+          List@121..129
+            LBracket@121..122 "["
+            Word@122..123 "b"
+            Whitespace@123..124 " "
+            Word@124..128 "2>&1"
+            RBracket@128..129 "]"
+          RBracket@129..130 "]"
+  Newline@130..131 "\n"
+  Pipeline@131..165
+    PipelineElement@131..165
+      Call@131..165
+        Word@131..135 "echo"
+        Whitespace@135..136 " "
+        Word@136..146 "[a b c; d]"
+        Whitespace@146..147 " "
+        List@147..157
+          LBracket@147..148 "["
+          Word@148..154 "[a; b]"
+          Whitespace@154..155 " "
+          Word@155..156 "c"
+          RBracket@156..157 "]"
+        Whitespace@157..158 " "
+        List@158..165
+          LBracket@158..159 "["
+          String@159..164 "\"a;b\""
+          RBracket@164..165 "]"
+  Newline@165..166 "\n"
+  Pipeline@166..199
+    PipelineElement@166..199
+      Call@166..199
+        Word@166..169 "def"
+        Whitespace@169..170 " "
+        Word@170..171 "f"
+        Whitespace@171..172 " "
+        Word@172..181 "[x: int]:"
+        Whitespace@181..182 " "
+        Word@182..189 "nothing"
+        Whitespace@189..190 " "
+        Word@190..192 "->"
+        Whitespace@192..193 " "
+        Word@193..196 "int"
+        Whitespace@196..197 " "
+        Word@197..199 "{}"
+  Newline@199..200 "\n"
+  Pipeline@200..235
+    PipelineElement@200..235
+      Call@200..235
+        Word@200..204 "echo"
+        Whitespace@204..205 " "
+        Word@205..209 "[a]b"
+        Whitespace@209..210 " "
+        Word@210..219 "[1 2 3].0"
+        Whitespace@219..220 " "
+        Word@220..224 "[],#"
+        Whitespace@224..225 " "
+        Word@225..235 "[à#b \"c\n]"
+  Newline@235..236 "\n"
+  Pipeline@236..262
+    PipelineElement@236..262
+      Call@236..262
+        Word@236..240 "echo"
+        Whitespace@240..241 " "
+        Word@241..249 "[a b].c]"
+        Whitespace@249..250 " "
+        Word@250..254 "[a]]"
+        Whitespace@254..255 " "
+        Word@255..262 "[a].[b]"
+  Newline@262..263 "\n"
+  Pipeline@263..276
+    PipelineElement@263..276
+      Call@263..276
+        Word@263..267 "echo"
+        Whitespace@267..268 " "
+        List@268..276
+          LBracket@268..269 "["
+          Word@269..270 "a"
+          Whitespace@270..271 " "
+          Comment@271..273 "#;"
+          Newline@273..274 "\n"
+          Word@274..275 "b"
+          RBracket@275..276 "]"
+  Newline@276..277 "\n"
+  Pipeline@277..292
+    PipelineElement@277..292
+      Call@277..292
+        Word@277..281 "echo"
+        Whitespace@281..282 " "
+        List@282..292
+          LBracket@282..283 "["
+          Word@283..289 "[#(\n)]"
+          Whitespace@289..290 " "
+          Word@290..291 "c"
+          RBracket@291..292 "]"
+  Newline@292..293 "\n"
+  Pipeline@293..317
+    PipelineElement@293..317
+      Call@293..317
+        Word@293..297 "echo"
+        Whitespace@297..298 " "
+        List@298..317
+          LBracket@298..299 "["
+          Word@299..300 "a"
+          Whitespace@300..301 " "
+          Word@301..304 "o>|"
+          Whitespace@304..305 " "
+          Word@305..306 "b"
+          Whitespace@306..307 " "
+          Word@307..309 "2>"
+          Whitespace@309..310 " "
+          Word@310..311 "c"
+          Whitespace@311..312 " "
+          OutGt@312..314 "o>"
+          Whitespace@314..315 " "
+          Word@315..316 "d"
+          RBracket@316..317 "]"
+  Newline@317..318 "\n"
+  Pipeline@318..335
+    PipelineElement@318..335
+      Call@318..335
+        Word@318..322 "echo"
+        Whitespace@322..323 " "
+        Word@323..328 "[#][]"
+        Whitespace@328..329 " "
+        Word@329..335 "[],#[]"
+  Newline@335..336 "\n"

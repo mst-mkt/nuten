@@ -2,7 +2,11 @@
 
 use nuten_syntax::SyntaxKind;
 
-use crate::{ParseErrorKind, parser::Parser};
+use crate::{
+    ParseErrorKind,
+    lexer::Mode,
+    parser::{Brackets, Parser},
+};
 
 pub(crate) fn file(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
@@ -178,7 +182,7 @@ fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Str
         None => p.bump(),
     }
     if has_target {
-        p.bump();
+        token_or_list(p);
     }
     p.finish();
 }
@@ -186,7 +190,38 @@ fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Str
 fn item(p: &mut Parser<'_>) {
     match p.peek_text().and_then(shell_operator) {
         Some(kind) => p.bump_error(kind),
-        None => p.bump(),
+        None => token_or_list(p),
+    }
+}
+
+pub(crate) const SQUARE: Brackets = Brackets {
+    open: b'[',
+    close: b']',
+    open_kind: SyntaxKind::LBracket,
+    close_kind: SyntaxKind::RBracket,
+};
+
+fn token_or_list(p: &mut Parser<'_>) {
+    match p.bracketed(&SQUARE, Mode::list()) {
+        Some(bracketed) if is_list(bracketed.inner()) => {
+            p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
+        },
+        _ => p.bump(),
+    }
+}
+
+/// A `;` may make it a table, which stays a word until tables are parsed.
+/// A lexing error keeps it a word too, since nothing inside may be reported.
+fn is_list(inner: &Parser<'_>) -> bool {
+    !inner
+        .remaining_kinds()
+        .any(|kind| matches!(kind, SyntaxKind::Semicolon | SyntaxKind::Error))
+}
+
+/// Unlike `item`, reports no error: nu may read the word as a string.
+fn list_items(p: &mut Parser<'_>) {
+    while p.peek().is_some() {
+        token_or_list(p);
     }
 }
 
@@ -281,6 +316,8 @@ fn is_item(kind: SyntaxKind) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use nuten_syntax::SyntaxKind;
+
     use crate::{ParseErrorKind, parse};
 
     fn errors(src: &str) -> Vec<ParseErrorKind> {
@@ -321,5 +358,22 @@ mod tests {
         assert_eq!(parsed.errors().len(), 1);
         assert_eq!(&"ls | | # c"[parsed.errors()[0].range], "|");
         assert_eq!(parsed.errors()[0].range.start(), 5.into());
+    }
+
+    #[test]
+    fn brackets_nested_too_deep_stay_a_word() {
+        let src = format!("{}{}", "[".repeat(130), "]".repeat(130));
+        let tree = parse(&src).syntax();
+        let lists = tree
+            .descendants()
+            .filter(|node| node.kind() == SyntaxKind::List);
+        assert_eq!(lists.count(), 128);
+        let innermost = tree
+            .descendants_with_tokens()
+            .filter(|element| element.kind() == SyntaxKind::Word);
+        assert_eq!(
+            innermost.map(|word| word.to_string()).collect::<Vec<_>>(),
+            ["[[]]"]
+        );
     }
 }
