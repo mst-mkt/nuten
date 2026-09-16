@@ -62,9 +62,11 @@ impl fmt::Display for LexErrorKind {
 /// The part of nu's `lex` settings that decides where items end.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Mode {
-    /// Bytes that end an item, on top of whitespace, `|`, and `;`.
+    /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with
+    /// the kind of the token it makes on its own at the start of an item.
     /// nu's special tokens, plus `,` where nu treats it as whitespace.
-    special: &'static [u8],
+    /// All ASCII, and none of the bytes `next` handles before `item`.
+    special: &'static [(u8, SyntaxKind)],
 }
 
 impl Mode {
@@ -76,8 +78,22 @@ impl Mode {
         }
     }
 
+    /// Lists, tables, and list patterns.
+    pub const fn list() -> Mode {
+        Mode {
+            special: &[(b',', SyntaxKind::Comma)],
+        }
+    }
+
     fn is_terminator(self, byte: u8) -> bool {
-        matches!(byte, b' ' | b'\t' | b'\n' | b'\r' | b'|' | b';') || self.special.contains(&byte)
+        matches!(byte, b' ' | b'\t' | b'\n' | b'\r' | b'|' | b';')
+            || self.special_kind(byte).is_some()
+    }
+
+    fn special_kind(self, byte: u8) -> Option<SyntaxKind> {
+        self.special
+            .iter()
+            .find_map(|&(special, kind)| (special == byte).then_some(kind))
     }
 }
 
@@ -175,6 +191,9 @@ impl<'a> Lexer<'a> {
     /// A redirection also takes the `|` right after it.
     /// On error, the item ends where nu finds it.
     fn item(&mut self) -> Result<SyntaxKind, LexError> {
+        if let Some(kind) = self.peek().and_then(|byte| self.mode.special_kind(byte)) {
+            return Ok(self.eat(1, kind));
+        }
         let start = self.pos;
         let mut closers = Vec::new();
         // A string that opens at `start`, with its kind and end.
@@ -343,9 +362,9 @@ fn text_range(range: Range<usize>) -> TextRange {
 #[cfg(test)]
 mod tests {
     use nuten_syntax::SyntaxKind::{
-        self, Assign, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString, Newline, OutErrGt,
-        OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString, Semicolon, Whitespace,
-        Word,
+        self, Assign, Comma, Comment, ErrGt, ErrGtGt, ErrGtPipe, Error, InterpString, Newline,
+        OutErrGt, OutErrGtGt, OutErrGtPipe, OutGt, OutGtGt, Pipe, PipePipe, RawString, Semicolon,
+        Whitespace, Word,
     };
     use rowan::{TextRange, TextSize};
 
@@ -357,11 +376,19 @@ mod tests {
     use crate::test_support::short_inputs;
 
     fn lex_all(src: &str) -> Lexed {
-        lex(src, TextRange::up_to(TextSize::of(src)), Mode::block())
+        lex_all_in(src, Mode::block())
+    }
+
+    fn lex_all_in(src: &str, mode: Mode) -> Lexed {
+        lex(src, TextRange::up_to(TextSize::of(src)), mode)
     }
 
     fn lexed(src: &str) -> Vec<(SyntaxKind, &str)> {
-        lex_all(src)
+        lexed_in(src, Mode::block())
+    }
+
+    fn lexed_in(src: &str, mode: Mode) -> Vec<(SyntaxKind, &str)> {
+        lex_all_in(src, mode)
             .tokens
             .iter()
             .map(|token| (token.kind, &src[token.range]))
@@ -388,9 +415,19 @@ mod tests {
 
     /// The split nu reports, which drops whitespace.
     fn split(src: &str) -> Vec<&str> {
-        lexed(src)
+        split_skipping(src, Mode::block(), &[Whitespace])
+    }
+
+    /// The split nu reports inside a list, where it reads `,` and line breaks
+    /// as whitespace too.
+    fn split_list(src: &str) -> Vec<&str> {
+        split_skipping(src, Mode::list(), &[Whitespace, Newline, Comma])
+    }
+
+    fn split_skipping<'a>(src: &'a str, mode: Mode, skipped: &[SyntaxKind]) -> Vec<&'a str> {
+        lexed_in(src, mode)
             .into_iter()
-            .filter(|(kind, _)| *kind != Whitespace)
+            .filter(|(kind, _)| !skipped.contains(kind))
             .map(|(_, text)| text)
             .collect()
     }
@@ -475,6 +512,7 @@ mod tests {
     fn block_mode_has_no_special_bytes() {
         assert_eq!(lexed("a:b,c=d.e?f!"), [(Word, "a:b,c=d.e?f!")]);
         assert_eq!(lexed("--foo=bar"), [(Word, "--foo=bar")]);
+        assert_eq!(lexed(",a"), [(Word, ",a")]);
     }
 
     #[test]
@@ -755,6 +793,69 @@ mod tests {
     fn splits_match_nu() {
         for &(src, expected) in NU_SPLITS {
             assert_eq!(split(src), expected, "{src:?}");
+        }
+    }
+
+    /// How nu 0.115.1 splits the inside of a list.
+    const NU_LIST_SPLITS: &[(&str, &[&str])] = &[
+        ("a,b", &["a", "b"]),
+        ("a,,b", &["a", "b"]),
+        ("a , b", &["a", "b"]),
+        ("a,", &["a"]),
+        (",a", &["a"]),
+        (" , ", &[]),
+        ("a,\nb", &["a", "b"]),
+        ("a\r,b", &["a", "b"]),
+        ("a,|b", &["a", "|", "b"]),
+        ("a=b", &["a=b"]),
+        ("a:b", &["a:b"]),
+        ("--x=1", &["--x=1"]),
+        (r#""a,b""#, &[r#""a,b""#]),
+        ("a[b,c]d", &["a[b,c]d"]),
+        ("a[b,#c] d", &["a[b,#c]", "d"]),
+        ("[a #,] b\n],c", &["[a #,] b\n]", "c"]),
+        ("a#b,c", &["a#b", "c"]),
+        ("à#b,c", &["à#b", "c"]),
+        ("a},b", &["a}", "b"]),
+        ("[a,b", &["[a,b"]),
+    ];
+
+    #[test]
+    fn list_splits_match_nu() {
+        for &(src, expected) in NU_LIST_SPLITS {
+            assert_eq!(split_list(src), expected, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn special_bytes_are_tokens_at_the_start_of_an_item() {
+        assert_eq!(
+            lexed_in(",a,,b ,", Mode::list()),
+            [
+                (Comma, ","),
+                (Word, "a"),
+                (Comma, ","),
+                (Comma, ","),
+                (Word, "b"),
+                (Whitespace, " "),
+                (Comma, ","),
+            ]
+        );
+    }
+
+    #[test]
+    fn items_ending_at_a_special_byte_keep_their_kinds() {
+        for (src, kind) in [
+            (r#""a",b"#, SyntaxKind::String),
+            (r#"$"(a,b)",b"#, InterpString),
+            ("r#'a,b'#,b", RawString),
+            ("e>,b", ErrGt),
+            ("e>|,b", ErrGtPipe),
+            ("=,b", Assign),
+        ] {
+            let tokens = lexed_in(src, Mode::list());
+            assert_eq!(tokens[0].0, kind, "{src:?}");
+            assert_eq!(&tokens[1..], [(Comma, ","), (Word, "b")], "{src:?}");
         }
     }
 
