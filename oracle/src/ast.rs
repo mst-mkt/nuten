@@ -52,7 +52,8 @@ fn json(text: &str) -> Result<JsonValue<'_>, String> {
 
 /// Without `start` and `end` wherever they stand together, and the
 /// `span_source` beside them, which is the text between.
-/// Nu writes positions as such pairs, in `span` objects and elsewhere.
+/// Nu writes positions as such pairs, in `span` objects and elsewhere, and as
+/// the source excerpt it draws into the message of a `LabeledError`.
 fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
     match value {
         JsonValue::Object(object) => {
@@ -66,7 +67,15 @@ fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
             }
             let map: Map<_, _> = map
                 .into_iter()
-                .map(|(key, value)| (key, without_positions(value)))
+                .map(|(key, value)| {
+                    let value = without_positions(value);
+                    let value = if key == "LabeledError" {
+                        without_excerpt(value)
+                    } else {
+                        value
+                    };
+                    (key, value)
+                })
                 .collect();
             JsonValue::Object(map.into())
         },
@@ -76,6 +85,31 @@ fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
         },
         other => other,
     }
+}
+
+/// `error`, the items of a `LabeledError`, without the lines of the excerpt
+/// in its message, from the one that starts with `,-[` to the one that
+/// starts with `` `---- ``.
+fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
+    let JsonValue::Array(items) = error else {
+        return error;
+    };
+    let mut items = items.take_inner();
+    if let Some(JsonValue::String(message)) = items.first() {
+        let mut inside = false;
+        let lines: Vec<_> = message
+            .lines()
+            .filter(|line| {
+                let line = line.trim_start();
+                inside |= line.starts_with(",-[");
+                let kept = !inside;
+                inside &= !line.starts_with("`----");
+                kept
+            })
+            .collect();
+        items[0] = JsonValue::String(lines.join("\n").into());
+    }
+    JsonValue::Array(items.into())
 }
 
 /// With each `\r\n` in a string as `\n`, as the printer writes line endings
@@ -157,6 +191,25 @@ mod tests {
             without_positions(ast),
             value(r#"{"span": {}, "head": {}, "start": 5, "items": [{}]}"#)
         );
+    }
+
+    #[test]
+    fn the_excerpt_in_the_message_of_a_labeled_error_is_dropped() {
+        let error = |line: u32| {
+            format!(
+                concat!(
+                    r#"{{"LabeledError": ["Error: x\n\n  x Not found\n   ,-[source:{line}:11]\n"#,
+                    r#" {line} | const x = path self\n   :           ^^\n   `----\n  help: y\n", "#,
+                    r#""z", {{"start": 1, "end": 2}}]}}"#,
+                ),
+                line = line
+            )
+        };
+        assert_eq!(
+            without_positions(value(&error(1))),
+            value(r#"{"LabeledError": ["Error: x\n\n  x Not found\n  help: y", "z", {}]}"#)
+        );
+        assert_eq!(difference(&error(1), &error(3)), Ok(None));
     }
 
     #[test]
