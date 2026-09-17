@@ -389,14 +389,17 @@ mod tests {
         assert_eq!(check("# c\n\n\n", "# c\n"), []);
         assert_eq!(check("# a\n\n\n# b\n", "# a\n\n# b\n"), []);
         assert_eq!(
-            check("echo {\nls\n# c\n\n}\nls\n", "echo {\nls\n# c\n}\nls\n"),
+            check(
+                "echo {\nls\n# c\n\n}\nls\n",
+                "echo {\n    ls\n    # c\n}\nls\n"
+            ),
             []
         );
     }
 
     #[test]
     fn blank_lines_between_statements_of_a_block_count() {
-        let violations = check("echo {\n# c\n\nls\n}\n", "echo {\n# c\nls\n}\n");
+        let violations = check("echo {\n# c\n\nls\n}\n", "echo {\n    # c\n    ls\n}\n");
         assert_eq!(invariants(&violations), [Invariant::Comments]);
     }
 

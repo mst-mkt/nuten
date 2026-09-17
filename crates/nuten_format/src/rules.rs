@@ -41,21 +41,33 @@ fn children(parent: &SyntaxNode) -> impl Iterator<Item = Child> {
 }
 
 /// `root` is the tree of `src`, with no `Error` element.
-/// Blank lines stay, one at most, or two after a statement ending in `|`.
-/// A comment stays on its own line or at the end of its line.
 pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut out = statements(src, children(root), true);
+    out.push(hard_line_break());
+    out
+}
+
+/// Statements; line breaks before the first are left to the container.
+/// Blank lines stay, one at most, or two after a statement ending in `|`.
+/// A comment stays on its own line or at the end of its line; `at_start` is
+/// whether nothing comes before the first child on its line.
+fn statements(
+    src: &str,
+    items: impl IntoIterator<Item = Child>,
+    at_start: bool,
+) -> Vec<Element<'_>> {
     let mut out = Vec::new();
     let mut prev = None;
     // Whether a `|` at the end of the last statement still reaches what
     // comes next.
     let mut open_pipe = false;
-    for child in children(root) {
+    for item in items {
         let Child {
             element,
             newlines,
-        } = child;
+        } = item;
         let kind = element.kind();
-        if newlines > 0 {
+        if newlines > 0 && prev.is_some() {
             out.push(match newlines {
                 1 => hard_line_break(),
                 // With one blank line, a `|` at the start of the next line
@@ -78,13 +90,14 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
             },
             SyntaxElement::Token(child) => match kind {
                 SyntaxKind::Semicolon => out.push(token(src, child)),
-                SyntaxKind::Comment => out.extend(comment(src, child, newlines, prev.is_none())),
-                kind => unreachable!("{kind:?} is not a child of Root"),
+                SyntaxKind::Comment => {
+                    out.extend(comment(src, child, newlines, at_start && prev.is_none()));
+                },
+                kind => unreachable!("{kind:?} is not among statements"),
             },
         }
         prev = Some(kind);
     }
-    out.push(hard_line_break());
     out
 }
 
@@ -105,9 +118,9 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         | SyntaxKind::ExternalCall
         | SyntaxKind::Redirection => spaced(src, node),
         SyntaxKind::List | SyntaxKind::Record if reads_as_value(node) => container(src, node),
-        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Block => {
-            vec![text(&src[node.text_range()])]
-        },
+        SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],
+        SyntaxKind::Block if in_match(node) => vec![text(&src[node.text_range()])],
+        SyntaxKind::Block => block(src, node),
         kind => unreachable!("{kind:?} is not formatted as a node"),
     }
 }
@@ -290,6 +303,77 @@ fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
         token(src, &open),
         indent(inner),
         padding(),
+        token(src, &close),
+    ];
+    if expand {
+        out.push(expand_parent());
+    }
+    vec![group(out)]
+}
+
+/// Whether `block` is an argument of `match`, its subject or its arms, which
+/// stay as they are.
+fn in_match(block: &SyntaxNode) -> bool {
+    block.parent().is_some_and(|parent| {
+        parent.kind() == SyntaxKind::Call
+            && parent
+                .first_child_or_token()
+                .and_then(SyntaxElement::into_token)
+                .is_some_and(|head| head.kind() == SyntaxKind::Word && head.text() == "match")
+    })
+}
+
+/// A block or a closure. On one line when it fits and no line break comes
+/// after the parameters, with one space inside the braces; otherwise the
+/// statements go indented, with the closing brace on a line of its own.
+/// Blank lines at the start and the end go. The parameters stay as they are,
+/// along with what comes before them.
+fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut items = children(block).peekable();
+    let Some(open) = items.next() else {
+        unreachable!("a block has braces");
+    };
+    let params = items.next_if(|item| item.element.kind() == SyntaxKind::ClosureParams);
+    let head_end = params
+        .as_ref()
+        .map_or(open.element.text_range(), |params| {
+            params.element.text_range()
+        })
+        .end();
+    let head = text(&src[TextRange::new(open.element.text_range().start(), head_end)]);
+    let mut body: Vec<_> = items.collect();
+    let Some(Child {
+        element: SyntaxElement::Token(close),
+        newlines: close_newlines,
+    }) = body.pop()
+    else {
+        unreachable!("a block has braces");
+    };
+    let Some(first) = body.first() else {
+        return vec![head, token(src, &close)];
+    };
+    // A comment is followed by a line break, so it expands the block too.
+    let expand = close_newlines > 0 || body.iter().any(|item| item.newlines > 0);
+    let lead = if first.element.kind() == SyntaxKind::Comment && first.newlines == 0 {
+        None
+    } else if params.is_none()
+        && first
+            .element
+            .as_node()
+            .and_then(SyntaxNode::first_child_or_token)
+            .is_some_and(|first| first.kind() == SyntaxKind::Pipe)
+    {
+        // Right after the brace and a line break, nu would read the `|` as
+        // the start of parameters.
+        Some(empty_line())
+    } else {
+        Some(soft_line_break_or_space())
+    };
+    let inner = lead.into_iter().chain(statements(src, body, false));
+    let mut out = vec![
+        head,
+        indent(inner),
+        soft_line_break_or_space(),
         token(src, &close),
     ];
     if expand {
@@ -514,7 +598,7 @@ fn spaced<'a>(src: &'a str, parent: &SyntaxNode) -> Vec<Element<'a>> {
 }
 
 /// The one place a comment is printed, other than inside text kept as it is.
-/// `at_start` is whether it is the first child of its container.
+/// `at_start` is whether nothing comes before it on its line.
 fn comment<'a>(
     src: &'a str,
     comment: &SyntaxToken,

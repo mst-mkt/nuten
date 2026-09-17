@@ -30,13 +30,13 @@ let x =
 # c
 | length
 ls | {|x|
-  $x
+    $x
 } = 1
 = 1
 
 | let x = {|x|
-  $x
+    $x
 }
 ls | = {|x|
-  $x
+    $x
 }
