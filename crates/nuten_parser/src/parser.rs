@@ -137,6 +137,11 @@ impl<'a> Parser<'a> {
         lexer::lex_first(self.src, TextRange::new(start, end), mode)
     }
 
+    /// The first error of lexing `range` again in `mode`.
+    pub(crate) fn lex_error(&self, range: TextRange, mode: Mode) -> Option<LexError> {
+        lexer::lex(self.src, range, mode).errors.into_iter().next()
+    }
+
     /// Whether `items` reports an error on the tokens ahead. Bracketed words
     /// are left unread, since what they hold reports no error.
     pub(crate) fn reports_error(&self, items: fn(&mut Parser<'a>)) -> bool {
@@ -274,6 +279,36 @@ impl<'a> Parser<'a> {
             kind,
             range: token.range,
         }));
+        self.finish();
+    }
+
+    /// Emits the tokens ahead up to `end` inside an `Error` node, reporting
+    /// `error`.
+    ///
+    /// # Panics
+    ///
+    /// Panics unless a token ahead ends at `end`, or when an `Error` token
+    /// comes before `end`.
+    pub(crate) fn bump_error_to(&mut self, end: TextSize, error: ParseError) {
+        self.start(SyntaxKind::Error);
+        self.events.push(Event::Error(error));
+        while self
+            .nth_token(0)
+            .is_some_and(|token| token.range.end() <= end)
+        {
+            let token = self.tokens[self.pos];
+            assert!(
+                token.kind != SyntaxKind::Error,
+                "bump_error_to over an Error token"
+            );
+            self.bump_one();
+        }
+        assert!(
+            self.tokens[..self.pos]
+                .last()
+                .is_some_and(|token| token.range.end() == end),
+            "bump_error_to past the end of a token"
+        );
         self.finish();
     }
 

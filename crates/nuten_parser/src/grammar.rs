@@ -1,9 +1,10 @@
 //! Grammar rules of Nushell.
 
 use nuten_syntax::SyntaxKind;
+use rowan::{TextRange, TextSize};
 
 use crate::{
-    ParseErrorKind,
+    ParseError, ParseErrorKind,
     lexer::Mode,
     parser::{Brackets, Parser},
 };
@@ -147,9 +148,13 @@ fn bump_newlines(p: &mut Parser<'_>) {
 fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
     p.start(SyntaxKind::PipelineElement);
     let redirected = if assignment_ahead(p) {
-        if first && matches!(p.peek_text(), Some("let" | "mut" | "const")) {
+        if first && let Some(keyword @ ("let" | "mut" | "const")) = p.peek_text() {
             p.start(SyntaxKind::Let);
             p.bump();
+            if let Some((end, error)) = var_type_error(p, keyword) {
+                p.bump();
+                p.bump_error_to(end, error);
+            }
             arguments(p, Some(Streams::default()), false, true);
         } else {
             p.start(SyntaxKind::Assignment);
@@ -165,6 +170,37 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
     };
     p.finish();
     redirected
+}
+
+/// Where the type ahead ends, after a name ending in `:`, and the first error
+/// of lexing it as nu does, which reads it up to the assignment operator,
+/// leaving out redirections at either end for `const`. `None` also when its
+/// tokens hold an error of their own.
+fn var_type_error(p: &Parser<'_>, keyword: &str) -> Option<(TextSize, ParseError)> {
+    let mut tokens = p
+        .remaining_tokens()
+        .filter(|(token, _)| !token.kind.is_trivia());
+    let (name, text) = tokens.next()?;
+    if !text.ends_with(':') {
+        return None;
+    }
+    let mut prev = name.kind;
+    let mut range: Option<TextRange> = None;
+    for (token, _) in tokens {
+        if token.kind == SyntaxKind::Assign && !is_file_redirection(prev) {
+            break;
+        }
+        if token.kind == SyntaxKind::Error {
+            return None;
+        }
+        if keyword != "const" || !(is_file_redirection(token.kind) || is_file_redirection(prev)) {
+            range = Some(range.map_or(token.range, |range| range.cover(token.range)));
+        }
+        prev = token.kind;
+    }
+    let range = range?;
+    let error = p.lex_error(range, Mode::var_type())?;
+    Some((range.end(), error.into()))
 }
 
 /// Whether an assignment operator comes before the element ends. As in nu,

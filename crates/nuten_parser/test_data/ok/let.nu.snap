@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/let.nu
 ---
-Root@0..212
+Root@0..359
   Pipeline@0..11
     Pipe@0..1 "|"
     Whitespace@1..2 " "
@@ -249,3 +249,153 @@ Root@0..212
             Call@210..211
               Word@210..211 "1"
   Newline@211..212 "\n"
+  Pipeline@212..226
+    PipelineElement@212..226
+      Let@212..226
+        Word@212..215 "let"
+        Whitespace@215..216 " "
+        Word@216..217 "x"
+        Whitespace@217..218 " "
+        Word@218..222 ":a<b"
+        Whitespace@222..223 " "
+        Assign@223..224 "="
+        Whitespace@224..225 " "
+        Pipeline@225..226
+          PipelineElement@225..226
+            Call@225..226
+              Word@225..226 "1"
+  Newline@226..227 "\n"
+  Pipeline@227..243
+    PipelineElement@227..243
+      Let@227..243
+        Word@227..230 "let"
+        Whitespace@230..231 " "
+        Word@231..233 "x:"
+        Whitespace@233..234 " "
+        Word@234..239 "a<b>c"
+        Whitespace@239..240 " "
+        Assign@240..241 "="
+        Whitespace@241..242 " "
+        Pipeline@242..243
+          PipelineElement@242..243
+            Call@242..243
+              Word@242..243 "1"
+  Newline@243..244 "\n"
+  Pipeline@244..257
+    PipelineElement@244..257
+      Let@244..257
+        Word@244..247 "let"
+        Whitespace@247..248 " "
+        Word@248..249 "x"
+        Whitespace@249..250 " "
+        Word@250..253 "a<b"
+        Whitespace@253..254 " "
+        Assign@254..255 "="
+        Whitespace@255..256 " "
+        Pipeline@256..257
+          PipelineElement@256..257
+            Call@256..257
+              Word@256..257 "1"
+  Newline@257..258 "\n"
+  Pipeline@258..276
+    PipelineElement@258..259
+      Call@258..259
+        Word@258..259 "a"
+    Whitespace@259..260 " "
+    Pipe@260..261 "|"
+    Whitespace@261..262 " "
+    PipelineElement@262..276
+      Assignment@262..276
+        Call@262..272
+          Word@262..265 "let"
+          Whitespace@265..266 " "
+          Word@266..268 "x:"
+          Whitespace@268..269 " "
+          Word@269..272 "a<b"
+        Whitespace@272..273 " "
+        Assign@273..274 "="
+        Whitespace@274..275 " "
+        Pipeline@275..276
+          PipelineElement@275..276
+            Call@275..276
+              Word@275..276 "1"
+  Newline@276..277 "\n"
+  Pipeline@277..298
+    PipelineElement@277..298
+      Let@277..298
+        Word@277..280 "let"
+        Whitespace@280..281 " "
+        Word@281..283 "x:"
+        Whitespace@283..284 " "
+        Word@284..287 "a<b"
+        Whitespace@287..288 " "
+        Word@288..289 "c"
+        Whitespace@289..290 " "
+        Redirection@290..294
+          OutGt@290..292 "o>"
+          Whitespace@292..293 " "
+          Word@293..294 "f"
+        Whitespace@294..295 " "
+        Assign@295..296 "="
+        Whitespace@296..297 " "
+        Pipeline@297..298
+          PipelineElement@297..298
+            Call@297..298
+              Word@297..298 "1"
+  Newline@298..299 "\n"
+  Pipeline@299..312
+    PipelineElement@299..312
+      Let@299..312
+        Word@299..302 "let"
+        Whitespace@302..303 " "
+        Word@303..308 "x:a<b"
+        Whitespace@308..309 " "
+        Assign@309..310 "="
+        Whitespace@310..311 " "
+        Pipeline@311..312
+          PipelineElement@311..312
+            Call@311..312
+              Word@311..312 "1"
+  Newline@312..313 "\n"
+  Pipeline@313..335
+    PipelineElement@313..335
+      Let@313..335
+        Word@313..318 "const"
+        Whitespace@318..319 " "
+        Word@319..321 "x:"
+        Whitespace@321..322 " "
+        Word@322..325 "int"
+        Whitespace@325..326 " "
+        Redirection@326..331
+          OutGt@326..328 "o>"
+          Whitespace@328..329 " "
+          Word@329..331 "a<"
+        Whitespace@331..332 " "
+        Assign@332..333 "="
+        Whitespace@333..334 " "
+        Pipeline@334..335
+          PipelineElement@334..335
+            Call@334..335
+              Word@334..335 "1"
+  Newline@335..336 "\n"
+  Pipeline@336..358
+    PipelineElement@336..358
+      Let@336..358
+        Word@336..341 "const"
+        Whitespace@341..342 " "
+        Word@342..344 "x:"
+        Whitespace@344..345 " "
+        Redirection@345..350
+          OutGt@345..347 "o>"
+          Whitespace@347..348 " "
+          Word@348..350 "a<"
+        Whitespace@350..351 " "
+        Word@351..354 "int"
+        Whitespace@354..355 " "
+        Assign@355..356 "="
+        Whitespace@356..357 " "
+        Pipeline@357..358
+          PipelineElement@357..358
+            Call@357..358
+              Word@357..358 "1"
+  Newline@358..359 "\n"

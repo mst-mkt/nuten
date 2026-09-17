@@ -116,7 +116,8 @@ syntax_kinds! {
     /// line-start `|`, and a `Pipeline` of the rest of the statement if anything follows.
     Assignment,
     /// As an `Assignment`, but for an element that starts a pipeline with `let`, `mut`, or
-    /// `const`, where that word, not a `Call`, comes before the arguments.
+    /// `const`, where that word, not a `Call`, comes before the arguments. The type after a name
+    /// ending in `:` is an `Error` node when nu fails to lex it.
     Let,
     /// A `Word` enclosed in `[ ]`: `[`, what it holds, and `]`.
     /// It stays a `Word` when its `[` closes before its end, when lexing what

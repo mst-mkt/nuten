@@ -12,3 +12,11 @@ let x | a
 let x
 export const x = 1
 let {a: 1} = 1
+let x :a<b = 1
+let x: a<b>c = 1
+let x a<b = 1
+a | let x: a<b = 1
+let x: a<b c o> f = 1
+let x:a<b = 1
+const x: int o> a< = 1
+const x: o> a< int = 1

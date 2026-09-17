@@ -1,0 +1,133 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/let_type_errors.nu
+---
+Root@0..132
+  Pipeline@0..14
+    PipelineElement@0..14
+      Let@0..14
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..6 "x:"
+        Whitespace@6..7 " "
+        Error@7..10
+          Word@7..10 "a<b"
+        Whitespace@10..11 " "
+        Assign@11..12 "="
+        Whitespace@12..13 " "
+        Pipeline@13..14
+          PipelineElement@13..14
+            Call@13..14
+              Word@13..14 "1"
+  Newline@14..15 "\n"
+  Pipeline@15..42
+    PipelineElement@15..42
+      Let@15..42
+        Word@15..18 "mut"
+        Whitespace@18..19 " "
+        Word@19..21 "x:"
+        Whitespace@21..22 " "
+        Error@22..37
+          Word@22..31 "record<a:"
+          Whitespace@31..32 " "
+          Word@32..37 "int]>"
+        Whitespace@37..38 " "
+        Assign@38..39 "="
+        Whitespace@39..40 " "
+        Pipeline@40..42
+          PipelineElement@40..42
+            Call@40..42
+              Word@40..42 "{}"
+  Newline@42..43 "\n"
+  Pipeline@43..66
+    PipelineElement@43..66
+      Let@43..66
+        Word@43..48 "const"
+        Whitespace@48..49 " "
+        Word@49..51 "x:"
+        Whitespace@51..52 " "
+        Error@52..61 "list<int)"
+        Whitespace@61..62 " "
+        Assign@62..63 "="
+        Whitespace@63..64 " "
+        Pipeline@64..66
+          PipelineElement@64..66
+            Call@64..66
+              List@64..66
+                LBracket@64..65 "["
+                RBracket@65..66 "]"
+  Newline@66..67 "\n"
+  Pipeline@67..90
+    PipelineElement@67..90
+      Let@67..90
+        Word@67..70 "let"
+        Whitespace@70..71 " "
+        Word@71..73 "x:"
+        Whitespace@73..74 " "
+        Error@74..86
+          Word@74..77 "a<b"
+          Whitespace@77..78 " "
+          Word@78..81 "c]>"
+          Whitespace@81..82 " "
+          OutGt@82..84 "o>"
+          Whitespace@84..85 " "
+          Word@85..86 "f"
+        Whitespace@86..87 " "
+        Assign@87..88 "="
+        Whitespace@88..89 " "
+        Pipeline@89..90
+          PipelineElement@89..90
+            Call@89..90
+              Word@89..90 "1"
+  Newline@90..91 "\n"
+  Pipeline@91..111
+    PipelineElement@91..111
+      Let@91..111
+        Word@91..94 "let"
+        Whitespace@94..95 " "
+        Word@95..97 "x:"
+        Whitespace@97..98 " "
+        Error@98..107
+          Word@98..99 "a"
+          Whitespace@99..100 " "
+          OutGt@100..102 "o>"
+          Whitespace@102..103 " "
+          Assign@103..104 "="
+          Whitespace@104..105 " "
+          Word@105..107 "<b"
+        Whitespace@107..108 " "
+        Assign@108..109 "="
+        Whitespace@109..110 " "
+        Pipeline@110..111
+          PipelineElement@110..111
+            Call@110..111
+              Word@110..111 "1"
+  Newline@111..112 "\n"
+  Pipeline@112..131
+    PipelineElement@112..131
+      Let@112..131
+        Word@112..117 "const"
+        Whitespace@117..118 " "
+        Word@118..120 "x:"
+        Whitespace@120..121 " "
+        Error@121..122
+          Word@121..122 "<"
+        Whitespace@122..123 " "
+        Redirection@123..127
+          OutGt@123..125 "o>"
+          Whitespace@125..126 " "
+          Word@126..127 ">"
+        Whitespace@127..128 " "
+        Assign@128..129 "="
+        Whitespace@129..130 " "
+        Pipeline@130..131
+          PipelineElement@130..131
+            Call@130..131
+              Word@130..131 "1"
+  Newline@131..132 "\n"
+error 8..9 "<": Lex(Unclosed)
+error 35..36 "]": Lex(UnmatchedCloser)
+error 60..61 ")": Lex(UnmatchedCloser)
+error 79..80 "]": Lex(UnmatchedCloser)
+error 105..106 "<": Lex(Unclosed)
+error 121..122 "<": Lex(Unclosed)
