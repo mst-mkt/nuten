@@ -17,7 +17,8 @@ use crate::{Config, FormatError, format_parsed};
 pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
     /// Line endings inside a token do not count, since the printer rewrites
-    /// them.
+    /// them, nor do `Comma` tokens, which separate the items of lists and
+    /// records as whitespace does.
     Tokens,
     /// The output has the comments of the source, in order, each on its own
     /// line or at the end of a line as it was, and, between statements, with
@@ -114,7 +115,7 @@ fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
     fn leaves(tree: &SyntaxNode) -> Vec<(SyntaxKind, String)> {
         tree.descendants_with_tokens()
             .filter_map(SyntaxElement::into_token)
-            .filter(|token| !token.kind().is_trivia())
+            .filter(|token| !token.kind().is_trivia() && token.kind() != SyntaxKind::Comma)
             .map(|token| (token.kind(), token.text().replace("\r\n", "\n")))
             .collect()
     }
@@ -333,6 +334,18 @@ mod tests {
     #[test]
     fn line_endings_inside_a_token_do_not_count() {
         assert_eq!(check("'a\r\nb'\r\n", "'a\nb'\n"), []);
+    }
+
+    #[test]
+    fn commas_that_are_tokens_do_not_count() {
+        assert_eq!(check("[a, b,]\n", "[a b]\n"), []);
+        for (src, output) in [("echo , a\n", "echo a\n"), ("echo a,b\n", "echo ab\n")] {
+            assert_eq!(
+                invariants(&check(src, output)),
+                [Invariant::Tokens],
+                "{src:?}"
+            );
+        }
     }
 
     #[test]
