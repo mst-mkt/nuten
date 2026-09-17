@@ -1,5 +1,6 @@
 //! Asks nu whether formatting keeps what it parses: each file must give the
-//! same AST, positions aside, before and after formatting.
+//! same AST, positions aside, before and after formatting. Nu parses each
+//! file in its directory.
 //!
 //! Takes files, and directories to search for `.nu` files. Skips a file that
 //! is too large, is not UTF-8, or has syntax errors, and says so. Exits with 1
@@ -129,8 +130,9 @@ fn check(path: &Path, max_size: u64) -> Result<Checked, String> {
     if output == src {
         return Ok(Checked::Kept);
     }
-    let before = nu::ast(&src)?;
-    let after = nu::ast(&output).map_err(|error| format!("after formatting, {error}"))?;
+    let dir = path.parent().filter(|dir| !dir.as_os_str().is_empty());
+    let before = nu::ast(&src, dir)?;
+    let after = nu::ast(&output, dir).map_err(|error| format!("after formatting, {error}"))?;
     match ast::difference(&before, &after)? {
         Some(difference) => Err(difference),
         None => Ok(Checked::Kept),
