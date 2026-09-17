@@ -28,10 +28,11 @@ pub(crate) fn check_version() -> Result<(), String> {
     }
 }
 
-/// The block and the error nu parses `src` into, as one JSON text.
-/// The block comes without its compiled IR, whose instruction order changes
-/// from run to run. Nu runs in `dir`, if given, so that it finds the modules
-/// `src` uses by relative path. Fails, in one line, when nu does.
+/// The block and the error nu parses `src` into, and its flattened tokens,
+/// as one JSON text. The block comes without its compiled IR, whose
+/// instruction order changes from run to run. Nu runs in `dir`, if given, so
+/// that it finds the modules `src` uses by relative path. Fails, in one line,
+/// when nu does.
 pub(crate) fn ast(src: &str, dir: Option<&Path>) -> Result<String, String> {
     let mut nu = Command::new("nu");
     if let Some(dir) = dir {
@@ -40,8 +41,9 @@ pub(crate) fn ast(src: &str, dir: Option<&Path>) -> Result<String, String> {
     let mut nu = nu
         .args(["-n", "--stdin", "-c"])
         .arg(
-            "ast $in --json | update block { from json | reject ir_block } \
-             | update error { from json } | to json -r",
+            "let src = $in; ast $src --json | update block { from json | reject ir_block } \
+             | update error { from json } | insert flat { ast $src --flatten | reject span } \
+             | to json -r",
         )
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

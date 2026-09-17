@@ -4,18 +4,23 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use jsonc_parser::{JsonValue, Map, ParseOptions, parse_to_value};
 
-/// Where the ASTs in `before` and `after` first differ, positions and line
-/// endings aside, in one line; `None` when they are the same. Fails when
-/// either is not JSON.
+/// Where what nu parses in `before` and `after` first differs, positions, line
+/// endings, and the layout in the flattened tokens aside, in one line; `None`
+/// when they are the same. Fails when either is not JSON.
 pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, String> {
     let (before, after) = (json(before)?, json(after)?);
     let difference = first_difference(
-        with_lf(without_positions(before)),
-        with_lf(without_positions(after)),
+        without_layout(with_lf(without_positions(before))),
+        without_layout(with_lf(without_positions(after))),
     );
     Ok(difference.map(|(pointer, before, after)| {
+        let what = if pointer.starts_with("/flat") {
+            "the flattened tokens differ"
+        } else {
+            "the AST differs"
+        };
         format!(
-            "the AST differs at {pointer:?}: {} becomes {}",
+            "{what} at {pointer:?}: {} becomes {}",
             excerpt(before),
             excerpt(after)
         )
@@ -135,6 +140,115 @@ fn with_lf(value: JsonValue<'_>) -> JsonValue<'_> {
     }
 }
 
+/// Without the layout in the flattened tokens that formatting may change.
+fn without_layout(value: JsonValue<'_>) -> JsonValue<'_> {
+    let JsonValue::Object(object) = value else {
+        return value;
+    };
+    let mut map = object.take_inner();
+    if let Some(JsonValue::Array(tokens)) = map.remove("flat") {
+        let tokens: Vec<_> = tokens
+            .into_iter()
+            .filter_map(token_without_layout)
+            .collect();
+        map.insert("flat".into(), JsonValue::Array(tokens.into()));
+    }
+    JsonValue::Object(map.into())
+}
+
+/// A token of a shape made of layout and words, such as the brackets and
+/// the gaps between the items of a list, with each run of whitespace and `,`
+/// as one space between two words and as nothing elsewhere; `None` when that
+/// leaves it empty. A token of any other shape, such as a string, as it is.
+fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
+    const LAYOUT_SHAPES: [&str; 10] = [
+        "shape_block",
+        "shape_closure",
+        "shape_garbage",
+        "shape_internalcall",
+        "shape_keyword",
+        "shape_list",
+        "shape_match_pattern",
+        "shape_record",
+        "shape_signature",
+        "shape_table",
+    ];
+    let JsonValue::Object(object) = token else {
+        return Some(token);
+    };
+    let mut token = object.take_inner();
+    if let (Some(JsonValue::String(shape)), Some(JsonValue::String(content))) =
+        (token.get("shape"), token.get("content"))
+        && LAYOUT_SHAPES.contains(&shape.as_ref())
+    {
+        let content = words(content);
+        if content.is_empty() {
+            return None;
+        }
+        token.insert("content".into(), JsonValue::String(content.into()));
+    }
+    Some(JsonValue::Object(token.into()))
+}
+
+/// `content` with each run of whitespace and `,` as one space between two
+/// words and as nothing elsewhere. A string that closes in `content` and a
+/// comment stay as they are, a comment without the whitespace it ends with
+/// but with its line break.
+fn words(content: &str) -> String {
+    let is_word = |char: char| {
+        !matches!(
+            char,
+            '[' | ']' | '{' | '}' | '(' | ')' | '|' | ':' | ';' | '=' | '<' | '>' | '\n'
+        )
+    };
+    let mut out = String::new();
+    let mut after_gap = true;
+    let mut rest = content;
+    while let Some(char) = rest.chars().next() {
+        if matches!(char, ' ' | '\t' | '\r' | '\n' | ',') {
+            after_gap = true;
+            rest = &rest[1..];
+            continue;
+        }
+        let after_word = out.ends_with(is_word);
+        if after_gap && after_word && is_word(char) {
+            out.push(' ');
+        }
+        let comment = char == '#' && (after_gap || !after_word);
+        let len = match char {
+            _ if comment => rest.find('\n').map_or(rest.len(), |end| end + 1),
+            '"' | '\'' | '`' => closing(rest).map_or(1, |close| close + 1),
+            _ => char.len_utf8(),
+        };
+        let (part, after) = rest.split_at(len);
+        if comment {
+            out.push_str(part.trim_end_matches([' ', '\t', '\r', '\n']));
+            if part.ends_with('\n') {
+                out.push('\n');
+            }
+        } else {
+            out.push_str(part);
+        }
+        after_gap = false;
+        rest = after;
+    }
+    out
+}
+
+/// Where the string that `text` starts with closes, if it does: a quote of
+/// the kind it opens with, not escaped when that is `"`.
+fn closing(text: &str) -> Option<usize> {
+    let quote = text.as_bytes()[0];
+    let mut escaped = false;
+    for (index, &byte) in text.as_bytes().iter().enumerate().skip(1) {
+        if byte == quote && !escaped {
+            return Some(index);
+        }
+        escaped = quote == b'"' && byte == b'\\' && !escaped;
+    }
+    None
+}
+
 /// The first difference: a JSON pointer to it and the two values there.
 /// Keys are compared sorted, so the difference reported does not depend on
 /// nu's key order.
@@ -175,7 +289,7 @@ fn first_difference<'a>(
 mod tests {
     use jsonc_parser::JsonValue;
 
-    use super::{difference, first_difference, json, without_positions};
+    use super::{difference, first_difference, json, without_layout, without_positions, words};
 
     fn value(text: &str) -> JsonValue<'_> {
         json(text).unwrap()
@@ -213,6 +327,51 @@ mod tests {
     }
 
     #[test]
+    fn layout_is_dropped_from_the_flattened_tokens_of_layout_shapes() {
+        let ast = value(
+            r#"{"block": {"content": " , "}, "flat": [
+                {"content": "{ |x, y|\r\n\t", "shape": "shape_closure"},
+                {"content": ", ", "shape": "shape_list"},
+                {"content": "export  def", "shape": "shape_internalcall"},
+                {"content": "[x: int, # a  b\r\n]", "shape": "shape_signature"},
+                {"content": "a,  b\r\n", "shape": "shape_string"},
+                {"content": "1"}]}"#,
+        );
+        assert_eq!(
+            without_layout(ast),
+            value(
+                r#"{"block": {"content": " , "}, "flat": [
+                    {"content": "{|x y|", "shape": "shape_closure"},
+                    {"content": "export def", "shape": "shape_internalcall"},
+                    {"content": "[x:int # a  b\n]", "shape": "shape_signature"},
+                    {"content": "a,  b\r\n", "shape": "shape_string"},
+                    {"content": "1"}]}"#
+            )
+        );
+    }
+
+    #[test]
+    fn words_stay_apart() {
+        assert_ne!(words("{|x, y| "), words("{|xy| "));
+        assert_ne!(words("[1, 2]"), words("[12]"));
+        assert_eq!(words("{ |x| "), words("{|x|"));
+        assert_eq!(words("[\n    a\n    b\n]"), words("[a, b]"));
+        assert_eq!(words("[x: int=1]"), words("[x: int = 1]"));
+        assert_ne!(words(r#"{|x = "a,  b"| "#), words(r#"{|x = "a b"| "#));
+        assert_ne!(words(r#"["a \"  b"]"#), words(r#"["a \" b"]"#));
+        assert_eq!(
+            words("{ # it's  a, b  \n    "),
+            words("{ # it's  a, b\n        ")
+        );
+        assert_ne!(words("[# a  b\n]"), words("[# a b\n]"));
+        assert_ne!(words("[# c\n  x\n]"), words("[# c x\n]"));
+        assert_eq!(words("[# c  \r\n\n  x\n]"), words("[\n    # c\n    x\n]"));
+        assert_eq!(words("[a#b  c]"), words("[a#b c]"));
+        assert_eq!(words("\"\n  }"), words("\"\n      }"));
+        assert_eq!(words("'a  b' 日本  語"), "'a  b' 日本 語");
+    }
+
+    #[test]
     fn the_first_difference_is_pointed_at() {
         let (pointer, a, b) = first_difference(
             value(r#"{"a": [1, {"b": "x"}], "c": true}"#),
@@ -241,6 +400,13 @@ mod tests {
         assert_eq!(
             line(r#"{"a": "x\ny"}"#, r#"{"a": "x"}"#),
             r#"the AST differs at "/a": "x\ny" becomes "x""#
+        );
+        assert_eq!(
+            line(
+                r#"{"flat": [{"content": "{|x, y| ", "shape": "shape_closure"}]}"#,
+                r#"{"flat": [{"content": "{|xy| ", "shape": "shape_closure"}]}"#
+            ),
+            r#"the flattened tokens differ at "/flat/0/content": "{|x y|" becomes "{|xy|""#
         );
         assert_eq!(
             line("[1]", "[1, 2]"),
@@ -273,7 +439,10 @@ mod tests {
     #[test]
     fn line_endings_do_not_count() {
         assert_eq!(
-            difference(r#"{"a": ["x\r\ny"]}"#, r#"{"a": ["x\ny"]}"#),
+            difference(
+                r#"{"a": ["x\r\ny"], "flat": [{"content": "x\r\ny", "shape": "shape_string"}]}"#,
+                r#"{"a": ["x\ny"], "flat": [{"content": "x\ny", "shape": "shape_string"}]}"#
+            ),
             Ok(None)
         );
         assert!(
