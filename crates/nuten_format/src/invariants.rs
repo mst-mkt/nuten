@@ -24,7 +24,8 @@ pub enum Invariant {
     /// line or at the end of a line as it was, and, between statements, with
     /// a blank line after it or not as it was. Spaces and tabs at the end of
     /// a comment do not count, since the printer trims them, nor do blank
-    /// lines at the end of the file or a block, which the formatter drops.
+    /// lines at the end of the file or a block, which the formatter drops, nor
+    /// `Comma` tokens, which it may drop too.
     Comments,
     /// Formatting the output succeeds and changes nothing.
     Idempotency,
@@ -187,7 +188,7 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
     let tokens: Vec<_> = tree
         .descendants_with_tokens()
         .filter_map(SyntaxElement::into_token)
-        .filter(|token| token.kind() != SyntaxKind::Whitespace)
+        .filter(|token| !matches!(token.kind(), SyntaxKind::Whitespace | SyntaxKind::Comma))
         .collect();
     tokens
         .iter()
@@ -339,6 +340,10 @@ mod tests {
     #[test]
     fn commas_that_are_tokens_do_not_count() {
         assert_eq!(check("[a, b,]\n", "[a b]\n"), []);
+        assert_eq!(
+            check("[a\n, # c\nb]\n", "[\n    a\n    # c\n    b\n]\n"),
+            []
+        );
         for (src, output) in [("echo , a\n", "echo a\n"), ("echo a,b\n", "echo ab\n")] {
             assert_eq!(
                 invariants(&check(src, output)),

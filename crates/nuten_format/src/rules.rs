@@ -1,6 +1,6 @@
 //! Turns each node of the tree into document elements.
 
-use std::iter;
+use std::{iter, mem};
 
 use nuten_doc::{
     Element, empty_line, empty_lines, expand_parent, group, hard_line_break, indent, line_suffix,
@@ -210,8 +210,8 @@ fn reads_as_list(list: &SyntaxNode) -> bool {
 
 /// On one line, with no space inside the brackets, when it fits, no line
 /// break comes right after `[`, and no comment is inside; otherwise one
-/// element per line, indented, with `]` on a line of its own. A `,` stays
-/// right after the element before it. A blank line between elements stays.
+/// element per line, indented, with `]` on a line of its own. A `,` is
+/// dropped. A blank line between elements stays.
 fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
     let (Some(open), Some(close)) = (list.first_token(), list.last_token()) else {
         unreachable!("a list has brackets");
@@ -221,11 +221,15 @@ fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
     let mut expand = children.peek().is_some_and(|child| child.newlines > 0);
     let mut inner = Vec::new();
     let mut prev = None;
+    // The most line breaks before a `,` dropped since the last element, which
+    // count as line breaks before what follows.
+    let mut dropped = 0;
     for child in children {
         let Child {
             element,
             newlines,
         } = child;
+        let newlines = newlines.max(mem::take(&mut dropped));
         let kind = element.kind();
         match &element {
             SyntaxElement::Node(child) => {
@@ -233,11 +237,9 @@ fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
                 inner.extend(node(src, child));
             },
             SyntaxElement::Token(_) if kind == SyntaxKind::RBracket => break,
-            SyntaxElement::Token(child)
-                if kind == SyntaxKind::Comma
-                    && prev.is_some_and(|prev| prev != SyntaxKind::Comment) =>
-            {
-                inner.push(token(src, child));
+            SyntaxElement::Token(_) if kind == SyntaxKind::Comma => {
+                dropped = newlines;
+                continue;
             },
             SyntaxElement::Token(child) if kind == SyntaxKind::Comment => {
                 if keeps_list_as_is(child) {

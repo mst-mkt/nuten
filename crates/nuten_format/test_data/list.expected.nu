@@ -2,7 +2,7 @@ echo [a,  b] [
   c
       d ]
 [1 2 3] | each {|x| $x }
-let x = [a, b, c]
+let x = [a b c]
 let y = [
     1
     2
@@ -32,15 +32,13 @@ let long = [
     dddddddddddddddddddd
 ]
 echo [ 1 2 ]
-[, a]
+[a]
 [a] [b  c]
 [
     a # c
-    ,
     b
 ]
 [
-    ,
     a
 ]
 [
@@ -63,4 +61,29 @@ echo [ 1 2 ]
 [a | b e>| c]
 [a o>|# c [
 ]
+]
+[
+    a
+
+    b
+]
+[
+    a
+
+    # c
+    b
+]
+[]
+[a b]
+[
+    a
+
+    b
+    c
+]
+[a b]
+[
+    a
+    # c
+    b
 ]
