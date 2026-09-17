@@ -1,1 +1,2 @@
 crates/*/test_data/** -text
+*.nu linguist-language=Nushell
