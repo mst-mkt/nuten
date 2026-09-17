@@ -307,17 +307,15 @@ fn def_shape(items: &[&str]) -> Option<DefShape> {
         return None;
     }
     let rest = items.len() - signature - 1;
+    let has_body = !external && rest > 0;
+    if has_body && !items[items.len() - 1].starts_with('{') {
+        return None;
+    }
     // Nu ignores the one item in braces an `extern` may end with, and never
     // parses it, so it stays a word.
-    let has_body = !external && rest > 0;
-    let types = rest - usize::from(has_body || external && rest == 1);
+    let ignored = external && rest == 1 && items[items.len() - 1].starts_with('{');
+    let types = rest - usize::from(has_body || ignored);
     if !attached_colon && types > 0 && items[signature + 1] != ":" {
-        return None;
-    }
-    if rest > 0 && !external && !items[items.len() - 1].starts_with('{') {
-        return None;
-    }
-    if external && rest == 1 && !items[items.len() - 1].starts_with('{') {
         return None;
     }
     Some(DefShape {
@@ -345,8 +343,14 @@ fn def(p: &mut Parser<'_>, shape: &DefShape) {
     }
     // The input and output types stay as they are; only the body is a block.
     let types = shape.rest - usize::from(shape.has_body);
-    for _ in 0..types {
-        p.bump();
+    for at in 0..types {
+        // The `:` nu takes for the one the types follow, which the formatter
+        // moves to the parameters.
+        if at == 0 && !shape.attached_colon && p.peek_text() == Some(":") {
+            p.bump_as(SyntaxKind::Colon);
+        } else {
+            p.bump();
+        }
     }
     if shape.has_body {
         token_or_bracketed(p, false);

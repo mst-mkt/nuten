@@ -292,6 +292,19 @@ impl<'a> Parser<'a> {
         self.bump_skipped();
     }
 
+    /// Emits the next token as `kind`, which the mode it was lexed in did
+    /// not give it, such as the `:` before input and output types.
+    ///
+    /// # Panics
+    ///
+    /// Panics at the end.
+    pub(crate) fn bump_as(&mut self, kind: SyntaxKind) {
+        self.bump_trivia();
+        let token = self.nth_token(0).expect("bump_as at the end");
+        self.pos += 1;
+        self.push_token(kind, token.range);
+    }
+
     /// Emits the next token.
     ///
     /// # Panics

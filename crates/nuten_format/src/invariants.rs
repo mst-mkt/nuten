@@ -18,7 +18,9 @@ pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
     /// Line endings inside a token do not count, since the printer rewrites
     /// them, nor do `Comma` tokens, which separate the items of lists and
-    /// records as whitespace does.
+    /// records as whitespace does. A long flag of a signature and the short
+    /// flag after it count as one, since the formatter joins them, as nu
+    /// reads them.
     Tokens,
     /// The output has the comments of the source, in order, each on its own
     /// line or at the end of a line as it was, and, between statements, with
@@ -114,11 +116,27 @@ fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
     // The leaves rather than the lexer's tokens, since the parser relabels
     // some.
     fn leaves(tree: &SyntaxNode) -> Vec<(SyntaxKind, String)> {
-        tree.descendants_with_tokens()
+        let mut leaves: Vec<(SyntaxKind, String)> = Vec::new();
+        let tokens = tree
+            .descendants_with_tokens()
             .filter_map(SyntaxElement::into_token)
-            .filter(|token| !token.kind().is_trivia() && token.kind() != SyntaxKind::Comma)
-            .map(|token| (token.kind(), token.text().replace("\r\n", "\n")))
-            .collect()
+            .filter(|token| !token.kind().is_trivia() && token.kind() != SyntaxKind::Comma);
+        for token in tokens {
+            let text = token.text().replace("\r\n", "\n");
+            match leaves.last_mut() {
+                Some((_, last)) if joins_flag(&token, last, &text) => last.push_str(&text),
+                _ => leaves.push((token.kind(), text)),
+            }
+        }
+        leaves
+    }
+    /// Whether the formatter joins `short`, a parameter of a signature, to
+    /// the long flag `long` before it, as nu reads the two.
+    fn joins_flag(short: &SyntaxToken, long: &str, text: &str) -> bool {
+        short
+            .parent()
+            .is_some_and(|param| param.kind() == SyntaxKind::Param)
+            && crate::rules::joins_flag(long, text)
     }
     fn describe((kind, text): &(SyntaxKind, String)) -> String {
         format!("{kind:?} {text:?}")

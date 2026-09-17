@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/def.nu
 ---
-Root@0..732
+Root@0..751
   Pipeline@0..15
     PipelineElement@0..15
       Def@0..15
@@ -193,7 +193,7 @@ Root@0..732
           LBracket@282..283 "["
           RBracket@283..284 "]"
         Whitespace@284..285 " "
-        Word@285..286 ":"
+        Colon@285..286 ":"
         Whitespace@286..287 " "
         Word@287..290 "int"
         Whitespace@290..291 " "
@@ -598,3 +598,18 @@ Root@0..732
         Whitespace@722..723 " "
         Word@723..731 "{  ls  }"
   Newline@731..732 "\n"
+  Pipeline@732..750
+    PipelineElement@732..750
+      Def@732..750
+        Word@732..738 "extern"
+        Whitespace@738..739 " "
+        Word@739..741 "aa"
+        Whitespace@741..742 " "
+        Signature@742..744
+          LBracket@742..743 "["
+          RBracket@743..744 "]"
+        Whitespace@744..745 " "
+        Colon@745..746 ":"
+        Whitespace@746..747 " "
+        Word@747..750 "bar"
+  Newline@750..751 "\n"

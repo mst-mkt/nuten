@@ -30,3 +30,4 @@ def x [y = # c
 ] { ls }
 def y [z: ;] { ls }
 extern z [] {  ls  }
+extern aa [] : bar

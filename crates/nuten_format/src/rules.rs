@@ -121,9 +121,9 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         SyntaxKind::If => if_(src, node),
         SyntaxKind::Def => def(src, node),
         SyntaxKind::List | SyntaxKind::Record if reads_as_value(node) => container(src, node),
-        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Signature => {
-            vec![text(&src[node.text_range()])]
-        },
+        SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],
+        SyntaxKind::Signature => container(src, node),
+        SyntaxKind::Param => param(src, node),
         SyntaxKind::Block if in_match(node) => vec![text(&src[node.text_range()])],
         SyntaxKind::Block => block(src, node),
         kind => unreachable!("{kind:?} is not formatted as a node"),
@@ -293,12 +293,12 @@ fn reads_as_value(node: &SyntaxNode) -> bool {
     })
 }
 
-/// A list or a record, unless it stays as it is. On one line when it fits,
-/// no line break comes right after the opening bracket, and no comment is
-/// inside, with no space inside the brackets of a list and one inside those
-/// of a record; otherwise one item per line, indented, with the closing
-/// bracket on a line of its own. A `,` is dropped. A blank line between items
-/// stays.
+/// A list, a record, or the parameters of a `def`, unless it stays as it is.
+/// On one line when it fits, no line break comes right after the opening
+/// bracket, and no comment is inside, with no space inside the brackets of a
+/// list and one inside those of a record; otherwise one item per line,
+/// indented, with the closing bracket on a line of its own. A `,` is dropped.
+/// A blank line between items stays.
 fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
     if stays_as_is(src, container) {
         return vec![text(&src[container.text_range()])];
@@ -556,10 +556,16 @@ fn is_statement(node: &SyntaxNode) -> bool {
         }
 }
 
-/// Whether `container` stays as it is: a comment inside keeps it so, or, for
+/// Whether `container` stays as it is: never for parameters, where nu starts
+/// a comment at the start of a token whatever comes before it, so that a
+/// space added before a `#` changes nothing. Otherwise a comment inside keeps
+/// it so, or, for
 /// a record, dropping a `,` would change the first two tokens nu looks at to
 /// tell a record from a closure, which it lexes with `,` as no whitespace.
 fn stays_as_is(src: &str, container: &SyntaxNode) -> bool {
+    if container.kind() == SyntaxKind::Signature {
+        return false;
+    }
     let kept_by_comment = container
         .children_with_tokens()
         .flat_map(|child| {
@@ -749,20 +755,91 @@ fn comment_follows(pipe: &SyntaxToken) -> bool {
     false
 }
 
-/// A `def` or an `extern`: its parts one space apart, with the `:` of the
-/// input and output types right after the parameters.
+/// A `def` or an `extern`: its parts one space apart, with the `:` the input
+/// and output types follow right after the parameters, and the body expanded.
 fn def<'a>(src: &'a str, def: &SyntaxNode) -> Vec<Element<'a>> {
+    let items: Vec<_> = children(def).map(|child| child.element).collect();
+    let body = def
+        .last_child()
+        .filter(|last| last.kind() == SyntaxKind::Block);
     let mut out = Vec::new();
-    for child in children(def) {
-        if !out.is_empty() && child.element.kind() != SyntaxKind::Colon {
+    for (index, item) in items.iter().enumerate() {
+        // Another `:` after it would make nu read the types from elsewhere.
+        let joined = item.kind() == SyntaxKind::Colon
+            && index > 0
+            && items[index - 1].kind() == SyntaxKind::Signature
+            && items
+                .get(index + 1)
+                .is_none_or(|next| next.as_token().is_none_or(|next| next.text() != ":"));
+        if !out.is_empty() && !joined {
             out.push(space());
         }
-        match &child.element {
+        match item {
+            SyntaxElement::Node(child) if Some(child) == body.as_ref() => {
+                let BlockLayout {
+                    mut head,
+                    mut rest,
+                    ..
+                } = block_layout(src, child);
+                rest.push(expand_parent());
+                head.push(group(rest));
+                out.extend(head);
+            },
             SyntaxElement::Node(child) => out.extend(node(src, child)),
             SyntaxElement::Token(child) => out.push(token(src, child)),
         }
     }
     out
+}
+
+/// One parameter of a signature: its name, then its `(-f)` joined to it where
+/// nu reads the two as one flag, its `:` and type, and its `=` and default
+/// value, each one space apart. A `,` is dropped.
+fn param<'a>(src: &'a str, param: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut out = Vec::new();
+    let mut prev: Option<SyntaxToken> = None;
+    for child in children(param) {
+        let Child {
+            element,
+            newlines,
+        } = child;
+        let kind = element.kind();
+        let SyntaxElement::Token(child) = &element else {
+            unreachable!("{kind:?} is not a child of Param");
+        };
+        if kind == SyntaxKind::Comma {
+            continue;
+        }
+        if kind == SyntaxKind::Comment {
+            out.extend(comment(src, child, newlines, false));
+            prev = Some(child.clone());
+            continue;
+        }
+        let joined = match &prev {
+            None => true,
+            Some(prev) => kind == SyntaxKind::Colon || joins_flag(prev.text(), child.text()),
+        };
+        if !joined {
+            out.extend(separator(prev.as_ref().map(SyntaxToken::kind), space));
+        }
+        out.push(token(src, child));
+        prev = Some(child.clone());
+    }
+    out
+}
+
+/// Whether nu reads `short`, right after `long`, as the short flag of that
+/// long flag, which lets the two be printed as one.
+pub(crate) fn joins_flag(long: &str, short: &str) -> bool {
+    // Nu reads `--` itself as a short flag, and gives a `(-f)` after it to
+    // that one rather than to a long flag.
+    long.starts_with("--")
+        && long.len() > 2
+        && !long.contains('(')
+        && short.strip_prefix("(-").is_some_and(|rest| {
+            rest.strip_suffix(')')
+                .is_some_and(|name| name.chars().count() == 1)
+        })
 }
 
 /// The children with one space between each two. No line break falls among
