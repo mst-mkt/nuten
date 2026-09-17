@@ -3,8 +3,8 @@
 use std::iter;
 
 use nuten_doc::{
-    Element, empty_line, empty_lines, expand_parent, group, hard_line_break, line_suffix,
-    soft_line_break_or_space, space, text,
+    Element, empty_line, empty_lines, expand_parent, group, hard_line_break, indent, line_suffix,
+    soft_line_break, soft_line_break_or_space, space, text,
 };
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
@@ -102,6 +102,7 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         | SyntaxKind::Call
         | SyntaxKind::ExternalCall
         | SyntaxKind::Redirection => spaced(src, node),
+        SyntaxKind::List if reads_as_list(node) => list(src, node),
         SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Block => {
             vec![text(&src[node.text_range()])]
         },
@@ -189,6 +190,106 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
         return tail;
     }
     iter::once(group(out)).chain(tail).collect()
+}
+
+/// Whether nu reads `list` as a list whatever the command: as the head of a
+/// command, or as an element of a list. Elsewhere, such as an argument, a
+/// command may read it as a string.
+fn reads_as_list(list: &SyntaxNode) -> bool {
+    list.parent().is_some_and(|parent| match parent.kind() {
+        SyntaxKind::List => true,
+        SyntaxKind::Call => {
+            parent
+                .first_child_or_token()
+                .and_then(SyntaxElement::into_node)
+                == Some(list.clone())
+        },
+        _ => false,
+    })
+}
+
+/// On one line, with no space inside the brackets, when it fits, no line
+/// break comes right after `[`, and no comment is inside; otherwise one
+/// element per line, indented, with `]` on a line of its own. A `,` stays
+/// right after the element before it. A blank line between elements stays.
+fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
+    let (Some(open), Some(close)) = (list.first_token(), list.last_token()) else {
+        unreachable!("a list has brackets");
+    };
+    let mut children = children(list).skip(1).peekable();
+    // A line break right after `[`.
+    let mut expand = children.peek().is_some_and(|child| child.newlines > 0);
+    let mut inner = Vec::new();
+    let mut prev = None;
+    for child in children {
+        let Child {
+            element,
+            newlines,
+        } = child;
+        let kind = element.kind();
+        match &element {
+            SyntaxElement::Node(child) => {
+                inner.push(list_separator(prev, newlines));
+                inner.extend(node(src, child));
+            },
+            SyntaxElement::Token(_) if kind == SyntaxKind::RBracket => break,
+            SyntaxElement::Token(child)
+                if kind == SyntaxKind::Comma
+                    && prev.is_some_and(|prev| prev != SyntaxKind::Comment) =>
+            {
+                inner.push(token(src, child));
+            },
+            SyntaxElement::Token(child) if kind == SyntaxKind::Comment => {
+                if keeps_list_as_is(child) {
+                    return vec![text(&src[list.text_range()])];
+                }
+                expand = true;
+                if prev.is_some() && newlines > 1 {
+                    inner.push(empty_line());
+                }
+                inner.extend(comment(src, child, newlines, false));
+            },
+            SyntaxElement::Token(child) => {
+                inner.push(list_separator(prev, newlines));
+                inner.push(token(src, child));
+            },
+        }
+        prev = Some(kind);
+    }
+    if inner.is_empty() {
+        return vec![token(src, &open), token(src, &close)];
+    }
+    let mut out = vec![
+        token(src, &open),
+        indent(inner),
+        soft_line_break(),
+        token(src, &close),
+    ];
+    if expand {
+        out.push(expand_parent());
+    }
+    vec![group(out)]
+}
+
+/// What comes before an element of a list after `prev`. After a comment,
+/// the list is expanded, so the line break comes anyway.
+fn list_separator(prev: Option<SyntaxKind>, newlines: u32) -> Element<'static> {
+    match prev {
+        None => soft_line_break(),
+        Some(_) if newlines > 1 => empty_line(),
+        Some(_) => soft_line_break_or_space(),
+    }
+}
+
+/// Whether `comment` makes its list stay as it is. Right after anything but
+/// whitespace, nu does not start a comment when it reads the word the list is
+/// in, so a space put before it may move where the word ends. A lone `\r` at
+/// its end would become part of a line break.
+fn keeps_list_as_is(comment: &SyntaxToken) -> bool {
+    comment.text().ends_with('\r')
+        || comment
+            .prev_sibling_or_token()
+            .is_some_and(|prev| !prev.kind().is_trivia())
 }
 
 /// A child of a pipeline as `pipeline` formats it.
@@ -309,8 +410,8 @@ fn spaced<'a>(src: &'a str, parent: &SyntaxNode) -> Vec<Element<'a>> {
     out
 }
 
-/// The one place a comment outside a list is printed. `at_start` is whether
-/// it is the first child of its container.
+/// The one place a comment is printed, other than inside text kept as it is.
+/// `at_start` is whether it is the first child of its container.
 fn comment<'a>(
     src: &'a str,
     comment: &SyntaxToken,
