@@ -122,14 +122,26 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
     // Where an element that ends the pipeline, with its separator, starts in
     // `out`.
     let mut tail = None;
-    for child in children(pipeline) {
-        let Child {
-            element,
-            newlines,
-        } = child;
+    for part in parts(pipeline) {
+        let Part {
+            child: Child {
+                element,
+                newlines,
+            },
+            joined,
+        } = part;
         let kind = element.kind();
         if newlines > 0 {
             out.push(expand_parent());
+        }
+        if joined {
+            out.push(space());
+            match &element {
+                SyntaxElement::Node(child) => out.extend(node(src, child)),
+                SyntaxElement::Token(child) => out.push(token(src, child)),
+            }
+            prev = Some(kind);
+            continue;
         }
         tail = None;
         match &element {
@@ -137,6 +149,15 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
                 tail = Some(out.len());
                 out.extend(separator(prev, space));
                 out.extend(node(src, child));
+            },
+            // `let`, or an assignment operator with nothing before it, which
+            // starts an element spread out.
+            SyntaxElement::Token(child)
+                if matches!(kind, SyntaxKind::Word | SyntaxKind::Assign) =>
+            {
+                tail = Some(out.len());
+                out.extend(separator(prev, space));
+                out.push(token(src, child));
             },
             SyntaxElement::Token(child) => match kind {
                 SyntaxKind::Pipe => {
@@ -168,6 +189,76 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
         return tail;
     }
     iter::once(group(out)).chain(tail).collect()
+}
+
+/// A child of a pipeline as `pipeline` formats it.
+struct Part {
+    child: Child,
+    /// Whether it belongs to the element before it, one space after.
+    joined: bool,
+}
+
+/// The children of `pipeline`, with each element that holds an `Assignment`
+/// or a `Let` spread out: its parts up to the operator, then any comment,
+/// then the children of the pipeline it takes, whose first element joins
+/// the operator unless a line break or a comment comes between. So the
+/// pipes of what the operator takes format as those of `pipeline`.
+fn parts(pipeline: &SyntaxNode) -> Vec<Part> {
+    let mut out = Vec::new();
+    spread(pipeline, 0, false, &mut out);
+    out
+}
+
+/// `newlines` come before the first child, and `joined` is whether it joins
+/// what comes before when it is an element.
+fn spread(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
+    let mut first = Some((newlines, joined));
+    for child in children(pipeline) {
+        let (before, joined) = first.take().unwrap_or((0, false));
+        let newlines = before + child.newlines;
+        let assignment = child
+            .element
+            .as_node()
+            .and_then(SyntaxNode::first_child)
+            .filter(|node| matches!(node.kind(), SyntaxKind::Assignment | SyntaxKind::Let));
+        match assignment {
+            Some(assignment) => spread_assignment(&assignment, newlines, joined, out),
+            None => out.push(Part {
+                joined: joined && child.element.as_node().is_some(),
+                child: Child {
+                    element: child.element,
+                    newlines,
+                },
+            }),
+        }
+    }
+}
+
+/// The parts of `assignment` for `spread`: each joins the part before it but
+/// a comment, and the first, which joins as `joined` tells.
+fn spread_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
+    let mut first = Some((newlines, joined));
+    for child in children(assignment) {
+        let (before, joined) = first.take().unwrap_or((0, true));
+        let Child {
+            element,
+            newlines,
+        } = child;
+        let newlines = before + newlines;
+        let kind = element.kind();
+        match &element {
+            SyntaxElement::Node(pipeline) if kind == SyntaxKind::Pipeline => {
+                spread(pipeline, newlines, true, out);
+            },
+            _ => out.push(Part {
+                joined: joined && kind != SyntaxKind::Comment,
+                child: Child {
+                    element,
+                    newlines,
+                },
+            }),
+        }
+    }
 }
 
 /// What separates the child after `prev` from it. A comment runs to the end

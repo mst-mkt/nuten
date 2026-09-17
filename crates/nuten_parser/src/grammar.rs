@@ -15,30 +15,38 @@ pub(crate) fn file(p: &mut Parser<'_>) {
                 p.bump_error(ParseErrorKind::SemicolonAfterPipe);
             },
             kind if ends_statement(kind) => p.bump(),
-            _ => pipeline(p),
+            _ => pipeline(p, false),
         }
     }
 }
 
-fn pipeline(p: &mut Parser<'_>) {
+/// `assigned` is whether an assignment operator takes the pipeline.
+fn pipeline(p: &mut Parser<'_>, assigned: bool) {
     p.start(SyntaxKind::Pipeline);
     let mut element = None;
+    let mut first = true;
     while let Some(kind) = p.peek() {
         match kind {
-            kind if is_pipe(kind) => pipe(p, kind, element.take()),
+            kind if is_pipe(kind) => pipe(p, kind, element.take(), assigned),
             SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
             kind if ends_statement(kind) => break,
-            _ => element = pipeline_element(p),
+            _ => {
+                element = pipeline_element(p, first);
+                first = false;
+            },
         }
     }
     p.finish();
 }
 
 /// `element` is what the element before the pipe redirects;
-/// `None` when it has no command.
-fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>) {
+/// `None` when it has no command. `assigned` is as for `pipeline`.
+fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>, assigned: bool) {
     match kind {
         SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
+        SyntaxKind::Pipe if assigned && pipe_ends_statement(p) => {
+            p.bump_error(ParseErrorKind::PipeEndsAssignment);
+        },
         SyntaxKind::Pipe => {
             p.bump();
             line_end_continuation(p);
@@ -71,6 +79,16 @@ fn pipe_ends_file(p: &Parser<'_>) -> bool {
         }
     }
     kinds.next().is_none()
+}
+
+/// Whether the statement ends at the line break right after the `|` ahead,
+/// past a trailing comment.
+fn pipe_ends_statement(p: &Parser<'_>) -> bool {
+    p.remaining_kinds()
+        .filter(|&kind| !matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
+        .nth(1)
+        == Some(SyntaxKind::Newline)
+        && !next_line_continues(p)
 }
 
 /// Whether a `|` starts the next line, past any comment lines.
@@ -125,23 +143,104 @@ fn bump_newlines(p: &mut Parser<'_>) {
 }
 
 /// Returns the streams the element redirects; `None` when it has no command.
-fn pipeline_element(p: &mut Parser<'_>) -> Option<Streams> {
+/// `first` is whether no element comes before it in the pipeline.
+fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
     p.start(SyntaxKind::PipelineElement);
-    let has_call = !p.peek().is_some_and(is_file_redirection);
+    let redirected = if assignment_ahead(p) {
+        if first && matches!(p.peek_text(), Some("let" | "mut" | "const")) {
+            p.start(SyntaxKind::Let);
+            p.bump();
+            arguments(p, Some(Streams::default()), false, true);
+        } else {
+            p.start(SyntaxKind::Assignment);
+            command(p, true);
+        }
+        p.bump();
+        assigned_pipeline(p);
+        p.finish();
+        // No pipe follows what the assignment operator takes.
+        None
+    } else {
+        command(p, false)
+    };
+    p.finish();
+    redirected
+}
+
+/// Whether an assignment operator comes before the element ends. As in nu,
+/// the target of a file redirection is none.
+fn assignment_ahead(p: &Parser<'_>) -> bool {
+    let mut prev = None;
+    for kind in p
+        .remaining_kinds()
+        .filter(|&kind| !matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
+    {
+        if ends_element(kind) {
+            return false;
+        }
+        if kind == SyntaxKind::Assign && !prev.is_some_and(is_file_redirection) {
+            return true;
+        }
+        prev = Some(kind);
+    }
+    false
+}
+
+/// A `Call` or an `ExternalCall`, then its arguments. Returns the streams it
+/// redirects; `None` when there is no command.
+fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
+    let has_call = !p
+        .peek()
+        .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
     let external = p.peek_text().is_some_and(|head| head.starts_with('^'));
     if has_call {
         call(p, external);
     }
-    let mut redirected = has_call.then_some(Streams::default());
+    arguments(
+        p,
+        has_call.then_some(Streams::default()),
+        external,
+        assigning,
+    )
+}
+
+/// Items and `Redirection`s up to the end of the element, or up to an
+/// assignment operator when `assigning`. `redirected` is what the element
+/// redirects so far; `None` when it has no command. Returns what it
+/// redirects then.
+fn arguments(
+    p: &mut Parser<'_>,
+    mut redirected: Option<Streams>,
+    external: bool,
+    assigning: bool,
+) -> Option<Streams> {
     while let Some(kind) = p.peek() {
         match kind {
             kind if ends_element(kind) => break,
-            kind if is_file_redirection(kind) => redirection(p, kind, redirected.as_mut()),
+            SyntaxKind::Assign if assigning => break,
+            kind if is_file_redirection(kind) => {
+                redirection(p, kind, redirected.as_mut());
+                if p.peek() == Some(SyntaxKind::Assign)
+                    && p.last_kind().is_some_and(is_file_redirection)
+                {
+                    p.bump();
+                }
+            },
             _ => item(p, external),
         }
     }
-    p.finish();
     redirected
+}
+
+/// What an assignment operator takes: the rest of the statement, where a
+/// line-start `|` goes on as after a line-end one.
+fn assigned_pipeline(p: &mut Parser<'_>) {
+    if p.peek() == Some(SyntaxKind::Newline) && next_line_starts_with_pipe(p) {
+        bump_newlines(p);
+    }
+    if p.peek().is_some_and(|kind| !ends_statement(kind)) {
+        pipeline(p, true);
+    }
 }
 
 fn call(p: &mut Parser<'_>, external: bool) {
@@ -460,7 +559,7 @@ fn ends_element(kind: SyntaxKind) -> bool {
 }
 
 fn ends_call(kind: SyntaxKind) -> bool {
-    is_file_redirection(kind) || ends_element(kind)
+    is_file_redirection(kind) || kind == SyntaxKind::Assign || ends_element(kind)
 }
 
 fn is_pipe(kind: SyntaxKind) -> bool {

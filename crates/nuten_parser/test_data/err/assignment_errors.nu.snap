@@ -1,0 +1,318 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/assignment_errors.nu
+---
+Root@0..219
+  Pipeline@0..9
+    PipelineElement@0..9
+      Assignment@0..9
+        Call@0..2
+          Word@0..2 "$x"
+        Whitespace@2..3 " "
+        Assign@3..4 "="
+        Whitespace@4..5 " "
+        Pipeline@5..9
+          PipelineElement@5..7
+            Call@5..7
+              Word@5..7 "ls"
+          Whitespace@7..8 " "
+          Error@8..9
+            Pipe@8..9 "|"
+  Newline@9..10 "\n"
+  Newline@10..11 "\n"
+  Pipeline@11..20
+    PipelineElement@11..20
+      Assignment@11..20
+        Call@11..13
+          Word@11..13 "$x"
+        Whitespace@13..14 " "
+        Assign@14..15 "="
+        Whitespace@15..16 " "
+        Pipeline@16..20
+          PipelineElement@16..18
+            Call@16..18
+              Word@16..18 "ls"
+          Whitespace@18..19 " "
+          Error@19..20
+            Pipe@19..20 "|"
+  Newline@20..21 "\n"
+  Comment@21..24 "# c"
+  Newline@24..25 "\n"
+  Newline@25..26 "\n"
+  Pipeline@26..38
+    PipelineElement@26..38
+      Let@26..38
+        Word@26..29 "let"
+        Whitespace@29..30 " "
+        Word@30..31 "x"
+        Whitespace@31..32 " "
+        Assign@32..33 "="
+        Whitespace@33..34 " "
+        Pipeline@34..38
+          PipelineElement@34..36
+            Call@34..36
+              Word@34..36 "ls"
+          Whitespace@36..37 " "
+          Error@37..38
+            Pipe@37..38 "|"
+  Whitespace@38..39 " "
+  Comment@39..42 "# c"
+  Newline@42..43 "\n"
+  Error@43..44
+    Semicolon@43..44 ";"
+  Newline@44..45 "\n"
+  Pipeline@45..57
+    PipelineElement@45..53
+      Call@45..46
+        Word@45..46 "a"
+      Whitespace@46..47 " "
+      Redirection@47..49
+        Error@47..49
+          OutGt@47..49 "o>"
+      Whitespace@49..50 " "
+      Assign@50..51 "="
+      Whitespace@51..52 " "
+      Word@52..53 "1"
+    Whitespace@53..54 " "
+    Pipe@54..55 "|"
+    Whitespace@55..56 " "
+    PipelineElement@56..57
+      Call@56..57
+        Word@56..57 "b"
+  Newline@57..58 "\n"
+  Pipeline@58..66
+    PipelineElement@58..66
+      Assignment@58..66
+        Redirection@58..62
+          Error@58..60
+            OutGt@58..60 "o>"
+          Whitespace@60..61 " "
+          Word@61..62 "f"
+        Whitespace@62..63 " "
+        Assign@63..64 "="
+        Whitespace@64..65 " "
+        Pipeline@65..66
+          PipelineElement@65..66
+            Call@65..66
+              Word@65..66 "1"
+  Newline@66..67 "\n"
+  Pipeline@67..79
+    PipelineElement@67..79
+      Assignment@67..79
+        Call@67..68
+          Word@67..68 "a"
+        Whitespace@68..69 " "
+        Redirection@69..71
+          Error@69..71
+            OutGt@69..71 "o>"
+        Whitespace@71..72 " "
+        Assign@72..73 "="
+        Whitespace@73..74 " "
+        Word@74..75 "f"
+        Whitespace@75..76 " "
+        Assign@76..77 "="
+        Whitespace@77..78 " "
+        Pipeline@78..79
+          PipelineElement@78..79
+            Call@78..79
+              Word@78..79 "1"
+  Newline@79..80 "\n"
+  Pipeline@80..96
+    PipelineElement@80..96
+      Let@80..96
+        Word@80..83 "let"
+        Whitespace@83..84 " "
+        Word@84..85 "x"
+        Whitespace@85..86 " "
+        Redirection@86..88
+          Error@86..88
+            OutGt@86..88 "o>"
+        Whitespace@88..89 " "
+        Assign@89..90 "="
+        Whitespace@90..91 " "
+        Word@91..92 "f"
+        Whitespace@92..93 " "
+        Assign@93..94 "="
+        Whitespace@94..95 " "
+        Pipeline@95..96
+          PipelineElement@95..96
+            Call@95..96
+              Word@95..96 "1"
+  Newline@96..97 "\n"
+  Pipeline@97..109
+    PipelineElement@97..109
+      Let@97..109
+        Word@97..100 "let"
+        Whitespace@100..101 " "
+        Word@101..102 "x"
+        Whitespace@102..103 " "
+        Error@103..105
+          PipePipe@103..105 "||"
+        Whitespace@105..106 " "
+        Assign@106..107 "="
+        Whitespace@107..108 " "
+        Pipeline@108..109
+          PipelineElement@108..109
+            Call@108..109
+              Word@108..109 "1"
+  Newline@109..110 "\n"
+  Pipeline@110..122
+    PipelineElement@110..122
+      Let@110..122
+        Word@110..113 "let"
+        Whitespace@113..114 " "
+        Word@114..115 "x"
+        Whitespace@115..116 " "
+        Error@116..118
+          Word@116..118 "&&"
+        Whitespace@118..119 " "
+        Assign@119..120 "="
+        Whitespace@120..121 " "
+        Pipeline@121..122
+          PipelineElement@121..122
+            Call@121..122
+              Word@121..122 "1"
+  Newline@122..123 "\n"
+  Pipeline@123..135
+    PipelineElement@123..135
+      Let@123..135
+        Word@123..126 "let"
+        Whitespace@126..127 " "
+        Word@127..128 "x"
+        Whitespace@128..129 " "
+        Error@129..131
+          Word@129..131 "2>"
+        Whitespace@131..132 " "
+        Assign@132..133 "="
+        Whitespace@133..134 " "
+        Pipeline@134..135
+          PipelineElement@134..135
+            Call@134..135
+              Word@134..135 "1"
+  Newline@135..136 "\n"
+  Pipeline@136..150
+    PipelineElement@136..150
+      Let@136..150
+        Word@136..139 "let"
+        Whitespace@139..140 " "
+        Word@140..141 "x"
+        Whitespace@141..142 " "
+        Error@142..146
+          Word@142..146 "2>&1"
+        Whitespace@146..147 " "
+        Assign@147..148 "="
+        Whitespace@148..149 " "
+        Pipeline@149..150
+          PipelineElement@149..150
+            Call@149..150
+              Word@149..150 "1"
+  Newline@150..151 "\n"
+  Pipeline@151..164
+    PipelineElement@151..164
+      Let@151..164
+        Word@151..154 "let"
+        Whitespace@154..155 " "
+        Word@155..156 "x"
+        Whitespace@156..157 " "
+        Error@157..160
+          Word@157..160 "o>|"
+        Whitespace@160..161 " "
+        Assign@161..162 "="
+        Whitespace@162..163 " "
+        Pipeline@163..164
+          PipelineElement@163..164
+            Call@163..164
+              Word@163..164 "1"
+  Newline@164..165 "\n"
+  Pipeline@165..177
+    PipelineElement@165..177
+      Let@165..177
+        Word@165..168 "let"
+        Whitespace@168..169 " "
+        Redirection@169..171
+          Error@169..171
+            OutGt@169..171 "o>"
+        Whitespace@171..172 " "
+        Assign@172..173 "="
+        Whitespace@173..174 " "
+        Assign@174..175 "="
+        Whitespace@175..176 " "
+        Pipeline@176..177
+          PipelineElement@176..177
+            Call@176..177
+              Word@176..177 "1"
+  Newline@177..178 "\n"
+  Pipeline@178..197
+    PipelineElement@178..197
+      Let@178..197
+        Word@178..181 "let"
+        Whitespace@181..182 " "
+        Word@182..183 "x"
+        Whitespace@183..184 " "
+        Redirection@184..188
+          OutGt@184..186 "o>"
+          Whitespace@186..187 " "
+          Word@187..188 "f"
+        Whitespace@188..189 " "
+        Redirection@189..193
+          Error@189..191
+            OutGt@189..191 "o>"
+          Whitespace@191..192 " "
+          Word@192..193 "g"
+        Whitespace@193..194 " "
+        Assign@194..195 "="
+        Whitespace@195..196 " "
+        Pipeline@196..197
+          PipelineElement@196..197
+            Call@196..197
+              Word@196..197 "1"
+  Newline@197..198 "\n"
+  Pipeline@198..207
+    PipelineElement@198..207
+      Assignment@198..207
+        Call@198..200
+          Word@198..200 "$x"
+        Whitespace@200..201 " "
+        Assign@201..202 "="
+        Whitespace@202..203 " "
+        Pipeline@203..207
+          PipelineElement@203..205
+            Call@203..205
+              Word@203..205 "ls"
+          Whitespace@205..206 " "
+          Error@206..207
+            Pipe@206..207 "|"
+  Newline@207..209 "\r\n"
+  Newline@209..211 "\r\n"
+  Pipeline@211..219
+    PipelineElement@211..219
+      Assignment@211..219
+        Call@211..213
+          Word@211..213 "$x"
+        Whitespace@213..214 " "
+        Assign@214..215 "="
+        Whitespace@215..216 " "
+        Pipeline@216..219
+          PipelineElement@216..217
+            Call@216..217
+              Word@216..217 "a"
+          Whitespace@217..218 " "
+          Error@218..219
+            Pipe@218..219 "|"
+error 8..9 "|": PipeEndsAssignment
+error 19..20 "|": PipeEndsAssignment
+error 37..38 "|": PipeEndsAssignment
+error 43..44 ";": SemicolonAfterPipe
+error 47..49 "o>": MissingRedirectionTarget
+error 58..60 "o>": RedirectionAtHead
+error 69..71 "o>": MissingRedirectionTarget
+error 86..88 "o>": MissingRedirectionTarget
+error 103..105 "||": ShellOrOr
+error 116..118 "&&": ShellAndAnd
+error 129..131 "2>": ShellErrRedirect
+error 142..146 "2>&1": ShellOutErrRedirect
+error 157..160 "o>|": OutPipe
+error 169..171 "o>": MissingRedirectionTarget
+error 189..191 "o>": MultipleRedirections
+error 206..207 "|": PipeEndsAssignment
+error 218..219 "|": PipeAtEof

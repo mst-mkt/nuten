@@ -94,10 +94,13 @@ syntax_kinds! {
     /// A statement. Ends before `;`, the end of the file,
     /// or a line break, unless a `|` ends that line or, past any comment lines, starts the next.
     Pipeline,
-    /// An element of a `Pipeline`: a `Call` or an `ExternalCall`, then any `Redirection`s.
+    /// An element of a `Pipeline`: a `Call` or an `ExternalCall`, then any `Redirection`s,
+    /// or else an `Assignment` or a `Let`, which runs to the end of the statement.
     /// Nu allows arguments after a redirection; they stay bare tokens.
-    /// Starts with a `Redirection` instead, its operator an `Error`, when no command precedes it.
-    /// Ends before a pipe (`|`, `e>|`, or `o+e>|`), `;`, a line break, or the end of the file.
+    /// Other than an `Assignment` or a `Let`, starts with a `Redirection` instead, its operator
+    /// an `Error`, when no command precedes it.
+    /// Other than an `Assignment` or a `Let`, ends before a pipe (`|`, `e>|`, or `o+e>|`), `;`,
+    /// a line break, or the end of the file.
     /// A pipe with nothing before or after it, as in `| ls` or `ls | | first`, yields no element.
     PipelineElement,
     /// A command name followed by its arguments.
@@ -107,6 +110,14 @@ syntax_kinds! {
     /// A redirection to a file: the operator, such as `o>`, and its target.
     /// Has no target only when the operator is an `Error`.
     Redirection,
+    /// What a `PipelineElement` holds when an assignment operator comes before it would end,
+    /// other than as the target of a file redirection: what comes before the operator as a
+    /// `PipelineElement` holds it, the operator, then any comments and line breaks before a
+    /// line-start `|`, and a `Pipeline` of the rest of the statement if anything follows.
+    Assignment,
+    /// As an `Assignment`, but for an element that starts a pipeline with `let`, `mut`, or
+    /// `const`, where that word, not a `Call`, comes before the arguments.
+    Let,
     /// A `Word` enclosed in `[ ]`: `[`, what it holds, and `]`.
     /// It stays a `Word` when its `[` closes before its end, when lexing what
     /// it holds gives an `Error` or `;` token, or when brackets nest too deep.

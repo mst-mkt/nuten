@@ -59,6 +59,9 @@ pub enum ParseErrorKind {
     /// below it. A blank line or a line break at the very end makes nu
     /// accept it.
     PipeAtEof,
+    /// A plain `|` in what an assignment operator takes, where a line break
+    /// ends the statement. Other pipelines end there without an error.
+    PipeEndsAssignment,
     /// A redirection with no command before it to apply to.
     RedirectionAtHead,
     /// A file redirection without a target item right after it on the same
@@ -84,7 +87,9 @@ impl fmt::Display for ParseErrorKind {
             ParseErrorKind::ShellOutErrRedirect => "`2>&1` is not a redirection; use `o+e>`",
             ParseErrorKind::OutPipe => "redirecting stdout to a pipe is just `|`",
             ParseErrorKind::SemicolonAfterPipe => "no command between `|` and `;`",
-            ParseErrorKind::PipeAtEof => "no command after `|`",
+            ParseErrorKind::PipeAtEof | ParseErrorKind::PipeEndsAssignment => {
+                "no command after `|`"
+            },
             ParseErrorKind::RedirectionAtHead => "redirection with no command before it",
             ParseErrorKind::MissingRedirectionTarget => "redirection with no target after it",
             ParseErrorKind::MultipleRedirections => {
