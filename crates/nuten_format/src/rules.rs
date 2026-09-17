@@ -117,6 +117,7 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         SyntaxKind::PipelineElement
         | SyntaxKind::Call
         | SyntaxKind::ExternalCall
+        | SyntaxKind::If
         | SyntaxKind::Redirection => spaced(src, node),
         SyntaxKind::List | SyntaxKind::Record if reads_as_value(node) => container(src, node),
         SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],

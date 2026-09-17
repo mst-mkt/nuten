@@ -222,15 +222,23 @@ fn assignment_ahead(p: &Parser<'_>) -> bool {
     false
 }
 
-/// A `Call` or an `ExternalCall`, then its arguments. Returns the streams it
-/// redirects; `None` when there is no command.
+/// A `Call`, an `ExternalCall`, or an `If`, then its arguments. Returns the
+/// streams it redirects; `None` when there is no command.
 fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     let has_call = !p
         .peek()
         .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
-    let external = p.peek_text().is_some_and(|head| head.starts_with('^'));
+    let external = p
+        .peek_text()
+        .is_some_and(|head| head.starts_with('^') || head == "else");
     if has_call {
-        call(p, external);
+        match (p.peek_text() == Some("if"))
+            .then(|| if_chain(&call_items(p)))
+            .flatten()
+        {
+            Some(chain) => if_(p, &chain),
+            None => call(p, external),
+        }
     }
     arguments(
         p,
@@ -238,6 +246,77 @@ fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
         external,
         assigning,
     )
+}
+
+/// The texts of the items ahead that a call takes.
+fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
+    p.remaining_tokens()
+        .filter(|(token, _)| !matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
+        .take_while(|(token, _)| !ends_call(token.kind))
+        .map(|(_, text)| text)
+        .collect()
+}
+
+/// One `if` of a chain: where its body is among the items of the chain, and
+/// whether `else` follows the body.
+struct IfLink {
+    body: usize,
+    has_else: bool,
+}
+
+/// The `if`s that `items` make when nu reads them as one, in order: each is
+/// `if`, a condition, and a body in braces right before its first `else` or
+/// last, and after its `else` comes one item or the next `if`.
+fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
+    let mut chain = Vec::new();
+    let mut start = 0;
+    loop {
+        let rest = &items[start..];
+        if rest.first() != Some(&"if") {
+            return None;
+        }
+        let otherwise = rest.iter().position(|&item| item == "else");
+        let body = match otherwise {
+            Some(otherwise) => otherwise.checked_sub(1)?,
+            None => rest.len() - 1,
+        };
+        if body < 2 || !rest[body].starts_with('{') {
+            return None;
+        }
+        chain.push(IfLink {
+            body: start + body,
+            has_else: otherwise.is_some(),
+        });
+        // Items after `else`.
+        match otherwise.map(|otherwise| rest.len() - otherwise - 1) {
+            None | Some(1) => return Some(chain),
+            Some(0) => return None,
+            Some(_) => start += body + 2,
+        }
+    }
+}
+
+/// The `If` of `chain`, which `if_chain` gave for the items ahead.
+fn if_(p: &mut Parser<'_>, chain: &[IfLink]) {
+    p.start(SyntaxKind::If);
+    let mut at = 0;
+    for link in chain {
+        p.bump();
+        for _ in at + 1..link.body {
+            item(p, false);
+        }
+        token_or_bracketed(p, false);
+        at = link.body + 1;
+        if link.has_else {
+            p.bump();
+            at += 1;
+        }
+    }
+    // The one item after the last `else`.
+    if chain.last().is_some_and(|link| link.has_else) {
+        item(p, false);
+    }
+    p.finish();
 }
 
 /// Items and `Redirection`s up to the end of the element, or up to an

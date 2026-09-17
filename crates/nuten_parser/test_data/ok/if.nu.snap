@@ -1,0 +1,578 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if.nu
+---
+Root@0..538
+  Pipeline@0..11
+    PipelineElement@0..11
+      If@0..11
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Word@3..5 "$a"
+        Whitespace@5..6 " "
+        Block@6..11
+          LBrace@6..7 "{"
+          Whitespace@7..8 " "
+          Pipeline@8..9
+            PipelineElement@8..9
+              Call@8..9
+                Word@8..9 "1"
+          Whitespace@9..10 " "
+          RBrace@10..11 "}"
+  Newline@11..12 "\n"
+  Pipeline@12..45
+    PipelineElement@12..45
+      If@12..45
+        Word@12..14 "if"
+        Whitespace@14..15 " "
+        Word@15..17 "$a"
+        Whitespace@17..18 " "
+        Word@18..19 ">"
+        Whitespace@19..20 " "
+        Word@20..21 "1"
+        Whitespace@21..22 " "
+        Word@22..25 "and"
+        Whitespace@25..26 " "
+        Word@26..28 "$b"
+        Whitespace@28..29 " "
+        Block@29..34
+          LBrace@29..30 "{"
+          Whitespace@30..31 " "
+          Pipeline@31..32
+            PipelineElement@31..32
+              Call@31..32
+                Word@31..32 "1"
+          Whitespace@32..33 " "
+          RBrace@33..34 "}"
+        Whitespace@34..35 " "
+        Word@35..39 "else"
+        Whitespace@39..40 " "
+        Block@40..45
+          LBrace@40..41 "{"
+          Whitespace@41..42 " "
+          Pipeline@42..43
+            PipelineElement@42..43
+              Call@42..43
+                Word@42..43 "2"
+          Whitespace@43..44 " "
+          RBrace@44..45 "}"
+  Newline@45..46 "\n"
+  Pipeline@46..85
+    PipelineElement@46..85
+      If@46..85
+        Word@46..48 "if"
+        Whitespace@48..49 " "
+        Word@49..51 "$a"
+        Whitespace@51..52 " "
+        Block@52..57
+          LBrace@52..53 "{"
+          Whitespace@53..54 " "
+          Pipeline@54..55
+            PipelineElement@54..55
+              Call@54..55
+                Word@54..55 "1"
+          Whitespace@55..56 " "
+          RBrace@56..57 "}"
+        Whitespace@57..58 " "
+        Word@58..62 "else"
+        Whitespace@62..63 " "
+        Word@63..65 "if"
+        Whitespace@65..66 " "
+        Word@66..68 "$b"
+        Whitespace@68..69 " "
+        Block@69..74
+          LBrace@69..70 "{"
+          Whitespace@70..71 " "
+          Pipeline@71..72
+            PipelineElement@71..72
+              Call@71..72
+                Word@71..72 "2"
+          Whitespace@72..73 " "
+          RBrace@73..74 "}"
+        Whitespace@74..75 " "
+        Word@75..79 "else"
+        Whitespace@79..80 " "
+        Block@80..85
+          LBrace@80..81 "{"
+          Whitespace@81..82 " "
+          Pipeline@82..83
+            PipelineElement@82..83
+              Call@82..83
+                Word@82..83 "3"
+          Whitespace@83..84 " "
+          RBrace@84..85 "}"
+  Newline@85..86 "\n"
+  Pipeline@86..115
+    PipelineElement@86..115
+      Let@86..115
+        Word@86..89 "let"
+        Whitespace@89..90 " "
+        Word@90..91 "x"
+        Whitespace@91..92 " "
+        Assign@92..93 "="
+        Whitespace@93..94 " "
+        Pipeline@94..115
+          PipelineElement@94..115
+            If@94..115
+              Word@94..96 "if"
+              Whitespace@96..97 " "
+              Word@97..99 "$a"
+              Whitespace@99..100 " "
+              Word@100..102 "{}"
+              Whitespace@102..103 " "
+              Word@103..107 "else"
+              Whitespace@107..108 " "
+              Word@108..115 "{ # c\n}"
+  Newline@115..116 "\n"
+  Pipeline@116..148
+    PipelineElement@116..118
+      Call@116..118
+        Word@116..118 "ls"
+    Whitespace@118..119 " "
+    Pipe@119..120 "|"
+    Whitespace@120..121 " "
+    PipelineElement@121..139
+      If@121..139
+        Word@121..123 "if"
+        Whitespace@123..124 " "
+        Word@124..126 "$a"
+        Whitespace@126..127 " "
+        Block@127..132
+          LBrace@127..128 "{"
+          Whitespace@128..129 " "
+          Pipeline@129..130
+            PipelineElement@129..130
+              Call@129..130
+                Word@129..130 "1"
+          Whitespace@130..131 " "
+          RBrace@131..132 "}"
+        Whitespace@132..133 " "
+        Word@133..137 "else"
+        Whitespace@137..138 " "
+        Word@138..139 "2"
+    Whitespace@139..140 " "
+    Pipe@140..141 "|"
+    Whitespace@141..142 " "
+    PipelineElement@142..148
+      Call@142..148
+        Word@142..148 "length"
+  Newline@148..149 "\n"
+  Pipeline@149..164
+    PipelineElement@149..164
+      If@149..164
+        Word@149..151 "if"
+        Whitespace@151..152 " "
+        Word@152..156 "true"
+        Whitespace@156..157 " "
+        Block@157..160
+          LBrace@157..158 "{"
+          Pipeline@158..159
+            PipelineElement@158..159
+              Call@158..159
+                Word@158..159 "1"
+          RBrace@159..160 "}"
+        Whitespace@160..161 " "
+        Block@161..164
+          LBrace@161..162 "{"
+          Pipeline@162..163
+            PipelineElement@162..163
+              Call@162..163
+                Word@162..163 "2"
+          RBrace@163..164 "}"
+  Newline@164..165 "\n"
+  Pipeline@165..187
+    PipelineElement@165..187
+      If@165..178
+        Word@165..167 "if"
+        Whitespace@167..168 " "
+        Word@168..174 "(true)"
+        Whitespace@174..175 " "
+        Block@175..178
+          LBrace@175..176 "{"
+          Pipeline@176..177
+            PipelineElement@176..177
+              Call@176..177
+                Word@176..177 "1"
+          RBrace@177..178 "}"
+      Whitespace@178..179 " "
+      Redirection@179..187
+        OutGt@179..181 "o>"
+        Whitespace@181..182 " "
+        Word@182..187 "f.txt"
+  Newline@187..188 "\n"
+  Pipeline@188..210
+    PipelineElement@188..210
+      Call@188..210
+        Word@188..190 "if"
+        Whitespace@190..191 " "
+        Word@191..193 "$x"
+        Whitespace@193..194 " "
+        Block@194..197
+          LBrace@194..195 "{"
+          Pipeline@195..196
+            PipelineElement@195..196
+              Call@195..196
+                Word@195..196 "a"
+          RBrace@196..197 "}"
+        Whitespace@197..198 " "
+        Word@198..202 "else"
+        Whitespace@202..203 " "
+        Block@203..206
+          LBrace@203..204 "{"
+          Pipeline@204..205
+            PipelineElement@204..205
+              Call@204..205
+                Word@204..205 "b"
+          RBrace@205..206 "}"
+        Whitespace@206..207 " "
+        Block@207..210
+          LBrace@207..208 "{"
+          Pipeline@208..209
+            PipelineElement@208..209
+              Call@208..209
+                Word@208..209 "c"
+          RBrace@209..210 "}"
+  Newline@210..211 "\n"
+  Pipeline@211..227
+    PipelineElement@211..227
+      Call@211..227
+        Word@211..213 "if"
+        Whitespace@213..214 " "
+        Word@214..218 "true"
+        Whitespace@218..219 " "
+        Block@219..222
+          LBrace@219..220 "{"
+          Pipeline@220..221
+            PipelineElement@220..221
+              Call@220..221
+                Word@220..221 "1"
+          RBrace@221..222 "}"
+        Whitespace@222..223 " "
+        Word@223..227 "else"
+  Newline@227..228 "\n"
+  Pipeline@228..234
+    PipelineElement@228..234
+      Call@228..234
+        Word@228..230 "if"
+        Whitespace@230..231 " "
+        Block@231..234
+          LBrace@231..232 "{"
+          Pipeline@232..233
+            PipelineElement@232..233
+              Call@232..233
+                Word@232..233 "1"
+          RBrace@233..234 "}"
+  Newline@234..235 "\n"
+  Pipeline@235..242
+    PipelineElement@235..242
+      Call@235..242
+        Word@235..237 "if"
+        Whitespace@237..238 " "
+        Word@238..242 "true"
+  Newline@242..243 "\n"
+  Pipeline@243..262
+    PipelineElement@243..262
+      If@243..262
+        Word@243..245 "if"
+        Whitespace@245..246 " "
+        Word@246..250 "true"
+        Whitespace@250..251 " "
+        Block@251..254
+          LBrace@251..252 "{"
+          Pipeline@252..253
+            PipelineElement@252..253
+              Call@252..253
+                Word@252..253 "1"
+          RBrace@253..254 "}"
+        Whitespace@254..255 " "
+        Word@255..259 "else"
+        Whitespace@259..260 " "
+        Word@260..262 "if"
+  Newline@262..263 "\n"
+  Pipeline@263..282
+    PipelineElement@263..282
+      If@263..282
+        Word@263..265 "if"
+        Whitespace@265..266 " "
+        Word@266..270 "true"
+        Whitespace@270..271 " "
+        Block@271..274
+          LBrace@271..272 "{"
+          Pipeline@272..273
+            PipelineElement@272..273
+              Call@272..273
+                Word@272..273 "1"
+          RBrace@273..274 "}"
+        Whitespace@274..275 " "
+        Word@275..278 "els"
+        Whitespace@278..279 " "
+        Block@279..282
+          LBrace@279..280 "{"
+          Pipeline@280..281
+            PipelineElement@280..281
+              Call@280..281
+                Word@280..281 "2"
+          RBrace@281..282 "}"
+  Newline@282..283 "\n"
+  Pipeline@283..295
+    PipelineElement@283..295
+      ExternalCall@283..295
+        Word@283..286 "^if"
+        Whitespace@286..287 " "
+        Word@287..291 "true"
+        Whitespace@291..292 " "
+        Word@292..295 "{1}"
+  Newline@295..296 "\n"
+  Pipeline@296..306
+    PipelineElement@296..306
+      ExternalCall@296..306
+        Word@296..300 "else"
+        Whitespace@300..301 " "
+        Word@301..306 "{ 2 }"
+  Newline@306..307 "\n"
+  Pipeline@307..329
+    PipelineElement@307..309
+      Call@307..309
+        Word@307..309 "ls"
+    Whitespace@309..310 " "
+    Pipe@310..311 "|"
+    Whitespace@311..312 " "
+    PipelineElement@312..329
+      ExternalCall@312..329
+        Word@312..316 "else"
+        Whitespace@316..317 " "
+        Word@317..323 "{a: 1}"
+        Whitespace@323..324 " "
+        List@324..329
+          LBracket@324..325 "["
+          Word@325..326 "b"
+          Whitespace@326..327 " "
+          Word@327..328 "c"
+          RBracket@328..329 "]"
+  Newline@329..330 "\n"
+  Pipeline@330..346
+    PipelineElement@330..346
+      Call@330..346
+        Word@330..334 "echo"
+        Whitespace@334..335 " "
+        Word@335..337 "if"
+        Whitespace@337..338 " "
+        Word@338..342 "true"
+        Whitespace@342..343 " "
+        Block@343..346
+          LBrace@343..344 "{"
+          Pipeline@344..345
+            PipelineElement@344..345
+              Call@344..345
+                Word@344..345 "1"
+          RBrace@345..346 "}"
+  Newline@346..347 "\n"
+  Pipeline@347..369
+    PipelineElement@347..369
+      If@347..369
+        Word@347..349 "if"
+        Whitespace@349..350 " "
+        Word@350..352 "$a"
+        Whitespace@352..353 " "
+        Block@353..356
+          LBrace@353..354 "{"
+          Pipeline@354..355
+            PipelineElement@354..355
+              Call@354..355
+                Word@354..355 "1"
+          RBrace@355..356 "}"
+        Whitespace@356..357 " "
+        Word@357..361 "else"
+        Whitespace@361..362 " "
+        Block@362..369
+          LBrace@362..363 "{"
+          ClosureParams@363..366
+            Pipe@363..364 "|"
+            Word@364..365 "x"
+            Pipe@365..366 "|"
+          Whitespace@366..367 " "
+          Pipeline@367..368
+            PipelineElement@367..368
+              Call@367..368
+                Word@367..368 "2"
+          RBrace@368..369 "}"
+  Newline@369..370 "\n"
+  Pipeline@370..391
+    PipelineElement@370..391
+      If@370..391
+        Word@370..372 "if"
+        Whitespace@372..373 " "
+        Word@373..375 "$a"
+        Whitespace@375..376 " "
+        Block@376..379
+          LBrace@376..377 "{"
+          Pipeline@377..378
+            PipelineElement@377..378
+              Call@377..378
+                Word@377..378 "1"
+          RBrace@378..379 "}"
+        Whitespace@379..380 " "
+        Word@380..384 "else"
+        Whitespace@384..385 " "
+        Record@385..391
+          LBrace@385..386 "{"
+          RecordField@386..390
+            Word@386..387 "a"
+            Colon@387..388 ":"
+            Whitespace@388..389 " "
+            Word@389..390 "1"
+          RBrace@390..391 "}"
+  Newline@391..392 "\n"
+  Pipeline@392..419
+    PipelineElement@392..419
+      If@392..410
+        Word@392..394 "if"
+        Whitespace@394..395 " "
+        Word@395..397 "$a"
+        Whitespace@397..398 " "
+        Block@398..401
+          LBrace@398..399 "{"
+          Pipeline@399..400
+            PipelineElement@399..400
+              Call@399..400
+                Word@399..400 "1"
+          RBrace@400..401 "}"
+        Whitespace@401..402 " "
+        Word@402..406 "else"
+        Whitespace@406..407 " "
+        Block@407..410
+          LBrace@407..408 "{"
+          Pipeline@408..409
+            PipelineElement@408..409
+              Call@408..409
+                Word@408..409 "2"
+          RBrace@409..410 "}"
+      Whitespace@410..411 " "
+      Redirection@411..419
+        OutGt@411..413 "o>"
+        Whitespace@413..414 " "
+        Word@414..419 "f.txt"
+  Newline@419..420 "\n"
+  Pipeline@420..436
+    PipelineElement@420..436
+      Let@420..436
+        Word@420..423 "let"
+        Whitespace@423..424 " "
+        Word@424..425 "x"
+        Whitespace@425..426 " "
+        Assign@426..427 "="
+        Whitespace@427..428 " "
+        Pipeline@428..436
+          PipelineElement@428..436
+            ExternalCall@428..436
+              Word@428..432 "else"
+              Whitespace@432..433 " "
+              Word@433..436 "{1}"
+  Newline@436..437 "\n"
+  Pipeline@437..459
+    PipelineElement@437..459
+      Call@437..459
+        Word@437..439 "if"
+        Whitespace@439..440 " "
+        Word@440..444 "true"
+        Whitespace@444..445 " "
+        Block@445..448
+          LBrace@445..446 "{"
+          Pipeline@446..447
+            PipelineElement@446..447
+              Call@446..447
+                Word@446..447 "1"
+          RBrace@447..448 "}"
+        Whitespace@448..449 " "
+        Word@449..453 "else"
+        Whitespace@453..454 " "
+        Word@454..455 "1"
+        Whitespace@455..456 " "
+        Word@456..457 "+"
+        Whitespace@457..458 " "
+        Word@458..459 "2"
+  Newline@459..460 "\n"
+  Pipeline@460..469
+    PipelineElement@460..469
+      If@460..469
+        Word@460..462 "if"
+        Whitespace@462..463 " "
+        Word@463..465 "$a"
+        Whitespace@465..466 " "
+        Block@466..469
+          LBrace@466..467 "{"
+          Pipeline@467..468
+            PipelineElement@467..468
+              Call@467..468
+                Word@467..468 "1"
+          RBrace@468..469 "}"
+  Whitespace@469..470 " "
+  Comment@470..473 "# c"
+  Newline@473..474 "\n"
+  Pipeline@474..537
+    PipelineElement@474..537
+      If@474..537
+        Word@474..476 "if"
+        Whitespace@476..477 " "
+        Word@477..479 "$a"
+        Whitespace@479..480 " "
+        Block@480..483
+          LBrace@480..481 "{"
+          Pipeline@481..482
+            PipelineElement@481..482
+              Call@481..482
+                Word@481..482 "1"
+          RBrace@482..483 "}"
+        Whitespace@483..484 " "
+        Word@484..488 "else"
+        Whitespace@488..489 " "
+        Word@489..491 "if"
+        Whitespace@491..492 " "
+        Word@492..494 "$b"
+        Whitespace@494..495 " "
+        Block@495..498
+          LBrace@495..496 "{"
+          Pipeline@496..497
+            PipelineElement@496..497
+              Call@496..497
+                Word@496..497 "2"
+          RBrace@497..498 "}"
+        Whitespace@498..499 " "
+        Word@499..503 "else"
+        Whitespace@503..504 " "
+        Word@504..506 "if"
+        Whitespace@506..507 " "
+        Word@507..509 "$c"
+        Whitespace@509..510 " "
+        Block@510..513
+          LBrace@510..511 "{"
+          Pipeline@511..512
+            PipelineElement@511..512
+              Call@511..512
+                Word@511..512 "3"
+          RBrace@512..513 "}"
+        Whitespace@513..514 " "
+        Word@514..518 "else"
+        Whitespace@518..519 " "
+        Word@519..521 "if"
+        Whitespace@521..522 " "
+        Word@522..524 "$d"
+        Whitespace@524..525 " "
+        Block@525..528
+          LBrace@525..526 "{"
+          Pipeline@526..527
+            PipelineElement@526..527
+              Call@526..527
+                Word@526..527 "4"
+          RBrace@527..528 "}"
+        Whitespace@528..529 " "
+        Word@529..533 "else"
+        Whitespace@533..534 " "
+        Block@534..537
+          LBrace@534..535 "{"
+          Pipeline@535..536
+            PipelineElement@535..536
+              Call@535..536
+                Word@535..536 "5"
+          RBrace@536..537 "}"
+  Newline@537..538 "\n"

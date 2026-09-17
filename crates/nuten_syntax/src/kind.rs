@@ -105,8 +105,16 @@ syntax_kinds! {
     PipelineElement,
     /// A command name followed by its arguments.
     Call,
-    /// Same as `Call`, but the name starts with `^`, so the command is external.
+    /// Same as `Call`, but the name starts with `^`, or is `else`, which nu runs
+    /// as an external command outside an `if`.
     ExternalCall,
+    /// What a `Call` would be for a command named `if` that nu reads as one,
+    /// with the `if`s that follow its `else`s in one flat node: `if`, the
+    /// condition, the body, then any number of `else`, `if`, condition, and
+    /// body, then optionally `else` and one more argument. A body is the
+    /// argument right before its `else`, or the last one, and starts with
+    /// `{`; a condition is at least one argument before it.
+    If,
     /// A redirection to a file: the operator, such as `o>`, and its target.
     /// Has no target only when the operator is an `Error`.
     Redirection,
