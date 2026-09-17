@@ -40,7 +40,7 @@ pub enum LexErrorKind {
     /// The range covers the innermost opener, such as `[`, `$"`, or `r#'`,
     /// but in interpolation the outermost unclosed `(`.
     Unclosed,
-    /// A closer that does not match the innermost opener,
+    /// A `]`, `}`, or `)` that does not match the innermost opener,
     /// other than `]` with nothing open.
     UnmatchedCloser,
     /// `r#` not followed by `'`.
@@ -67,6 +67,8 @@ pub struct Mode {
     /// nu's special tokens, plus `,` where nu treats it as whitespace.
     /// All ASCII, and none of the bytes `next` handles before `item`.
     special: &'static [(u8, SyntaxKind)],
+    /// Whether `<` and `>` nest as brackets, as nu does where it reads a type.
+    signature: bool,
 }
 
 impl Mode {
@@ -76,6 +78,7 @@ impl Mode {
         Mode::record(),
         Mode::record_value(),
         Mode::brace(),
+        Mode::var_type(),
     ];
 
     /// Statements in the top level, `{ }` blocks, closures, and modules.
@@ -83,6 +86,7 @@ impl Mode {
     pub const fn block() -> Mode {
         Mode {
             special: &[],
+            signature: false,
         }
     }
 
@@ -90,6 +94,7 @@ impl Mode {
     pub const fn list() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
+            signature: false,
         }
     }
 
@@ -97,6 +102,7 @@ impl Mode {
     pub const fn record() -> Mode {
         Mode {
             special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
+            signature: false,
         }
     }
 
@@ -104,6 +110,7 @@ impl Mode {
     pub const fn record_value() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
+            signature: false,
         }
     }
 
@@ -112,6 +119,15 @@ impl Mode {
     pub const fn brace() -> Mode {
         Mode {
             special: &[(b':', SyntaxKind::Colon)],
+            signature: false,
+        }
+    }
+
+    /// The type of a variable, as in `let x: int`.
+    pub const fn var_type() -> Mode {
+        Mode {
+            special: &[(b',', SyntaxKind::Comma)],
+            signature: true,
         }
     }
 
@@ -127,14 +143,21 @@ impl Mode {
     }
 }
 
-/// The special bytes, as in `Mode(",")`.
+/// The special bytes, and `signature` if `<` and `>` nest, as in
+/// `Mode(",", signature)`.
 impl fmt::Debug for Mode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let Mode {
             special,
+            signature,
         } = self;
         let bytes: String = special.iter().map(|&(byte, _)| char::from(byte)).collect();
-        f.debug_tuple("Mode").field(&bytes).finish()
+        let mut tuple = f.debug_tuple("Mode");
+        tuple.field(&bytes);
+        if *signature {
+            tuple.field(&format_args!("signature"));
+        }
+        tuple.finish()
     }
 }
 
@@ -286,7 +309,10 @@ impl<'a> Lexer<'a> {
                 b'[' => closers.push((b']', at)),
                 b'{' => closers.push((b'}', at)),
                 b'(' => closers.push((b')', at)),
-                b']' | b'}' | b')' if closers.last().is_some_and(|&(closer, _)| closer == byte) => {
+                b'<' if self.mode.signature => closers.push((b'>', at)),
+                b']' | b'}' | b')' | b'>'
+                    if closers.last().is_some_and(|&(closer, _)| closer == byte) =>
+                {
                     closers.pop();
                 },
                 b']' if closers.is_empty() => {},
@@ -499,6 +525,12 @@ mod tests {
             Mode::record_value(),
             &[Whitespace, Newline, Comment, Comma],
         )
+    }
+
+    /// The split nu reports where it reads the type of a variable, skipping
+    /// comments.
+    fn split_var_type(src: &str) -> Vec<&str> {
+        split_skipping(src, Mode::var_type(), &[Whitespace, Newline, Comment])
     }
 
     fn split_skipping<'a>(src: &'a str, mode: Mode, skipped: &[SyntaxKind]) -> Vec<&'a str> {
@@ -964,6 +996,54 @@ mod tests {
         }
     }
 
+    /// How nu 0.115.1 splits the type of a variable.
+    const NU_VAR_TYPE_SPLITS: &[(&str, &[&str])] = &[
+        ("record<a: int, b: string>", &["record<a: int, b: string>"]),
+        ("int, string", &["int", ",", "string"]),
+        ("a,<b,c>", &["a", ",", "<b,c>"]),
+        ("a< b >c d", &["a< b >c", "d"]),
+        ("a<(b)>", &["a<(b)>"]),
+        ("a>b", &["a>b"]),
+        ("a:b", &["a:b"]),
+    ];
+
+    #[test]
+    fn var_type_splits_match_nu() {
+        for &(src, expected) in NU_VAR_TYPE_SPLITS {
+            assert_eq!(split_var_type(src), expected, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn angle_brackets_nest_in_a_var_type() {
+        for (src, error) in [
+            ("a<b", (Unclosed, "<")),
+            ("a<b<c>", (Unclosed, "<")),
+            ("a<[b>]", (Unclosed, "<")),
+            ("a<b # c>", (Unclosed, "<")),
+            ("a<b]", (UnmatchedCloser, "]")),
+            ("a<b}", (UnmatchedCloser, "}")),
+            ("a<b)", (UnmatchedCloser, ")")),
+        ] {
+            let Lexed {
+                tokens,
+                errors,
+            } = lex_all_in(src, Mode::var_type());
+            assert_eq!(tokens.len(), 1, "{src:?}");
+            assert_eq!(errors.len(), 1, "{src:?}");
+            assert_eq!((errors[0].kind, &src[errors[0].range]), error, "{src:?}");
+        }
+        for mode in [
+            Mode::block(),
+            Mode::list(),
+            Mode::record(),
+            Mode::record_value(),
+            Mode::brace(),
+        ] {
+            assert_eq!(lexed_in("a<b", mode), [(Word, "a<b")], "{mode:?}");
+        }
+    }
+
     #[test]
     fn a_colon_is_a_token_in_record_and_brace_modes() {
         for mode in [Mode::record(), Mode::brace()] {
@@ -1138,8 +1218,10 @@ mod tests {
             && match error.kind {
                 // Runs to the end, or before a final `\` in a `"` string.
                 Unclosed => {
-                    (matches!(text, "[" | "{" | "(" | "'" | "\"" | "`" | "$'" | "$\"")
-                        || text.strip_suffix('\'').is_some_and(raw_prefix))
+                    (matches!(
+                        text,
+                        "[" | "{" | "(" | "<" | "'" | "\"" | "`" | "$'" | "$\""
+                    ) || text.strip_suffix('\'').is_some_and(raw_prefix))
                         && (after.is_empty() || after == "\\" && text.ends_with('"'))
                 },
                 UnmatchedCloser => matches!(text, "]" | "}" | ")") && ends_token,
