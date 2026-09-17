@@ -156,12 +156,20 @@ Root@0..336
   Newline@165..166 "\n"
   Pipeline@166..199
     PipelineElement@166..199
-      Call@166..199
+      Def@166..199
         Word@166..169 "def"
         Whitespace@169..170 " "
         Word@170..171 "f"
         Whitespace@171..172 " "
-        Word@172..181 "[x: int]:"
+        Signature@172..180
+          LBracket@172..173 "["
+          Param@173..179
+            Word@173..174 "x"
+            Colon@174..175 ":"
+            Whitespace@175..176 " "
+            Word@176..179 "int"
+          RBracket@179..180 "]"
+        Colon@180..181 ":"
         Whitespace@181..182 " "
         Word@182..189 "nothing"
         Whitespace@189..190 " "

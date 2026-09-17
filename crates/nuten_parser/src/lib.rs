@@ -70,6 +70,11 @@ pub enum ParseErrorKind {
     MissingRedirectionTarget,
     /// A redirection of a stream the element already redirects.
     MultipleRedirections,
+    /// A `:`, `=`, or `,` where the parameters of a `def` or an `extern` take
+    /// a parameter or a flag, a `(-f)` after a `,`, or a `:` or an `=` with
+    /// nothing at all after it. nu rejects each of these, and dropping a `,`
+    /// would take the error away.
+    SignatureSeparator,
 }
 
 /// One line.
@@ -92,6 +97,9 @@ impl fmt::Display for ParseErrorKind {
             },
             ParseErrorKind::RedirectionAtHead => "redirection with no command before it",
             ParseErrorKind::MissingRedirectionTarget => "redirection with no target after it",
+            ParseErrorKind::SignatureSeparator => {
+                "`:`, `=`, or `,` with no parameter, type, or default value for it"
+            },
             ParseErrorKind::MultipleRedirections => {
                 "redirection of a stream that is already redirected"
             },

@@ -79,6 +79,9 @@ impl Mode {
         Mode::record_value(),
         Mode::brace(),
         Mode::var_type(),
+        Mode::signature(),
+        Mode::io_types(),
+        Mode::type_params(),
     ];
 
     /// Statements in the top level, `{ }` blocks, closures, and modules.
@@ -127,6 +130,35 @@ impl Mode {
     pub const fn var_type() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
+            signature: true,
+        }
+    }
+
+    /// The inside of the `[ ]` of a `def` or an `extern`.
+    pub const fn signature() -> Mode {
+        Mode {
+            special: &[
+                (b':', SyntaxKind::Colon),
+                (b'=', SyntaxKind::Eq),
+                (b',', SyntaxKind::Comma),
+            ],
+            signature: true,
+        }
+    }
+
+    /// The input and output types after the signature, as in
+    /// `]: nothing -> string`.
+    pub const fn io_types() -> Mode {
+        Mode {
+            special: &[(b',', SyntaxKind::Comma)],
+            signature: true,
+        }
+    }
+
+    /// The inside of the `< >` of a type, as in `record<a: int>`.
+    pub const fn type_params() -> Mode {
+        Mode {
+            special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
             signature: true,
         }
     }

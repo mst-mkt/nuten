@@ -232,12 +232,13 @@ fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
         .peek_text()
         .is_some_and(|head| head.starts_with('^') || head == "else");
     if has_call {
-        match (p.peek_text() == Some("if"))
-            .then(|| if_chain(&call_items(p)))
-            .flatten()
-        {
-            Some(chain) => if_(p, &chain),
-            None => call(p, external),
+        let items = keyword_items(p);
+        if let Some(chain) = items.as_deref().and_then(if_chain) {
+            if_(p, &chain);
+        } else if let Some(shape) = items.as_deref().and_then(def_shape) {
+            def(p, &shape);
+        } else {
+            call(p, external);
         }
     }
     arguments(
@@ -248,6 +249,16 @@ fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     )
 }
 
+/// The texts of the items ahead that a call takes, when the first is a word
+/// that starts a syntax of its own.
+fn keyword_items<'a>(p: &Parser<'a>) -> Option<Vec<&'a str>> {
+    let head = p.peek_text()?;
+    if !matches!(head, "if" | "def" | "extern" | "export") {
+        return None;
+    }
+    Some(call_items(p))
+}
+
 /// The texts of the items ahead that a call takes.
 fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
     p.remaining_tokens()
@@ -255,6 +266,196 @@ fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
         .take_while(|(token, _)| !ends_call(token.kind))
         .map(|(_, text)| text)
         .collect()
+}
+
+/// Where the parts of a `def` or an `extern` are among `items`, when nu reads
+/// them as one: the keyword, `export` before it if there, then flags, the
+/// name, the parameters in `[ ]`, the input and output types after a `:`, and
+/// the body, which only a `def` has and which nu takes from the last item.
+struct DefShape {
+    /// Where the parameters are, the items before them being the keyword,
+    /// any flags, and the name.
+    signature: usize,
+    /// Whether the `:` of the input and output types ends that item.
+    attached_colon: bool,
+    /// How many items follow the parameters, the last being the body when the
+    /// definition has one.
+    rest: usize,
+    has_body: bool,
+}
+
+fn def_shape(items: &[&str]) -> Option<DefShape> {
+    let mut at = usize::from(*items.first()? == "export");
+    let external = match *items.get(at)? {
+        "def" => false,
+        "extern" => true,
+        _ => return None,
+    };
+    at += 1;
+    while items.get(at)?.starts_with('-') {
+        at += 1;
+    }
+    // Nu reads a name holding `[` or `(` as the name and the parameters at
+    // once, and rejects it.
+    if items.get(at)?.contains(['[', '(']) {
+        return None;
+    }
+    let signature = at + 1;
+    let item = items.get(signature)?;
+    let attached_colon = item.ends_with("]:");
+    if !item.starts_with('[') || !(item.ends_with(']') || attached_colon) {
+        return None;
+    }
+    let rest = items.len() - signature - 1;
+    // Nu ignores the one item in braces an `extern` may end with, and never
+    // parses it, so it stays a word.
+    let has_body = !external && rest > 0;
+    let types = rest - usize::from(has_body || external && rest == 1);
+    if !attached_colon && types > 0 && items[signature + 1] != ":" {
+        return None;
+    }
+    if rest > 0 && !external && !items[items.len() - 1].starts_with('{') {
+        return None;
+    }
+    if external && rest == 1 && !items[items.len() - 1].starts_with('{') {
+        return None;
+    }
+    Some(DefShape {
+        signature,
+        attached_colon,
+        rest,
+        has_body,
+    })
+}
+
+/// The `Def` of `shape`, which `def_shape` gave for the items ahead.
+fn def(p: &mut Parser<'_>, shape: &DefShape) {
+    p.start(SyntaxKind::Def);
+    for _ in 0..shape.signature {
+        p.bump();
+    }
+    let bracketed = if shape.attached_colon {
+        p.bracketed_then(&SQUARE, Mode::signature(), SyntaxKind::Colon)
+    } else {
+        p.bracketed(&SQUARE, Mode::signature())
+    };
+    match bracketed {
+        Some(bracketed) => p.bump_bracketed(SyntaxKind::Signature, bracketed, params),
+        None => p.bump(),
+    }
+    // The input and output types stay as they are; only the body is a block.
+    let types = shape.rest - usize::from(shape.has_body);
+    for _ in 0..types {
+        p.bump();
+    }
+    if shape.has_body {
+        token_or_bracketed(p, false);
+    }
+    p.finish();
+}
+
+/// What a signature takes next, as nu's `parse_signature_helper` calls it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Params {
+    /// A parameter, a flag, a `:`, an `=`, or a `,`.
+    Param,
+    /// A parameter or a flag, after a `,`.
+    AfterComma,
+    /// The type a `:` promises.
+    Type,
+    /// A parameter, a flag, an `=`, or a `,`, after a type.
+    AfterType,
+    /// The value an `=` promises.
+    Default,
+}
+
+/// The parameters of a signature as nu splits them: a `Param` at each item
+/// where nu takes one, holding the `(-f)`, the `:` and the type, and the `=`
+/// and the default value that nu gives it, along with the comments that
+/// describe it. A `:`, an `=`, or a `,` where nu takes none is an `Error`, as
+/// is one with nothing after it.
+fn params(p: &mut Parser<'_>) {
+    let mut mode = Params::Param;
+    let mut started = false;
+    while let Some(kind) = p.peek() {
+        let promised = matches!(kind, SyntaxKind::Colon | SyntaxKind::Eq) && !token_ahead(p);
+        mode = match (kind, mode) {
+            (SyntaxKind::Colon, Params::Param) if !promised => Params::Type,
+            (SyntaxKind::Eq, Params::Param | Params::AfterType) if !promised => Params::Default,
+            (SyntaxKind::Comma, Params::Param | Params::AfterType) => Params::AfterComma,
+            (SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma, _) => {
+                p.bump_error(ParseErrorKind::SignatureSeparator);
+                continue;
+            },
+            // Nu takes a `(-f)` for the parameter before it, and has none
+            // after a `,`.
+            (_, Params::AfterComma) if p.peek_text().is_some_and(is_short_flag) => {
+                p.bump_error(ParseErrorKind::SignatureSeparator);
+                continue;
+            },
+            // A line break belongs to the parameter only while it goes on.
+            (SyntaxKind::Newline, mode) => {
+                if started && !goes_on(p, mode) {
+                    p.finish();
+                    started = false;
+                }
+                mode
+            },
+            (_, Params::Type) => Params::AfterType,
+            (_, Params::Default) => Params::Param,
+            // An item that is no `(-f)` starts a parameter of its own; nu
+            // ignores `|`, `;`, and redirections, which stay where they are.
+            (_, _) if is_item(kind) && !p.peek_text().is_some_and(is_short_flag) => {
+                if started {
+                    p.finish();
+                }
+                // Trivia between two parameters, such as the comment that
+                // describes the one before, belongs to neither.
+                p.bump_trivia();
+                p.start(SyntaxKind::Param);
+                started = true;
+                Params::Param
+            },
+            (_, mode) => mode,
+        };
+        p.bump();
+    }
+    if started {
+        p.finish();
+    }
+}
+
+/// Whether the parameter being read goes on past the line breaks ahead: nu
+/// gives it the type or the default value it promised, the `(-f)`, the type,
+/// or the default value that comes next, or the `,` that ends it.
+fn goes_on(p: &Parser<'_>, mode: Params) -> bool {
+    let next = p
+        .remaining_tokens()
+        .find(|(token, _)| !token.kind.is_trivia() && token.kind != SyntaxKind::Newline);
+    match mode {
+        Params::Type | Params::Default => next.is_some(),
+        _ => next.is_some_and(|(token, text)| {
+            matches!(
+                token.kind,
+                SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma
+            ) || is_short_flag(text)
+        }),
+    }
+}
+
+/// Whether any token comes before the parameters end, a comment included.
+/// Nu reports a `:` or an `=` only as the very last token, however little
+/// what follows it has to do with a type or a default value.
+fn token_ahead(p: &Parser<'_>) -> bool {
+    p.remaining_kinds()
+        .filter(|kind| !matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Newline))
+        .nth(1)
+        .is_some()
+}
+
+/// Whether `text` is how nu spells a short flag for the parameter before it.
+fn is_short_flag(text: &str) -> bool {
+    text.starts_with("(-")
 }
 
 /// One `if` of a chain: where its body is among the items of the chain, and

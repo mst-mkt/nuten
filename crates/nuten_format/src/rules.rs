@@ -119,8 +119,11 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         | SyntaxKind::ExternalCall
         | SyntaxKind::Redirection => spaced(src, node),
         SyntaxKind::If => if_(src, node),
+        SyntaxKind::Def => def(src, node),
         SyntaxKind::List | SyntaxKind::Record if reads_as_value(node) => container(src, node),
-        SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],
+        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Signature => {
+            vec![text(&src[node.text_range()])]
+        },
         SyntaxKind::Block if in_match(node) => vec![text(&src[node.text_range()])],
         SyntaxKind::Block => block(src, node),
         kind => unreachable!("{kind:?} is not formatted as a node"),
@@ -744,6 +747,22 @@ fn comment_follows(pipe: &SyntaxToken) -> bool {
         }
     }
     false
+}
+
+/// A `def` or an `extern`: its parts one space apart, with the `:` of the
+/// input and output types right after the parameters.
+fn def<'a>(src: &'a str, def: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut out = Vec::new();
+    for child in children(def) {
+        if !out.is_empty() && child.element.kind() != SyntaxKind::Colon {
+            out.push(space());
+        }
+        match &child.element {
+            SyntaxElement::Node(child) => out.extend(node(src, child)),
+            SyntaxElement::Token(child) => out.push(token(src, child)),
+        }
+    }
+    out
 }
 
 /// The children with one space between each two. No line break falls among

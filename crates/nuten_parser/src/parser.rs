@@ -34,6 +34,9 @@ pub(crate) struct Bracketed<'a> {
     inner: Parser<'a>,
     token: Token,
     brackets: &'static Brackets,
+    /// The kind of the byte the token ends with past its closing bracket,
+    /// which `bump_bracketed` emits after the node.
+    suffix: Option<SyntaxKind>,
 }
 
 impl<'a> Bracketed<'a> {
@@ -193,20 +196,46 @@ impl<'a> Parser<'a> {
         brackets: &'static Brackets,
         mode: Mode,
     ) -> Option<Bracketed<'a>> {
+        self.bracketed_within(brackets, mode, None)
+    }
+
+    /// As `bracketed`, for a token that ends with one byte past its closing
+    /// bracket, such as the `:` of a signature with input and output types.
+    /// `bump_bracketed` emits that byte as `suffix` after the node.
+    pub(crate) fn bracketed_then(
+        &self,
+        brackets: &'static Brackets,
+        mode: Mode,
+        suffix: SyntaxKind,
+    ) -> Option<Bracketed<'a>> {
+        self.bracketed_within(brackets, mode, Some(suffix))
+    }
+
+    fn bracketed_within(
+        &self,
+        brackets: &'static Brackets,
+        mode: Mode,
+        suffix: Option<SyntaxKind>,
+    ) -> Option<Bracketed<'a>> {
         let token = self.nth_token(0)?;
+        let range = match suffix {
+            None => token.range,
+            Some(_) => TextRange::new(token.range.start(), token.range.end() - TextSize::new(1)),
+        };
         if !self.expand
             || token.kind != SyntaxKind::Word
             || self.depth == MAX_DEPTH
-            || !encloses(self.src, token.range, brackets)
+            || !encloses(self.src, range, brackets)
         {
             return None;
         }
-        let (_, inside, _) = split(token.range);
+        let (_, inside, _) = split(range);
         let lexed = lexer::lex(self.src, inside, mode);
         Some(Bracketed {
             inner: Parser::new(self.src, lexed, self.depth + 1),
             token,
             brackets,
+            suffix,
         })
     }
 
@@ -227,6 +256,7 @@ impl<'a> Parser<'a> {
             mut inner,
             token,
             brackets,
+            suffix,
         } = bracketed;
         assert_eq!(
             self.nth_token(0),
@@ -235,7 +265,11 @@ impl<'a> Parser<'a> {
         );
         self.start(node);
         self.pos += 1;
-        let (open, _, close) = split(token.range);
+        let end = match suffix {
+            None => token.range.end(),
+            Some(_) => token.range.end() - TextSize::new(1),
+        };
+        let (open, _, close) = split(TextRange::new(token.range.start(), end));
         self.push_token(brackets.open_kind, open);
         // Lent, so that nested brackets do not copy the events inside.
         inner.events = mem::take(&mut self.events);
@@ -248,6 +282,14 @@ impl<'a> Parser<'a> {
         self.events = inner.events;
         self.push_token(brackets.close_kind, close);
         self.finish();
+        if let Some(suffix) = suffix {
+            self.push_token(suffix, TextRange::new(end, token.range.end()));
+        }
+    }
+
+    /// Emits the trivia ahead, so that a node does not start or end with it.
+    pub(crate) fn bump_trivia(&mut self) {
+        self.bump_skipped();
     }
 
     /// Emits the next token.

@@ -154,6 +154,18 @@ syntax_kinds! {
     /// The parameters of a closure as unchecked tokens: `|` to the next `|`,
     /// or `||`.
     ClosureParams,
+    /// A `def` or an `extern` that nu reads as one: `export` if there, the
+    /// keyword, any flags, the name, a `Signature`, the `:` and the items of
+    /// the input and output types if there, and the body of a `def`.
+    Def,
+    /// The parameters of a `def` or an `extern`: `[`, what it holds, and `]`.
+    Signature,
+    /// One parameter of a `Signature`: its name, then in source order the
+    /// `(-f)` short flag, the `:` and the type, and the `=` and the default
+    /// value that follow it, each while nu takes them for that parameter. It
+    /// also holds the `,` that ends it, and the `|`, `;`, and redirection
+    /// tokens nu ignores among them.
+    Param,
 }
 
 impl SyntaxKind {
