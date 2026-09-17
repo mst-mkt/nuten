@@ -63,8 +63,8 @@ ls | each {|x|
 }
 ls
 | each {|x|
-    $x
-}
+      $x
+  }
 | length
 let long = {
     aaaaaaaaaaaaaaaaaaaaaaaaaaa; bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; cccccccccccccccccccccccccccc

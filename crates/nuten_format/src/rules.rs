@@ -3,8 +3,9 @@
 use std::{iter, mem};
 
 use nuten_doc::{
-    Element, empty_line, empty_lines, expand_parent, group, hard_line_break, indent, line_suffix,
-    soft_line_break, soft_line_break_or_space, space, text,
+    Element, GroupId, align, align_if_group_breaks, empty_line, empty_lines, expand_parent, group,
+    group_with_id, hard_line_break, indent, line_suffix, soft_line_break, soft_line_break_or_space,
+    space, text,
 };
 use nuten_parser::lexer::{self, Mode};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
@@ -128,16 +129,23 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
 /// On one line when no line break came before a pipe or element in the
 /// source and it fits, counting only the first line of an element that ends
 /// it; otherwise each `|` starts a line, at the current indent, while `e>|`
-/// and `o+e>|` stay on the line of their element.
+/// and `o+e>|` stay on the line of their element. What follows a `|` at the
+/// start of a line goes two columns further on its lines after the first, so
+/// that it lines up after the `| `.
 /// A comment stays where it is among the pipes and elements, on its own
 /// line or at the end of its line. A pipe with a comment after it stays at
 /// the end of its line, and what comes next starts a line.
 fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
+    // Unique, as a pipeline inside another starts after a bracket.
+    let id = GroupId(pipeline.text_range().start().into());
     let mut out = Vec::new();
     let mut prev = None;
     // Where an element that ends the pipeline, with its separator, starts in
     // `out`.
     let mut tail = None;
+    // Where what follows a `|` that may start a line starts in `out`, and
+    // whether the `|` starts a line even when the pipeline is on one line.
+    let mut after_pipe: Option<(usize, bool)> = None;
     for part in parts(pipeline) {
         let Part {
             child: Child {
@@ -147,6 +155,9 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
             joined,
         } = part;
         let kind = element.kind();
+        if matches!(kind, SyntaxKind::Pipe | SyntaxKind::Comment) {
+            align_after_pipe(&mut out, after_pipe.take(), id, &mut tail);
+        }
         if newlines > 0 {
             out.push(expand_parent());
         }
@@ -177,14 +188,25 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
             },
             SyntaxElement::Token(child) => match kind {
                 SyntaxKind::Pipe => {
+                    let before_comment = comment_follows(child);
                     out.extend(separator(prev, || {
-                        if comment_follows(child) {
+                        if before_comment {
                             space()
                         } else {
                             soft_line_break_or_space()
                         }
                     }));
                     out.push(token(src, child));
+                    if !before_comment {
+                        let starts_line = match prev {
+                            // A statement starts a line in the output but
+                            // right after a `;` on the same line; in a block
+                            // on one line, nothing breaks anyway.
+                            None => !follows_semicolon(pipeline),
+                            prev => prev == Some(SyntaxKind::Comment),
+                        };
+                        after_pipe = Some((out.len(), starts_line));
+                    }
                 },
                 // Nu rejects these at the start of a line, so they stay
                 // after their element, which the parser puts right before.
@@ -198,13 +220,59 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
         }
         prev = Some(kind);
     }
+    align_after_pipe(&mut out, after_pipe, id, &mut tail);
     // The tail is measured in break mode, so its first line break ends the
     // measure instead of breaking the group.
     let tail = out.split_off(tail.unwrap_or(out.len()));
     if out.is_empty() {
         return tail;
     }
-    iter::once(group(out)).chain(tail).collect()
+    iter::once(group_with_id(id, out)).chain(tail).collect()
+}
+
+/// Whether a `;` comes right before `node`, past whitespace.
+fn follows_semicolon(node: &SyntaxNode) -> bool {
+    let mut before = node.prev_sibling_or_token();
+    while let Some(sibling) = &before
+        && sibling.kind() == SyntaxKind::Whitespace
+    {
+        before = sibling.prev_sibling_or_token();
+    }
+    before.is_some_and(|before| before.kind() == SyntaxKind::Semicolon)
+}
+
+/// Aligns `out` from the start in `after_pipe`, right after a `|`: always
+/// when that `|` starts a line anyway, otherwise when the group `id` of the
+/// pipeline breaks. The part before `tail` is aligned apart, so that it stays
+/// in the group.
+fn align_after_pipe(
+    out: &mut Vec<Element<'_>>,
+    after_pipe: Option<(usize, bool)>,
+    id: GroupId,
+    tail: &mut Option<usize>,
+) {
+    let Some((start, starts_line)) = after_pipe else {
+        return;
+    };
+    let aligned = |elements| {
+        if starts_line {
+            align(2, elements)
+        } else {
+            align_if_group_breaks(id, 2, elements)
+        }
+    };
+    let mut elements = out.split_off(start);
+    if let Some(tail) = tail
+        && *tail > start
+    {
+        let rest = elements.split_off(*tail - start);
+        out.push(aligned(elements));
+        *tail = out.len();
+        elements = rest;
+    }
+    if !elements.is_empty() {
+        out.push(aligned(elements));
+    }
 }
 
 /// Whether nu reads `node`, a list or a record, as one whatever the command:

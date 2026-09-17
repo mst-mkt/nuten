@@ -9,21 +9,21 @@ ls | where type == dir | each {|x|
 }
 ls
 | each {|x|
-    print $x
-}
+      print $x
+  }
 # The first line of the last element does not fit, so the pipes break.
 ls
 | where name =~ "a very long pattern that takes up most of the line, and then some more"
 | each {|entry|
-    print $entry
-}
+      print $entry
+  }
 ls | str join "a
 b"
 # Only the last element counts by its first line.
 ls
 | each {|x|
-    print $x
-}
+      print $x
+  }
 | length
 # A pipe that ends the pipeline leaves every element to fit whole.
 ls
