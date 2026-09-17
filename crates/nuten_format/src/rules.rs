@@ -6,7 +6,9 @@ use nuten_doc::{
     Element, empty_line, empty_lines, expand_parent, group, hard_line_break, indent, line_suffix,
     soft_line_break, soft_line_break_or_space, space, text,
 };
+use nuten_parser::lexer::{self, Mode};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
+use rowan::TextRange;
 
 /// A child of a container: neither whitespace nor a line break.
 struct Child {
@@ -102,7 +104,7 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         | SyntaxKind::Call
         | SyntaxKind::ExternalCall
         | SyntaxKind::Redirection => spaced(src, node),
-        SyntaxKind::List if reads_as_list(node) => list(src, node),
+        SyntaxKind::List | SyntaxKind::Record if reads_as_value(node) => container(src, node),
         SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Block => {
             vec![text(&src[node.text_range()])]
         },
@@ -192,36 +194,47 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
     iter::once(group(out)).chain(tail).collect()
 }
 
-/// Whether nu reads `list` as a list whatever the command: as the head of a
-/// command, or as an element of a list. Elsewhere, such as an argument, a
-/// command may read it as a string.
-fn reads_as_list(list: &SyntaxNode) -> bool {
-    list.parent().is_some_and(|parent| match parent.kind() {
-        SyntaxKind::List => true,
+/// Whether nu reads `node`, a list or a record, as one whatever the command:
+/// as the head of a command, as an element of a list, or as the value of a
+/// field. Elsewhere, such as an argument, a command may read it as a string.
+fn reads_as_value(node: &SyntaxNode) -> bool {
+    node.parent().is_some_and(|parent| match parent.kind() {
+        // Only a value of a field is a node.
+        SyntaxKind::List | SyntaxKind::RecordField => true,
         SyntaxKind::Call => {
             parent
                 .first_child_or_token()
                 .and_then(SyntaxElement::into_node)
-                == Some(list.clone())
+                == Some(node.clone())
         },
         _ => false,
     })
 }
 
-/// On one line, with no space inside the brackets, when it fits, no line
-/// break comes right after `[`, and no comment is inside; otherwise one
-/// element per line, indented, with `]` on a line of its own. A `,` is
-/// dropped. A blank line between elements stays.
-fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
-    let (Some(open), Some(close)) = (list.first_token(), list.last_token()) else {
-        unreachable!("a list has brackets");
+/// A list or a record, unless it stays as it is. On one line when it fits,
+/// no line break comes right after the opening bracket, and no comment is
+/// inside, with no space inside the brackets of a list and one inside those
+/// of a record; otherwise one item per line, indented, with the closing
+/// bracket on a line of its own. A `,` is dropped. A blank line between items
+/// stays.
+fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
+    if stays_as_is(src, container) {
+        return vec![text(&src[container.text_range()])];
+    }
+    let (Some(open), Some(close)) = (container.first_token(), container.last_token()) else {
+        unreachable!("a container has brackets");
     };
-    let mut children = children(list).skip(1).peekable();
-    // A line break right after `[`.
+    let padding = if container.kind() == SyntaxKind::Record {
+        soft_line_break_or_space
+    } else {
+        soft_line_break
+    };
+    let mut children = children(container).skip(1).peekable();
+    // A line break right after the opening bracket.
     let mut expand = children.peek().is_some_and(|child| child.newlines > 0);
     let mut inner = Vec::new();
     let mut prev = None;
-    // The most line breaks before a `,` dropped since the last element, which
+    // The most line breaks before a `,` dropped since the last item, which
     // count as line breaks before what follows.
     let mut dropped = 0;
     for child in children {
@@ -231,20 +244,32 @@ fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
         } = child;
         let newlines = newlines.max(mem::take(&mut dropped));
         let kind = element.kind();
+        let separator = || match prev {
+            None => padding(),
+            Some(_) if newlines > 1 => empty_line(),
+            // After a comment, the container is expanded, so the line break
+            // comes anyway.
+            Some(_) => soft_line_break_or_space(),
+        };
         match &element {
+            SyntaxElement::Node(child) if kind == SyntaxKind::RecordField => {
+                inner.push(separator());
+                inner.extend(field(src, child));
+            },
             SyntaxElement::Node(child) => {
-                inner.push(list_separator(prev, newlines));
+                inner.push(separator());
                 inner.extend(node(src, child));
             },
-            SyntaxElement::Token(_) if kind == SyntaxKind::RBracket => break,
+            SyntaxElement::Token(_)
+                if matches!(kind, SyntaxKind::RBracket | SyntaxKind::RBrace) =>
+            {
+                break;
+            },
             SyntaxElement::Token(_) if kind == SyntaxKind::Comma => {
                 dropped = newlines;
                 continue;
             },
             SyntaxElement::Token(child) if kind == SyntaxKind::Comment => {
-                if keeps_list_as_is(child) {
-                    return vec![text(&src[list.text_range()])];
-                }
                 expand = true;
                 if prev.is_some() && newlines > 1 {
                     inner.push(empty_line());
@@ -252,7 +277,7 @@ fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
                 inner.extend(comment(src, child, newlines, false));
             },
             SyntaxElement::Token(child) => {
-                inner.push(list_separator(prev, newlines));
+                inner.push(separator());
                 inner.push(token(src, child));
             },
         }
@@ -264,7 +289,7 @@ fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = vec![
         token(src, &open),
         indent(inner),
-        soft_line_break(),
+        padding(),
         token(src, &close),
     ];
     if expand {
@@ -273,21 +298,97 @@ fn list<'a>(src: &'a str, list: &SyntaxNode) -> Vec<Element<'a>> {
     vec![group(out)]
 }
 
-/// What comes before an element of a list after `prev`. After a comment,
-/// the list is expanded, so the line break comes anyway.
-fn list_separator(prev: Option<SyntaxKind>, newlines: u32) -> Element<'static> {
-    match prev {
-        None => soft_line_break(),
-        Some(_) if newlines > 1 => empty_line(),
-        Some(_) => soft_line_break_or_space(),
-    }
+/// Whether `container` stays as it is: a comment inside keeps it so, or, for
+/// a record, dropping a `,` would change the first two tokens nu looks at to
+/// tell a record from a closure, which it lexes with `,` as no whitespace.
+fn stays_as_is(src: &str, container: &SyntaxNode) -> bool {
+    let kept_by_comment = container
+        .children_with_tokens()
+        .flat_map(|child| {
+            let field = child
+                .as_node()
+                .filter(|node| node.kind() == SyntaxKind::RecordField)
+                .map(SyntaxNode::children_with_tokens);
+            let own = field.is_none().then_some(child);
+            own.into_iter().chain(field.into_iter().flatten())
+        })
+        .filter_map(SyntaxElement::into_token)
+        .any(|token| token.kind() == SyntaxKind::Comment && keeps_as_is(&token));
+    kept_by_comment || container.kind() == SyntaxKind::Record && !keeps_first_tokens(src, container)
 }
 
-/// Whether `comment` makes its list stay as it is. Right after anything but
-/// whitespace, nu does not start a comment when it reads the word the list is
-/// in, so a space put before it may move where the word ends. A lone `\r` at
-/// its end would become part of a line break.
-fn keeps_list_as_is(comment: &SyntaxToken) -> bool {
+/// Whether the first two tokens of the inside of `record`, lexed as nu does to
+/// tell a record from a closure, stay the same once the commas are dropped.
+/// The output has no `,` and `:` is special in both lexings, so its tokens
+/// are those of `record`. A `,` ending a token does not count, as nu looks
+/// only at how the first token starts and whether the second is `:`.
+fn keeps_first_tokens(src: &str, record: &SyntaxNode) -> bool {
+    let (Some(open), Some(close)) = (record.first_token(), record.last_token()) else {
+        unreachable!("a record has braces");
+    };
+    let inside = TextRange::new(open.text_range().end(), close.text_range().start());
+    let lexed = lexer::lex(src, inside, Mode::brace());
+    let source = lexed
+        .tokens
+        .iter()
+        .filter(|token| !token.kind.is_trivia())
+        .map(|token| src[token.range].trim_end_matches(',').to_owned());
+    let output = record
+        .descendants_with_tokens()
+        .filter_map(SyntaxElement::into_token)
+        .filter(|token| {
+            !token.kind().is_trivia()
+                && !matches!(
+                    token.kind(),
+                    SyntaxKind::LBrace | SyntaxKind::RBrace | SyntaxKind::Comma
+                )
+        })
+        .map(|token| token.text().to_owned());
+    source.take(2).eq(output.take(2))
+}
+
+/// A key, its `:` right after it, and its value one space after that. What
+/// follows a comment inside starts a line. A `,` is dropped.
+fn field<'a>(src: &'a str, field: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut out = Vec::new();
+    let mut prev = None;
+    // Parts printed, comments and commas aside; the key is the first.
+    let mut parts = 0;
+    for child in children(field) {
+        let Child {
+            element,
+            newlines,
+        } = child;
+        let kind = element.kind();
+        match &element {
+            SyntaxElement::Token(_) if kind == SyntaxKind::Comma => continue,
+            SyntaxElement::Token(child) if kind == SyntaxKind::Comment => {
+                out.extend(comment(src, child, newlines, false));
+            },
+            _ => {
+                match prev {
+                    None => {},
+                    Some(SyntaxKind::Comment) => out.push(hard_line_break()),
+                    Some(_) if parts == 1 && kind == SyntaxKind::Colon => {},
+                    Some(_) => out.push(space()),
+                }
+                match &element {
+                    SyntaxElement::Node(child) => out.extend(node(src, child)),
+                    SyntaxElement::Token(child) => out.push(token(src, child)),
+                }
+                parts += 1;
+            },
+        }
+        prev = Some(kind);
+    }
+    out
+}
+
+/// Whether `comment` makes the list or record it is in stay as it is. Right
+/// after anything but whitespace, nu does not start a comment when it reads
+/// the word the list or record is in, so a space put before it may move where
+/// the word ends. A lone `\r` at its end would become part of a line break.
+fn keeps_as_is(comment: &SyntaxToken) -> bool {
     comment.text().ends_with('\r')
         || comment
             .prev_sibling_or_token()
