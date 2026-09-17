@@ -198,14 +198,11 @@ fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
                         }
                     }));
                     out.push(token(src, child));
-                    if !before_comment {
-                        let starts_line = match prev {
-                            // A statement starts a line in the output but
-                            // right after a `;` on the same line; in a block
-                            // on one line, nothing breaks anyway.
-                            None => !follows_semicolon(pipeline),
-                            prev => prev == Some(SyntaxKind::Comment),
-                        };
+                    // A statement starts a line in the output but right after
+                    // a `;` on the same line, where its `|` never does; in a
+                    // block on one line, nothing breaks anyway.
+                    if !before_comment && (prev.is_some() || !follows_semicolon(pipeline)) {
+                        let starts_line = matches!(prev, None | Some(SyntaxKind::Comment));
                         after_pipe = Some((out.len(), starts_line));
                     }
                 },
