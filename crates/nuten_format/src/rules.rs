@@ -117,8 +117,8 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         SyntaxKind::PipelineElement
         | SyntaxKind::Call
         | SyntaxKind::ExternalCall
-        | SyntaxKind::If
         | SyntaxKind::Redirection => spaced(src, node),
+        SyntaxKind::If => if_(src, node),
         SyntaxKind::List | SyntaxKind::Record if reads_as_value(node) => container(src, node),
         SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],
         SyntaxKind::Block if in_match(node) => vec![text(&src[node.text_range()])],
@@ -396,6 +396,33 @@ fn in_match(block: &SyntaxNode) -> bool {
 /// Blank lines at the end go, and so do those at the start, unless a comment
 /// comes before them.
 fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
+    let BlockLayout {
+        mut head,
+        mut rest,
+        line_break,
+        ..
+    } = block_layout(src, block);
+    if line_break {
+        rest.push(expand_parent());
+    }
+    head.push(group(rest));
+    head
+}
+
+/// A block laid out for its container to group.
+struct BlockLayout<'a> {
+    /// The opening brace and the parameters, which stay out of the group, so
+    /// that parameters over lines leave the rest to fit after their last
+    /// line.
+    head: Vec<Element<'a>>,
+    rest: Vec<Element<'a>>,
+    /// Whether a line break comes after the parameters in the source.
+    line_break: bool,
+    /// Whether it holds at most one statement and nothing else.
+    one_statement: bool,
+}
+
+fn block_layout<'a>(src: &'a str, block: &SyntaxNode) -> BlockLayout<'a> {
     let mut items = children(block).peekable();
     let Some(Child {
         element: SyntaxElement::Token(open),
@@ -404,10 +431,10 @@ fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
     else {
         unreachable!("a block has braces");
     };
-    let mut out = vec![token(src, &open)];
+    let mut head = vec![token(src, &open)];
     let params = items.next_if(|item| item.element.kind() == SyntaxKind::ClosureParams);
     if let Some(params) = &params {
-        out.push(text(&src[params.element.text_range()]));
+        head.push(text(&src[params.element.text_range()]));
     }
     let mut body: Vec<_> = items.collect();
     let Some(Child {
@@ -417,12 +444,23 @@ fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
     else {
         unreachable!("a block has braces");
     };
+    let one_statement = matches!(
+        body.as_slice(),
+        [] | [Child {
+            element: SyntaxElement::Node(_),
+            ..
+        }]
+    );
     let Some(first) = body.first() else {
-        out.push(token(src, &close));
-        return out;
+        return BlockLayout {
+            head,
+            rest: vec![token(src, &close)],
+            line_break: false,
+            one_statement,
+        };
     };
-    // A comment is followed by a line break, so it expands the block too.
-    let expand = close_newlines > 0 || body.iter().any(|item| item.newlines > 0);
+    // A comment is followed by a line break, so it counts too.
+    let line_break = close_newlines > 0 || body.iter().any(|item| item.newlines > 0);
     let lead = if first.element.kind() == SyntaxKind::Comment && first.newlines == 0 {
         None
     } else if params.is_none()
@@ -439,18 +477,80 @@ fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
         Some(soft_line_break_or_space())
     };
     let inner = lead.into_iter().chain(statements(src, body, false));
-    // Out of the group, so that parameters over lines leave the rest to fit
-    // after their last line.
-    let mut rest = vec![
-        indent(inner),
-        soft_line_break_or_space(),
-        token(src, &close),
-    ];
-    if expand {
-        rest.push(expand_parent());
+    BlockLayout {
+        head,
+        rest: vec![
+            indent(inner),
+            soft_line_break_or_space(),
+            token(src, &close),
+        ],
+        line_break,
+        one_statement,
     }
-    out.push(group(rest));
-    out
+}
+
+/// An `if` with its `else` branches, the bodies laid out as blocks that
+/// break together: always for a statement, otherwise when a body holds more
+/// than one statement or the whole does not fit on the line. Line breaks in
+/// the source do not count.
+fn if_<'a>(src: &'a str, if_node: &SyntaxNode) -> Vec<Element<'a>> {
+    let items: Vec<_> = children(if_node).map(|child| child.element).collect();
+    let mut expand = is_statement(if_node);
+    let mut out = Vec::new();
+    for (index, item) in items.iter().enumerate() {
+        if index > 0 {
+            out.push(space());
+        }
+        // A body comes right before an `else`, and the last item is a body
+        // or what the last `else` takes.
+        let branch = items.get(index + 1).is_none_or(|next| {
+            next.as_token()
+                .is_some_and(|next| next.kind() == SyntaxKind::Word && next.text() == "else")
+        });
+        match item {
+            SyntaxElement::Node(block) if branch && block.kind() == SyntaxKind::Block => {
+                let layout = block_layout(src, block);
+                expand |= !layout.one_statement;
+                out.extend(layout.head);
+                out.extend(layout.rest);
+            },
+            SyntaxElement::Node(child) => out.extend(node(src, child)),
+            SyntaxElement::Token(child) => out.push(token(src, child)),
+        }
+    }
+    if expand {
+        out.push(expand_parent());
+    }
+    vec![group(out)]
+}
+
+/// Whether `node`, an `If`, is a statement: the only element of a pipeline,
+/// redirections aside, that is a statement of Root, or of a block holding
+/// anything else but its braces, parameters, and comments.
+fn is_statement(node: &SyntaxNode) -> bool {
+    let Some(pipeline) = node.parent().and_then(|element| element.parent()) else {
+        return false;
+    };
+    let alone = |parent: &SyntaxNode| {
+        parent
+            .children_with_tokens()
+            .filter(|child| {
+                !child.kind().is_trivia()
+                    && !matches!(
+                        child.kind(),
+                        SyntaxKind::LBrace | SyntaxKind::RBrace | SyntaxKind::ClosureParams
+                    )
+            })
+            .count()
+            == 1
+    };
+    pipeline.kind() == SyntaxKind::Pipeline
+        && alone(&pipeline)
+        && match pipeline.parent() {
+            Some(parent) if parent.kind() == SyntaxKind::Root => true,
+            Some(parent) if parent.kind() == SyntaxKind::Block => !alone(&parent),
+            _ => false,
+        }
 }
 
 /// Whether `container` stays as it is: a comment inside keeps it so, or, for
