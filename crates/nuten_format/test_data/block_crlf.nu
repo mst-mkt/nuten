@@ -4,3 +4,5 @@ echo {
 
   echo 'a
   b' }
+echo {
+|x| $x}

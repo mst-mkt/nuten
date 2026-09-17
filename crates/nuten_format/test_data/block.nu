@@ -81,6 +81,11 @@ echo {|x|
 $x}
 echo {|x,
 y| $x}
+echo { |x,
+  y|
+$x}
+echo {  ||  1} { |x|
+$x}
 do { aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb } | complete
 ls | each {|x| aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb }
 try { ls } catch {|e| ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc }
@@ -94,3 +99,7 @@ echo { # c
 ls }
 let r = {a: {ls
 }}
+echo { 
+  |x| $x}
+echo {
+|| 1}

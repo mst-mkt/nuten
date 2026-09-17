@@ -323,24 +323,26 @@ fn in_match(block: &SyntaxNode) -> bool {
     })
 }
 
-/// A block or a closure. On one line when it fits and no line break comes
-/// after the parameters, with one space inside the braces; otherwise the
-/// statements go indented, with the closing brace on a line of its own.
-/// Blank lines at the start and the end go. The parameters stay as they are,
-/// along with what comes before them.
+/// A block or a closure. The parameters come right after the opening brace,
+/// as they are. The rest goes on one line when it fits and no line break
+/// comes after the parameters, with one space inside the braces; otherwise
+/// the statements go indented, with the closing brace on a line of its own.
+/// Blank lines at the end go, and so do those at the start, unless a comment
+/// comes before them.
 fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
     let mut items = children(block).peekable();
-    let Some(open) = items.next() else {
+    let Some(Child {
+        element: SyntaxElement::Token(open),
+        ..
+    }) = items.next()
+    else {
         unreachable!("a block has braces");
     };
+    let mut out = vec![token(src, &open)];
     let params = items.next_if(|item| item.element.kind() == SyntaxKind::ClosureParams);
-    let head_end = params
-        .as_ref()
-        .map_or(open.element.text_range(), |params| {
-            params.element.text_range()
-        })
-        .end();
-    let head = text(&src[TextRange::new(open.element.text_range().start(), head_end)]);
+    if let Some(params) = &params {
+        out.push(text(&src[params.element.text_range()]));
+    }
     let mut body: Vec<_> = items.collect();
     let Some(Child {
         element: SyntaxElement::Token(close),
@@ -350,7 +352,8 @@ fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
         unreachable!("a block has braces");
     };
     let Some(first) = body.first() else {
-        return vec![head, token(src, &close)];
+        out.push(token(src, &close));
+        return out;
     };
     // A comment is followed by a line break, so it expands the block too.
     let expand = close_newlines > 0 || body.iter().any(|item| item.newlines > 0);
@@ -370,16 +373,18 @@ fn block<'a>(src: &'a str, block: &SyntaxNode) -> Vec<Element<'a>> {
         Some(soft_line_break_or_space())
     };
     let inner = lead.into_iter().chain(statements(src, body, false));
-    let mut out = vec![
-        head,
+    // Out of the group, so that parameters over lines leave the rest to fit
+    // after their last line.
+    let mut rest = vec![
         indent(inner),
         soft_line_break_or_space(),
         token(src, &close),
     ];
     if expand {
-        out.push(expand_parent());
+        rest.push(expand_parent());
     }
-    vec![group(out)]
+    out.push(group(rest));
+    out
 }
 
 /// Whether `container` stays as it is: a comment inside keeps it so, or, for

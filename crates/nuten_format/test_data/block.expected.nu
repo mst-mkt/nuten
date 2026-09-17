@@ -29,7 +29,7 @@ echo {
     ls
     # d
 }
-echo {|x| $x } { |x| $x } {|x|} {|x|} {||} {|x| # c
+echo {|x| $x } {|x| $x } {|x|} {|x|} {||} {|x| # c
 }
 echo {|x|
     $x
@@ -44,10 +44,7 @@ echo {||
 echo { # c
     | x | x
 }
-echo {
-|x|
-    x
-}
+echo {|x| x }
 echo {
     ls |
 
@@ -87,7 +84,12 @@ echo {|x|
     $x
 }
 echo {|x,
-y|
+y| $x }
+echo {|x,
+  y|
+    $x
+}
+echo {|| 1 } {|x|
     $x
 }
 do {
@@ -114,3 +116,6 @@ let r = {
         ls
     }
 }
+echo {|x| $x }
+echo {
+|| 1}
