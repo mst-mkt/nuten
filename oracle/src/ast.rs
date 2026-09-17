@@ -4,11 +4,15 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use jsonc_parser::{JsonValue, Map, ParseOptions, parse_to_value};
 
-/// Where the ASTs in `before` and `after` first differ, positions aside, in
-/// one line; `None` when they are the same. Fails when either is not JSON.
+/// Where the ASTs in `before` and `after` first differ, positions and line
+/// endings aside, in one line; `None` when they are the same. Fails when
+/// either is not JSON.
 pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, String> {
     let (before, after) = (json(before)?, json(after)?);
-    let difference = first_difference(without_positions(before), without_positions(after));
+    let difference = first_difference(
+        with_lf(without_positions(before)),
+        with_lf(without_positions(after)),
+    );
     Ok(difference.map(|(pointer, before, after)| {
         format!(
             "the AST differs at {pointer:?}: {} becomes {}",
@@ -68,6 +72,29 @@ fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
         },
         JsonValue::Array(array) => {
             let items: Vec<_> = array.into_iter().map(without_positions).collect();
+            JsonValue::Array(items.into())
+        },
+        other => other,
+    }
+}
+
+/// With each `\r\n` in a string as `\n`, as the printer writes line endings
+/// everywhere, inside strings too.
+fn with_lf(value: JsonValue<'_>) -> JsonValue<'_> {
+    match value {
+        JsonValue::String(text) if text.contains("\r\n") => {
+            JsonValue::String(text.replace("\r\n", "\n").into())
+        },
+        JsonValue::Object(object) => {
+            let map: Map<_, _> = object
+                .take_inner()
+                .into_iter()
+                .map(|(key, value)| (key, with_lf(value)))
+                .collect();
+            JsonValue::Object(map.into())
+        },
+        JsonValue::Array(array) => {
+            let items: Vec<_> = array.into_iter().map(with_lf).collect();
             JsonValue::Array(items.into())
         },
         other => other,
@@ -188,5 +215,18 @@ mod tests {
             Ok(None)
         );
         assert!(difference("", "{}").is_err());
+    }
+
+    #[test]
+    fn line_endings_do_not_count() {
+        assert_eq!(
+            difference(r#"{"a": ["x\r\ny"]}"#, r#"{"a": ["x\ny"]}"#),
+            Ok(None)
+        );
+        assert!(
+            difference(r#"{"a": "x\ry"}"#, r#"{"a": "x\ny"}"#)
+                .unwrap()
+                .is_some()
+        );
     }
 }

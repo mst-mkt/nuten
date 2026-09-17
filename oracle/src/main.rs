@@ -1,6 +1,6 @@
 //! Asks nu whether formatting keeps what it parses: each file must give the
-//! same AST, positions aside, before and after formatting. Nu parses each
-//! file in its directory.
+//! same AST, positions and line endings aside, before and after formatting.
+//! Nu parses each file in its directory.
 //!
 //! Takes files, and directories to search for `.nu` files. Skips a file that
 //! is too large, is not UTF-8, or has syntax errors, and says so. Exits with 1
