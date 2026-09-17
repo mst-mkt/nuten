@@ -1,6 +1,6 @@
 //! Functions that build each element.
 
-use crate::{Element, LineMode, TextWidth};
+use crate::{Element, GroupId, LineMode, TextWidth};
 
 pub fn text(text: &str) -> Element<'_> {
     Element::Text {
@@ -46,11 +46,44 @@ pub fn line_suffix_boundary() -> Element<'static> {
 }
 
 pub fn group<'a>(elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
-    Element::Group(elements.into_iter().collect())
+    Element::Group {
+        id: None,
+        elements: elements.into_iter().collect(),
+    }
+}
+
+pub fn group_with_id<'a>(
+    id: GroupId,
+    elements: impl IntoIterator<Item = Element<'a>>,
+) -> Element<'a> {
+    Element::Group {
+        id: Some(id),
+        elements: elements.into_iter().collect(),
+    }
 }
 
 pub fn indent<'a>(elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
     Element::Indent(elements.into_iter().collect())
+}
+
+pub fn align<'a>(columns: u32, elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
+    Element::Align {
+        columns,
+        group: None,
+        elements: elements.into_iter().collect(),
+    }
+}
+
+pub fn align_if_group_breaks<'a>(
+    group: GroupId,
+    columns: u32,
+    elements: impl IntoIterator<Item = Element<'a>>,
+) -> Element<'a> {
+    Element::Align {
+        columns,
+        group: Some(group),
+        elements: elements.into_iter().collect(),
+    }
 }
 
 #[cfg(test)]
@@ -79,11 +112,14 @@ mod tests {
         ]);
         assert_eq!(
             doc,
-            Element::Group(vec![
-                Element::Space,
-                text("a"),
-                Element::Indent(vec![text("a"), Element::Line(LineMode::SoftOrSpace)]),
-            ])
+            Element::Group {
+                id: None,
+                elements: vec![
+                    Element::Space,
+                    text("a"),
+                    Element::Indent(vec![text("a"), Element::Line(LineMode::SoftOrSpace)]),
+                ],
+            }
         );
     }
 }

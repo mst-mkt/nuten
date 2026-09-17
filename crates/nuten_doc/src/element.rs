@@ -26,11 +26,29 @@ pub enum Element<'a> {
     /// A hard line break here if a line suffix is held back.
     LineSuffixBoundary,
     /// Printed flat when it fits on the line, otherwise with its own `Line`s
-    /// broken.
-    Group(Vec<Element<'a>>),
+    /// broken. An `Align` after it or inside it can depend on that through
+    /// `id`.
+    Group {
+        id: Option<GroupId>,
+        elements: Vec<Element<'a>>,
+    },
     /// One level deeper after each line break inside.
     Indent(Vec<Element<'a>>),
+    /// `columns` further, in spaces, after each line break inside, when `group`
+    /// is `None` or names a group that broke, around it or printed before it;
+    /// zero columns are no alignment. With tabs, an alignment that a deeper
+    /// level follows takes a tab instead, so that no space comes before a
+    /// tab.
+    Align {
+        columns: u32,
+        group: Option<GroupId>,
+        elements: Vec<Element<'a>>,
+    },
 }
+
+/// Names a group; the document keeps each id to one group.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct GroupId(pub u32);
 
 /// What a `Line` prints, flat or broken.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
