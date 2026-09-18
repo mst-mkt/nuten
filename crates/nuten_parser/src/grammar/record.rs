@@ -1,7 +1,22 @@
 use nuten_syntax::SyntaxKind;
 
 use super::token_or_bracketed;
-use crate::{lexer::Mode, parser::Parser};
+use crate::{
+    lexer::Mode,
+    parser::{Bracketed, Parser},
+};
+
+/// The `{ }` ahead that `is_record` as a `Record`, or as a word when its
+/// tokens cannot make nu's split. `bracketed` is what it holds in record
+/// mode.
+pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
+    match split_record(bracketed.inner()) {
+        Some(items) => p.bump_bracketed(SyntaxKind::Record, bracketed, |p| {
+            record_items(p, &items);
+        }),
+        None => p.bump(),
+    }
+}
 
 /// Whether nu reads `{ }` as a record where it takes any value, given its
 /// inside in brace mode: a `:` second or a spread first, unless a pipe comes
@@ -33,7 +48,7 @@ fn is_spread(text: &str) -> bool {
 }
 
 /// An item of a record as nu splits it.
-pub(super) enum RecordItem {
+enum RecordItem {
     Spread,
     Key,
     /// A key and the token nu takes as its `:`.
@@ -47,7 +62,7 @@ pub(super) enum RecordItem {
 /// make nu's split. nu lexes a key and its `:` as record mode does, but a
 /// value differently, so a value is lexed again in its own mode and must
 /// cover touching tokens, with no comment among them.
-pub(super) fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
+fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
     let tokens: Vec<_> = inner
         .remaining_tokens()
         .filter(|(token, _)| {
@@ -105,10 +120,10 @@ pub(super) fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
     Some(items)
 }
 
-/// Unlike `item`, reports no error. Keys are strings to nu, so a key and its
-/// `:` stay tokens.
-pub(super) fn record_items(p: &mut Parser<'_>) {
-    let items = split_record(p).expect("split_record accepted the record");
+/// The `items` that `split_record` gave for the tokens ahead. Unlike `item`,
+/// reports no error. Keys are strings to nu, so a key and its `:` stay
+/// tokens.
+fn record_items(p: &mut Parser<'_>, items: &[RecordItem]) {
     for item in items {
         bump_separators(p);
         if let RecordItem::Spread = item {
@@ -121,7 +136,7 @@ pub(super) fn record_items(p: &mut Parser<'_>) {
             bump_separators(p);
             p.bump();
         }
-        match item {
+        match *item {
             RecordItem::Pair(1) => {
                 bump_separators(p);
                 token_or_bracketed(p, false);

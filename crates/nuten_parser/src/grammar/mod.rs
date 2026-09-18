@@ -16,16 +16,16 @@ mod table;
 use nuten_syntax::SyntaxKind;
 
 use self::{
-    block::{block_items, is_block},
+    block::block,
     list::{is_list, list_items},
     pipeline::pipeline,
-    record::{is_record, record_items, split_record},
+    record::{is_record, record},
     table::{is_table, table_items},
 };
 use crate::{
     ParseErrorKind,
     lexer::Mode,
-    parser::{Brackets, Parser},
+    parser::{Bracketed, Brackets, Parser},
 };
 
 pub(crate) fn file(p: &mut Parser<'_>) {
@@ -66,9 +66,6 @@ const CURLY: Brackets = Brackets {
 /// `external` is whether the token is an argument of a `^` command that
 /// starts the pipeline element, where nu keeps a word in braces whole.
 fn token_or_bracketed(p: &mut Parser<'_>, external: bool) {
-    let record = !external
-        && p.bracketed(&CURLY, Mode::brace())
-            .is_some_and(|bracketed| is_record(bracketed.inner()));
     if let Some(bracketed) = p.bracketed(&SQUARE, Mode::list()) {
         if is_list(bracketed.inner()) {
             p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
@@ -77,19 +74,21 @@ fn token_or_bracketed(p: &mut Parser<'_>, external: bool) {
         } else {
             p.bump();
         }
-    } else if record
-        && let Some(bracketed) = p.bracketed(&CURLY, Mode::record())
-        && split_record(bracketed.inner()).is_some()
-    {
-        p.bump_bracketed(SyntaxKind::Record, bracketed, record_items);
-    } else if !external
-        && !record
-        && let Some(bracketed) = p.bracketed(&CURLY, Mode::block())
-        && is_block(bracketed.inner())
-    {
-        p.bump_bracketed(SyntaxKind::Block, bracketed, block_items);
+    } else if !external && let Some(bracketed) = p.bracketed(&CURLY, Mode::brace()) {
+        braced(p, bracketed);
     } else {
         p.bump();
+    }
+}
+
+/// The `{ }` ahead as a `Record` or a `Block`, or as a word when what it
+/// holds makes neither. `bracketed` is what it holds in brace mode, which
+/// tells the two apart.
+fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
+    if is_record(bracketed.inner()) {
+        record(p, bracketed.lexed_in(Mode::record()));
+    } else {
+        block(p, bracketed.lexed_in(Mode::block()));
     }
 }
 

@@ -1,31 +1,43 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{file, shell_operator};
-use crate::parser::Parser;
+use crate::parser::{Bracketed, Parser};
 
-/// Whether `{ }` that is no record reads as a block or a closure, given its
-/// inside in block mode: something but trivia, parameters that close at a
-/// `|` with no `;` or shell operator before it, and statements that report
-/// no error, since nothing inside may be reported.
-pub(super) fn is_block(inner: &Parser<'_>) -> bool {
+/// The `{ }` ahead that is no record as a `Block`, or as a word when nu
+/// reads no block or closure in it. `bracketed` is what it holds in block
+/// mode.
+pub(super) fn block<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
+    if may_be_block(bracketed.inner()) {
+        p.bump_bracketed_or_word(SyntaxKind::Block, bracketed, block_items);
+    } else {
+        p.bump();
+    }
+}
+
+/// Whether the inside of `{ }` in block mode has the shape of a block or a
+/// closure: something but trivia, and parameters that close at a `|` with
+/// no `;` or shell operator before it. Its statements must report no error
+/// too, since nothing inside may be reported, which only reading them
+/// tells.
+fn may_be_block(inner: &Parser<'_>) -> bool {
     if !inner.remaining_kinds().any(|kind| !kind.is_trivia()) {
         return false;
     }
-    if params_start(inner) == Some(SyntaxKind::Pipe) {
-        let closes = inner
-            .remaining_tokens()
-            .skip_while(|(token, _)| token.kind != SyntaxKind::Pipe)
-            .skip(1)
-            .find(|&(token, text)| {
-                matches!(token.kind, SyntaxKind::Semicolon | SyntaxKind::Pipe)
-                    || shell_operator(text).is_some()
-            })
-            .is_some_and(|(token, _)| token.kind == SyntaxKind::Pipe);
-        if !closes {
-            return false;
-        }
-    }
-    !inner.reports_error(block_items)
+    params_start(inner) != Some(SyntaxKind::Pipe) || params_close(inner)
+}
+
+/// Whether the `|` that starts parameters has another `|` after it, with no
+/// `;` or shell operator between them.
+fn params_close(inner: &Parser<'_>) -> bool {
+    inner
+        .remaining_tokens()
+        .skip_while(|(token, _)| token.kind != SyntaxKind::Pipe)
+        .skip(1)
+        .find(|&(token, text)| {
+            matches!(token.kind, SyntaxKind::Semicolon | SyntaxKind::Pipe)
+                || shell_operator(text).is_some()
+        })
+        .is_some_and(|(token, _)| token.kind == SyntaxKind::Pipe)
 }
 
 /// The `|` or `||` that starts parameters where nu finds it: first past
@@ -41,7 +53,7 @@ fn params_start(p: &Parser<'_>) -> Option<SyntaxKind> {
 }
 
 /// Parameters, if any, closing at the next `|`, then statements.
-pub(super) fn block_items(p: &mut Parser<'_>) {
+fn block_items(p: &mut Parser<'_>) {
     match params_start(p) {
         Some(SyntaxKind::PipePipe) => {
             p.start(SyntaxKind::ClosureParams);

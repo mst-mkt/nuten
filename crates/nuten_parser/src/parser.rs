@@ -105,6 +105,21 @@ impl<'a> Bracketed<'a> {
     pub(crate) fn inner(&self) -> &Parser<'a> {
         &self.inner
     }
+
+    /// The same token, with what it holds lexed again in `mode`.
+    pub(crate) fn lexed_in(self, mode: Mode) -> Bracketed<'a> {
+        let Parser {
+            src,
+            depth,
+            ..
+        } = self.inner;
+        let (_, inside, _) = split(self.range);
+        let lexed = lexer::lex(src, inside, mode);
+        Bracketed {
+            inner: Parser::new(src, lexed, depth),
+            ..self
+        }
+    }
 }
 
 pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
@@ -129,8 +144,10 @@ pub(crate) struct Parser<'a> {
     events: Vec<Event>,
     /// Brackets around the tokens.
     depth: usize,
-    /// Whether bracketed words are read into; not while checking for errors.
-    expand: bool,
+    /// How many errors were reported among these tokens. Those inside a
+    /// bracketed word read as a node are not counted: whether `{ }` reads
+    /// as a block depends on its own statements alone.
+    errors: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -142,7 +159,7 @@ impl<'a> Parser<'a> {
             pos: 0,
             events: Vec::new(),
             depth,
-            expand: true,
+            errors: 0,
         }
     }
 
@@ -206,25 +223,6 @@ impl<'a> Parser<'a> {
         lexer::lex(self.src, range, mode).errors.into_iter().next()
     }
 
-    /// Whether `items` reports an error on the tokens ahead. Bracketed words
-    /// are left unread, since what they hold reports no error.
-    pub(crate) fn reports_error(&self, items: fn(&mut Parser<'a>)) -> bool {
-        let mut check = Parser {
-            src: self.src,
-            tokens: self.tokens.clone(),
-            lex_errors: self.lex_errors.clone(),
-            pos: self.pos,
-            events: Vec::new(),
-            depth: self.depth,
-            expand: false,
-        };
-        items(&mut check);
-        check
-            .events
-            .iter()
-            .any(|event| matches!(event, Event::Error(_)))
-    }
-
     /// Emits the next `count` tokens, which touch one another, as one `Word`.
     ///
     /// # Panics
@@ -250,8 +248,8 @@ impl<'a> Parser<'a> {
     }
 
     /// What the next token holds inside `brackets`, lexed in `mode`.
-    /// `None` when the token is not a word enclosed in them, when brackets
-    /// nest too deep, or while checking for errors.
+    /// `None` when the token is not a word enclosed in them, or when
+    /// brackets nest too deep.
     pub(crate) fn bracketed(
         &self,
         brackets: &'static Brackets,
@@ -273,7 +271,7 @@ impl<'a> Parser<'a> {
         affix: Affix,
     ) -> Option<Bracketed<'a>> {
         let token = self.nth_token(0)?;
-        if !self.expand || token.kind != SyntaxKind::Word || self.depth == MAX_DEPTH {
+        if token.kind != SyntaxKind::Word || self.depth == MAX_DEPTH {
             return None;
         }
         let range = affix.brackets_within(token.range);
@@ -302,8 +300,43 @@ impl<'a> Parser<'a> {
         &mut self,
         node: SyntaxKind,
         bracketed: Bracketed<'a>,
-        items: fn(&mut Parser<'a>),
+        items: impl FnOnce(&mut Parser<'a>),
     ) {
+        self.emit_bracketed(node, bracketed, items);
+    }
+
+    /// As `bump_bracketed`, unless `items` reports an error among the
+    /// tokens it holds: then its events are dropped and the token stays a
+    /// `Word`. Errors inside nested nodes do not count. For a word that nu
+    /// may read as a string, where nothing inside may be reported.
+    ///
+    /// # Panics
+    ///
+    /// As `bump_bracketed`.
+    pub(crate) fn bump_bracketed_or_word(
+        &mut self,
+        node: SyntaxKind,
+        bracketed: Bracketed<'a>,
+        items: impl FnOnce(&mut Parser<'a>),
+    ) {
+        let token = bracketed.token;
+        // Before the mark, so that the trivia before the word stays when
+        // the node is dropped.
+        self.bump_skipped();
+        let mark = self.events.len();
+        if self.emit_bracketed(node, bracketed, items) > 0 {
+            self.events.truncate(mark);
+            self.push_token(SyntaxKind::Word, token.range);
+        }
+    }
+
+    /// Returns how many errors `items` reported among the tokens it holds.
+    fn emit_bracketed(
+        &mut self,
+        node: SyntaxKind,
+        bracketed: Bracketed<'a>,
+        items: impl FnOnce(&mut Parser<'a>),
+    ) -> usize {
         let Bracketed {
             mut inner,
             token,
@@ -334,12 +367,13 @@ impl<'a> Parser<'a> {
             inner.pos == inner.tokens.len(),
             "items left some of what the token holds"
         );
-        self.events = inner.events;
+        self.events = mem::take(&mut inner.events);
         self.push_token(brackets.close_kind, close);
         self.finish();
         if let Affix::Suffix(kind) = affix {
             self.push_token(kind, TextRange::new(close.end(), token.range.end()));
         }
+        inner.errors
     }
 
     /// Emits the whitespace and comments ahead, so that a node does not
@@ -404,7 +438,7 @@ impl<'a> Parser<'a> {
     /// comes before `end`.
     pub(crate) fn bump_error_to(&mut self, end: TextSize, error: ParseError) {
         self.start(SyntaxKind::Error);
-        self.events.push(Event::Error(error));
+        self.push_error(error);
         while self
             .nth_token(0)
             .is_some_and(|token| token.range.end() <= end)
@@ -448,7 +482,7 @@ impl<'a> Parser<'a> {
         self.events.push(Event::Token(token));
         if token.kind == SyntaxKind::Error {
             let error = self.lex_errors.next().expect("an error per Error token");
-            self.events.push(Event::Error(error.into()));
+            self.push_error(error.into());
         }
     }
 
@@ -457,6 +491,11 @@ impl<'a> Parser<'a> {
             kind,
             range,
         }));
+    }
+
+    fn push_error(&mut self, error: ParseError) {
+        self.errors += 1;
+        self.events.push(Event::Error(error));
     }
 }
 
@@ -480,10 +519,11 @@ mod tests {
     use nuten_syntax::SyntaxKind;
     use rowan::{TextRange, TextSize};
 
-    use super::Parser;
+    use super::{Event, Parser};
     use crate::{
+        ParseErrorKind,
         grammar::SQUARE,
-        lexer::{self, Mode},
+        lexer::{self, Mode, Token},
     };
 
     fn parser(src: &str) -> Parser<'_> {
@@ -506,5 +546,52 @@ mod tests {
         let mut p = parser("[a]");
         let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
         p.bump_bracketed(SyntaxKind::List, bracketed, |_| {});
+    }
+
+    #[test]
+    fn bump_bracketed_or_word_drops_items_that_report_an_error() {
+        let mut p = parser(" [a]");
+        let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
+        p.bump_bracketed_or_word(SyntaxKind::List, bracketed, |p| {
+            p.bump_error(ParseErrorKind::ShellAndAnd);
+        });
+        assert_eq!(
+            p.events,
+            [
+                Event::Token(Token {
+                    kind: SyntaxKind::Whitespace,
+                    range: TextRange::up_to(TextSize::new(1)),
+                }),
+                Event::Token(Token {
+                    kind: SyntaxKind::Word,
+                    range: TextRange::new(TextSize::new(1), TextSize::new(4)),
+                }),
+            ]
+        );
+        assert_eq!(p.errors, 0);
+        assert_eq!(p.peek(), None);
+    }
+
+    #[test]
+    fn bump_bracketed_or_word_keeps_the_node_over_an_error_inside_a_nested_node() {
+        let mut p = parser("[[a]]");
+        let outer = p.bracketed(&SQUARE, Mode::list()).unwrap();
+        p.bump_bracketed_or_word(SyntaxKind::List, outer, |p| {
+            let inner = p.bracketed(&SQUARE, Mode::list()).unwrap();
+            p.bump_bracketed(SyntaxKind::List, inner, |p| {
+                p.bump_error(ParseErrorKind::ShellAndAnd);
+            });
+        });
+        let starts = p
+            .events
+            .iter()
+            .filter(|event| matches!(event, Event::Start(SyntaxKind::List)))
+            .count();
+        assert_eq!(starts, 2);
+        assert!(
+            p.events
+                .iter()
+                .any(|event| matches!(event, Event::Error(_)))
+        );
     }
 }
