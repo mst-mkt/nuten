@@ -64,3 +64,5 @@ def tu []: record<  a : int  > -> int { ls }
 def tv [x: list<int>=[1]] { ls }
 extern tw [x: record<a:int>]
 def tx [x: record<a:>] { ls }
+def ty [x # c
+: int] { ls }

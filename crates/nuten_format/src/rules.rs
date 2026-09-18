@@ -848,8 +848,9 @@ fn type_field<'a>(src: &'a str, field: &SyntaxNode) -> Vec<Element<'a>> {
 }
 
 /// One parameter of a signature: its name, then its `(-f)` joined to it where
-/// nu reads the two as one flag, its `:` and type, and its `=` and default
-/// value, each one space apart. A `,` is dropped.
+/// nu reads the two as one flag, its `:` joined too unless a comment comes
+/// before it, its type, and its `=` and default value, each one space apart.
+/// A `,` is dropped.
 fn param<'a>(src: &'a str, param: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
     let mut prev: Option<SyntaxElement> = None;
@@ -872,8 +873,11 @@ fn param<'a>(src: &'a str, param: &SyntaxNode) -> Vec<Element<'a>> {
         }
         let joined = match &prev {
             None => true,
+            // A `:` after a comment stays on the next line: joined, it would
+            // land inside the comment or, as a line suffix, the comment would
+            // land after the `]`, and nu would lose the description.
             Some(prev) => {
-                kind == SyntaxKind::Colon
+                (kind == SyntaxKind::Colon && prev.kind() != SyntaxKind::Comment)
                     || prev
                         .as_token()
                         .zip(element.as_token())
