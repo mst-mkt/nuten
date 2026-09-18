@@ -17,10 +17,12 @@ use crate::{Config, FormatError, format_parsed};
 pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
     /// Line endings inside a token do not count, since the printer rewrites
-    /// them, nor do `Comma` tokens, which separate the items of lists and
-    /// records as whitespace does. A long flag of a signature and the short
-    /// flag after it count as one, since the formatter joins them, as nu
-    /// reads them.
+    /// them, nor do `Comma` tokens, which separate the items of lists,
+    /// records, and types as whitespace does; so a `,` the formatter prints
+    /// in a type without one in the source goes unseen here, and only the nu
+    /// oracle tells whether it went where nu reads it as a separator. A long
+    /// flag of a signature and the short flag after it count as one, since
+    /// the formatter joins them, as nu reads them.
     Tokens,
     /// The output has the comments of the source, in order, each on its own
     /// line or at the end of a line as it was, and, between statements, with

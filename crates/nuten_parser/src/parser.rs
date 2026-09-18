@@ -34,6 +34,9 @@ pub(crate) struct Bracketed<'a> {
     inner: Parser<'a>,
     token: Token,
     brackets: &'static Brackets,
+    /// The bytes before the opening bracket, empty but for a type, which
+    /// `bump_bracketed` emits as a `Word` inside the node.
+    name: TextRange,
     /// The kind of the byte the token ends with past its closing bracket,
     /// which `bump_bracketed` emits after the node.
     suffix: Option<SyntaxKind>,
@@ -211,6 +214,46 @@ impl<'a> Parser<'a> {
         self.bracketed_within(brackets, mode, Some(suffix))
     }
 
+    /// As `bracketed`, for a token that starts with `name` bytes before its
+    /// opening bracket, as a type does before its `< >`. `bump_bracketed`
+    /// emits those bytes as a `Word` inside the node. Unlike `bracketed`, it
+    /// only asks that the brackets be the bytes around what lies between,
+    /// which the caller checks by lexing it.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `name` is past the end of the token ahead or inside one of
+    /// its characters.
+    pub(crate) fn bracketed_after(
+        &self,
+        name: usize,
+        brackets: &'static Brackets,
+        mode: Mode,
+    ) -> Option<Bracketed<'a>> {
+        let token = self.nth_token(0)?;
+        if !self.expand || token.kind != SyntaxKind::Word || self.depth == MAX_DEPTH {
+            return None;
+        }
+        let name = TextRange::new(
+            token.range.start(),
+            token.range.start() + TextSize::new(u32::try_from(name).expect("a name of a token")),
+        );
+        let range = TextRange::new(name.end(), token.range.end());
+        let bytes = self.src[range].as_bytes();
+        if bytes.first() != Some(&brackets.open) || bytes.last() != Some(&brackets.close) {
+            return None;
+        }
+        let (_, inside, _) = split(range);
+        let lexed = lexer::lex(self.src, inside, mode);
+        Some(Bracketed {
+            inner: Parser::new(self.src, lexed, self.depth + 1),
+            token,
+            name,
+            brackets,
+            suffix: None,
+        })
+    }
+
     fn bracketed_within(
         &self,
         brackets: &'static Brackets,
@@ -234,6 +277,7 @@ impl<'a> Parser<'a> {
         Some(Bracketed {
             inner: Parser::new(self.src, lexed, self.depth + 1),
             token,
+            name: TextRange::empty(token.range.start()),
             brackets,
             suffix,
         })
@@ -255,6 +299,7 @@ impl<'a> Parser<'a> {
         let Bracketed {
             mut inner,
             token,
+            name,
             brackets,
             suffix,
         } = bracketed;
@@ -265,11 +310,14 @@ impl<'a> Parser<'a> {
         );
         self.start(node);
         self.pos += 1;
+        if !name.is_empty() {
+            self.push_token(SyntaxKind::Word, name);
+        }
         let end = match suffix {
             None => token.range.end(),
             Some(_) => token.range.end() - TextSize::new(1),
         };
-        let (open, _, close) = split(TextRange::new(token.range.start(), end));
+        let (open, _, close) = split(TextRange::new(name.end(), end));
         self.push_token(brackets.open_kind, open);
         // Lent, so that nested brackets do not copy the events inside.
         inner.events = mem::take(&mut self.events);

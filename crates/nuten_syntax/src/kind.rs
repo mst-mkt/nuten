@@ -166,6 +166,15 @@ syntax_kinds! {
     /// also holds the `,` that ends it, and the `|`, `;`, and redirection
     /// tokens nu ignores among them.
     Param,
+    /// A type in a `Signature` that takes parameters: its name, `<`, what it
+    /// holds, and `>`. Any other type stays one token, as does one with a
+    /// `@`, one that holds a comment, which would swallow the `>` once the
+    /// type is on one line, or one that holds a token nu refuses there.
+    Type,
+    /// One field of a `record` or a `table` type: its key, then the `:` that
+    /// follows it while nu gives it to that key, and the one item after that
+    /// `:`, which nu takes for the type whatever it is.
+    TypeField,
 }
 
 impl SyntaxKind {

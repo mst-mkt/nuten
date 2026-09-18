@@ -32,3 +32,4 @@ let x = 1; let y = 2
 let x: int # c
 = 1
 let long = echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+let y: record<a:int> = { a: 1 }

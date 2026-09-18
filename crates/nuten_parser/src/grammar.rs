@@ -405,7 +405,11 @@ fn params(p: &mut Parser<'_>) {
                 }
                 mode
             },
-            (_, Params::Type) => Params::AfterType,
+            (_, Params::Type) => {
+                type_(p);
+                mode = Params::AfterType;
+                continue;
+            },
             (_, Params::Default) => Params::Param,
             // An item that is no `(-f)` starts a parameter of its own; nu
             // ignores `|`, `;`, and redirections, which stay where they are.
@@ -445,6 +449,109 @@ fn goes_on(p: &Parser<'_>, mode: Params) -> bool {
             ) || is_short_flag(text)
         }),
     }
+}
+
+const ANGLE: Brackets = Brackets {
+    open: b'<',
+    close: b'>',
+    open_kind: SyntaxKind::LAngle,
+    close_kind: SyntaxKind::RAngle,
+};
+
+/// The type ahead: a `Type` where nu reads parameters in `< >`, or else the
+/// item as it is. The name must be one of the four that take parameters, and
+/// the `< >` must hold nothing but items, `:`, `,`, and whitespace, which
+/// leaves out a comment, since printing the type on one line would put the
+/// `>` inside it.
+fn type_(p: &mut Parser<'_>) {
+    let Some((name, named)) = generic_type(p.peek_text()) else {
+        p.bump();
+        return;
+    };
+    let Some(bracketed) = p.bracketed_after(name, &ANGLE, Mode::type_params()) else {
+        p.bump();
+        return;
+    };
+    let takes = bracketed.inner().remaining_kinds().all(|kind| {
+        (is_item(kind) && kind != SyntaxKind::Error)
+            || matches!(
+                kind,
+                SyntaxKind::Colon
+                    | SyntaxKind::Comma
+                    | SyntaxKind::Whitespace
+                    | SyntaxKind::Newline
+            )
+    });
+    if !takes {
+        p.bump();
+        return;
+    }
+    let items = if named { type_fields } else { type_params };
+    p.bump_bracketed(SyntaxKind::Type, bracketed, items);
+}
+
+/// The name of the type ahead and whether its parameters are fields, when nu
+/// reads it as a type with parameters: one of `list`, `oneof`, `record`, and
+/// `table`, then `< >` around the rest. A `@` anywhere moves where nu ends
+/// the name, which takes a completer after it, so the `< >` here need not be
+/// the one nu reads.
+fn generic_type(text: Option<&str>) -> Option<(usize, bool)> {
+    let text = text?;
+    if text.contains('@') || !text.ends_with('>') {
+        return None;
+    }
+    let name = text.find('<')?;
+    match &text[..name] {
+        "record" | "table" => Some((name, true)),
+        "list" | "oneof" => Some((name, false)),
+        _ => None,
+    }
+}
+
+/// The types a `list` or a `oneof` takes, which nu reads one by one, `,`
+/// aside.
+fn type_params(p: &mut Parser<'_>) {
+    while let Some(kind) = p.peek() {
+        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) {
+            p.bump();
+        } else {
+            type_(p);
+        }
+    }
+}
+
+/// The fields a `record` or a `table` takes: a key, then the `:` and the type
+/// that follow it. Anything else starts a field of its own, as in nu.
+fn type_fields(p: &mut Parser<'_>) {
+    while let Some(kind) = p.peek() {
+        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) {
+            p.bump();
+            continue;
+        }
+        p.start(SyntaxKind::TypeField);
+        p.bump();
+        if colon_ahead(p) {
+            while p.peek() == Some(SyntaxKind::Newline) {
+                p.bump();
+            }
+            p.bump();
+            // Nu takes the token after the `:`, whatever it is, for the type
+            // of the key, and a line break before it is whitespace to it.
+            if p.remaining_kinds().any(|kind| !kind.is_trivia()) {
+                while p.peek() == Some(SyntaxKind::Newline) {
+                    p.bump();
+                }
+                type_(p);
+            }
+        }
+        p.finish();
+    }
+}
+
+/// Whether the key just read has a `:` after it, past line breaks, which
+/// gives it the type that follows.
+fn colon_ahead(p: &Parser<'_>) -> bool {
+    p.remaining_kinds().find(|kind| !kind.is_trivia()) == Some(SyntaxKind::Colon)
 }
 
 /// Whether any token comes before the parameters end, a comment included.

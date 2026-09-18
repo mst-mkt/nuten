@@ -67,3 +67,81 @@ def v [-- (-f)] {
 }
 extern w []: bar
 extern x [] bar
+def ta [x: record<a: int, b: string>] {
+    ls
+}
+def tb [x: record<a: int, b: list<record<c: int>>>] {
+    ls
+}
+def tc [x: oneof<int, string>] {
+    ls
+}
+def td [x: oneof<int, string>] {
+    ls
+}
+def te [x: list<int>@"ls"] {
+    ls
+}
+def tf [
+    x: record<a: int # c
+>
+] {
+    ls
+}
+def tg [x: record<a: int | b>] {
+    ls
+}
+def th [x: listx<int>] {
+    ls
+}
+def ti [x: record<name>] {
+    ls
+}
+def tj [x: record<a: int>] {
+    ls
+}
+def tk [x: table<a: int, b: string>] {
+    ls
+}
+def tl [x: record<>] {
+    ls
+}
+def tm [x: record<a, :, int>] {
+    ls
+}
+def tn [x: record<a: ,, b: int>] {
+    ls
+}
+def to [x: record<a: int>] {
+    ls
+}
+def tp [x: record<a::, int>] {
+    ls
+}
+def tq [x: record<a: int>] {
+    ls
+}
+def tr [
+    x: # c
+    record<a: int>
+] {
+    ls
+}
+def ts [--flag(-f): record<a: int> = {a: 1}] {
+    ls
+}
+def tt [
+    aaaaaaaaaaaaaaaa: record<bbbbbbbbbbbbbbbb: int, cccccccccccccccc: string, dddddddddddddddd: int, eeeeeeeeeeeeeeee: int>
+] {
+    ls
+}
+def tu []: record< a : int > -> int {
+    ls
+}
+def tv [x: list<int> = [1]] {
+    ls
+}
+extern tw [x: record<a: int>]
+def tx [x: record<a:>] {
+    ls
+}

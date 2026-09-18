@@ -124,6 +124,8 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],
         SyntaxKind::Signature => container(src, node),
         SyntaxKind::Param => param(src, node),
+        SyntaxKind::Type => type_(src, node),
+        SyntaxKind::TypeField => type_field(src, node),
         SyntaxKind::Block if in_match(node) => vec![text(&src[node.text_range()])],
         SyntaxKind::Block => block(src, node),
         kind => unreachable!("{kind:?} is not formatted as a node"),
@@ -559,9 +561,9 @@ fn is_statement(node: &SyntaxNode) -> bool {
 /// Whether `container` stays as it is: never for parameters, where nu starts
 /// a comment at the start of a token whatever comes before it, so that a
 /// space added before a `#` changes nothing. Otherwise a comment inside keeps
-/// it so, or, for
-/// a record, dropping a `,` would change the first two tokens nu looks at to
-/// tell a record from a closure, which it lexes with `,` as no whitespace.
+/// it so, or, for a record, dropping a `,` would change the first two tokens
+/// nu looks at to tell a record from a closure, which it lexes with `,` as no
+/// whitespace.
 fn stays_as_is(src: &str, container: &SyntaxNode) -> bool {
     if container.kind() == SyntaxKind::Signature {
         return false;
@@ -792,38 +794,100 @@ fn def<'a>(src: &'a str, def: &SyntaxNode) -> Vec<Element<'a>> {
     out
 }
 
+/// A type that takes parameters, on one line: its name, `<`, its parameters
+/// or fields `, ` apart, and `>`, with no space inside the brackets. A `,` is
+/// dropped, and one is printed between two parameters whether the source had
+/// one or not, which the token invariant cannot see and the nu oracle does.
+/// No comment comes inside, since the parser keeps a type holding one as one
+/// token.
+fn type_<'a>(src: &'a str, type_: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut out = Vec::new();
+    // Whether the `<` has been printed, and whether no parameter has since.
+    let mut open = false;
+    let mut first = true;
+    for child in children(type_) {
+        let kind = child.element.kind();
+        if kind == SyntaxKind::Comma {
+            continue;
+        }
+        // The name and the brackets touch what is around them; every
+        // parameter but the first follows a `, `.
+        if open && kind != SyntaxKind::RAngle {
+            if !first {
+                out.push(text(","));
+                out.push(space());
+            }
+            first = false;
+        }
+        if kind == SyntaxKind::LAngle {
+            open = true;
+        }
+        match &child.element {
+            SyntaxElement::Node(child) => out.extend(node(src, child)),
+            SyntaxElement::Token(child) => out.push(token(src, child)),
+        }
+    }
+    out
+}
+
+/// One field of a type: its key, its `:` right after it, and its type one
+/// space after that. A `,` here is the type nu takes for the key, so it
+/// stays, unlike one among the fields.
+fn type_field<'a>(src: &'a str, field: &SyntaxNode) -> Vec<Element<'a>> {
+    let mut out = Vec::new();
+    for child in children(field) {
+        if !out.is_empty() && child.element.kind() != SyntaxKind::Colon {
+            out.push(space());
+        }
+        match &child.element {
+            SyntaxElement::Node(child) => out.extend(node(src, child)),
+            SyntaxElement::Token(child) => out.push(token(src, child)),
+        }
+    }
+    out
+}
+
 /// One parameter of a signature: its name, then its `(-f)` joined to it where
 /// nu reads the two as one flag, its `:` and type, and its `=` and default
 /// value, each one space apart. A `,` is dropped.
 fn param<'a>(src: &'a str, param: &SyntaxNode) -> Vec<Element<'a>> {
     let mut out = Vec::new();
-    let mut prev: Option<SyntaxToken> = None;
+    let mut prev: Option<SyntaxElement> = None;
     for child in children(param) {
         let Child {
             element,
             newlines,
         } = child;
         let kind = element.kind();
-        let SyntaxElement::Token(child) = &element else {
-            unreachable!("{kind:?} is not a child of Param");
-        };
         if kind == SyntaxKind::Comma {
             continue;
         }
         if kind == SyntaxKind::Comment {
+            let SyntaxElement::Token(child) = &element else {
+                unreachable!("a comment is a token");
+            };
             out.extend(comment(src, child, newlines, false));
-            prev = Some(child.clone());
+            prev = Some(element);
             continue;
         }
         let joined = match &prev {
             None => true,
-            Some(prev) => kind == SyntaxKind::Colon || joins_flag(prev.text(), child.text()),
+            Some(prev) => {
+                kind == SyntaxKind::Colon
+                    || prev
+                        .as_token()
+                        .zip(element.as_token())
+                        .is_some_and(|(prev, child)| joins_flag(prev.text(), child.text()))
+            },
         };
         if !joined {
-            out.extend(separator(prev.as_ref().map(SyntaxToken::kind), space));
+            out.extend(separator(prev.as_ref().map(SyntaxElement::kind), space));
         }
-        out.push(token(src, child));
-        prev = Some(child.clone());
+        match &element {
+            SyntaxElement::Node(child) => out.extend(node(src, child)),
+            SyntaxElement::Token(child) => out.push(token(src, child)),
+        }
+        prev = Some(element);
     }
     out
 }
