@@ -1,0 +1,66 @@
+use nuten_syntax::SyntaxKind;
+
+use super::{item, token_or_bracketed};
+use crate::parser::Parser;
+
+/// One `if` of a chain: where its body is among the items of the chain, and
+/// whether `else` follows the body.
+pub(super) struct IfLink {
+    body: usize,
+    has_else: bool,
+}
+
+/// The `if`s that `items` make when nu reads them as one, in order: each is
+/// `if`, a condition, and a body in braces right before its first `else` or
+/// last, and after its `else` comes one item or the next `if`.
+pub(super) fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
+    let mut chain = Vec::new();
+    let mut start = 0;
+    loop {
+        let rest = &items[start..];
+        if rest.first() != Some(&"if") {
+            return None;
+        }
+        let otherwise = rest.iter().position(|&item| item == "else");
+        let body = match otherwise {
+            Some(otherwise) => otherwise.checked_sub(1)?,
+            None => rest.len() - 1,
+        };
+        if body < 2 || !rest[body].starts_with('{') {
+            return None;
+        }
+        chain.push(IfLink {
+            body: start + body,
+            has_else: otherwise.is_some(),
+        });
+        // Items after `else`.
+        match otherwise.map(|otherwise| rest.len() - otherwise - 1) {
+            None | Some(1) => return Some(chain),
+            Some(0) => return None,
+            Some(_) => start += body + 2,
+        }
+    }
+}
+
+/// The `If` of `chain`, which `if_chain` gave for the items ahead.
+pub(super) fn if_(p: &mut Parser<'_>, chain: &[IfLink]) {
+    p.start(SyntaxKind::If);
+    let mut at = 0;
+    for link in chain {
+        p.bump();
+        for _ in at + 1..link.body {
+            item(p, false);
+        }
+        token_or_bracketed(p, false);
+        at = link.body + 1;
+        if link.has_else {
+            p.bump();
+            at += 1;
+        }
+    }
+    // The one item after the last `else`.
+    if chain.last().is_some_and(|link| link.has_else) {
+        item(p, false);
+    }
+    p.finish();
+}

@@ -1,0 +1,194 @@
+use nuten_syntax::SyntaxKind;
+
+use super::{
+    control::{control, control_shape},
+    def::{def, def_shape},
+    ends_call, ends_element,
+    if_::{if_, if_chain},
+    is_file_redirection, is_item, item,
+    match_::{match_, match_shape},
+    shell_operator, token_or_bracketed,
+};
+use crate::{ParseErrorKind, parser::Parser};
+
+/// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its
+/// arguments. Returns the streams it redirects; `None` when there is no
+/// command.
+pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
+    let has_call = !p
+        .peek()
+        .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
+    let external = p
+        .peek_text()
+        .is_some_and(|head| head.starts_with('^') || matches!(head, "else" | "catch"));
+    if has_call {
+        let items = keyword_items(p);
+        if let Some(chain) = items.as_deref().and_then(if_chain) {
+            if_(p, &chain);
+        } else if let Some(shape) = items.as_deref().and_then(control_shape) {
+            control(p, &shape);
+        } else if let Some(len) = items.as_deref().and_then(match_shape) {
+            match_(p, len);
+        } else if let Some(shape) = items.as_deref().and_then(def_shape) {
+            def(p, &shape);
+        } else {
+            call(p, external);
+        }
+    }
+    arguments(
+        p,
+        has_call.then_some(Streams::default()),
+        external,
+        assigning,
+    )
+}
+
+/// The texts of the items ahead that a call takes, when the first is a word
+/// that starts a syntax of its own.
+fn keyword_items<'a>(p: &Parser<'a>) -> Option<Vec<&'a str>> {
+    let head = p.peek_text()?;
+    if !matches!(
+        head,
+        "if" | "for" | "while" | "loop" | "try" | "match" | "def" | "extern" | "export"
+    ) {
+        return None;
+    }
+    Some(call_items(p))
+}
+
+/// The texts of the items ahead that a call takes.
+fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
+    p.remaining_tokens()
+        .filter(|(token, _)| !matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
+        .take_while(|(token, _)| !ends_call(token.kind))
+        .map(|(_, text)| text)
+        .collect()
+}
+
+fn call(p: &mut Parser<'_>, external: bool) {
+    p.start(if external {
+        SyntaxKind::ExternalCall
+    } else {
+        SyntaxKind::Call
+    });
+    while p.peek().is_some_and(|kind| !ends_call(kind)) {
+        item(p, external);
+    }
+    p.finish();
+}
+
+/// Items and `Redirection`s up to the end of the element, or up to an
+/// assignment operator when `assigning`. `redirected` is what the element
+/// redirects so far; `None` when it has no command. Returns what it
+/// redirects then.
+pub(super) fn arguments(
+    p: &mut Parser<'_>,
+    mut redirected: Option<Streams>,
+    external: bool,
+    assigning: bool,
+) -> Option<Streams> {
+    while let Some(kind) = p.peek() {
+        match kind {
+            kind if ends_element(kind) => break,
+            SyntaxKind::Assign if assigning => break,
+            kind if is_file_redirection(kind) => {
+                redirection(p, kind, redirected.as_mut());
+                if p.peek() == Some(SyntaxKind::Assign)
+                    && p.last_kind().is_some_and(is_file_redirection)
+                {
+                    p.bump();
+                }
+            },
+            _ => item(p, external),
+        }
+    }
+    redirected
+}
+
+/// `redirected` is what the element redirects so far; `None` when it has
+/// no command for the redirection to apply to.
+///
+/// Nu wants an item right after the operator; anything else is a missing
+/// target and stays outside the node.
+fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Streams>) {
+    p.start(SyntaxKind::Redirection);
+    let has_target =
+        p.nth(1).is_some_and(is_item) && p.nth_text(1).and_then(shell_operator).is_none();
+    let streams = Streams::of(kind);
+    let error = match redirected {
+        None => Some(ParseErrorKind::RedirectionAtHead),
+        Some(_) if !has_target => Some(ParseErrorKind::MissingRedirectionTarget),
+        Some(redirected) if redirected.overlaps(streams) => {
+            Some(ParseErrorKind::MultipleRedirections)
+        },
+        Some(redirected) => {
+            redirected.add(streams);
+            None
+        },
+    };
+    match error {
+        Some(error) => p.bump_error(error),
+        None => p.bump(),
+    }
+    if has_target {
+        token_or_bracketed(p, false);
+    }
+    p.finish();
+}
+
+/// Stdout and stderr, as what an operator redirects or an element has
+/// redirected.
+#[derive(Debug, Clone, Copy, Default)]
+pub(super) struct Streams {
+    out: bool,
+    err: bool,
+}
+
+impl Streams {
+    pub(super) fn of(kind: SyntaxKind) -> Streams {
+        let (out, err) = match kind {
+            SyntaxKind::OutGt | SyntaxKind::OutGtGt => (true, false),
+            SyntaxKind::ErrGt | SyntaxKind::ErrGtGt | SyntaxKind::ErrGtPipe => (false, true),
+            SyntaxKind::OutErrGt | SyntaxKind::OutErrGtGt | SyntaxKind::OutErrGtPipe => {
+                (true, true)
+            },
+            _ => unreachable!("{kind:?} is not a redirection"),
+        };
+        Streams {
+            out,
+            err,
+        }
+    }
+
+    pub(super) fn overlaps(self, other: Streams) -> bool {
+        (self.out && other.out) || (self.err && other.err)
+    }
+
+    fn add(&mut self, other: Streams) {
+        self.out |= other.out;
+        self.err |= other.err;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ParseErrorKind, parse};
+
+    fn errors(src: &str) -> Vec<ParseErrorKind> {
+        parse(src).errors().iter().map(|error| error.kind).collect()
+    }
+
+    #[test]
+    fn redirection_target_is_missing_at_eof() {
+        assert_eq!(errors("ls o>"), [ParseErrorKind::MissingRedirectionTarget]);
+    }
+
+    #[test]
+    fn a_redirection_gets_one_error_at_most() {
+        assert_eq!(errors("o>"), [ParseErrorKind::RedirectionAtHead]);
+        assert_eq!(
+            errors("ls o> a o> | x"),
+            [ParseErrorKind::MissingRedirectionTarget]
+        );
+    }
+}
