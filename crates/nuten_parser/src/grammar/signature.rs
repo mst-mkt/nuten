@@ -8,8 +8,8 @@ use crate::{
 };
 
 /// What a signature takes next, as nu's `parse_signature_helper` calls it.
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Params {
+#[derive(Clone, Copy)]
+enum Expect {
     /// A parameter, a flag, a `:`, an `=`, or a `,`.
     Param,
     /// A parameter or a flag, after a `,`.
@@ -22,81 +22,101 @@ enum Params {
     Default,
 }
 
+/// What `params` does with the token ahead.
+enum Action {
+    /// Emits it as it is.
+    Bump,
+    /// Emits it as an `Error`: a `:`, an `=`, or a `,` where nu takes none,
+    /// or a `(-f)` after a `,`.
+    Reject,
+    /// Emits it as the `ShortFlag` of the parameter being read.
+    BumpAsShortFlag,
+    /// Reads it as the type a `:` promised.
+    ReadType,
+    /// Ends the parameter being read at it, a line break.
+    EndParam,
+    /// Starts a parameter at it, ending the one being read.
+    StartParam,
+}
+
 /// The parameters of a signature as nu splits them: a `Param` at each item
 /// where nu takes one, holding the `(-f)` as a `ShortFlag`, the `:` and the
-/// type, and the `=` and the default value that nu gives it, along with the
-/// comments that describe it. A `:`, an `=`, or a `,` where nu takes none is
-/// an `Error`, as is one with nothing after it.
+/// type, and the `=` and the default value that nu gives it. A `:`, an `=`,
+/// or a `,` where nu takes none is an `Error`, as is one with nothing after
+/// it.
 pub(super) fn params(p: &mut Parser<'_>) {
-    let mut mode = Params::Param;
-    let mut started = false;
-    while let Some(kind) = p.peek() {
-        let promised = matches!(kind, SyntaxKind::Colon | SyntaxKind::Eq) && !token_ahead(p);
-        mode = match (kind, mode) {
-            (SyntaxKind::Colon, Params::Param) if !promised => Params::Type,
-            (SyntaxKind::Eq, Params::Param | Params::AfterType) if !promised => Params::Default,
-            (SyntaxKind::Comma, Params::Param | Params::AfterType) => Params::AfterComma,
-            (SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma, _) => {
-                p.bump_error(ParseErrorKind::SignatureSeparator);
-                continue;
+    let mut expect = Expect::Param;
+    let mut in_param = false;
+    while let Some((action, next)) = step(p, expect, in_param) {
+        match action {
+            Action::Bump => p.bump(),
+            Action::Reject => p.bump_error(ParseErrorKind::SignatureSeparator),
+            Action::BumpAsShortFlag => p.bump_as(SyntaxKind::ShortFlag),
+            Action::ReadType => type_(p),
+            Action::EndParam => {
+                p.finish();
+                p.bump();
+                in_param = false;
             },
-            // Nu takes a `(-f)` for the parameter before it, and has none
-            // after a `,`. An `Error` token already carries its error.
-            (_, Params::AfterComma)
-                if kind != SyntaxKind::Error && p.peek_text().is_some_and(starts_short_flag) =>
-            {
-                p.bump_error(ParseErrorKind::SignatureSeparator);
-                continue;
-            },
-            // A line break belongs to the parameter only while it goes on.
-            (SyntaxKind::Newline, mode) => {
-                if started && !goes_on(p, mode) {
-                    p.finish();
-                    started = false;
-                }
-                mode
-            },
-            (_, Params::Type) => {
-                type_(p);
-                mode = Params::AfterType;
-                continue;
-            },
-            (_, Params::Default) => Params::Param,
-            (SyntaxKind::Word, _) if started && p.peek_text().is_some_and(is_short_flag) => {
-                p.bump_as(SyntaxKind::ShortFlag);
-                continue;
-            },
-            // An item that is no `(-f)` starts a parameter of its own; nu
-            // ignores `|`, `;`, and redirections, which stay where they are.
-            (_, _) if is_item(kind) && !p.peek_text().is_some_and(starts_short_flag) => {
-                if started {
+            Action::StartParam => {
+                if in_param {
                     p.finish();
                 }
-                // Trivia between two parameters, such as the comment that
-                // describes the one before, belongs to neither.
-                p.bump_skipped();
                 p.start(SyntaxKind::Param);
-                started = true;
-                Params::Param
+                p.bump();
+                in_param = true;
             },
-            (_, mode) => mode,
-        };
-        p.bump();
+        }
+        expect = next;
     }
-    if started {
+    if in_param {
         p.finish();
     }
+}
+
+/// What `params` does with the token ahead and what it takes after that,
+/// given what it takes now and whether it is inside a `Param`. `None` at the
+/// end.
+fn step(p: &Parser<'_>, expect: Expect, in_param: bool) -> Option<(Action, Expect)> {
+    let (kind, text) = p.peek().zip(p.peek_text())?;
+    Some(match (kind, expect) {
+        (SyntaxKind::Colon, Expect::Param) if token_ahead(p) => (Action::Bump, Expect::Type),
+        (SyntaxKind::Eq, Expect::Param | Expect::AfterType) if token_ahead(p) => {
+            (Action::Bump, Expect::Default)
+        },
+        (SyntaxKind::Comma, Expect::Param | Expect::AfterType) => {
+            (Action::Bump, Expect::AfterComma)
+        },
+        (SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma, _) => (Action::Reject, expect),
+        // Nu takes a `(-f)` for the parameter before it, and has none after
+        // a `,`. An `Error` token already carries its error.
+        (_, Expect::AfterComma) if kind != SyntaxKind::Error && starts_short_flag(text) => {
+            (Action::Reject, expect)
+        },
+        // A line break belongs to the parameter only while it goes on.
+        (SyntaxKind::Newline, _) if in_param && !goes_on(p, expect) => (Action::EndParam, expect),
+        (SyntaxKind::Newline, _) => (Action::Bump, expect),
+        (_, Expect::Type) => (Action::ReadType, Expect::AfterType),
+        (_, Expect::Default) => (Action::Bump, Expect::Param),
+        (SyntaxKind::Word, _) if in_param && is_short_flag(text) => {
+            (Action::BumpAsShortFlag, expect)
+        },
+        // An item that is no `(-f)` starts a parameter of its own; nu ignores
+        // `|`, `;`, and redirections, which stay where they are.
+        _ if is_item(kind) && !starts_short_flag(text) => (Action::StartParam, Expect::Param),
+        _ => (Action::Bump, expect),
+    })
 }
 
 /// Whether the parameter being read goes on past the line breaks ahead: nu
 /// gives it the type or the default value it promised, the `(-f)`, the type,
 /// or the default value that comes next, or the `,` that ends it.
-fn goes_on(p: &Parser<'_>, mode: Params) -> bool {
+fn goes_on(p: &Parser<'_>, expect: Expect) -> bool {
     let next = p
         .remaining_tokens()
         .find(|(token, _)| !token.kind.is_trivia() && token.kind != SyntaxKind::Newline);
-    match mode {
-        Params::Type | Params::Default => next.is_some(),
+    match expect {
+        Expect::Type | Expect::Default => next.is_some(),
         _ => next.is_some_and(|(token, text)| {
             matches!(
                 token.kind,
