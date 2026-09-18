@@ -4,7 +4,7 @@ use super::is_item;
 use crate::{
     ParseErrorKind,
     lexer::Mode,
-    parser::{Brackets, Parser},
+    parser::{Affix, Brackets, Parser},
 };
 
 /// What a signature takes next, as nu's `parse_signature_helper` calls it.
@@ -107,6 +107,7 @@ const ANGLE: Brackets = Brackets {
     close: b'>',
     open_kind: SyntaxKind::LAngle,
     close_kind: SyntaxKind::RAngle,
+    always_nested: false,
 };
 
 /// The type ahead: a `Type` where nu reads parameters in `< >`, or else the
@@ -119,7 +120,8 @@ fn type_(p: &mut Parser<'_>) {
         p.bump();
         return;
     };
-    let Some(bracketed) = p.bracketed_after(name, &ANGLE, Mode::type_params()) else {
+    let Some(bracketed) = p.bracketed_affixed(&ANGLE, Mode::type_params(), Affix::Name(name))
+    else {
         p.bump();
         return;
     };

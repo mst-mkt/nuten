@@ -52,6 +52,7 @@ pub(crate) const SQUARE: Brackets = Brackets {
     close: b']',
     open_kind: SyntaxKind::LBracket,
     close_kind: SyntaxKind::RBracket,
+    always_nested: true,
 };
 
 const CURLY: Brackets = Brackets {
@@ -59,6 +60,7 @@ const CURLY: Brackets = Brackets {
     close: b'}',
     open_kind: SyntaxKind::LBrace,
     close_kind: SyntaxKind::RBrace,
+    always_nested: true,
 };
 
 /// `external` is whether the token is an argument of a `^` command that

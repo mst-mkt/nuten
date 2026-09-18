@@ -1,7 +1,10 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{SQUARE, signature::params, token_or_bracketed};
-use crate::{lexer::Mode, parser::Parser};
+use crate::{
+    lexer::Mode,
+    parser::{Affix, Parser},
+};
 
 /// Where the parts of a `def` or an `extern` are among `items`, when nu reads
 /// them as one: the keyword, `export` before it if there, then flags, the
@@ -67,12 +70,12 @@ pub(super) fn def(p: &mut Parser<'_>, shape: &DefShape) {
     for _ in 0..shape.signature {
         p.bump();
     }
-    let bracketed = if shape.attached_colon {
-        p.bracketed_then(&SQUARE, Mode::signature(), SyntaxKind::Colon)
+    let affix = if shape.attached_colon {
+        Affix::Suffix(SyntaxKind::Colon)
     } else {
-        p.bracketed(&SQUARE, Mode::signature())
+        Affix::None
     };
-    match bracketed {
+    match p.bracketed_affixed(&SQUARE, Mode::signature(), affix) {
         Some(bracketed) => p.bump_bracketed(SyntaxKind::Signature, bracketed, params),
         None => p.bump(),
     }
