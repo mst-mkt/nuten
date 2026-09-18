@@ -74,7 +74,7 @@ echo {
   b'
 }
 match $x {
-  1 => {ls},
+    1 => { ls }
     _ => { pwd }
 }
 echo { ls; } { ; ls } { ; }
@@ -106,8 +106,8 @@ try {
 }
 do {
     match $x {
-  1 => {ls}
-}
+        1 => { ls }
+    }
 }
 echo { # c
 

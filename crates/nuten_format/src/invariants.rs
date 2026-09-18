@@ -25,11 +25,11 @@ pub enum Invariant {
     /// the formatter joins them, as nu reads them.
     Tokens,
     /// The output has the comments of the source, in order, each on its own
-    /// line or at the end of a line as it was, and, between statements, with
-    /// a blank line after it or not as it was. Spaces and tabs at the end of
-    /// a comment do not count, since the printer trims them, nor do blank
-    /// lines at the end of the file or a block, which the formatter drops, nor
-    /// `Comma` tokens, which it may drop too.
+    /// line or at the end of a line as it was, and, between statements or the
+    /// arms of a `match`, with a blank line after it or not as it was. Spaces
+    /// and tabs at the end of a comment do not count, since the printer trims
+    /// them, nor do blank lines at the end of the file, a block, or the arms,
+    /// which the formatter drops, nor `Comma` tokens, which it may drop too.
     Comments,
     /// Formatting the output succeeds and changes nothing.
     Idempotency,
@@ -219,7 +219,10 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
             // Inside a statement the formatter drops blank lines, and nu
             // reads no documentation there.
             let between_statements = token.parent().is_some_and(|parent| {
-                matches!(parent.kind(), SyntaxKind::Root | SyntaxKind::Block)
+                matches!(
+                    parent.kind(),
+                    SyntaxKind::Root | SyntaxKind::Block | SyntaxKind::MatchArms
+                )
             });
             let mut after = tokens[index + 1..].iter().map(SyntaxToken::kind);
             let blank_line_after = between_statements
@@ -420,6 +423,15 @@ mod tests {
     #[test]
     fn blank_lines_between_statements_of_a_block_count() {
         let violations = check("echo {\n# c\n\nls\n}\n", "echo {\n    # c\n    ls\n}\n");
+        assert_eq!(invariants(&violations), [Invariant::Comments]);
+    }
+
+    #[test]
+    fn blank_lines_between_arms_count() {
+        let violations = check(
+            "match $x {\n# c\n\n1 => a\n}\n",
+            "match $x {\n    # c\n    1 => a\n}\n",
+        );
         assert_eq!(invariants(&violations), [Invariant::Comments]);
     }
 

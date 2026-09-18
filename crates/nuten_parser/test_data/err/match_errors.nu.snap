@@ -1,0 +1,27 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/match_errors.nu
+---
+Root@0..40
+  Pipeline@0..21
+    PipelineElement@0..21
+      Call@0..21
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        Error@9..19 "{ 1 => a )"
+        Whitespace@19..20 " "
+        Error@20..21 "}"
+  Newline@21..22 "\n"
+  Pipeline@22..40
+    PipelineElement@22..40
+      Match@22..40
+        Word@22..27 "match"
+        Whitespace@27..28 " "
+        Word@28..30 "$x"
+        Whitespace@30..31 " "
+        Error@31..40 "{ 1 => a\n"
+error 18..19 ")": Lex(UnmatchedCloser)
+error 20..21 "}": Lex(UnmatchedCloser)
+error 31..32 "{": Lex(Unclosed)

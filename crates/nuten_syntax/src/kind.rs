@@ -56,6 +56,9 @@ syntax_kinds! {
     /// `>` of type parameters.
     /// The parser emits this, not the lexer.
     RAngle,
+    /// `=>` between the pattern of a `match` arm and what the arm does.
+    /// The parser emits this, not the lexer.
+    FatArrow,
 
     // Assignment and redirection.
     /// `=`, `+=`, `++=`, `-=`, `*=`, or `/=` as a whole item.
@@ -131,6 +134,20 @@ syntax_kinds! {
     /// `try` and the body, then optionally `catch` and what it takes, each
     /// starting with `{`.
     Try,
+    /// What a `Call` would be for a command named `match` that nu reads as
+    /// one: `match`, at least one argument of the subject, and the arms,
+    /// which start with `{`: a `MatchArms` where nu reads arms, or else what
+    /// the argument is.
+    Match,
+    /// The `{ }` of a `match` read as arms: `{`, `MatchArm`s with the `,`
+    /// between them, and `}`. Stays a `Block`, a `Record`, or a `Word` when
+    /// an arm has no `=>`, more or less than one item after it, or anything
+    /// among its pattern but items with a `|` between two of them, such as a
+    /// `;`, a `||`, or a `,`.
+    MatchArms,
+    /// One arm: the tokens of its pattern and of any `if` guard, `|` among
+    /// them, then `=>` and the one item nu takes as what the arm does.
+    MatchArm,
     /// A redirection to a file: the operator, such as `o>`, and its target.
     /// Has no target only when the operator is an `Error`.
     Redirection,

@@ -1,0 +1,841 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match.nu
+---
+Root@0..927
+  Pipeline@0..27
+    PipelineElement@0..27
+      Match@0..27
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..27
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..17
+            Word@11..12 "1"
+            Whitespace@12..13 " "
+            FatArrow@13..15 "=>"
+            Whitespace@15..16 " "
+            Word@16..17 "a"
+          Comma@17..18 ","
+          Whitespace@18..19 " "
+          MatchArm@19..25
+            Word@19..20 "_"
+            Whitespace@20..21 " "
+            FatArrow@21..23 "=>"
+            Whitespace@23..24 " "
+            Word@24..25 "b"
+          Whitespace@25..26 " "
+          RBrace@26..27 "}"
+  Newline@27..28 "\n"
+  Pipeline@28..62
+    PipelineElement@28..62
+      Match@28..62
+        Word@28..33 "match"
+        Whitespace@33..34 " "
+        Word@34..36 "$x"
+        Whitespace@36..37 " "
+        MatchArms@37..62
+          LBrace@37..38 "{"
+          Newline@38..39 "\n"
+          Whitespace@39..41 "  "
+          MatchArm@41..51
+            Word@41..42 "1"
+            Whitespace@42..43 " "
+            FatArrow@43..45 "=>"
+            Whitespace@45..46 " "
+            Block@46..51
+              LBrace@46..47 "{"
+              Whitespace@47..48 " "
+              Pipeline@48..49
+                PipelineElement@48..49
+                  Call@48..49
+                    Word@48..49 "a"
+              Whitespace@49..50 " "
+              RBrace@50..51 "}"
+          Newline@51..52 "\n"
+          Whitespace@52..54 "  "
+          MatchArm@54..60
+            Word@54..55 "_"
+            Whitespace@55..56 " "
+            FatArrow@56..58 "=>"
+            Whitespace@58..59 " "
+            Word@59..60 "b"
+          Newline@60..61 "\n"
+          RBrace@61..62 "}"
+  Newline@62..63 "\n"
+  Pipeline@63..116
+    PipelineElement@63..116
+      Match@63..116
+        Word@63..68 "match"
+        Whitespace@68..69 " "
+        Word@69..82 "($x | length)"
+        Whitespace@82..83 " "
+        MatchArms@83..116
+          LBrace@83..84 "{"
+          Whitespace@84..85 " "
+          MatchArm@85..94
+            Word@85..86 "0"
+            Whitespace@86..87 " "
+            FatArrow@87..89 "=>"
+            Whitespace@89..90 " "
+            Word@90..94 "null"
+          Comma@94..95 ","
+          Whitespace@95..96 " "
+          MatchArm@96..114
+            Word@96..98 "$n"
+            Whitespace@98..99 " "
+            FatArrow@99..101 "=>"
+            Whitespace@101..102 " "
+            Block@102..114
+              LBrace@102..103 "{"
+              Whitespace@103..104 " "
+              Pipeline@104..112
+                PipelineElement@104..112
+                  Call@104..112
+                    Word@104..109 "print"
+                    Whitespace@109..110 " "
+                    Word@110..112 "$n"
+              Whitespace@112..113 " "
+              RBrace@113..114 "}"
+          Whitespace@114..115 " "
+          RBrace@115..116 "}"
+  Newline@116..117 "\n"
+  Pipeline@117..204
+    PipelineElement@117..204
+      Match@117..204
+        Word@117..122 "match"
+        Whitespace@122..123 " "
+        Word@123..125 "$x"
+        Whitespace@125..126 " "
+        MatchArms@126..204
+          LBrace@126..127 "{"
+          Whitespace@127..128 " "
+          MatchArm@128..138
+            Word@128..133 "[a b]"
+            Whitespace@133..134 " "
+            FatArrow@134..136 "=>"
+            Whitespace@136..137 " "
+            Word@137..138 "1"
+          Comma@138..139 ","
+          Whitespace@139..140 " "
+          MatchArm@140..152
+            Word@140..147 "{c: $d}"
+            Whitespace@147..148 " "
+            FatArrow@148..150 "=>"
+            Whitespace@150..151 " "
+            Word@151..152 "2"
+          Comma@152..153 ","
+          Whitespace@153..154 " "
+          MatchArm@154..163
+            Word@154..158 "1..3"
+            Whitespace@158..159 " "
+            FatArrow@159..161 "=>"
+            Whitespace@161..162 " "
+            Word@162..163 "3"
+          Comma@163..164 ","
+          Whitespace@164..165 " "
+          MatchArm@165..175
+            Word@165..166 "a"
+            Whitespace@166..167 " "
+            Pipe@167..168 "|"
+            Whitespace@168..169 " "
+            Word@169..170 "b"
+            Whitespace@170..171 " "
+            FatArrow@171..173 "=>"
+            Whitespace@173..174 " "
+            Word@174..175 "4"
+          Comma@175..176 ","
+          Whitespace@176..177 " "
+          MatchArm@177..194
+            Word@177..179 "$y"
+            Whitespace@179..180 " "
+            Word@180..182 "if"
+            Whitespace@182..183 " "
+            Word@183..185 "$y"
+            Whitespace@185..186 " "
+            Word@186..187 ">"
+            Whitespace@187..188 " "
+            Word@188..189 "1"
+            Whitespace@189..190 " "
+            FatArrow@190..192 "=>"
+            Whitespace@192..193 " "
+            Word@193..194 "5"
+          Comma@194..195 ","
+          Whitespace@195..196 " "
+          MatchArm@196..202
+            Word@196..197 "_"
+            Whitespace@197..198 " "
+            FatArrow@198..200 "=>"
+            Whitespace@200..201 " "
+            Word@201..202 "6"
+          Whitespace@202..203 " "
+          RBrace@203..204 "}"
+  Newline@204..205 "\n"
+  Pipeline@205..240
+    PipelineElement@205..240
+      Let@205..240
+        Word@205..208 "let"
+        Whitespace@208..209 " "
+        Word@209..210 "v"
+        Whitespace@210..211 " "
+        Assign@211..212 "="
+        Whitespace@212..213 " "
+        Pipeline@213..240
+          PipelineElement@213..240
+            Match@213..240
+              Word@213..218 "match"
+              Whitespace@218..219 " "
+              Word@219..221 "$x"
+              Whitespace@221..222 " "
+              MatchArms@222..240
+                LBrace@222..223 "{"
+                Whitespace@223..224 " "
+                MatchArm@224..230
+                  Word@224..225 "1"
+                  Whitespace@225..226 " "
+                  FatArrow@226..228 "=>"
+                  Whitespace@228..229 " "
+                  Word@229..230 "a"
+                Comma@230..231 ","
+                Whitespace@231..232 " "
+                MatchArm@232..238
+                  Word@232..233 "_"
+                  Whitespace@233..234 " "
+                  FatArrow@234..236 "=>"
+                  Whitespace@236..237 " "
+                  Word@237..238 "b"
+                Whitespace@238..239 " "
+                RBrace@239..240 "}"
+  Newline@240..241 "\n"
+  Pipeline@241..269
+    PipelineElement@241..260
+      Match@241..260
+        Word@241..246 "match"
+        Whitespace@246..247 " "
+        Word@247..249 "$x"
+        Whitespace@249..250 " "
+        MatchArms@250..260
+          LBrace@250..251 "{"
+          Whitespace@251..252 " "
+          MatchArm@252..258
+            Word@252..253 "1"
+            Whitespace@253..254 " "
+            FatArrow@254..256 "=>"
+            Whitespace@256..257 " "
+            Word@257..258 "a"
+          Whitespace@258..259 " "
+          RBrace@259..260 "}"
+    Whitespace@260..261 " "
+    Pipe@261..262 "|"
+    Whitespace@262..263 " "
+    PipelineElement@263..269
+      Call@263..269
+        Word@263..269 "length"
+  Newline@269..270 "\n"
+  Pipeline@270..281
+    PipelineElement@270..281
+      Match@270..281
+        Word@270..275 "match"
+        Whitespace@275..276 " "
+        Word@276..278 "$x"
+        Whitespace@278..279 " "
+        MatchArms@279..281
+          LBrace@279..280 "{"
+          RBrace@280..281 "}"
+  Newline@281..282 "\n"
+  Pipeline@282..327
+    PipelineElement@282..327
+      Match@282..327
+        Word@282..287 "match"
+        Whitespace@287..288 " "
+        Word@288..290 "$x"
+        Whitespace@290..291 " "
+        MatchArms@291..327
+          LBrace@291..292 "{"
+          Whitespace@292..293 " "
+          Comment@293..296 "# c"
+          Newline@296..297 "\n"
+          Whitespace@297..299 "  "
+          MatchArm@299..305
+            Word@299..300 "1"
+            Whitespace@300..301 " "
+            FatArrow@301..303 "=>"
+            Whitespace@303..304 " "
+            Word@304..305 "a"
+          Whitespace@305..306 " "
+          Comment@306..309 "# d"
+          Newline@309..310 "\n"
+          Whitespace@310..312 "  "
+          Comment@312..315 "# e"
+          Newline@315..316 "\n"
+          Whitespace@316..318 "  "
+          MatchArm@318..324
+            Word@318..319 "_"
+            Whitespace@319..320 " "
+            FatArrow@320..322 "=>"
+            Whitespace@322..323 " "
+            Word@323..324 "b"
+          Comma@324..325 ","
+          Newline@325..326 "\n"
+          RBrace@326..327 "}"
+  Newline@327..328 "\n"
+  Pipeline@328..355
+    PipelineElement@328..355
+      Match@328..355
+        Word@328..333 "match"
+        Whitespace@333..334 " "
+        Word@334..336 "$x"
+        Whitespace@336..337 " "
+        Block@337..355
+          LBrace@337..338 "{"
+          Whitespace@338..339 " "
+          Pipeline@339..345
+            PipelineElement@339..345
+              Call@339..345
+                Word@339..340 "1"
+                Whitespace@340..341 " "
+                Word@341..343 "=>"
+                Whitespace@343..344 " "
+                Word@344..345 "a"
+          Semicolon@345..346 ";"
+          Whitespace@346..347 " "
+          Pipeline@347..353
+            PipelineElement@347..353
+              Call@347..353
+                Word@347..348 "_"
+                Whitespace@348..349 " "
+                Word@349..351 "=>"
+                Whitespace@351..352 " "
+                Word@352..353 "b"
+          Whitespace@353..354 " "
+          RBrace@354..355 "}"
+  Newline@355..356 "\n"
+  Pipeline@356..377
+    PipelineElement@356..377
+      Match@356..377
+        Word@356..361 "match"
+        Whitespace@361..362 " "
+        Word@362..364 "$x"
+        Whitespace@364..365 " "
+        Block@365..377
+          LBrace@365..366 "{"
+          Whitespace@366..367 " "
+          Pipeline@367..375
+            PipelineElement@367..375
+              Call@367..375
+                Word@367..368 "1"
+                Whitespace@368..369 " "
+                Word@369..371 "=>"
+                Whitespace@371..372 " "
+                Word@372..373 "a"
+                Whitespace@373..374 " "
+                Word@374..375 "b"
+          Whitespace@375..376 " "
+          RBrace@376..377 "}"
+  Newline@377..378 "\n"
+  Pipeline@378..395
+    PipelineElement@378..395
+      Match@378..395
+        Word@378..383 "match"
+        Whitespace@383..384 " "
+        Word@384..386 "$x"
+        Whitespace@386..387 " "
+        Block@387..395
+          LBrace@387..388 "{"
+          Whitespace@388..389 " "
+          Pipeline@389..393
+            PipelineElement@389..393
+              Call@389..393
+                Word@389..391 "=>"
+                Whitespace@391..392 " "
+                Word@392..393 "a"
+          Whitespace@393..394 " "
+          RBrace@394..395 "}"
+  Newline@395..396 "\n"
+  Pipeline@396..421
+    PipelineElement@396..421
+      Match@396..421
+        Word@396..401 "match"
+        Whitespace@401..402 " "
+        Word@402..404 "$x"
+        Whitespace@404..405 " "
+        Block@405..421
+          LBrace@405..406 "{"
+          Whitespace@406..407 " "
+          Pipeline@407..419
+            PipelineElement@407..419
+              Call@407..419
+                Word@407..408 "1"
+                Whitespace@408..409 " "
+                Word@409..412 "=>,"
+                Whitespace@412..413 " "
+                Word@413..414 "_"
+                Whitespace@414..415 " "
+                Word@415..417 "=>"
+                Whitespace@417..418 " "
+                Word@418..419 "b"
+          Whitespace@419..420 " "
+          RBrace@420..421 "}"
+  Newline@421..422 "\n"
+  Pipeline@422..445
+    PipelineElement@422..445
+      Match@422..445
+        Word@422..427 "match"
+        Whitespace@427..428 " "
+        Word@428..430 "$x"
+        Whitespace@430..431 " "
+        Block@431..445
+          LBrace@431..432 "{"
+          Whitespace@432..433 " "
+          Pipeline@433..443
+            PipelineElement@433..439
+              Call@433..439
+                Word@433..434 "1"
+                Whitespace@434..435 " "
+                Word@435..437 "=>"
+                Whitespace@437..438 " "
+                Word@438..439 "a"
+            Whitespace@439..440 " "
+            Pipe@440..441 "|"
+            Whitespace@441..442 " "
+            PipelineElement@442..443
+              Call@442..443
+                Word@442..443 "b"
+          Whitespace@443..444 " "
+          RBrace@444..445 "}"
+  Newline@445..446 "\n"
+  Pipeline@446..470
+    PipelineElement@446..470
+      Match@446..470
+        Word@446..451 "match"
+        Whitespace@451..452 " "
+        Word@452..454 "$x"
+        Whitespace@454..455 " "
+        Word@455..470 "{ 1 => a || b }"
+  Newline@470..471 "\n"
+  Pipeline@471..479
+    PipelineElement@471..479
+      Call@471..479
+        Word@471..476 "match"
+        Whitespace@476..477 " "
+        Word@477..479 "$x"
+  Newline@479..480 "\n"
+  Pipeline@480..505
+    PipelineElement@480..505
+      Call@480..505
+        Word@480..485 "match"
+        Whitespace@485..486 " "
+        Word@486..488 "$x"
+        Whitespace@488..489 " "
+        Block@489..499
+          LBrace@489..490 "{"
+          Whitespace@490..491 " "
+          Pipeline@491..497
+            PipelineElement@491..497
+              Call@491..497
+                Word@491..492 "1"
+                Whitespace@492..493 " "
+                Word@493..495 "=>"
+                Whitespace@495..496 " "
+                Word@496..497 "a"
+          Whitespace@497..498 " "
+          RBrace@498..499 "}"
+        Whitespace@499..500 " "
+        Word@500..505 "extra"
+  Newline@505..506 "\n"
+  Pipeline@506..525
+    PipelineElement@506..525
+      Match@506..525
+        Word@506..511 "match"
+        Whitespace@511..512 " "
+        Word@512..514 "$x"
+        Whitespace@514..515 " "
+        MatchArms@515..525
+          LBrace@515..516 "{"
+          Whitespace@516..517 " "
+          MatchArm@517..523
+            Word@517..518 "1"
+            Newline@518..519 "\n"
+            FatArrow@519..521 "=>"
+            Whitespace@521..522 " "
+            Word@522..523 "a"
+          Whitespace@523..524 " "
+          RBrace@524..525 "}"
+  Newline@525..526 "\n"
+  Pipeline@526..545
+    PipelineElement@526..545
+      Match@526..545
+        Word@526..531 "match"
+        Whitespace@531..532 " "
+        Word@532..534 "$x"
+        Whitespace@534..535 " "
+        MatchArms@535..545
+          LBrace@535..536 "{"
+          Whitespace@536..537 " "
+          MatchArm@537..543
+            Word@537..538 "1"
+            Whitespace@538..539 " "
+            FatArrow@539..541 "=>"
+            Newline@541..542 "\n"
+            Word@542..543 "a"
+          Whitespace@543..544 " "
+          RBrace@544..545 "}"
+  Newline@545..546 "\n"
+  Pipeline@546..572
+    PipelineElement@546..572
+      Match@546..572
+        Word@546..551 "match"
+        Whitespace@551..552 " "
+        Word@552..554 "$x"
+        Whitespace@554..555 " "
+        MatchArms@555..572
+          LBrace@555..556 "{"
+          Whitespace@556..557 " "
+          MatchArm@557..570
+            Word@557..558 "1"
+            Whitespace@558..559 " "
+            FatArrow@559..561 "=>"
+            Whitespace@561..562 " "
+            Block@562..570
+              LBrace@562..563 "{"
+              ClosureParams@563..566
+                Pipe@563..564 "|"
+                Word@564..565 "y"
+                Pipe@565..566 "|"
+              Whitespace@566..567 " "
+              Pipeline@567..568
+                PipelineElement@567..568
+                  Call@567..568
+                    Word@567..568 "b"
+              Whitespace@568..569 " "
+              RBrace@569..570 "}"
+          Whitespace@570..571 " "
+          RBrace@571..572 "}"
+  Newline@572..573 "\n"
+  Pipeline@573..609
+    PipelineElement@573..609
+      Match@573..609
+        Word@573..578 "match"
+        Whitespace@578..579 " "
+        Word@579..581 "$x"
+        Whitespace@581..582 " "
+        MatchArms@582..609
+          LBrace@582..583 "{"
+          Whitespace@583..584 " "
+          MatchArm@584..594
+            String@584..589 "\"a b\""
+            Whitespace@589..590 " "
+            FatArrow@590..592 "=>"
+            Whitespace@592..593 " "
+            Word@593..594 "1"
+          Comma@594..595 ","
+          Whitespace@595..596 " "
+          MatchArm@596..607
+            Word@596..597 "_"
+            Whitespace@597..598 " "
+            FatArrow@598..600 "=>"
+            Whitespace@600..601 " "
+            Record@601..607
+              LBrace@601..602 "{"
+              RecordField@602..606
+                Word@602..603 "a"
+                Colon@603..604 ":"
+                Whitespace@604..605 " "
+                Word@605..606 "1"
+              RBrace@606..607 "}"
+          Whitespace@607..608 " "
+          RBrace@608..609 "}"
+  Newline@609..610 "\n"
+  Pipeline@610..638
+    PipelineElement@610..638
+      Match@610..638
+        Word@610..615 "match"
+        Whitespace@615..616 " "
+        Word@616..618 "$x"
+        Whitespace@618..619 " "
+        MatchArms@619..638
+          LBrace@619..620 "{"
+          Whitespace@620..621 " "
+          MatchArm@621..627
+            Word@621..622 "1"
+            Whitespace@622..623 " "
+            FatArrow@623..625 "=>"
+            Whitespace@625..626 " "
+            Word@626..627 "a"
+          Comma@627..628 ","
+          Comma@628..629 ","
+          Whitespace@629..630 " "
+          MatchArm@630..636
+            Word@630..631 "_"
+            Whitespace@631..632 " "
+            FatArrow@632..634 "=>"
+            Whitespace@634..635 " "
+            Word@635..636 "b"
+          Whitespace@636..637 " "
+          RBrace@637..638 "}"
+  Newline@638..639 "\n"
+  Pipeline@639..661
+    PipelineElement@639..661
+      Match@639..661
+        Word@639..644 "match"
+        Whitespace@644..645 " "
+        Word@645..647 "$x"
+        Whitespace@647..648 " "
+        Block@648..661
+          LBrace@648..649 "{"
+          Whitespace@649..650 " "
+          Pipeline@650..659
+            PipelineElement@650..659
+              Call@650..659
+                Word@650..652 "1,"
+                Whitespace@652..653 " "
+                Word@653..654 "2"
+                Whitespace@654..655 " "
+                Word@655..657 "=>"
+                Whitespace@657..658 " "
+                Word@658..659 "a"
+          Whitespace@659..660 " "
+          RBrace@660..661 "}"
+  Newline@661..662 "\n"
+  Pipeline@662..685
+    PipelineElement@662..685
+      Match@662..685
+        Word@662..667 "match"
+        Whitespace@667..668 " "
+        Word@668..670 "$x"
+        Whitespace@670..671 " "
+        MatchArms@671..685
+          LBrace@671..672 "{"
+          Whitespace@672..673 " "
+          MatchArm@673..683
+            Word@673..674 "1"
+            Whitespace@674..675 " "
+            Comment@675..678 "# c"
+            Newline@678..679 "\n"
+            FatArrow@679..681 "=>"
+            Whitespace@681..682 " "
+            Word@682..683 "a"
+          Whitespace@683..684 " "
+          RBrace@684..685 "}"
+  Newline@685..686 "\n"
+  Pipeline@686..707
+    PipelineElement@686..707
+      Match@686..707
+        Word@686..691 "match"
+        Whitespace@691..692 " "
+        Word@692..694 "$x"
+        Whitespace@694..695 " "
+        MatchArms@695..707
+          LBrace@695..696 "{"
+          Whitespace@696..697 " "
+          Comma@697..698 ","
+          Whitespace@698..699 " "
+          MatchArm@699..705
+            Word@699..700 "1"
+            Whitespace@700..701 " "
+            FatArrow@701..703 "=>"
+            Whitespace@703..704 " "
+            Word@704..705 "a"
+          Whitespace@705..706 " "
+          RBrace@706..707 "}"
+  Newline@707..708 "\n"
+  Pipeline@708..723
+    PipelineElement@708..723
+      Match@708..723
+        Word@708..713 "match"
+        Whitespace@713..714 " "
+        Word@714..716 "$x"
+        Whitespace@716..717 " "
+        MatchArms@717..723
+          LBrace@717..718 "{"
+          Whitespace@718..719 " "
+          Comma@719..720 ","
+          Comma@720..721 ","
+          Whitespace@721..722 " "
+          RBrace@722..723 "}"
+  Newline@723..724 "\n"
+  Pipeline@724..747
+    PipelineElement@724..747
+      Match@724..747
+        Word@724..729 "match"
+        Whitespace@729..730 " "
+        Word@730..732 "$x"
+        Whitespace@732..733 " "
+        MatchArms@733..747
+          LBrace@733..734 "{"
+          Whitespace@734..735 " "
+          MatchArm@735..745
+            Word@735..736 "1"
+            Whitespace@736..737 " "
+            FatArrow@737..739 "=>"
+            Whitespace@739..740 " "
+            Comment@740..743 "# c"
+            Newline@743..744 "\n"
+            Word@744..745 "a"
+          Whitespace@745..746 " "
+          RBrace@746..747 "}"
+  Newline@747..748 "\n"
+  Pipeline@748..793
+    PipelineElement@748..793
+      Match@748..793
+        Word@748..753 "match"
+        Whitespace@753..754 " "
+        Word@754..756 "$x"
+        Whitespace@756..757 " "
+        MatchArms@757..793
+          LBrace@757..758 "{"
+          Whitespace@758..759 " "
+          MatchArm@759..768
+            String@759..763 "\"=>\""
+            Whitespace@763..764 " "
+            FatArrow@764..766 "=>"
+            Whitespace@766..767 " "
+            Word@767..768 "a"
+          Comma@768..769 ","
+          Whitespace@769..770 " "
+          MatchArm@770..791
+            Word@770..772 "$y"
+            Whitespace@772..773 " "
+            Word@773..775 "if"
+            Whitespace@775..776 " "
+            Word@776..778 "$y"
+            Whitespace@778..779 " "
+            Word@779..781 "=="
+            Whitespace@781..782 " "
+            String@782..786 "\"=>\""
+            Whitespace@786..787 " "
+            FatArrow@787..789 "=>"
+            Whitespace@789..790 " "
+            Word@790..791 "b"
+          Whitespace@791..792 " "
+          RBrace@792..793 "}"
+  Newline@793..794 "\n"
+  Pipeline@794..811
+    PipelineElement@794..811
+      Match@794..811
+        Word@794..799 "match"
+        Whitespace@799..800 " "
+        Word@800..802 "$x"
+        Whitespace@802..803 " "
+        Block@803..811
+          LBrace@803..804 "{"
+          Whitespace@804..805 " "
+          Pipeline@805..809
+            PipelineElement@805..809
+              Call@805..809
+                Word@805..809 "1=>a"
+          Whitespace@809..810 " "
+          RBrace@810..811 "}"
+  Newline@811..812 "\n"
+  Pipeline@812..832
+    PipelineElement@812..832
+      Match@812..832
+        Word@812..817 "match"
+        Whitespace@817..818 " "
+        Word@818..819 "a"
+        Whitespace@819..820 " "
+        Word@820..821 "b"
+        Whitespace@821..822 " "
+        MatchArms@822..832
+          LBrace@822..823 "{"
+          Whitespace@823..824 " "
+          MatchArm@824..830
+            Word@824..825 "_"
+            Whitespace@825..826 " "
+            FatArrow@826..828 "=>"
+            Whitespace@828..829 " "
+            Word@829..830 "1"
+          Whitespace@830..831 " "
+          RBrace@831..832 "}"
+  Newline@832..833 "\n"
+  Pipeline@833..861
+    PipelineElement@833..861
+      Match@833..852
+        Word@833..838 "match"
+        Whitespace@838..839 " "
+        Word@839..841 "$x"
+        Whitespace@841..842 " "
+        MatchArms@842..852
+          LBrace@842..843 "{"
+          Whitespace@843..844 " "
+          MatchArm@844..850
+            Word@844..845 "1"
+            Whitespace@845..846 " "
+            FatArrow@846..848 "=>"
+            Whitespace@848..849 " "
+            Word@849..850 "a"
+          Whitespace@850..851 " "
+          RBrace@851..852 "}"
+      Whitespace@852..853 " "
+      Redirection@853..861
+        OutGt@853..855 "o>"
+        Whitespace@855..856 " "
+        Word@856..861 "f.txt"
+  Newline@861..862 "\n"
+  Pipeline@862..887
+    PipelineElement@862..864
+      Call@862..864
+        Word@862..864 "ls"
+    Whitespace@864..865 " "
+    Pipe@865..866 "|"
+    Whitespace@866..867 " "
+    PipelineElement@867..887
+      Match@867..887
+        Word@867..872 "match"
+        Whitespace@872..873 " "
+        Word@873..876 "$in"
+        Whitespace@876..877 " "
+        MatchArms@877..887
+          LBrace@877..878 "{"
+          Whitespace@878..879 " "
+          MatchArm@879..885
+            Word@879..880 "1"
+            Whitespace@880..881 " "
+            FatArrow@881..883 "=>"
+            Whitespace@883..884 " "
+            Word@884..885 "a"
+          Whitespace@885..886 " "
+          RBrace@886..887 "}"
+  Newline@887..888 "\n"
+  Pipeline@888..908
+    PipelineElement@888..908
+      Match@888..908
+        Word@888..893 "match"
+        Whitespace@893..894 " "
+        Word@894..896 "$x"
+        Whitespace@896..897 " "
+        Block@897..908
+          LBrace@897..898 "{"
+          Whitespace@898..899 " "
+          Pipeline@899..906
+            PipelineElement@899..906
+              Call@899..906
+                Word@899..901 "1,"
+                Whitespace@901..902 " "
+                Word@902..904 "=>"
+                Whitespace@904..905 " "
+                Word@905..906 "a"
+          Whitespace@906..907 " "
+          RBrace@907..908 "}"
+  Newline@908..909 "\n"
+  Pipeline@909..926
+    PipelineElement@909..926
+      Match@909..926
+        Word@909..914 "match"
+        Whitespace@914..915 " "
+        Word@915..917 "$x"
+        Whitespace@917..918 " "
+        Record@918..926
+          LBrace@918..919 "{"
+          Whitespace@919..920 " "
+          RecordField@920..924
+            Word@920..921 "a"
+            Colon@921..922 ":"
+            Whitespace@922..923 " "
+            Word@923..924 "1"
+          Whitespace@924..925 " "
+          RBrace@925..926 "}"
+  Newline@926..927 "\n"

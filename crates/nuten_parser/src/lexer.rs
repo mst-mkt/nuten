@@ -82,6 +82,7 @@ impl Mode {
         Mode::signature(),
         Mode::io_types(),
         Mode::type_params(),
+        Mode::match_arms(),
     ];
 
     /// Statements in the top level, `{ }` blocks, closures, and modules.
@@ -160,6 +161,14 @@ impl Mode {
         Mode {
             special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
             signature: true,
+        }
+    }
+
+    /// The inside of the `{ }` of a `match`.
+    pub const fn match_arms() -> Mode {
+        Mode {
+            special: &[(b',', SyntaxKind::Comma)],
+            signature: false,
         }
     }
 
@@ -1071,6 +1080,7 @@ mod tests {
             Mode::record(),
             Mode::record_value(),
             Mode::brace(),
+            Mode::match_arms(),
         ] {
             assert_eq!(lexed_in("a<b", mode), [(Word, "a<b")], "{mode:?}");
         }
