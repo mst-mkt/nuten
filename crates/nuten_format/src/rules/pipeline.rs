@@ -60,7 +60,7 @@ pub(super) fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'
                 out.extend(node(src, child));
             },
             // `let`, or an assignment operator with nothing before it, which
-            // starts an element spread out.
+            // starts an element laid flat.
             SyntaxElement::Token(child)
                 if matches!(kind, SyntaxKind::Word | SyntaxKind::Assign) =>
             {
@@ -162,19 +162,19 @@ struct Part {
 }
 
 /// The children of `pipeline`, with each element that holds an `Assignment`
-/// or a `Let` spread out: its parts up to the operator, then any comment,
+/// or a `Let` laid flat: its parts up to the operator, then any comment,
 /// then the children of the pipeline it takes, whose first element joins
 /// the operator unless a line break or a comment comes between. So the
 /// pipes of what the operator takes format as those of `pipeline`.
 fn parts(pipeline: &SyntaxNode) -> Vec<Part> {
     let mut out = Vec::new();
-    spread(pipeline, 0, false, &mut out);
+    flatten(pipeline, 0, false, &mut out);
     out
 }
 
 /// `newlines` come before the first child, and `joined` is whether it joins
 /// what comes before when it is an element.
-fn spread(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
+fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
     let mut first = Some((newlines, joined));
     for child in children(pipeline) {
         let (before, joined) = first.take().unwrap_or((0, false));
@@ -185,7 +185,7 @@ fn spread(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part
             .and_then(SyntaxNode::first_child)
             .filter(|node| matches!(node.kind(), SyntaxKind::Assignment | SyntaxKind::Let));
         match assignment {
-            Some(assignment) => spread_assignment(&assignment, newlines, joined, out),
+            Some(assignment) => flatten_assignment(&assignment, newlines, joined, out),
             None => out.push(Part {
                 joined: joined && child.element.as_node().is_some(),
                 child: Child {
@@ -197,9 +197,9 @@ fn spread(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part
     }
 }
 
-/// The parts of `assignment` for `spread`: each joins the part before it but
+/// The parts of `assignment` for `flatten`: each joins the part before it but
 /// a comment, and the first, which joins as `joined` tells.
-fn spread_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
+fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
     let mut first = Some((newlines, joined));
     for child in children(assignment) {
         let (before, joined) = first.take().unwrap_or((0, true));
@@ -211,7 +211,7 @@ fn spread_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool, out: 
         let kind = element.kind();
         match &element {
             SyntaxElement::Node(pipeline) if kind == SyntaxKind::Pipeline => {
-                spread(pipeline, newlines, true, out);
+                flatten(pipeline, newlines, true, out);
             },
             _ => out.push(Part {
                 joined: joined && kind != SyntaxKind::Comment,
