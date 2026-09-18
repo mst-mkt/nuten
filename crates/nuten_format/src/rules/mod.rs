@@ -11,7 +11,6 @@ mod signature;
 use nuten_doc::{Element, empty_line, empty_lines, hard_line_break, line_suffix, space, text};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
-pub(crate) use self::signature::joins_flag;
 use self::{
     block::{block, in_match},
     container::{container, reads_as_value},

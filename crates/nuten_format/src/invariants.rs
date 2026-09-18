@@ -20,9 +20,9 @@ pub enum Invariant {
     /// them, nor do `Comma` tokens, which separate the items of lists,
     /// records, and types as whitespace does; so a `,` the formatter prints
     /// in a type without one in the source goes unseen here, and only the nu
-    /// oracle tells whether it went where nu reads it as a separator. A long
-    /// flag of a signature and the short flag after it count as one, since
-    /// the formatter joins them, as nu reads them.
+    /// oracle tells whether it went where nu reads it as a separator. A
+    /// `ShortFlag` counts as one with the token before it, since the
+    /// formatter may join the two, as nu reads them.
     Tokens,
     /// The output has the comments of the source, in order, each on its own
     /// line or at the end of a line as it was, and, between statements or the
@@ -126,19 +126,11 @@ fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
         for token in tokens {
             let text = token.text().replace("\r\n", "\n");
             match leaves.last_mut() {
-                Some((_, last)) if joins_flag(&token, last, &text) => last.push_str(&text),
+                Some((_, last)) if token.kind() == SyntaxKind::ShortFlag => last.push_str(&text),
                 _ => leaves.push((token.kind(), text)),
             }
         }
         leaves
-    }
-    /// Whether the formatter joins `short`, a parameter of a signature, to
-    /// the long flag `long` before it, as nu reads the two.
-    fn joins_flag(short: &SyntaxToken, long: &str, text: &str) -> bool {
-        short
-            .parent()
-            .is_some_and(|param| param.kind() == SyntaxKind::Param)
-            && crate::rules::joins_flag(long, text)
     }
     fn describe((kind, text): &(SyntaxKind, String)) -> String {
         format!("{kind:?} {text:?}")

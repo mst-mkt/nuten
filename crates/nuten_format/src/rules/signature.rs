@@ -32,12 +32,15 @@ pub(super) fn param<'a>(src: &'a str, param: &SyntaxNode) -> Vec<Element<'a>> {
             // A `:` after a comment stays on the next line: joined, it would
             // land inside the comment or, as a line suffix, the comment would
             // land after the `]`, and nu would lose the description.
+            // A `ShortFlag` joins the name it follows, a long flag; joined
+            // to a type or a default value, it would become part of that.
             Some(prev) => {
                 (kind == SyntaxKind::Colon && prev.kind() != SyntaxKind::Comment)
-                    || prev
-                        .as_token()
-                        .zip(element.as_token())
-                        .is_some_and(|(prev, child)| joins_flag(prev.text(), child.text()))
+                    || (kind == SyntaxKind::ShortFlag
+                        && prev.as_token() == param.first_token().as_ref()
+                        && prev
+                            .as_token()
+                            .is_some_and(|name| is_long_flag(name.text())))
             },
         };
         if !joined {
@@ -52,18 +55,11 @@ pub(super) fn param<'a>(src: &'a str, param: &SyntaxNode) -> Vec<Element<'a>> {
     out
 }
 
-/// Whether nu reads `short`, right after `long`, as the short flag of that
-/// long flag, which lets the two be printed as one.
-pub(crate) fn joins_flag(long: &str, short: &str) -> bool {
-    // Nu reads `--` itself as a short flag, and gives a `(-f)` after it to
-    // that one rather than to a long flag.
-    long.starts_with("--")
-        && long.len() > 2
-        && !long.contains('(')
-        && short.strip_prefix("(-").is_some_and(|rest| {
-            rest.strip_suffix(')')
-                .is_some_and(|name| name.chars().count() == 1)
-        })
+/// Whether `text` is a long flag that takes a `(-f)`. Nu reads `--` itself
+/// as a short flag, and gives a `(-f)` after it to that one; a flag holding
+/// a `(` has its short flag already, and nu splits it at the first `(`.
+fn is_long_flag(text: &str) -> bool {
+    text.starts_with("--") && text.len() > 2 && !text.contains('(')
 }
 
 /// A type that takes parameters, on one line: its name, `<`, its parameters

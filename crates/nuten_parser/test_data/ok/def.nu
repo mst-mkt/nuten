@@ -56,3 +56,4 @@ def tp []: record<a: int> -> int { ls }
 def tq [x: "record<a: int>"] { ls }
 def tr [x: record<a: "b>c">] { ls }
 def ts [x: record<a:>] { ls }
+def q [--a = (-b) --c: (-d) --e (-fg) --h (-i)] { ls }

@@ -89,6 +89,10 @@ syntax_kinds! {
     InterpString,
     /// Any other item, such as `ls` or a mixture like `a"b"c`.
     Word,
+    /// A `(-f)` of one character after a parameter of a signature, which nu
+    /// takes for that parameter.
+    /// The parser emits this, not the lexer.
+    ShortFlag,
     /// An item with a lexing error, or a node wrapping a parse error.
     Error,
 
@@ -202,8 +206,8 @@ syntax_kinds! {
     /// The parameters of a `def` or an `extern`: `[`, what it holds, and `]`.
     Signature,
     /// One parameter of a `Signature`: its name, then in source order the
-    /// `(-f)` short flag, the `:` and the type, and the `=` and the default
-    /// value that follow it, each while nu takes them for that parameter. It
+    /// `ShortFlag`, the `:` and the type, and the `=` and the default value
+    /// that follow it, each while nu takes them for that parameter. It
     /// also holds the `,` that ends it, and the `|`, `;`, and redirection
     /// tokens nu ignores among them.
     Param,

@@ -23,10 +23,10 @@ enum Params {
 }
 
 /// The parameters of a signature as nu splits them: a `Param` at each item
-/// where nu takes one, holding the `(-f)`, the `:` and the type, and the `=`
-/// and the default value that nu gives it, along with the comments that
-/// describe it. A `:`, an `=`, or a `,` where nu takes none is an `Error`, as
-/// is one with nothing after it.
+/// where nu takes one, holding the `(-f)` as a `ShortFlag`, the `:` and the
+/// type, and the `=` and the default value that nu gives it, along with the
+/// comments that describe it. A `:`, an `=`, or a `,` where nu takes none is
+/// an `Error`, as is one with nothing after it.
 pub(super) fn params(p: &mut Parser<'_>) {
     let mut mode = Params::Param;
     let mut started = false;
@@ -43,7 +43,7 @@ pub(super) fn params(p: &mut Parser<'_>) {
             // Nu takes a `(-f)` for the parameter before it, and has none
             // after a `,`. An `Error` token already carries its error.
             (_, Params::AfterComma)
-                if kind != SyntaxKind::Error && p.peek_text().is_some_and(is_short_flag) =>
+                if kind != SyntaxKind::Error && p.peek_text().is_some_and(starts_short_flag) =>
             {
                 p.bump_error(ParseErrorKind::SignatureSeparator);
                 continue;
@@ -62,9 +62,13 @@ pub(super) fn params(p: &mut Parser<'_>) {
                 continue;
             },
             (_, Params::Default) => Params::Param,
+            (SyntaxKind::Word, _) if started && p.peek_text().is_some_and(is_short_flag) => {
+                p.bump_as(SyntaxKind::ShortFlag);
+                continue;
+            },
             // An item that is no `(-f)` starts a parameter of its own; nu
             // ignores `|`, `;`, and redirections, which stay where they are.
-            (_, _) if is_item(kind) && !p.peek_text().is_some_and(is_short_flag) => {
+            (_, _) if is_item(kind) && !p.peek_text().is_some_and(starts_short_flag) => {
                 if started {
                     p.finish();
                 }
@@ -97,7 +101,7 @@ fn goes_on(p: &Parser<'_>, mode: Params) -> bool {
             matches!(
                 token.kind,
                 SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma
-            ) || is_short_flag(text)
+            ) || starts_short_flag(text)
         }),
     }
 }
@@ -217,7 +221,17 @@ fn token_ahead(p: &Parser<'_>) -> bool {
         .is_some()
 }
 
-/// Whether `text` is how nu spells a short flag for the parameter before it.
-fn is_short_flag(text: &str) -> bool {
+/// Whether nu takes `text` for the short flag of the parameter before it,
+/// whatever it makes of it then.
+fn starts_short_flag(text: &str) -> bool {
     text.starts_with("(-")
+}
+
+/// Whether `text` is a short flag nu accepts: `(-f)` with one character.
+/// Any other spelling nu rejects, and joined to its parameter it would
+/// reject differently, so it stays a word.
+fn is_short_flag(text: &str) -> bool {
+    text.strip_prefix("(-")
+        .and_then(|rest| rest.strip_suffix(')'))
+        .is_some_and(|name| name.chars().count() == 1)
 }

@@ -154,3 +154,9 @@ def ty [
 def tz [a,#c [
 ]
 ] {}
+def tz2 [--f = --x (-y)] {
+    ls
+}
+def tz3 [--f: --x (-y)] {
+    ls
+}

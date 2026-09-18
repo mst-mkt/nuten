@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/def.nu
 ---
-Root@0..1428
+Root@0..1483
   Pipeline@0..15
     PipelineElement@0..15
       Def@0..15
@@ -106,7 +106,7 @@ Root@0..1428
           Param@148..159
             Word@148..154 "--flag"
             Whitespace@154..155 " "
-            Word@155..159 "(-f)"
+            ShortFlag@155..159 "(-f)"
           Newline@159..160 "\n"
           Whitespace@160..162 "  "
           Param@162..173
@@ -362,7 +362,7 @@ Root@0..1428
           Param@474..485
             Word@474..480 "--d(f)"
             Whitespace@480..481 " "
-            Word@481..485 "(-e)"
+            ShortFlag@481..485 "(-e)"
           RBracket@485..486 "]"
         Whitespace@486..487 " "
         Block@487..493
@@ -1243,3 +1243,46 @@ Root@0..1428
           Whitespace@1425..1426 " "
           RBrace@1426..1427 "}"
   Newline@1427..1428 "\n"
+  Pipeline@1428..1482
+    PipelineElement@1428..1482
+      Def@1428..1482
+        Word@1428..1431 "def"
+        Whitespace@1431..1432 " "
+        Word@1432..1433 "q"
+        Whitespace@1433..1434 " "
+        Signature@1434..1475
+          LBracket@1434..1435 "["
+          Param@1435..1445
+            Word@1435..1438 "--a"
+            Whitespace@1438..1439 " "
+            Eq@1439..1440 "="
+            Whitespace@1440..1441 " "
+            Word@1441..1445 "(-b)"
+          Whitespace@1445..1446 " "
+          Param@1446..1455
+            Word@1446..1449 "--c"
+            Colon@1449..1450 ":"
+            Whitespace@1450..1451 " "
+            Word@1451..1455 "(-d)"
+          Whitespace@1455..1456 " "
+          Param@1456..1465
+            Word@1456..1459 "--e"
+            Whitespace@1459..1460 " "
+            Word@1460..1465 "(-fg)"
+          Whitespace@1465..1466 " "
+          Param@1466..1474
+            Word@1466..1469 "--h"
+            Whitespace@1469..1470 " "
+            ShortFlag@1470..1474 "(-i)"
+          RBracket@1474..1475 "]"
+        Whitespace@1475..1476 " "
+        Block@1476..1482
+          LBrace@1476..1477 "{"
+          Whitespace@1477..1478 " "
+          Pipeline@1478..1480
+            PipelineElement@1478..1480
+              Call@1478..1480
+                Word@1478..1480 "ls"
+          Whitespace@1480..1481 " "
+          RBrace@1481..1482 "}"
+  Newline@1482..1483 "\n"
