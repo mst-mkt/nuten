@@ -335,9 +335,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Emits the trivia ahead, so that a node does not start or end with it.
-    pub(crate) fn bump_trivia(&mut self) {
-        self.bump_skipped();
+    /// Emits the whitespace and comments ahead, so that a node does not
+    /// start or end with them.
+    pub(crate) fn bump_skipped(&mut self) {
+        while self
+            .tokens
+            .get(self.pos)
+            .is_some_and(|token| is_skipped(token.kind))
+        {
+            self.bump_one();
+        }
     }
 
     /// Emits the next token as `kind`, which the mode it was lexed in did
@@ -347,7 +354,7 @@ impl<'a> Parser<'a> {
     ///
     /// Panics at the end.
     pub(crate) fn bump_as(&mut self, kind: SyntaxKind) {
-        self.bump_trivia();
+        self.bump_skipped();
         let token = self.nth_token(0).expect("bump_as at the end");
         self.pos += 1;
         self.push_token(kind, token.range);
@@ -372,17 +379,13 @@ impl<'a> Parser<'a> {
     /// error.
     pub(crate) fn bump_error(&mut self, kind: ParseErrorKind) {
         let token = self.nth_token(0).expect("bump_error at the end");
-        assert!(
-            token.kind != SyntaxKind::Error,
-            "bump_error at an Error token"
+        self.bump_error_to(
+            token.range.end(),
+            ParseError {
+                kind,
+                range: token.range,
+            },
         );
-        self.start(SyntaxKind::Error);
-        self.bump();
-        self.events.push(Event::Error(ParseError {
-            kind,
-            range: token.range,
-        }));
-        self.finish();
     }
 
     /// Emits the tokens ahead up to `end` inside an `Error` node, reporting
@@ -430,16 +433,6 @@ impl<'a> Parser<'a> {
             .copied()
             .filter(|token| !is_skipped(token.kind))
             .nth(n)
-    }
-
-    fn bump_skipped(&mut self) {
-        while self
-            .tokens
-            .get(self.pos)
-            .is_some_and(|token| is_skipped(token.kind))
-        {
-            self.bump_one();
-        }
     }
 
     fn bump_one(&mut self) {

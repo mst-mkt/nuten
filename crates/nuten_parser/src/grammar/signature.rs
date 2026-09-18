@@ -70,7 +70,7 @@ pub(super) fn params(p: &mut Parser<'_>) {
                 }
                 // Trivia between two parameters, such as the comment that
                 // describes the one before, belongs to neither.
-                p.bump_trivia();
+                p.bump_skipped();
                 p.start(SyntaxKind::Param);
                 started = true;
                 Params::Param
