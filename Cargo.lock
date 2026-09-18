@@ -183,7 +183,6 @@ dependencies = [
  "nuten_doc",
  "nuten_parser",
  "nuten_syntax",
- "rowan",
 ]
 
 [[package]]

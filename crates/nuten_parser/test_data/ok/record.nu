@@ -3,7 +3,7 @@ echo {a: 1, b: 2} {a:1,b:2}
 echo {a: b:c} {a: b : c} {"a:b": 1} {a: :b}
 echo {...$x, a: 1} {a: 1 ...(f)} {...{a: 1}}
 echo {a: 1 b} {a: } {a 1 2} {a: 1 | b} {a: 1; b: 2}
-echo {|x| $x} {} { } {a b} {a,b: 1} {...x}
+echo {|x| $x} {} { } {a b} {a,b: 1} {...x} {,a: 1} {,: 1} {...$x,a: 1} {...$x ,: 1} {,...$x,a: 1}
 ^echo {a: 1} [{a: 1}]
 echo {a: b:#c d} {x: y:e>|z} {a: e>|b}
 echo {a: 1}.a {a: 1}b

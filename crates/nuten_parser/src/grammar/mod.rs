@@ -19,7 +19,7 @@ use self::{
     block::block,
     list::{is_list, list_items},
     pipeline::pipeline,
-    record::{is_record, record},
+    record::{record, record_sign},
     table::{is_table, table_items},
 };
 use crate::{
@@ -85,10 +85,9 @@ fn token_or_bracketed(p: &mut Parser<'_>, external: bool) {
 /// holds makes neither. `bracketed` is what it holds in brace mode, which
 /// tells the two apart.
 fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
-    if is_record(bracketed.inner()) {
-        record(p, bracketed.lexed_in(Mode::record()));
-    } else {
-        block(p, bracketed.lexed_in(Mode::block()));
+    match record_sign(bracketed.inner().remaining_tokens()) {
+        Some(sign) => record(p, bracketed.lexed_in(Mode::record()), sign),
+        None => block(p, bracketed.lexed_in(Mode::block())),
     }
 }
 

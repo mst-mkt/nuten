@@ -2,14 +2,25 @@ use nuten_syntax::SyntaxKind;
 
 use super::token_or_bracketed;
 use crate::{
-    lexer::Mode,
+    lexer::{Mode, Token},
     parser::{Bracketed, Parser},
 };
 
-/// The `{ }` ahead that `is_record` as a `Record`, or as a word when its
-/// tokens cannot make nu's split. `bracketed` is what it holds in record
-/// mode.
-pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
+/// The `{ }` ahead as a `Record`, or as a word when its tokens cannot make
+/// nu's split, or when they show another `RecordSign` without the `,` among
+/// them. A `,` is whitespace to nu inside a record, so the formatter drops
+/// every one, and nu would then read the `{ }` by the other sign. `sign` is
+/// what `record_sign` found in brace mode, and `bracketed` is what the `{ }`
+/// holds in record mode.
+pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, sign: RecordSign) {
+    let without_commas = bracketed
+        .inner()
+        .remaining_tokens()
+        .filter(|(token, _)| token.kind != SyntaxKind::Comma);
+    if record_sign(without_commas) != Some(sign) {
+        p.bump();
+        return;
+    }
     match split_record(bracketed.inner()) {
         Some(items) => p.bump_bracketed(SyntaxKind::Record, bracketed, |p| {
             record_items(p, &items);
@@ -18,18 +29,29 @@ pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
     }
 }
 
-/// Whether nu reads `{ }` as a record where it takes any value, given its
-/// inside in brace mode: a `:` second or a spread first, unless a pipe comes
-/// first.
-pub(super) fn is_record(inner: &Parser<'_>) -> bool {
-    let mut tokens = inner
-        .remaining_tokens()
-        .filter(|(token, _)| !token.kind.is_trivia());
+/// What makes nu read `{ }` as a record where it takes any value. Nu reads
+/// a `:` second as a record whatever it takes, and a spread first as one
+/// only where it takes neither a closure, a block, nor match arms, so which
+/// sign shows must not depend on a `,`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum RecordSign {
+    ColonSecond,
+    SpreadFirst,
+}
+
+/// The `RecordSign` among the first two of `tokens`, the inside of `{ }`,
+/// trivia aside, or `None` when a pipe comes first or neither sign does. Nu
+/// looks with `,` as no whitespace, so brace mode tells what it sees, and
+/// record mode without its `,` what it would see in the output.
+pub(super) fn record_sign<'a>(
+    tokens: impl Iterator<Item = (Token, &'a str)>,
+) -> Option<RecordSign> {
+    let mut tokens = tokens.filter(|(token, _)| !token.kind.is_trivia());
     match (tokens.next(), tokens.next()) {
-        (Some((first, text)), _) if is_pipe_to_nu(first.kind, text) => false,
-        (_, Some((second, _))) if second.kind == SyntaxKind::Colon => true,
-        (Some((_, text)), _) => is_spread(text),
-        (None, _) => false,
+        (Some((first, text)), _) if is_pipe_to_nu(first.kind, text) => None,
+        (_, Some((second, _))) if second.kind == SyntaxKind::Colon => Some(RecordSign::ColonSecond),
+        (Some((_, text)), _) => is_spread(text).then_some(RecordSign::SpreadFirst),
+        (None, _) => None,
     }
 }
 

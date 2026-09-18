@@ -4,9 +4,7 @@ use nuten_doc::{
     Element, empty_line, expand_parent, group, hard_line_break, indent, soft_line_break,
     soft_line_break_or_space, space, text,
 };
-use nuten_parser::lexer::{self, Mode};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
-use rowan::TextRange;
 
 use super::{Child, children, comment, node, token};
 
@@ -40,7 +38,7 @@ pub(super) fn reads_as_value(node: &SyntaxNode) -> bool {
 /// the rows on one line, and a line break right after the `;` expands it too.
 /// A `,` is dropped. A blank line between items stays.
 pub(super) fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
-    if stays_as_is(src, container) {
+    if stays_as_is(container) {
         return vec![text(&src[container.text_range()])];
     }
     let (Some(open), Some(close)) = (container.first_token(), container.last_token()) else {
@@ -141,11 +139,9 @@ pub(super) fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element
 
 /// Whether `container` stays as it is: a comment inside ending in a lone
 /// `\r` keeps it so, since the line break printed after the comment would
-/// make that `\r` part of the line break. Otherwise, for a record, dropping
-/// a `,` would change the first two tokens nu looks at to tell a record from
-/// a closure, which it lexes with `,` as no whitespace.
-fn stays_as_is(src: &str, container: &SyntaxNode) -> bool {
-    let kept_by_comment = container
+/// make that `\r` part of the line break.
+fn stays_as_is(container: &SyntaxNode) -> bool {
+    container
         .children_with_tokens()
         .flat_map(|child| {
             let field = child
@@ -156,38 +152,7 @@ fn stays_as_is(src: &str, container: &SyntaxNode) -> bool {
             own.into_iter().chain(field.into_iter().flatten())
         })
         .filter_map(SyntaxElement::into_token)
-        .any(|token| token.kind() == SyntaxKind::Comment && token.text().ends_with('\r'));
-    kept_by_comment || container.kind() == SyntaxKind::Record && !keeps_first_tokens(src, container)
-}
-
-/// Whether the first two tokens of the inside of `record`, lexed as nu does to
-/// tell a record from a closure, stay the same once the commas are dropped.
-/// The output has no `,` and `:` is special in both lexings, so its tokens
-/// are those of `record`. A `,` ending a token does not count, as nu looks
-/// only at how the first token starts and whether the second is `:`.
-fn keeps_first_tokens(src: &str, record: &SyntaxNode) -> bool {
-    let (Some(open), Some(close)) = (record.first_token(), record.last_token()) else {
-        unreachable!("a record has braces");
-    };
-    let inside = TextRange::new(open.text_range().end(), close.text_range().start());
-    let lexed = lexer::lex(src, inside, Mode::brace());
-    let source = lexed
-        .tokens
-        .iter()
-        .filter(|token| !token.kind.is_trivia())
-        .map(|token| src[token.range].trim_end_matches(',').to_owned());
-    let output = record
-        .descendants_with_tokens()
-        .filter_map(SyntaxElement::into_token)
-        .filter(|token| {
-            !token.kind().is_trivia()
-                && !matches!(
-                    token.kind(),
-                    SyntaxKind::LBrace | SyntaxKind::RBrace | SyntaxKind::Comma
-                )
-        })
-        .map(|token| token.text().to_owned());
-    source.take(2).eq(output.take(2))
+        .any(|token| token.kind() == SyntaxKind::Comment && token.text().ends_with('\r'))
 }
 
 /// A key, its `:` right after it, and its value one space after that. What
