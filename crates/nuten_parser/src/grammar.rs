@@ -539,8 +539,10 @@ fn params(p: &mut Parser<'_>) {
                 continue;
             },
             // Nu takes a `(-f)` for the parameter before it, and has none
-            // after a `,`.
-            (_, Params::AfterComma) if p.peek_text().is_some_and(is_short_flag) => {
+            // after a `,`. An `Error` token already carries its error.
+            (_, Params::AfterComma)
+                if kind != SyntaxKind::Error && p.peek_text().is_some_and(is_short_flag) =>
+            {
                 p.bump_error(ParseErrorKind::SignatureSeparator);
                 continue;
             },
