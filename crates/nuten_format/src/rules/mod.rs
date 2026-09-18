@@ -12,8 +12,8 @@ use nuten_doc::{Element, empty_line, empty_lines, hard_line_break, line_suffix, 
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
 use self::{
-    block::{block, in_match},
-    container::{container, reads_as_value},
+    block::block,
+    container::container,
     control::bodies,
     def::def,
     match_::{arm, arms},
@@ -137,17 +137,12 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         SyntaxKind::MatchArms => arms(src, node),
         SyntaxKind::MatchArm => arm(src, node),
         SyntaxKind::Def => def(src, node),
-        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Table if reads_as_value(node) => {
+        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Table | SyntaxKind::Signature => {
             container(src, node)
         },
-        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Table => {
-            vec![text(&src[node.text_range()])]
-        },
-        SyntaxKind::Signature => container(src, node),
         SyntaxKind::Param => param(src, node),
         SyntaxKind::Type => type_(src, node),
         SyntaxKind::TypeField => type_field(src, node),
-        SyntaxKind::Block if in_match(node) => vec![text(&src[node.text_range()])],
         SyntaxKind::Block => block(src, node),
         kind => unreachable!("{kind:?} is not formatted as a node"),
     }

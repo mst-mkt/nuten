@@ -8,26 +8,6 @@ use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
 use super::{Child, children, comment, node, token};
 
-/// Whether nu reads `node`, a list, a record, or a table, as one whatever the
-/// command: as the head of a command, as an item of a list or a table, as the
-/// value of a field, or as what a `match` arm does. Elsewhere, such as an
-/// argument, a command may read it as a string.
-pub(super) fn reads_as_value(node: &SyntaxNode) -> bool {
-    node.parent().is_some_and(|parent| match parent.kind() {
-        // Only a value of a field is a node, and only what an arm does.
-        SyntaxKind::List | SyntaxKind::Table | SyntaxKind::RecordField | SyntaxKind::MatchArm => {
-            true
-        },
-        SyntaxKind::Call => {
-            parent
-                .first_child_or_token()
-                .and_then(SyntaxElement::into_node)
-                == Some(node.clone())
-        },
-        _ => false,
-    })
-}
-
 /// A list, a record, a table, or the parameters of a `def`, unless it stays
 /// as it is. On one line when it fits, no line break comes right after the
 /// opening bracket, and no comment is inside, with no space inside the

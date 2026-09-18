@@ -1,6 +1,7 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
+    Shape,
     assignment::{assigned_pipeline, assignment_ahead, var_type_error},
     command::{Streams, arguments, command},
     ends_statement, is_pipe,
@@ -141,7 +142,7 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
                 p.bump();
                 p.bump_error_to(end, error);
             }
-            arguments(p, Some(Streams::default()), false, true);
+            arguments(p, Some(Streams::default()), Shape::Argument, true);
         } else {
             p.start(SyntaxKind::Assignment);
             command(p, true);

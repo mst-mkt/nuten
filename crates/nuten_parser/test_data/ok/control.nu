@@ -33,3 +33,4 @@ for
 try
 while
 loop
+loop {...$x, a: 1}

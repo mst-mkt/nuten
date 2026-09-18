@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::token_or_bracketed;
+use super::{Shape, value};
 use crate::{
     lexer::{Mode, Token},
     parser::{Bracketed, Parser},
@@ -161,7 +161,7 @@ fn record_items(p: &mut Parser<'_>, items: &[RecordItem]) {
         match *item {
             RecordItem::Pair(1) => {
                 bump_separators(p);
-                token_or_bracketed(p, false);
+                value(p, Shape::Any);
             },
             RecordItem::Pair(count) => {
                 bump_separators(p);

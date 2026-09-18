@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{item, token_or_bracketed};
+use super::{Shape, item, value};
 use crate::parser::Parser;
 
 /// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of
@@ -42,12 +42,12 @@ pub(super) fn control(p: &mut Parser<'_>, shape: &ControlShape) {
     p.bump();
     for at in 1..shape.len {
         if at + 1 == shape.len || (shape.has_catch && at == 1) {
-            token_or_bracketed(p, false);
+            value(p, Shape::Block);
         } else if shape.kind == SyntaxKind::For && at == 1 {
             // The variable, which nu never reads as a value, braces or not.
             p.bump();
         } else {
-            item(p, false);
+            item(p, Shape::Any);
         }
     }
     p.finish();

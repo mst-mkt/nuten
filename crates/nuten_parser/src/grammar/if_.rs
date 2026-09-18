@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{item, token_or_bracketed};
+use super::{Shape, item, value};
 use crate::parser::Parser;
 
 /// One `if` of a chain: where its body is among the items of the chain, and
@@ -49,9 +49,9 @@ pub(super) fn if_(p: &mut Parser<'_>, chain: &[IfLink]) {
     for link in chain {
         p.bump();
         for _ in at + 1..link.body {
-            item(p, false);
+            item(p, Shape::Any);
         }
-        token_or_bracketed(p, false);
+        value(p, Shape::Block);
         at = link.body + 1;
         if link.has_else {
             p.bump();
@@ -60,7 +60,7 @@ pub(super) fn if_(p: &mut Parser<'_>, chain: &[IfLink]) {
     }
     // The one item after the last `else`.
     if chain.last().is_some_and(|link| link.has_else) {
-        item(p, false);
+        item(p, Shape::Block);
     }
     p.finish();
 }

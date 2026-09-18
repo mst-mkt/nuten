@@ -5,14 +5,6 @@ use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
 use super::{Child, children, statements, token};
 
-/// Whether `block` is an argument of `match`, its subject or its arms where
-/// nu reads no arms, which stay as they are.
-pub(super) fn in_match(block: &SyntaxNode) -> bool {
-    block
-        .parent()
-        .is_some_and(|parent| parent.kind() == SyntaxKind::Match)
-}
-
 /// A block or a closure. The parameters come right after the opening brace,
 /// as they are. The rest goes on one line when it fits and no line break
 /// comes after the parameters, with one space inside the braces; otherwise

@@ -23,3 +23,4 @@ let x = else {1}
 if true {1} else 1 + 2
 if $a {1} # c
 if $a {1} else if $b {2} else if $c {3} else if $d {4} else {5}
+if true {} else {...$x, a: 1}

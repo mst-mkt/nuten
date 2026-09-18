@@ -139,15 +139,15 @@ syntax_kinds! {
     /// starting with `{`.
     Try,
     /// What a `Call` would be for a command named `match` that nu reads as
-    /// one: `match`, at least one argument of the subject, and the arms,
-    /// which start with `{`: a `MatchArms` where nu reads arms, or else what
-    /// the argument is.
+    /// one: `match`, at least one argument of the subject, which nu reads as
+    /// any value, and the arms, which start with `{`: a `MatchArms` where nu
+    /// reads arms, or else the `Word` as it is.
     Match,
     /// The `{ }` of a `match` read as arms: `{`, `MatchArm`s with the `,`
-    /// between them, and `}`. Stays a `Block`, a `Record`, or a `Word` when
-    /// an arm has no `=>`, more or less than one item after it, or anything
-    /// among its pattern but items with a `|` between two of them, such as a
-    /// `;`, a `||`, or a `,`.
+    /// between them, and `}`. Stays a `Word` when an arm has no `=>`, more
+    /// or less than one item after it, or anything among its pattern but
+    /// items with a `|` between two of them, such as a `;`, a `||`, or a
+    /// `,`, or when a comment inside has no whitespace before its `#`.
     MatchArms,
     /// One arm: the tokens of its pattern and of any `if` guard, `|` among
     /// them, then `=>` and the one item nu takes as what the arm does.
@@ -164,37 +164,43 @@ syntax_kinds! {
     /// `const`, where that word, not a `Call`, comes before the arguments. The type after a name
     /// ending in `:` is an `Error` node when nu fails to lex it.
     Let,
-    /// A `Word` enclosed in `[ ]`: `[`, what it holds, and `]`.
-    /// It stays a `Word` when its `[` closes before its end, when lexing what
-    /// it holds gives an `Error` or `;` token, or when brackets nest too deep.
+    /// A `Word` enclosed in `[ ]` where nu reads a list, taking any value, a
+    /// block, or an argument of an external command: `[`, what it holds, and
+    /// `]`. It stays a `Word` as an argument of any other command, which may
+    /// read it as a string, when its `[` closes before its end, when lexing
+    /// what it holds gives an `Error` or `;` token, when a comment inside
+    /// has no whitespace before its `#`, or when brackets nest too deep.
     List,
-    /// A `Word` enclosed in `[ ]` that nu reads as a table: `[`, the column
-    /// names, the `;` right after them, the rows, any `,` among them, and
-    /// `]`. The names and each row are a `List`, or a `Word` when they hold
-    /// a `;`, which nu reads as no table there. It stays a `Word` as a `List`
-    /// does, as an argument of a `^` command, where nu reads a list, and when
-    /// anything else comes before the `;`, when another `;` or an item not in
-    /// `[ ]` follows it, or when nothing does.
+    /// A `Word` enclosed in `[ ]` that nu reads as a table where it takes any
+    /// value or a block: `[`, the column names, the `;` right after them, the
+    /// rows, any `,` among them, and `]`. The names and each row are a
+    /// `List`, or a `Word` when they hold a `;`, which nu reads as no table
+    /// there. It stays a `Word` as a `List` does, as an argument of any
+    /// command, and when anything else comes before the `;`, when another
+    /// `;` or an item not in `[ ]` follows it, or when nothing does.
     Table,
     /// A `Word` enclosed in `{ }` that nu reads as a record where it takes
-    /// any value: `{`, its fields and spreads, and `}`. Elsewhere, such as a
-    /// `def` body or an argument of an external command, nu may read it
-    /// otherwise. It stays a `Word` as an argument of a `^` command that
-    /// starts a pipeline element, when its `{` closes before its end, when
-    /// lexing what it holds as a record gives an `Error`, when its fields
-    /// cannot be split as nu splits them, or when brackets nest too deep.
+    /// any value, or where it takes a block unless a spread comes first: `{`,
+    /// its fields and spreads, and `}`. It is a `Block` as the body of a
+    /// `def`. It stays a `Word` as an argument of any command, which may
+    /// read it as a string, when its `{` closes before its end, when lexing
+    /// what it holds as a record gives an `Error`, when its fields cannot be
+    /// split as nu splits them, when nu would tell it from a closure by
+    /// another sign without its `,`, when a comment inside has no whitespace
+    /// before its `#`, or when brackets nest too deep.
     Record,
     /// A key, then the token nu takes as its `:`, then its value, each while
     /// the record lasts. A value of several touching tokens is one `Word`.
     RecordField,
-    /// A `Word` enclosed in `{ }` that is no record, read as a closure where
-    /// nu takes any value: `{`, its parameters if any, its statements, and
-    /// `}`. Elsewhere, such as a `match` or `if` body, nu may read it
-    /// otherwise. It stays a `Word` as an argument of a `^` command that
-    /// starts a pipeline element, when it holds nothing but trivia, when its
-    /// `{` closes before its end, when its parameters meet a `;`, a shell
-    /// operator, or the end before a closing `|`, when what it holds reports
-    /// an error, or when brackets nest too deep.
+    /// A `Word` enclosed in `{ }` that is no record, read as a closure or a
+    /// block where nu takes any value, a block, or an argument of a command
+    /// other than an external one, and the body of a `def` whatever it
+    /// holds: `{`, its parameters if any, its statements, and `}`. It stays
+    /// a `Word` as an argument of an external command, when it holds nothing
+    /// but trivia, when its `{` closes before its end, when its parameters
+    /// meet a `;`, a shell operator, or the end before a closing `|`, when
+    /// what it holds reports an error, when a comment inside has no
+    /// whitespace before its `#`, or when brackets nest too deep.
     Block,
     /// The parameters of a closure as unchecked tokens: `|` to the next `|`,
     /// or `||`.
@@ -204,6 +210,7 @@ syntax_kinds! {
     /// the input and output types if there, and the body of a `def`.
     Def,
     /// The parameters of a `def` or an `extern`: `[`, what it holds, and `]`.
+    /// Stays a `Word` when a comment inside has no whitespace before its `#`.
     Signature,
     /// One parameter of a `Signature`: its name, then in source order the
     /// `ShortFlag`, the `:` and the type, and the `=` and the default value

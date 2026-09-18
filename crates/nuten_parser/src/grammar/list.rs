@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::token_or_bracketed;
+use super::{Shape, value};
 use crate::parser::Parser;
 
 /// A `;` may make it a table, or else a word. A lexing error keeps it a word
@@ -14,6 +14,6 @@ pub(super) fn is_list(inner: &Parser<'_>) -> bool {
 /// Unlike `item`, reports no error: nu may read the word as a string.
 pub(super) fn list_items(p: &mut Parser<'_>) {
     while p.peek().is_some() {
-        token_or_bracketed(p, false);
+        value(p, Shape::Any);
     }
 }

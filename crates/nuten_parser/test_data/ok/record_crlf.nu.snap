@@ -2,21 +2,22 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/record_crlf.nu
 ---
-Root@0..21
-  Pipeline@0..19
-    PipelineElement@0..19
-      Call@0..19
-        Word@0..4 "echo"
-        Whitespace@4..5 " "
-        Record@5..19
-          LBrace@5..6 "{"
-          Newline@6..8 "\r\n"
-          Whitespace@8..12 "    "
-          RecordField@12..16
-            Word@12..13 "a"
-            Colon@13..14 ":"
-            Whitespace@14..15 " "
-            Word@15..16 "1"
-          Newline@16..18 "\r\n"
-          RBrace@18..19 "}"
-  Newline@19..21 "\r\n"
+Root@0..18
+  Pipeline@0..16
+    PipelineElement@0..16
+      Call@0..16
+        List@0..16
+          LBracket@0..1 "["
+          Record@1..15
+            LBrace@1..2 "{"
+            Newline@2..4 "\r\n"
+            Whitespace@4..8 "    "
+            RecordField@8..12
+              Word@8..9 "a"
+              Colon@9..10 ":"
+              Whitespace@10..11 " "
+              Word@11..12 "1"
+            Newline@12..14 "\r\n"
+            RBrace@14..15 "}"
+          RBracket@15..16 "]"
+  Newline@16..18 "\r\n"

@@ -10,3 +10,5 @@ open data.json
 | sort-by created_at
 | select name o> out.txt e> err.log
 ls o> a.txt e>| lines
+ls o> [a b]
+ls o> { a: 1 }

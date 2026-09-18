@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/match.nu
 ---
-Root@0..927
+Root@0..956
   Pipeline@0..27
     PipelineElement@0..27
       Match@0..27
@@ -289,29 +289,7 @@ Root@0..927
         Whitespace@333..334 " "
         Word@334..336 "$x"
         Whitespace@336..337 " "
-        Block@337..355
-          LBrace@337..338 "{"
-          Whitespace@338..339 " "
-          Pipeline@339..345
-            PipelineElement@339..345
-              Call@339..345
-                Word@339..340 "1"
-                Whitespace@340..341 " "
-                Word@341..343 "=>"
-                Whitespace@343..344 " "
-                Word@344..345 "a"
-          Semicolon@345..346 ";"
-          Whitespace@346..347 " "
-          Pipeline@347..353
-            PipelineElement@347..353
-              Call@347..353
-                Word@347..348 "_"
-                Whitespace@348..349 " "
-                Word@349..351 "=>"
-                Whitespace@351..352 " "
-                Word@352..353 "b"
-          Whitespace@353..354 " "
-          RBrace@354..355 "}"
+        Word@337..355 "{ 1 => a; _ => b }"
   Newline@355..356 "\n"
   Pipeline@356..377
     PipelineElement@356..377
@@ -320,21 +298,7 @@ Root@0..927
         Whitespace@361..362 " "
         Word@362..364 "$x"
         Whitespace@364..365 " "
-        Block@365..377
-          LBrace@365..366 "{"
-          Whitespace@366..367 " "
-          Pipeline@367..375
-            PipelineElement@367..375
-              Call@367..375
-                Word@367..368 "1"
-                Whitespace@368..369 " "
-                Word@369..371 "=>"
-                Whitespace@371..372 " "
-                Word@372..373 "a"
-                Whitespace@373..374 " "
-                Word@374..375 "b"
-          Whitespace@375..376 " "
-          RBrace@376..377 "}"
+        Word@365..377 "{ 1 => a b }"
   Newline@377..378 "\n"
   Pipeline@378..395
     PipelineElement@378..395
@@ -343,17 +307,7 @@ Root@0..927
         Whitespace@383..384 " "
         Word@384..386 "$x"
         Whitespace@386..387 " "
-        Block@387..395
-          LBrace@387..388 "{"
-          Whitespace@388..389 " "
-          Pipeline@389..393
-            PipelineElement@389..393
-              Call@389..393
-                Word@389..391 "=>"
-                Whitespace@391..392 " "
-                Word@392..393 "a"
-          Whitespace@393..394 " "
-          RBrace@394..395 "}"
+        Word@387..395 "{ => a }"
   Newline@395..396 "\n"
   Pipeline@396..421
     PipelineElement@396..421
@@ -362,23 +316,7 @@ Root@0..927
         Whitespace@401..402 " "
         Word@402..404 "$x"
         Whitespace@404..405 " "
-        Block@405..421
-          LBrace@405..406 "{"
-          Whitespace@406..407 " "
-          Pipeline@407..419
-            PipelineElement@407..419
-              Call@407..419
-                Word@407..408 "1"
-                Whitespace@408..409 " "
-                Word@409..412 "=>,"
-                Whitespace@412..413 " "
-                Word@413..414 "_"
-                Whitespace@414..415 " "
-                Word@415..417 "=>"
-                Whitespace@417..418 " "
-                Word@418..419 "b"
-          Whitespace@419..420 " "
-          RBrace@420..421 "}"
+        Word@405..421 "{ 1 =>, _ => b }"
   Newline@421..422 "\n"
   Pipeline@422..445
     PipelineElement@422..445
@@ -387,25 +325,7 @@ Root@0..927
         Whitespace@427..428 " "
         Word@428..430 "$x"
         Whitespace@430..431 " "
-        Block@431..445
-          LBrace@431..432 "{"
-          Whitespace@432..433 " "
-          Pipeline@433..443
-            PipelineElement@433..439
-              Call@433..439
-                Word@433..434 "1"
-                Whitespace@434..435 " "
-                Word@435..437 "=>"
-                Whitespace@437..438 " "
-                Word@438..439 "a"
-            Whitespace@439..440 " "
-            Pipe@440..441 "|"
-            Whitespace@441..442 " "
-            PipelineElement@442..443
-              Call@442..443
-                Word@442..443 "b"
-          Whitespace@443..444 " "
-          RBrace@444..445 "}"
+        Word@431..445 "{ 1 => a | b }"
   Newline@445..446 "\n"
   Pipeline@446..470
     PipelineElement@446..470
@@ -584,21 +504,7 @@ Root@0..927
         Whitespace@644..645 " "
         Word@645..647 "$x"
         Whitespace@647..648 " "
-        Block@648..661
-          LBrace@648..649 "{"
-          Whitespace@649..650 " "
-          Pipeline@650..659
-            PipelineElement@650..659
-              Call@650..659
-                Word@650..652 "1,"
-                Whitespace@652..653 " "
-                Word@653..654 "2"
-                Whitespace@654..655 " "
-                Word@655..657 "=>"
-                Whitespace@657..658 " "
-                Word@658..659 "a"
-          Whitespace@659..660 " "
-          RBrace@660..661 "}"
+        Word@648..661 "{ 1, 2 => a }"
   Newline@661..662 "\n"
   Pipeline@662..685
     PipelineElement@662..685
@@ -720,15 +626,7 @@ Root@0..927
         Whitespace@799..800 " "
         Word@800..802 "$x"
         Whitespace@802..803 " "
-        Block@803..811
-          LBrace@803..804 "{"
-          Whitespace@804..805 " "
-          Pipeline@805..809
-            PipelineElement@805..809
-              Call@805..809
-                Word@805..809 "1=>a"
-          Whitespace@809..810 " "
-          RBrace@810..811 "}"
+        Word@803..811 "{ 1=>a }"
   Newline@811..812 "\n"
   Pipeline@812..832
     PipelineElement@812..832
@@ -807,19 +705,7 @@ Root@0..927
         Whitespace@893..894 " "
         Word@894..896 "$x"
         Whitespace@896..897 " "
-        Block@897..908
-          LBrace@897..898 "{"
-          Whitespace@898..899 " "
-          Pipeline@899..906
-            PipelineElement@899..906
-              Call@899..906
-                Word@899..901 "1,"
-                Whitespace@901..902 " "
-                Word@902..904 "=>"
-                Whitespace@904..905 " "
-                Word@905..906 "a"
-          Whitespace@906..907 " "
-          RBrace@907..908 "}"
+        Word@897..908 "{ 1, => a }"
   Newline@908..909 "\n"
   Pipeline@909..926
     PipelineElement@909..926
@@ -828,14 +714,32 @@ Root@0..927
         Whitespace@914..915 " "
         Word@915..917 "$x"
         Whitespace@917..918 " "
-        Record@918..926
-          LBrace@918..919 "{"
-          Whitespace@919..920 " "
-          RecordField@920..924
-            Word@920..921 "a"
-            Colon@921..922 ":"
-            Whitespace@922..923 " "
-            Word@923..924 "1"
-          Whitespace@924..925 " "
-          RBrace@925..926 "}"
+        Word@918..926 "{ a: 1 }"
   Newline@926..927 "\n"
+  Pipeline@927..955
+    PipelineElement@927..955
+      Match@927..955
+        Word@927..932 "match"
+        Whitespace@932..933 " "
+        Word@933..934 "1"
+        Whitespace@934..935 " "
+        MatchArms@935..955
+          LBrace@935..936 "{"
+          MatchArm@936..954
+            Word@936..937 "_"
+            Whitespace@937..938 " "
+            FatArrow@938..940 "=>"
+            Whitespace@940..941 " "
+            Block@941..954
+              LBrace@941..942 "{"
+              Pipeline@942..953
+                PipelineElement@942..953
+                  Call@942..953
+                    Word@942..948 "...$x,"
+                    Whitespace@948..949 " "
+                    Word@949..951 "a:"
+                    Whitespace@951..952 " "
+                    Word@952..953 "1"
+              RBrace@953..954 "}"
+          RBrace@954..955 "}"
+  Newline@955..956 "\n"

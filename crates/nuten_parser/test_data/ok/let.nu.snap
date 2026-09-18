@@ -233,14 +233,7 @@ Root@0..359
       Let@197..211
         Word@197..200 "let"
         Whitespace@200..201 " "
-        Record@201..207
-          LBrace@201..202 "{"
-          RecordField@202..206
-            Word@202..203 "a"
-            Colon@203..204 ":"
-            Whitespace@204..205 " "
-            Word@205..206 "1"
-          RBrace@206..207 "}"
+        Word@201..207 "{a: 1}"
         Whitespace@207..208 " "
         Assign@208..209 "="
         Whitespace@209..210 " "

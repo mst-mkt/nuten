@@ -108,3 +108,8 @@ for it in $items {
 do {
     if $a { 1 } else { 2 } # c
 }
+if true {} else {
+    ...$x, a: 1
+}
+if true {} else [1 2]
+if true {} else { a: 1 }

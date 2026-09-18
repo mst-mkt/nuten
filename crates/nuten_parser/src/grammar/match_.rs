@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{CURLY, is_item, item, shell_operator, token_or_bracketed};
+use super::{CURLY, Shape, is_item, item, shell_operator, value};
 use crate::{lexer::Mode, parser::Parser};
 
 /// How many items a `match` takes when nu reads `items` as one: `match`,
@@ -10,20 +10,21 @@ pub(super) fn match_shape(items: &[&str]) -> Option<usize> {
     (items[0] == "match" && last >= 2 && items[last].starts_with('{')).then_some(items.len())
 }
 
-/// The `Match` of the `len` items ahead: `match`, the subject, and the arms,
-/// a `MatchArms` where nu reads arms.
+/// The `Match` of the `len` items ahead: `match`, the subject, which nu
+/// reads as any value, and the arms, a `MatchArms` where nu reads arms and
+/// otherwise the word as it is, which nu rejects.
 pub(super) fn match_(p: &mut Parser<'_>, len: usize) {
     p.start(SyntaxKind::Match);
     p.bump();
     for _ in 1..len - 1 {
-        item(p, false);
+        item(p, Shape::Any);
     }
     if let Some(bracketed) = p.bracketed(&CURLY, Mode::match_arms())
         && is_arms(bracketed.inner())
     {
         p.bump_bracketed(SyntaxKind::MatchArms, bracketed, arms);
     } else {
-        token_or_bracketed(p, false);
+        p.bump();
     }
     p.finish();
 }
@@ -87,7 +88,7 @@ fn arms(p: &mut Parser<'_>) {
         while p.peek() == Some(SyntaxKind::Newline) {
             p.bump();
         }
-        token_or_bracketed(p, false);
+        value(p, Shape::Block);
         p.finish();
     }
 }

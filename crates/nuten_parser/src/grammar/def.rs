@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{SQUARE, signature::params, token_or_bracketed};
+use super::{SQUARE, Shape, signature::params, value};
 use crate::{
     lexer::Mode,
     parser::{Affix, Parser},
@@ -91,7 +91,7 @@ pub(super) fn def(p: &mut Parser<'_>, shape: &DefShape) {
         }
     }
     if shape.has_body {
-        token_or_bracketed(p, false);
+        value(p, Shape::DefBody);
     }
     p.finish();
 }

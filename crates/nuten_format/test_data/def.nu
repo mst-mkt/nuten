@@ -71,3 +71,5 @@ def tz [a,#c [
 ] {}
 def tz2 [--f = --x (-y)] { ls }
 def tz3 [--f: --x (-y)] { ls }
+def tz4 [] {a: 1}
+def tz5 [] {...$x, a: 1}

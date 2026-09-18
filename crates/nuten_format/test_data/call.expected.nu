@@ -5,3 +5,5 @@ if $x {
     1
 }
 else {  2  }
+^echo [a b] [[a]; [1]]
+echo [a,  b]

@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/if.nu
 ---
-Root@0..538
+Root@0..568
   Pipeline@0..11
     PipelineElement@0..11
       If@0..11
@@ -576,3 +576,26 @@ Root@0..538
                 Word@535..536 "5"
           RBrace@536..537 "}"
   Newline@537..538 "\n"
+  Pipeline@538..567
+    PipelineElement@538..567
+      If@538..567
+        Word@538..540 "if"
+        Whitespace@540..541 " "
+        Word@541..545 "true"
+        Whitespace@545..546 " "
+        Word@546..548 "{}"
+        Whitespace@548..549 " "
+        Word@549..553 "else"
+        Whitespace@553..554 " "
+        Block@554..567
+          LBrace@554..555 "{"
+          Pipeline@555..566
+            PipelineElement@555..566
+              Call@555..566
+                Word@555..561 "...$x,"
+                Whitespace@561..562 " "
+                Word@562..564 "a:"
+                Whitespace@564..565 " "
+                Word@565..566 "1"
+          RBrace@566..567 "}"
+  Newline@567..568 "\n"

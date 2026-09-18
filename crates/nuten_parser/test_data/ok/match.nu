@@ -42,3 +42,4 @@ match $x { 1 => a } o> f.txt
 ls | match $in { 1 => a }
 match $x { 1, => a }
 match $x { a: 1 }
+match 1 {_ => {...$x, a: 1}}

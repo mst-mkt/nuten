@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/control.nu
 ---
-Root@0..687
+Root@0..706
   Pipeline@0..27
     PipelineElement@0..27
       For@0..27
@@ -256,10 +256,7 @@ Root@0..687
         Whitespace@243..244 " "
         Word@244..245 "x"
         Whitespace@245..246 " "
-        List@246..249
-          LBracket@246..247 "["
-          Word@247..248 "1"
-          RBracket@248..249 "]"
+        Word@246..249 "[1]"
         Whitespace@249..250 " "
         Block@250..256
           LBrace@250..251 "{"
@@ -280,10 +277,7 @@ Root@0..687
         Whitespace@262..263 " "
         Word@263..265 "in"
         Whitespace@265..266 " "
-        List@266..269
-          LBracket@266..267 "["
-          Word@267..268 "1"
-          RBracket@268..269 "]"
+        Word@266..269 "[1]"
   Newline@269..270 "\n"
   Pipeline@270..289
     PipelineElement@270..289
@@ -710,3 +704,20 @@ Root@0..687
       Call@682..686
         Word@682..686 "loop"
   Newline@686..687 "\n"
+  Pipeline@687..705
+    PipelineElement@687..705
+      Loop@687..705
+        Word@687..691 "loop"
+        Whitespace@691..692 " "
+        Block@692..705
+          LBrace@692..693 "{"
+          Pipeline@693..704
+            PipelineElement@693..704
+              Call@693..704
+                Word@693..699 "...$x,"
+                Whitespace@699..700 " "
+                Word@700..702 "a:"
+                Whitespace@702..703 " "
+                Word@703..704 "1"
+          RBrace@704..705 "}"
+  Newline@705..706 "\n"

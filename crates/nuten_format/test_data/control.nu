@@ -35,3 +35,9 @@ try { ls } catch { # c
 do { try { 1 } catch { 2 }; }
 for x: int in [1] { print $x }
 for {a} in [1] { ls }
+for x in [1,  2] { print $x }
+if [1,  2] == $x { 1 }
+while [1,  2] == $x { 1 }
+if true {...$x, a: 1}
+for x in [1] {...$x,  a: 1}
+try {...$x} catch {...$x, a: 1}

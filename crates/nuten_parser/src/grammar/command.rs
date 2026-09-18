@@ -1,13 +1,14 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
+    Shape,
     control::{control, control_shape},
     def::{def, def_shape},
     ends_call, ends_element,
     if_::{if_, if_chain},
     is_file_redirection, is_item, item,
     match_::{match_, match_shape},
-    shell_operator, token_or_bracketed,
+    shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
 
@@ -18,29 +19,31 @@ pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     let has_call = !p
         .peek()
         .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
+    // Nu runs `else` and `catch` at the start of a statement as external
+    // commands.
     let external = p
         .peek_text()
         .is_some_and(|head| head.starts_with('^') || matches!(head, "else" | "catch"));
+    let shape = if external {
+        Shape::ExternalArgument
+    } else {
+        Shape::Argument
+    };
     if has_call {
         let items = keyword_items(p);
         if let Some(chain) = items.as_deref().and_then(if_chain) {
             if_(p, &chain);
-        } else if let Some(shape) = items.as_deref().and_then(control_shape) {
-            control(p, &shape);
+        } else if let Some(flow) = items.as_deref().and_then(control_shape) {
+            control(p, &flow);
         } else if let Some(len) = items.as_deref().and_then(match_shape) {
             match_(p, len);
-        } else if let Some(shape) = items.as_deref().and_then(def_shape) {
-            def(p, &shape);
+        } else if let Some(definition) = items.as_deref().and_then(def_shape) {
+            def(p, &definition);
         } else {
-            call(p, external);
+            call(p, shape);
         }
     }
-    arguments(
-        p,
-        has_call.then_some(Streams::default()),
-        external,
-        assigning,
-    )
+    arguments(p, has_call.then_some(Streams::default()), shape, assigning)
 }
 
 /// The texts of the items ahead that a call takes, when the first is a word
@@ -65,26 +68,28 @@ fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
         .collect()
 }
 
-fn call(p: &mut Parser<'_>, external: bool) {
-    p.start(if external {
+/// The head, which nu reads as any value, then the arguments as `shape`.
+fn call(p: &mut Parser<'_>, shape: Shape) {
+    p.start(if shape == Shape::ExternalArgument {
         SyntaxKind::ExternalCall
     } else {
         SyntaxKind::Call
     });
+    item(p, Shape::Any);
     while p.peek().is_some_and(|kind| !ends_call(kind)) {
-        item(p, external);
+        item(p, shape);
     }
     p.finish();
 }
 
-/// Items and `Redirection`s up to the end of the element, or up to an
-/// assignment operator when `assigning`. `redirected` is what the element
-/// redirects so far; `None` when it has no command. Returns what it
+/// Items as `shape` and `Redirection`s up to the end of the element, or up
+/// to an assignment operator when `assigning`. `redirected` is what the
+/// element redirects so far; `None` when it has no command. Returns what it
 /// redirects then.
 pub(super) fn arguments(
     p: &mut Parser<'_>,
     mut redirected: Option<Streams>,
-    external: bool,
+    shape: Shape,
     assigning: bool,
 ) -> Option<Streams> {
     while let Some(kind) = p.peek() {
@@ -99,7 +104,7 @@ pub(super) fn arguments(
                     p.bump();
                 }
             },
-            _ => item(p, external),
+            _ => item(p, shape),
         }
     }
     redirected
@@ -131,7 +136,7 @@ fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Str
         None => p.bump(),
     }
     if has_target {
-        token_or_bracketed(p, false);
+        value(p, Shape::Any);
     }
     p.finish();
 }

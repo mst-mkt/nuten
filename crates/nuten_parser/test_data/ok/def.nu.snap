@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/def.nu
 ---
-Root@0..1483
+Root@0..1506
   Pipeline@0..15
     PipelineElement@0..15
       Def@0..15
@@ -382,9 +382,7 @@ Root@0..1483
         Whitespace@497..498 " "
         String@498..504 "\"p[q]\""
         Whitespace@504..505 " "
-        List@505..507
-          LBracket@505..506 "["
-          RBracket@506..507 "]"
+        Word@505..507 "[]"
         Whitespace@507..508 " "
         Block@508..514
           LBrace@508..509 "{"
@@ -403,9 +401,7 @@ Root@0..1483
         Whitespace@518..519 " "
         Word@519..520 "q"
         Whitespace@520..521 " "
-        List@521..523
-          LBracket@521..522 "["
-          RBracket@522..523 "]"
+        Word@521..523 "[]"
         Whitespace@523..524 " "
         Word@524..526 "{}"
         Whitespace@526..527 " "
@@ -450,9 +446,7 @@ Root@0..1483
         Whitespace@565..566 " "
         Word@566..567 "t"
         Whitespace@567..568 " "
-        List@568..570
-          LBracket@568..569 "["
-          RBracket@569..570 "]"
+        Word@568..570 "[]"
         Whitespace@570..571 " "
         Word@571..576 "--env"
         Whitespace@576..577 " "
@@ -1286,3 +1280,26 @@ Root@0..1483
           Whitespace@1480..1481 " "
           RBrace@1481..1482 "}"
   Newline@1482..1483 "\n"
+  Pipeline@1483..1505
+    PipelineElement@1483..1505
+      Def@1483..1505
+        Word@1483..1486 "def"
+        Whitespace@1486..1487 " "
+        Word@1487..1488 "s"
+        Whitespace@1488..1489 " "
+        Signature@1489..1491
+          LBracket@1489..1490 "["
+          RBracket@1490..1491 "]"
+        Whitespace@1491..1492 " "
+        Block@1492..1505
+          LBrace@1492..1493 "{"
+          Pipeline@1493..1504
+            PipelineElement@1493..1504
+              Call@1493..1504
+                Word@1493..1499 "...$x,"
+                Whitespace@1499..1500 " "
+                Word@1500..1502 "a:"
+                Whitespace@1502..1503 " "
+                Word@1503..1504 "1"
+          RBrace@1504..1505 "}"
+  Newline@1505..1506 "\n"

@@ -71,3 +71,16 @@ match $x {
 match 1 {1 => a,#c [
 ] => b
 }
+match { a: 1 } {
+    _ => 1
+}
+match $x {1 => a b}
+match [1 2] {
+    1 => a
+}
+match 1 {
+    _ => { ...$x, a: 1 }
+}
+match 1 {
+    _ => [1 2]
+}
