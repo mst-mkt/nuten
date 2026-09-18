@@ -127,8 +127,12 @@ fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
         SyntaxKind::MatchArms => arms(src, node),
         SyntaxKind::MatchArm => arm(src, node),
         SyntaxKind::Def => def(src, node),
-        SyntaxKind::List | SyntaxKind::Record if reads_as_value(node) => container(src, node),
-        SyntaxKind::List | SyntaxKind::Record => vec![text(&src[node.text_range()])],
+        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Table if reads_as_value(node) => {
+            container(src, node)
+        },
+        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Table => {
+            vec![text(&src[node.text_range()])]
+        },
         SyntaxKind::Signature => container(src, node),
         SyntaxKind::Param => param(src, node),
         SyntaxKind::Type => type_(src, node),
@@ -285,13 +289,16 @@ fn align_after_pipe(
     }
 }
 
-/// Whether nu reads `node`, a list or a record, as one whatever the command:
-/// as the head of a command, as an element of a list, or as the value of a
-/// field. Elsewhere, such as an argument, a command may read it as a string.
+/// Whether nu reads `node`, a list, a record, or a table, as one whatever the
+/// command: as the head of a command, as an item of a list or a table, as the
+/// value of a field, or as what a `match` arm does. Elsewhere, such as an
+/// argument, a command may read it as a string.
 fn reads_as_value(node: &SyntaxNode) -> bool {
     node.parent().is_some_and(|parent| match parent.kind() {
         // Only a value of a field is a node, and only what an arm does.
-        SyntaxKind::List | SyntaxKind::RecordField | SyntaxKind::MatchArm => true,
+        SyntaxKind::List | SyntaxKind::Table | SyntaxKind::RecordField | SyntaxKind::MatchArm => {
+            true
+        },
         SyntaxKind::Call => {
             parent
                 .first_child_or_token()
@@ -302,12 +309,15 @@ fn reads_as_value(node: &SyntaxNode) -> bool {
     })
 }
 
-/// A list, a record, or the parameters of a `def`, unless it stays as it is.
-/// On one line when it fits, no line break comes right after the opening
-/// bracket, and no comment is inside, with no space inside the brackets of a
-/// list and one inside those of a record; otherwise one item per line,
-/// indented, with the closing bracket on a line of its own. A `,` is dropped.
-/// A blank line between items stays.
+/// A list, a record, a table, or the parameters of a `def`, unless it stays
+/// as it is. On one line when it fits, no line break comes right after the
+/// opening bracket, and no comment is inside, with no space inside the
+/// brackets of a list and one inside those of a record; otherwise one item
+/// per line, indented, with the closing bracket on a line of its own. A table
+/// is laid out as a list of its rows, but its column names and, glued to
+/// them, their `;` stay on the line of the opening bracket, one space before
+/// the rows on one line, and a line break right after the `;` expands it too.
+/// A `,` is dropped. A blank line between items stays.
 fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
     if stays_as_is(src, container) {
         return vec![text(&src[container.text_range()])];
@@ -315,14 +325,34 @@ fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
     let (Some(open), Some(close)) = (container.first_token(), container.last_token()) else {
         unreachable!("a container has brackets");
     };
-    let padding = if container.kind() == SyntaxKind::Record {
+    let mut children = children(container).skip(1).peekable();
+    // A line break right after the opening bracket.
+    let mut expand = children.peek().is_some_and(|child| child.newlines > 0);
+    let mut head = vec![token(src, &open)];
+    let closing = if container.kind() == SyntaxKind::Record {
         soft_line_break_or_space
     } else {
         soft_line_break
     };
-    let mut children = children(container).skip(1).peekable();
-    // A line break right after the opening bracket.
-    let mut expand = children.peek().is_some_and(|child| child.newlines > 0);
+    let opening = if container.kind() == SyntaxKind::Table {
+        // The parser puts the column names and their `;` first, with nothing
+        // between.
+        let (Some(names), Some(semicolon)) = (children.next(), children.next()) else {
+            unreachable!("a table has column names and a `;`");
+        };
+        match &names.element {
+            SyntaxElement::Node(names) => head.extend(node(src, names)),
+            SyntaxElement::Token(names) => head.push(token(src, names)),
+        }
+        let SyntaxElement::Token(semicolon) = &semicolon.element else {
+            unreachable!("a table has a `;` after its column names");
+        };
+        head.push(token(src, semicolon));
+        expand |= children.peek().is_some_and(|child| child.newlines > 0);
+        soft_line_break_or_space
+    } else {
+        closing
+    };
     let mut inner = Vec::new();
     let mut prev = None;
     // The most line breaks before a `,` dropped since the last item, which
@@ -336,7 +366,7 @@ fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
         let newlines = newlines.max(mem::take(&mut dropped));
         let kind = element.kind();
         let separator = || match prev {
-            None => padding(),
+            None => opening(),
             Some(_) if newlines > 1 => empty_line(),
             // After a comment, the container is expanded, so the line break
             // comes anyway.
@@ -375,14 +405,13 @@ fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element<'a>> {
         prev = Some(kind);
     }
     if inner.is_empty() {
-        return vec![token(src, &open), token(src, &close)];
+        head.push(token(src, &close));
+        return head;
     }
-    let mut out = vec![
-        token(src, &open),
-        indent(inner),
-        padding(),
-        token(src, &close),
-    ];
+    let mut out = head;
+    out.push(indent(inner));
+    out.push(closing());
+    out.push(token(src, &close));
     if expand {
         out.push(expand_parent());
     }

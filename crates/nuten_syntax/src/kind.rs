@@ -164,6 +164,14 @@ syntax_kinds! {
     /// It stays a `Word` when its `[` closes before its end, when lexing what
     /// it holds gives an `Error` or `;` token, or when brackets nest too deep.
     List,
+    /// A `Word` enclosed in `[ ]` that nu reads as a table: `[`, the column
+    /// names, the `;` right after them, the rows, any `,` among them, and
+    /// `]`. The names and each row are a `List`, or a `Word` when they hold
+    /// a `;`, which nu reads as no table there. It stays a `Word` as a `List`
+    /// does, as an argument of a `^` command, where nu reads a list, and when
+    /// anything else comes before the `;`, when another `;` or an item not in
+    /// `[ ]` follows it, or when nothing does.
+    Table,
     /// A `Word` enclosed in `{ }` that nu reads as a record where it takes
     /// any value: `{`, its fields and spreads, and `}`. Elsewhere, such as a
     /// `def` body or an argument of an external command, nu may read it
