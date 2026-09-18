@@ -80,7 +80,7 @@ fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Str
     p.start(SyntaxKind::Redirection);
     let has_target =
         p.nth(1).is_some_and(is_item) && p.nth_text(1).and_then(shell_operator).is_none();
-    let streams = Streams::of(kind);
+    let streams = Streams::redirected_by(kind);
     let error = match redirected {
         None => Some(ParseErrorKind::RedirectionAtHead),
         Some(_) if !has_target => Some(ParseErrorKind::MissingRedirectionTarget),
@@ -111,7 +111,7 @@ pub(super) struct Streams {
 }
 
 impl Streams {
-    pub(super) fn of(kind: SyntaxKind) -> Streams {
+    pub(super) fn redirected_by(kind: SyntaxKind) -> Streams {
         let (out, err) = match kind {
             SyntaxKind::OutGt | SyntaxKind::OutGtGt => (true, false),
             SyntaxKind::ErrGt | SyntaxKind::ErrGtGt | SyntaxKind::ErrGtPipe => (false, true),

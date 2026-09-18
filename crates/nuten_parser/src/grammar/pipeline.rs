@@ -42,7 +42,7 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>, assigned
         // Nu goes on to the next line only after a plain `|`.
         _ => match element {
             None => p.bump_error(ParseErrorKind::RedirectionAtHead),
-            Some(redirected) if redirected.overlaps(Streams::of(kind)) => {
+            Some(redirected) if redirected.overlaps(Streams::redirected_by(kind)) => {
                 p.bump_error(ParseErrorKind::MultipleRedirections);
             },
             Some(_) => p.bump(),
