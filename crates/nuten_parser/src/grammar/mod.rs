@@ -6,6 +6,7 @@ mod command;
 mod control;
 mod def;
 mod if_;
+mod keyword;
 mod list;
 mod match_;
 mod pipeline;
@@ -166,6 +167,15 @@ fn ends_element(kind: SyntaxKind) -> bool {
 
 fn ends_call(kind: SyntaxKind) -> bool {
     is_file_redirection(kind) || kind == SyntaxKind::Assign || ends_element(kind)
+}
+
+/// The texts of the items ahead that a call takes.
+fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
+    p.remaining_tokens()
+        .filter(|(token, _)| !matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
+        .take_while(|(token, _)| !ends_call(token.kind))
+        .map(|(_, text)| text)
+        .collect()
 }
 
 fn is_pipe(kind: SyntaxKind) -> bool {

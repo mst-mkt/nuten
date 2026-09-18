@@ -1,19 +1,15 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{CURLY, Shape, is_item, item, shell_operator, value};
+use super::{CURLY, Shape, call_items, is_item, item, shell_operator, value};
 use crate::{lexer::Mode, parser::Parser};
 
-/// How many items a `match` takes when nu reads `items` as one: `match`,
-/// the subject, and the arms in braces last.
-pub(super) fn match_shape(items: &[&str]) -> Option<usize> {
-    let last = items.len().checked_sub(1)?;
-    (items[0] == "match" && last >= 2 && items[last].starts_with('{')).then_some(items.len())
-}
-
-/// The `Match` of the `len` items ahead: `match`, the subject, which nu
-/// reads as any value, and the arms, a `MatchArms` where nu reads arms and
-/// otherwise the word as it is, which nu rejects.
-pub(super) fn match_(p: &mut Parser<'_>, len: usize) {
+/// The `Match` ahead, when nu reads the call as one: `match`, the subject,
+/// which nu reads as any value, and the arms, a `MatchArms` where nu reads
+/// arms and otherwise the word as it is, which nu rejects.
+pub(super) fn match_(p: &mut Parser<'_>) -> bool {
+    let Some(len) = match_shape(&call_items(p)) else {
+        return false;
+    };
     p.start(SyntaxKind::Match);
     p.bump();
     for _ in 1..len - 1 {
@@ -27,6 +23,14 @@ pub(super) fn match_(p: &mut Parser<'_>, len: usize) {
         p.bump();
     }
     p.finish();
+    true
+}
+
+/// How many items a `match` takes when nu reads `items`, `match` first, as
+/// one: the subject, and the arms in braces last.
+fn match_shape(items: &[&str]) -> Option<usize> {
+    let last = items.len().checked_sub(1)?;
+    (last >= 2 && items[last].starts_with('{')).then_some(items.len())
 }
 
 /// Whether the `{ }` of a `match` holds arms as nu reads them, near enough:

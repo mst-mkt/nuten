@@ -1,13 +1,7 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape,
-    control::{control, control_shape},
-    def::{def, def_shape},
-    ends_call, ends_element,
-    if_::{if_, if_chain},
-    is_file_redirection, is_item, item,
-    match_::{match_, match_shape},
+    Shape, ends_call, ends_element, is_file_redirection, is_item, item, keyword::keyword,
     shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
@@ -29,43 +23,10 @@ pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     } else {
         Shape::Argument
     };
-    if has_call {
-        let items = keyword_items(p);
-        if let Some(chain) = items.as_deref().and_then(if_chain) {
-            if_(p, &chain);
-        } else if let Some(flow) = items.as_deref().and_then(control_shape) {
-            control(p, &flow);
-        } else if let Some(len) = items.as_deref().and_then(match_shape) {
-            match_(p, len);
-        } else if let Some(definition) = items.as_deref().and_then(def_shape) {
-            def(p, &definition);
-        } else {
-            call(p, shape);
-        }
+    if has_call && !keyword(p) {
+        call(p, shape);
     }
     arguments(p, has_call.then_some(Streams::default()), shape, assigning)
-}
-
-/// The texts of the items ahead that a call takes, when the first is a word
-/// that starts a syntax of its own.
-fn keyword_items<'a>(p: &Parser<'a>) -> Option<Vec<&'a str>> {
-    let head = p.peek_text()?;
-    if !matches!(
-        head,
-        "if" | "for" | "while" | "loop" | "try" | "match" | "def" | "extern" | "export"
-    ) {
-        return None;
-    }
-    Some(call_items(p))
-}
-
-/// The texts of the items ahead that a call takes.
-fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
-    p.remaining_tokens()
-        .filter(|(token, _)| !matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
-        .take_while(|(token, _)| !ends_call(token.kind))
-        .map(|(_, text)| text)
-        .collect()
 }
 
 /// The head, which nu reads as any value, then the arguments as `shape`.

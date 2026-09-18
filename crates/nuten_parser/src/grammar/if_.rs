@@ -1,11 +1,38 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{Shape, item, value};
+use super::{Shape, call_items, item, value};
 use crate::parser::Parser;
+
+/// The `If` ahead, when nu reads the call as one.
+pub(super) fn if_(p: &mut Parser<'_>) -> bool {
+    let Some(chain) = if_chain(&call_items(p)) else {
+        return false;
+    };
+    p.start(SyntaxKind::If);
+    let mut at = 0;
+    for link in &chain {
+        p.bump();
+        for _ in at + 1..link.body {
+            item(p, Shape::Any);
+        }
+        value(p, Shape::Block);
+        at = link.body + 1;
+        if link.has_else {
+            p.bump();
+            at += 1;
+        }
+    }
+    // The one item after the last `else`.
+    if chain.last().is_some_and(|link| link.has_else) {
+        item(p, Shape::Block);
+    }
+    p.finish();
+    true
+}
 
 /// One `if` of a chain: where its body is among the items of the chain, and
 /// whether `else` follows the body.
-pub(super) struct IfLink {
+struct IfLink {
     body: usize,
     has_else: bool,
 }
@@ -13,7 +40,7 @@ pub(super) struct IfLink {
 /// The `if`s that `items` make when nu reads them as one, in order: each is
 /// `if`, a condition, and a body in braces right before its first `else` or
 /// last, and after its `else` comes one item or the next `if`.
-pub(super) fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
+fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
     let mut chain = Vec::new();
     let mut start = 0;
     loop {
@@ -40,27 +67,4 @@ pub(super) fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
             Some(_) => start += body + 2,
         }
     }
-}
-
-/// The `If` of `chain`, which `if_chain` gave for the items ahead.
-pub(super) fn if_(p: &mut Parser<'_>, chain: &[IfLink]) {
-    p.start(SyntaxKind::If);
-    let mut at = 0;
-    for link in chain {
-        p.bump();
-        for _ in at + 1..link.body {
-            item(p, Shape::Any);
-        }
-        value(p, Shape::Block);
-        at = link.body + 1;
-        if link.has_else {
-            p.bump();
-            at += 1;
-        }
-    }
-    // The one item after the last `else`.
-    if chain.last().is_some_and(|link| link.has_else) {
-        item(p, Shape::Block);
-    }
-    p.finish();
 }

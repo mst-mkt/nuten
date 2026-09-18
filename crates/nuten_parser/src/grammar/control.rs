@@ -1,18 +1,40 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{Shape, item, value};
+use super::{Shape, call_items, item, value};
 use crate::parser::Parser;
+
+/// The `For`, `While`, `Loop`, or `Try` ahead, when nu reads the call as
+/// one.
+pub(super) fn control(p: &mut Parser<'_>) -> bool {
+    let Some(shape) = control_shape(&call_items(p)) else {
+        return false;
+    };
+    p.start(shape.kind);
+    p.bump();
+    for at in 1..shape.len {
+        if at + 1 == shape.len || (shape.has_catch && at == 1) {
+            value(p, Shape::Block);
+        } else if shape.kind == SyntaxKind::For && at == 1 {
+            // The variable, which nu never reads as a value, braces or not.
+            p.bump();
+        } else {
+            item(p, Shape::Any);
+        }
+    }
+    p.finish();
+    true
+}
 
 /// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of
 /// a call, when nu reads them as one: the last item is a body, and so is the
 /// second when `catch` follows it.
-pub(super) struct ControlShape {
+struct ControlShape {
     kind: SyntaxKind,
     len: usize,
     has_catch: bool,
 }
 
-pub(super) fn control_shape(items: &[&str]) -> Option<ControlShape> {
+fn control_shape(items: &[&str]) -> Option<ControlShape> {
     let braced = |at: usize| items.get(at).is_some_and(|item| item.starts_with('{'));
     let last = items.len().checked_sub(1)?;
     if last == 0 || !braced(last) {
@@ -34,21 +56,4 @@ pub(super) fn control_shape(items: &[&str]) -> Option<ControlShape> {
         len: items.len(),
         has_catch,
     })
-}
-
-/// The node of `shape`, which `control_shape` gave for the items ahead.
-pub(super) fn control(p: &mut Parser<'_>, shape: &ControlShape) {
-    p.start(shape.kind);
-    p.bump();
-    for at in 1..shape.len {
-        if at + 1 == shape.len || (shape.has_catch && at == 1) {
-            value(p, Shape::Block);
-        } else if shape.kind == SyntaxKind::For && at == 1 {
-            // The variable, which nu never reads as a value, braces or not.
-            p.bump();
-        } else {
-            item(p, Shape::Any);
-        }
-    }
-    p.finish();
 }

@@ -1,16 +1,52 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{SQUARE, Shape, signature::params, value};
+use super::{SQUARE, Shape, call_items, signature::params, value};
 use crate::{
     lexer::Mode,
     parser::{Affix, Parser},
 };
 
+/// The `Def` ahead, when nu reads the call as one.
+pub(super) fn def(p: &mut Parser<'_>) -> bool {
+    let Some(shape) = def_shape(&call_items(p)) else {
+        return false;
+    };
+    p.start(SyntaxKind::Def);
+    for _ in 0..shape.signature {
+        p.bump();
+    }
+    let affix = if shape.attached_colon {
+        Affix::Suffix(SyntaxKind::Colon)
+    } else {
+        Affix::None
+    };
+    match p.bracketed_affixed(&SQUARE, Mode::signature(), affix) {
+        Some(bracketed) => p.bump_bracketed(SyntaxKind::Signature, bracketed, params),
+        None => p.bump(),
+    }
+    // The input and output types stay as they are; only the body is a block.
+    let types = shape.rest - usize::from(shape.has_body);
+    for at in 0..types {
+        // The `:` nu takes for the one the types follow, which the formatter
+        // moves to the parameters.
+        if at == 0 && !shape.attached_colon && p.peek_text() == Some(":") {
+            p.bump_as(SyntaxKind::Colon);
+        } else {
+            p.bump();
+        }
+    }
+    if shape.has_body {
+        value(p, Shape::DefBody);
+    }
+    p.finish();
+    true
+}
+
 /// Where the parts of a `def` or an `extern` are among `items`, when nu reads
 /// them as one: the keyword, `export` before it if there, then flags, the
 /// name, the parameters in `[ ]`, the input and output types after a `:`, and
 /// the body, which only a `def` has and which nu takes from the last item.
-pub(super) struct DefShape {
+struct DefShape {
     /// Where the parameters are, the items before them being the keyword,
     /// any flags, and the name.
     signature: usize,
@@ -22,7 +58,7 @@ pub(super) struct DefShape {
     has_body: bool,
 }
 
-pub(super) fn def_shape(items: &[&str]) -> Option<DefShape> {
+fn def_shape(items: &[&str]) -> Option<DefShape> {
     let mut at = usize::from(*items.first()? == "export");
     let external = match *items.get(at)? {
         "def" => false,
@@ -62,36 +98,4 @@ pub(super) fn def_shape(items: &[&str]) -> Option<DefShape> {
         rest,
         has_body,
     })
-}
-
-/// The `Def` of `shape`, which `def_shape` gave for the items ahead.
-pub(super) fn def(p: &mut Parser<'_>, shape: &DefShape) {
-    p.start(SyntaxKind::Def);
-    for _ in 0..shape.signature {
-        p.bump();
-    }
-    let affix = if shape.attached_colon {
-        Affix::Suffix(SyntaxKind::Colon)
-    } else {
-        Affix::None
-    };
-    match p.bracketed_affixed(&SQUARE, Mode::signature(), affix) {
-        Some(bracketed) => p.bump_bracketed(SyntaxKind::Signature, bracketed, params),
-        None => p.bump(),
-    }
-    // The input and output types stay as they are; only the body is a block.
-    let types = shape.rest - usize::from(shape.has_body);
-    for at in 0..types {
-        // The `:` nu takes for the one the types follow, which the formatter
-        // moves to the parameters.
-        if at == 0 && !shape.attached_colon && p.peek_text() == Some(":") {
-            p.bump_as(SyntaxKind::Colon);
-        } else {
-            p.bump();
-        }
-    }
-    if shape.has_body {
-        value(p, Shape::DefBody);
-    }
-    p.finish();
 }
