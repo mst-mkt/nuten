@@ -103,3 +103,6 @@ echo {
   |x| $x}
 echo {
 || 1}
+echo {ls;#c [
+]
+}

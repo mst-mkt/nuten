@@ -151,3 +151,6 @@ def ty [
 ] {
     ls
 }
+def tz [a,#c [
+]
+] {}

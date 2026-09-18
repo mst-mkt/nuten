@@ -5,7 +5,7 @@ use nuten_doc::{
     soft_line_break_or_space, space, text,
 };
 use nuten_parser::lexer::{self, Mode};
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
+use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 use rowan::TextRange;
 
 use super::{Child, children, comment, node, token};
@@ -139,16 +139,12 @@ pub(super) fn container<'a>(src: &'a str, container: &SyntaxNode) -> Vec<Element
     vec![group(out)]
 }
 
-/// Whether `container` stays as it is: never for parameters, where nu starts
-/// a comment at the start of a token whatever comes before it, so that a
-/// space added before a `#` changes nothing. Otherwise a comment inside keeps
-/// it so, or, for a record, dropping a `,` would change the first two tokens
-/// nu looks at to tell a record from a closure, which it lexes with `,` as no
-/// whitespace.
+/// Whether `container` stays as it is: a comment inside ending in a lone
+/// `\r` keeps it so, since the line break printed after the comment would
+/// make that `\r` part of the line break. Otherwise, for a record, dropping
+/// a `,` would change the first two tokens nu looks at to tell a record from
+/// a closure, which it lexes with `,` as no whitespace.
 fn stays_as_is(src: &str, container: &SyntaxNode) -> bool {
-    if container.kind() == SyntaxKind::Signature {
-        return false;
-    }
     let kept_by_comment = container
         .children_with_tokens()
         .flat_map(|child| {
@@ -160,7 +156,7 @@ fn stays_as_is(src: &str, container: &SyntaxNode) -> bool {
             own.into_iter().chain(field.into_iter().flatten())
         })
         .filter_map(SyntaxElement::into_token)
-        .any(|token| token.kind() == SyntaxKind::Comment && keeps_as_is(&token));
+        .any(|token| token.kind() == SyntaxKind::Comment && token.text().ends_with('\r'));
     kept_by_comment || container.kind() == SyntaxKind::Record && !keeps_first_tokens(src, container)
 }
 
@@ -192,17 +188,6 @@ fn keeps_first_tokens(src: &str, record: &SyntaxNode) -> bool {
         })
         .map(|token| token.text().to_owned());
     source.take(2).eq(output.take(2))
-}
-
-/// Whether `comment` makes the list or record it is in stay as it is. Right
-/// after anything but whitespace, nu does not start a comment when it reads
-/// the word the list or record is in, so a space put before it may move where
-/// the word ends. A lone `\r` at its end would become part of a line break.
-fn keeps_as_is(comment: &SyntaxToken) -> bool {
-    comment.text().ends_with('\r')
-        || comment
-            .prev_sibling_or_token()
-            .is_some_and(|prev| !prev.kind().is_trivia())
 }
 
 /// A key, its `:` right after it, and its value one space after that. What

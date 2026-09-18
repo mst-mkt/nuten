@@ -290,7 +290,11 @@ impl<'a> Parser<'a> {
     }
 
     /// Emits the next token as a `node`: its opening bracket, the events
-    /// `items` makes of what it holds, and its closing bracket.
+    /// `items` makes of what it holds, and its closing bracket. The token
+    /// stays a `Word` when a comment inside has no whitespace before its `#`:
+    /// nu reads the word with that `#` as no comment and counts the brackets
+    /// in its text, so whitespace put before the `#` may move where the word
+    /// ends.
     ///
     /// # Panics
     ///
@@ -349,6 +353,10 @@ impl<'a> Parser<'a> {
             Some(token),
             "bump_bracketed at another token"
         );
+        if has_glued_comment(self.src, &inner.tokens) {
+            self.bump();
+            return 0;
+        }
         let (open, _, close) = split(range);
         self.start(node);
         self.pos += 1;
@@ -503,6 +511,19 @@ fn is_skipped(kind: SyntaxKind) -> bool {
     matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment)
 }
 
+/// Whether a comment among `tokens`, the inside of a bracketed word of
+/// `src`, has no whitespace before its `#`, which the lexer reads as no
+/// comment when it reads the word.
+fn has_glued_comment(src: &str, tokens: &[Token]) -> bool {
+    tokens
+        .iter()
+        .filter(|token| token.kind == SyntaxKind::Comment)
+        .any(|comment| {
+            let before = usize::from(comment.range.start()).checked_sub(1);
+            !lexer::starts_comment_after(before.map(|at| src.as_bytes()[at]))
+        })
+}
+
 /// The first byte of `range`, what lies between, and the last byte.
 fn split(range: TextRange) -> (TextRange, TextRange, TextRange) {
     let one = TextSize::new(1);
@@ -570,6 +591,37 @@ mod tests {
         );
         assert_eq!(p.errors, 0);
         assert_eq!(p.peek(), None);
+    }
+
+    #[test]
+    fn bump_bracketed_keeps_a_word_holding_a_comment_with_no_whitespace_before_it() {
+        for src in ["[a,#c]", "[a;#c\n]", "[a #c\n,#d]", "[#c\n]"] {
+            let mut p = parser(src);
+            let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
+            p.bump_bracketed(SyntaxKind::List, bracketed, |_| {});
+            assert_eq!(
+                p.events,
+                [Event::Token(Token {
+                    kind: SyntaxKind::Word,
+                    range: TextRange::up_to(TextSize::of(src)),
+                })],
+                "{src:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn bump_bracketed_expands_a_word_holding_a_comment_after_whitespace() {
+        for src in ["[a #c\n]", "[a\n#c\n]", "[ #c\n]"] {
+            let mut p = parser(src);
+            let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
+            p.bump_bracketed(SyntaxKind::List, bracketed, |p| {
+                while p.peek().is_some() {
+                    p.bump();
+                }
+            });
+            assert_eq!(p.events[0], Event::Start(SyntaxKind::List), "{src:?}");
+        }
     }
 
     #[test]

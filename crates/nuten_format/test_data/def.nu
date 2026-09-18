@@ -66,3 +66,6 @@ extern tw [x: record<a:int>]
 def tx [x: record<a:>] { ls }
 def ty [x # c
 : int] { ls }
+def tz [a,#c [
+]
+] {}

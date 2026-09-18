@@ -325,7 +325,7 @@ impl<'a> Lexer<'a> {
             let prev = self.src[start..at].last().copied();
             self.pos += 1;
             match byte {
-                b'#' if prev.is_none_or(|b| char::from(b).is_whitespace()) => {
+                b'#' if starts_comment_after(prev) => {
                     self.comment_in_item(closers.is_empty());
                 },
                 b'\'' | b'"' | b'`' => {
@@ -450,6 +450,14 @@ impl<'a> Lexer<'a> {
         self.pos += offset + closer.len();
         Ok(())
     }
+}
+
+/// Whether a `#` inside an item starts a comment, given the byte before it:
+/// nu takes it as one only after whitespace, as it does at the start of an
+/// item. A byte is whitespace as the Latin-1 character it stands for, as nu
+/// checks it.
+pub(crate) fn starts_comment_after(prev: Option<u8>) -> bool {
+    prev.is_none_or(|byte| char::from(byte).is_whitespace())
 }
 
 fn operator_kind(text: &[u8]) -> Option<SyntaxKind> {
