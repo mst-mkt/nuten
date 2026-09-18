@@ -48,7 +48,7 @@ pub(super) fn record_sign<'a>(
 ) -> Option<RecordSign> {
     let mut tokens = tokens.filter(|(token, _)| !token.kind.is_trivia());
     match (tokens.next(), tokens.next()) {
-        (Some((first, text)), _) if is_pipe_to_nu(first.kind, text) => None,
+        (Some((first, text)), _) if nu_lexes_as_pipe(first.kind, text) => None,
         (_, Some((second, _))) if second.kind == SyntaxKind::Colon => Some(RecordSign::ColonSecond),
         (Some((_, text)), _) => is_spread(text).then_some(RecordSign::SpreadFirst),
         (None, _) => None,
@@ -57,7 +57,7 @@ pub(super) fn record_sign<'a>(
 
 /// Whether nu's lexer makes a pipe of the token: `|`, `||`, and what it
 /// reports as a mistaken pipe.
-fn is_pipe_to_nu(kind: SyntaxKind, text: &str) -> bool {
+fn nu_lexes_as_pipe(kind: SyntaxKind, text: &str) -> bool {
     matches!(kind, SyntaxKind::Pipe | SyntaxKind::PipePipe)
         || matches!(text, "o>|" | "out>|" | "&&" | "2>&1")
 }
