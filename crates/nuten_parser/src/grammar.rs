@@ -222,19 +222,22 @@ fn assignment_ahead(p: &Parser<'_>) -> bool {
     false
 }
 
-/// A `Call`, an `ExternalCall`, or an `If`, then its arguments. Returns the
-/// streams it redirects; `None` when there is no command.
+/// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its
+/// arguments. Returns the streams it redirects; `None` when there is no
+/// command.
 fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     let has_call = !p
         .peek()
         .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
     let external = p
         .peek_text()
-        .is_some_and(|head| head.starts_with('^') || head == "else");
+        .is_some_and(|head| head.starts_with('^') || matches!(head, "else" | "catch"));
     if has_call {
         let items = keyword_items(p);
         if let Some(chain) = items.as_deref().and_then(if_chain) {
             if_(p, &chain);
+        } else if let Some(shape) = items.as_deref().and_then(control_shape) {
+            control(p, &shape);
         } else if let Some(shape) = items.as_deref().and_then(def_shape) {
             def(p, &shape);
         } else {
@@ -253,10 +256,63 @@ fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
 /// that starts a syntax of its own.
 fn keyword_items<'a>(p: &Parser<'a>) -> Option<Vec<&'a str>> {
     let head = p.peek_text()?;
-    if !matches!(head, "if" | "def" | "extern" | "export") {
+    if !matches!(
+        head,
+        "if" | "for" | "while" | "loop" | "try" | "def" | "extern" | "export"
+    ) {
         return None;
     }
     Some(call_items(p))
+}
+
+/// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of
+/// a call, when nu reads them as one: the last item is a body, and so is the
+/// second when `catch` follows it.
+struct ControlShape {
+    kind: SyntaxKind,
+    len: usize,
+    has_catch: bool,
+}
+
+fn control_shape(items: &[&str]) -> Option<ControlShape> {
+    let braced = |at: usize| items.get(at).is_some_and(|item| item.starts_with('{'));
+    let last = items.len().checked_sub(1)?;
+    if last == 0 || !braced(last) {
+        return None;
+    }
+    // `in` at `at`, then at least one item of the value before the body.
+    let in_at = |at: usize| items.get(at) == Some(&"in") && last > at + 1;
+    let (kind, has_catch) = match items[0] {
+        // The variable may take a type after a `:` it ends with.
+        "for" if in_at(2) || (items[1].ends_with(':') && in_at(3)) => (SyntaxKind::For, false),
+        "while" if last >= 2 => (SyntaxKind::While, false),
+        "loop" if last == 1 => (SyntaxKind::Loop, false),
+        "try" if last == 1 => (SyntaxKind::Try, false),
+        "try" if last == 3 && braced(1) && items[2] == "catch" => (SyntaxKind::Try, true),
+        _ => return None,
+    };
+    Some(ControlShape {
+        kind,
+        len: items.len(),
+        has_catch,
+    })
+}
+
+/// The node of `shape`, which `control_shape` gave for the items ahead.
+fn control(p: &mut Parser<'_>, shape: &ControlShape) {
+    p.start(shape.kind);
+    p.bump();
+    for at in 1..shape.len {
+        if at + 1 == shape.len || (shape.has_catch && at == 1) {
+            token_or_bracketed(p, false);
+        } else if shape.kind == SyntaxKind::For && at == 1 {
+            // The variable, which nu never reads as a value, braces or not.
+            p.bump();
+        } else {
+            item(p, false);
+        }
+    }
+    p.finish();
 }
 
 /// The texts of the items ahead that a call takes.

@@ -99,7 +99,9 @@ do {
 ls | each {|x|
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 }
-try { ls } catch {|e|
+try {
+    ls
+} catch {|e|
     ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 }
 do {

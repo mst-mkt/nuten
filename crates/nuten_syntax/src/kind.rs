@@ -105,8 +105,8 @@ syntax_kinds! {
     PipelineElement,
     /// A command name followed by its arguments.
     Call,
-    /// Same as `Call`, but the name starts with `^`, or is `else`, which nu runs
-    /// as an external command outside an `if`.
+    /// Same as `Call`, but the name starts with `^`, or is `else` or `catch`,
+    /// which nu runs as an external command outside an `if` or a `try`.
     ExternalCall,
     /// What a `Call` would be for a command named `if` that nu reads as one,
     /// with the `if`s that follow its `else`s in one flat node: `if`, the
@@ -115,6 +115,22 @@ syntax_kinds! {
     /// argument right before its `else`, or the last one, and starts with
     /// `{`; a condition is at least one argument before it.
     If,
+    /// What a `Call` would be for a command named `for` that nu reads as one:
+    /// `for`, the variable, its type when the variable ends with `:`, `in`,
+    /// at least one argument of the value, and the body, which starts with
+    /// `{`.
+    For,
+    /// What a `Call` would be for a command named `while` that nu reads as
+    /// one: `while`, at least one argument of the condition, and the body,
+    /// which starts with `{`.
+    While,
+    /// What a `Call` would be for a command named `loop` that nu reads as
+    /// one: `loop` and the body, which starts with `{`.
+    Loop,
+    /// What a `Call` would be for a command named `try` that nu reads as one:
+    /// `try` and the body, then optionally `catch` and what it takes, each
+    /// starting with `{`.
+    Try,
     /// A redirection to a file: the operator, such as `o>`, and its target.
     /// Has no target only when the operator is an `Error`.
     Redirection,
