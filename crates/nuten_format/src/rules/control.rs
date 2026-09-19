@@ -1,44 +1,46 @@
 use nuten_doc::{Element, expand_parent, group, space};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
-use super::{block::block_layout, children, node, token};
+use super::{Formatter, children};
 
-/// An `if` with its `else` branches, or a `for`, a `while`, a `loop`, or a
-/// `try`, its parts one space apart and its bodies laid out as blocks that
-/// break together: always but for an `if` or a `try` that is no statement,
-/// which stays on one line when every body holds one statement at most and
-/// the whole fits. Line breaks in the source do not count.
-pub(super) fn bodies<'a>(src: &'a str, keyword: &SyntaxNode) -> Vec<Element<'a>> {
-    let items: Vec<_> = children(keyword).map(|child| child.element).collect();
-    let mut expand =
-        !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try) || is_statement(keyword);
-    let mut out = Vec::new();
-    for (index, item) in items.iter().enumerate() {
-        if index > 0 {
-            out.push(space());
+impl<'a> Formatter<'a> {
+    /// An `if` with its `else` branches, or a `for`, a `while`, a `loop`, or
+    /// a `try`, its parts one space apart and its bodies laid out as blocks
+    /// that break together: always but for an `if` or a `try` that is no
+    /// statement, which stays on one line when every body holds one
+    /// statement at most and the whole fits. Line breaks in the source do not
+    /// count.
+    pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
+        let items: Vec<_> = children(keyword).map(|child| child.element).collect();
+        let mut expand =
+            !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try) || is_statement(keyword);
+        let mut out = Vec::new();
+        for (index, item) in items.iter().enumerate() {
+            if index > 0 {
+                out.push(space());
+            }
+            // A body comes right before an `else` or a `catch`, and the last
+            // item is a body or what the last `else` takes.
+            let branch = items.get(index + 1).is_none_or(|next| {
+                next.as_token().is_some_and(|next| {
+                    next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
+                })
+            });
+            match item {
+                SyntaxElement::Node(block) if branch && block.kind() == SyntaxKind::Block => {
+                    let layout = self.block_layout(block);
+                    expand |= !layout.one_statement;
+                    out.extend(layout.head);
+                    out.extend(layout.rest);
+                },
+                _ => out.extend(self.element(item)),
+            }
         }
-        // A body comes right before an `else` or a `catch`, and the last
-        // item is a body or what the last `else` takes.
-        let branch = items.get(index + 1).is_none_or(|next| {
-            next.as_token().is_some_and(|next| {
-                next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
-            })
-        });
-        match item {
-            SyntaxElement::Node(block) if branch && block.kind() == SyntaxKind::Block => {
-                let layout = block_layout(src, block);
-                expand |= !layout.one_statement;
-                out.extend(layout.head);
-                out.extend(layout.rest);
-            },
-            SyntaxElement::Node(child) => out.extend(node(src, child)),
-            SyntaxElement::Token(child) => out.push(token(src, child)),
+        if expand {
+            out.push(expand_parent());
         }
+        vec![group(out)]
     }
-    if expand {
-        out.push(expand_parent());
-    }
-    vec![group(out)]
 }
 
 /// Whether `node`, an `If` or a `Try`, is a statement: the only element of a

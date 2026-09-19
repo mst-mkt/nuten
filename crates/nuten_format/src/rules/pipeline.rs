@@ -6,107 +6,108 @@ use nuten_doc::{
 };
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
-use super::{Child, children, comment, node, separator, token};
+use super::{Child, Formatter, children, separator};
 
-/// On one line when no line break came before a pipe or element in the
-/// source and it fits, counting only the first line of an element that ends
-/// it; otherwise each `|` starts a line, at the current indent, while `e>|`
-/// and `o+e>|` stay on the line of their element. What follows a `|` at the
-/// start of a line goes two columns further on its lines after the first, so
-/// that it lines up after the `| `.
-/// A comment stays where it is among the pipes and elements, on its own
-/// line or at the end of its line. A pipe with a comment after it stays at
-/// the end of its line, and what comes next starts a line.
-pub(super) fn pipeline<'a>(src: &'a str, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
-    // Unique, as a pipeline inside another starts after a bracket.
-    let id = GroupId(pipeline.text_range().start().into());
-    let mut out = Vec::new();
-    let mut prev = None;
-    // Where an element that ends the pipeline, with its separator, starts in
-    // `out`.
-    let mut tail = None;
-    // Where what follows a `|` that may start a line starts in `out`, and
-    // whether the `|` starts a line even when the pipeline is on one line.
-    let mut after_pipe: Option<(usize, bool)> = None;
-    for part in parts(pipeline) {
-        let Part {
-            child: Child {
-                element,
-                newlines,
-            },
-            joined,
-        } = part;
-        let kind = element.kind();
-        if matches!(kind, SyntaxKind::Pipe | SyntaxKind::Comment) {
-            align_after_pipe(&mut out, after_pipe.take(), id, &mut tail);
-        }
-        if newlines > 0 {
-            out.push(expand_parent());
-        }
-        if joined {
-            out.push(space());
+impl<'a> Formatter<'a> {
+    /// On one line when no line break came before a pipe or element in the
+    /// source and it fits, counting only the first line of an element that
+    /// ends it; otherwise each `|` starts a line, at the current indent, while
+    /// `e>|` and `o+e>|` stay on the line of their element. What follows a
+    /// `|` at the start of a line goes two columns further on its lines after
+    /// the first, so that it lines up after the `| `.
+    /// A comment stays where it is among the pipes and elements, on its own
+    /// line or at the end of its line. A pipe with a comment after it stays
+    /// at the end of its line, and what comes next starts a line.
+    pub(super) fn pipeline(&mut self, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
+        let id = self.group_id();
+        let mut out = Vec::new();
+        let mut prev = None;
+        // Where an element that ends the pipeline, with its separator, starts
+        // in `out`.
+        let mut tail = None;
+        // Where what follows a `|` that may start a line starts in `out`, and
+        // whether the `|` starts a line even when the pipeline is on one line.
+        let mut after_pipe: Option<(usize, bool)> = None;
+        for part in parts(pipeline) {
+            let Part {
+                child:
+                    Child {
+                        element,
+                        newlines,
+                    },
+                joined,
+            } = part;
+            let kind = element.kind();
+            if matches!(kind, SyntaxKind::Pipe | SyntaxKind::Comment) {
+                align_after_pipe(&mut out, after_pipe.take(), id, &mut tail);
+            }
+            if newlines > 0 {
+                out.push(expand_parent());
+            }
+            if joined {
+                out.push(space());
+                out.extend(self.element(&element));
+                prev = Some(kind);
+                continue;
+            }
+            tail = None;
             match &element {
-                SyntaxElement::Node(child) => out.extend(node(src, child)),
-                SyntaxElement::Token(child) => out.push(token(src, child)),
+                SyntaxElement::Node(child) => {
+                    tail = Some(out.len());
+                    out.extend(separator(prev, space));
+                    out.extend(self.node(child));
+                },
+                // `let`, or an assignment operator with nothing before it,
+                // which starts an element laid flat.
+                SyntaxElement::Token(child)
+                    if matches!(kind, SyntaxKind::Word | SyntaxKind::Assign) =>
+                {
+                    tail = Some(out.len());
+                    out.extend(separator(prev, space));
+                    out.push(self.token(child));
+                },
+                SyntaxElement::Token(child) => match kind {
+                    SyntaxKind::Pipe => {
+                        let before_comment = comment_follows(child);
+                        out.extend(separator(prev, || {
+                            if before_comment {
+                                space()
+                            } else {
+                                soft_line_break_or_space()
+                            }
+                        }));
+                        out.push(self.token(child));
+                        // A statement starts a line in the output but right
+                        // after a `;` on the same line, where its `|` never
+                        // does; in a block on one line, nothing breaks anyway.
+                        if !before_comment && (prev.is_some() || !follows_semicolon(pipeline)) {
+                            let starts_line = matches!(prev, None | Some(SyntaxKind::Comment));
+                            after_pipe = Some((out.len(), starts_line));
+                        }
+                    },
+                    // Nu rejects these at the start of a line, so they stay
+                    // after their element, which the parser puts right before.
+                    SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
+                        out.extend(separator(prev, space));
+                        out.push(self.token(child));
+                    },
+                    SyntaxKind::Comment => {
+                        out.extend(self.comment(child, newlines, prev.is_none()));
+                    },
+                    kind => unreachable!("{kind:?} is not a child of Pipeline"),
+                },
             }
             prev = Some(kind);
-            continue;
         }
-        tail = None;
-        match &element {
-            SyntaxElement::Node(child) => {
-                tail = Some(out.len());
-                out.extend(separator(prev, space));
-                out.extend(node(src, child));
-            },
-            // `let`, or an assignment operator with nothing before it, which
-            // starts an element laid flat.
-            SyntaxElement::Token(child)
-                if matches!(kind, SyntaxKind::Word | SyntaxKind::Assign) =>
-            {
-                tail = Some(out.len());
-                out.extend(separator(prev, space));
-                out.push(token(src, child));
-            },
-            SyntaxElement::Token(child) => match kind {
-                SyntaxKind::Pipe => {
-                    let before_comment = comment_follows(child);
-                    out.extend(separator(prev, || {
-                        if before_comment {
-                            space()
-                        } else {
-                            soft_line_break_or_space()
-                        }
-                    }));
-                    out.push(token(src, child));
-                    // A statement starts a line in the output but right after
-                    // a `;` on the same line, where its `|` never does; in a
-                    // block on one line, nothing breaks anyway.
-                    if !before_comment && (prev.is_some() || !follows_semicolon(pipeline)) {
-                        let starts_line = matches!(prev, None | Some(SyntaxKind::Comment));
-                        after_pipe = Some((out.len(), starts_line));
-                    }
-                },
-                // Nu rejects these at the start of a line, so they stay
-                // after their element, which the parser puts right before.
-                SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
-                    out.extend(separator(prev, space));
-                    out.push(token(src, child));
-                },
-                SyntaxKind::Comment => out.extend(comment(src, child, newlines, prev.is_none())),
-                kind => unreachable!("{kind:?} is not a child of Pipeline"),
-            },
+        align_after_pipe(&mut out, after_pipe, id, &mut tail);
+        // The tail is measured in break mode, so its first line break ends the
+        // measure instead of breaking the group.
+        let tail = out.split_off(tail.unwrap_or(out.len()));
+        if out.is_empty() {
+            return tail;
         }
-        prev = Some(kind);
+        iter::once(group_with_id(id, out)).chain(tail).collect()
     }
-    align_after_pipe(&mut out, after_pipe, id, &mut tail);
-    // The tail is measured in break mode, so its first line break ends the
-    // measure instead of breaking the group.
-    let tail = out.split_off(tail.unwrap_or(out.len()));
-    if out.is_empty() {
-        return tail;
-    }
-    iter::once(group_with_id(id, out)).chain(tail).collect()
 }
 
 /// Whether a `;` comes right before `node`, past whitespace.
