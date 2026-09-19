@@ -174,60 +174,66 @@ struct Part {
 /// the operator unless a line break or a comment comes between. So the
 /// pipes of what the operator takes format as those of `pipeline`.
 fn parts(pipeline: &SyntaxNode) -> Vec<Part> {
-    let mut out = Vec::new();
-    flatten(pipeline, 0, false, &mut out);
-    out
+    flatten(pipeline, 0, false)
 }
 
 /// `newlines` come before the first child, and `joined` is whether it joins
 /// what comes before when it is an element.
-fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
-    let mut first = Some((newlines, joined));
-    for child in children(pipeline.children_with_tokens()) {
-        let (before, joined) = first.take().unwrap_or((0, false));
-        let newlines = before + child.newlines;
-        let assignment = child
-            .element
-            .as_node()
-            .and_then(|node| node.syntax().first_child())
-            .filter(|node| matches!(node.kind(), SyntaxKind::Assignment | SyntaxKind::Let));
-        match assignment {
-            Some(assignment) => flatten_assignment(&assignment, newlines, joined, out),
-            None => out.push(Part {
-                joined: joined && child.element.as_node().is_some(),
-                child: Child {
-                    element: child.element,
-                    newlines,
-                },
-            }),
-        }
-    }
+fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
+    children(pipeline.children_with_tokens())
+        .enumerate()
+        .flat_map(|(index, child)| {
+            let (before, joined) = if index == 0 {
+                (newlines, joined)
+            } else {
+                (0, false)
+            };
+            let child = Child {
+                element: child.element,
+                newlines: before + child.newlines,
+            };
+            let assignment = child
+                .element
+                .as_node()
+                .and_then(|node| node.syntax().first_child())
+                .filter(|node| matches!(node.kind(), SyntaxKind::Assignment | SyntaxKind::Let));
+            match assignment {
+                Some(assignment) => flatten_assignment(&assignment, child.newlines, joined),
+                None => vec![Part {
+                    joined: joined && child.element.as_node().is_some(),
+                    child,
+                }],
+            }
+        })
+        .collect()
 }
 
 /// The parts of `assignment` for `flatten`: each joins the part before it but
 /// a comment, and the first, which joins as `joined` tells.
-fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
-    let mut first = Some((newlines, joined));
-    for child in children(assignment.children_with_tokens()) {
-        let (before, joined) = first.take().unwrap_or((0, true));
-        let Child {
-            element,
-            newlines,
-        } = child;
-        let newlines = before + newlines;
-        match &element {
-            NodeOrToken::Node(Node::Pipeline(pipeline)) => {
-                flatten(pipeline.syntax(), newlines, true, out);
-            },
-            _ => out.push(Part {
-                joined: joined && ast::kind_of(&element) != SyntaxKind::Comment,
-                child: Child {
-                    element,
-                    newlines,
+fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
+    children(assignment.children_with_tokens())
+        .enumerate()
+        .flat_map(|(index, child)| {
+            let (before, joined) = if index == 0 {
+                (newlines, joined)
+            } else {
+                (0, true)
+            };
+            let child = Child {
+                element: child.element,
+                newlines: before + child.newlines,
+            };
+            match &child.element {
+                NodeOrToken::Node(Node::Pipeline(pipeline)) => {
+                    flatten(pipeline.syntax(), child.newlines, true)
                 },
-            }),
-        }
-    }
+                _ => vec![Part {
+                    joined: joined && !child.is_comment(),
+                    child,
+                }],
+            }
+        })
+        .collect()
 }
 
 /// Whether a comment comes before the next pipe or element after `pipe`.
