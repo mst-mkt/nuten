@@ -8,14 +8,13 @@ use super::{
 };
 use crate::{ParseErrorKind, parser::Parser};
 
-/// `assigned` is whether an assignment operator takes the pipeline.
-pub(super) fn pipeline(p: &mut Parser<'_>, assigned: bool) {
+pub(super) fn pipeline(p: &mut Parser<'_>, in_assignment: bool) {
     p.start(SyntaxKind::Pipeline);
     let mut element = None;
     let mut first = true;
     while let Some(kind) = p.peek() {
         match kind {
-            kind if is_pipe(kind) => pipe(p, kind, element.take(), assigned),
+            kind if is_pipe(kind) => pipe(p, kind, element.take(), in_assignment),
             SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
             kind if ends_statement(kind) => break,
             _ => {
@@ -27,12 +26,10 @@ pub(super) fn pipeline(p: &mut Parser<'_>, assigned: bool) {
     p.finish();
 }
 
-/// `element` is what the element before the pipe redirects; `None` when it has no command.
-/// `assigned` is as for `pipeline`.
-fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>, assigned: bool) {
+fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, in_assignment: bool) {
     match kind {
         SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
-        SyntaxKind::Pipe if assigned && pipe_ends_statement(p) => {
+        SyntaxKind::Pipe if in_assignment && pipe_ends_statement(p) => {
             p.bump_error(ParseErrorKind::PipeEndsAssignment);
         },
         SyntaxKind::Pipe => {
@@ -40,9 +37,9 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>, assigned
             line_end_continuation(p);
         },
         // Nu goes on to the next line only after a plain `|`.
-        _ => match element {
+        _ => match redirected {
             None => p.bump_error(ParseErrorKind::RedirectionAtHead),
-            Some(redirected) if redirected.overlaps(Streams::redirected_by(kind)) => {
+            Some(streams) if streams.overlaps(Streams::redirected_by(kind)) => {
                 p.bump_error(ParseErrorKind::MultipleRedirections);
             },
             Some(_) => p.bump(),
@@ -126,7 +123,6 @@ pub(super) fn bump_newlines(p: &mut Parser<'_>) {
 }
 
 /// Returns the streams the element redirects; `None` when it has no command.
-/// `first` is whether no element comes before it in the pipeline.
 fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
     p.start(SyntaxKind::PipelineElement);
     let redirected = if assignment_ahead(p) {
