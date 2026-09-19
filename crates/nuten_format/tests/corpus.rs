@@ -6,13 +6,17 @@
 
 #![expect(clippy::print_stderr, reason = "what is skipped is reported")]
 
+mod support;
+
 use std::{
     collections::BTreeSet,
-    env, fs, io, panic,
+    env, fs, io,
     path::{Path, PathBuf},
 };
 
 use nuten_format::{Config, invariants};
+
+use crate::support::caught;
 
 /// The files with syntax errors, relative to the corpus. Nu rejects each of
 /// them too.
@@ -53,9 +57,7 @@ fn every_corpus_file_keeps_the_invariants() {
                 continue;
             },
         };
-        // A panic is a bug in nuten itself; catching it keeps the rest of the
-        // corpus checked.
-        match panic::catch_unwind(|| invariants::check(&src, &config)) {
+        match caught(|| invariants::check(&src, &config)) {
             Ok(checked) => {
                 let mislisting = match (listed, checked.syntax_errors.first()) {
                     (true, None) => Some(format!("{name}: in SYNTAX_ERRORS, but no syntax errors")),
@@ -73,14 +75,7 @@ fn every_corpus_file_keeps_the_invariants() {
                         .map(|violation| format!("{name}: {violation}")),
                 );
             },
-            Err(payload) => {
-                let message = payload
-                    .downcast_ref::<String>()
-                    .map(String::as_str)
-                    .or_else(|| payload.downcast_ref::<&str>().copied())
-                    .unwrap_or("a panic");
-                problems.push(format!("{name}: panics: {message}"));
-            },
+            Err(message) => problems.push(format!("{name}: panics: {message}")),
         }
     }
     problems.extend(
