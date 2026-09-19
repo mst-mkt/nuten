@@ -30,7 +30,7 @@ use nuten_format::{Config, format};
 use usage::Cli;
 
 #[derive(Cli)]
-#[usage(bin = "nuten_oracle", unknown_flags = "error")]
+#[usage(bin = "nuten-oracle", unknown_flags = "error")]
 struct Args {
     /// Skip files larger than this many bytes
     #[usage(long, default = "524288")]

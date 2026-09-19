@@ -1,5 +1,5 @@
 [package]
-name = "nuten_parser"
+name = "nuten-parser"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-nuten_syntax = { workspace = true }
+nuten-syntax = { workspace = true }
 rowan = { workspace = true }
 
 [dev-dependencies]

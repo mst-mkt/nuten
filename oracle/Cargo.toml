@@ -1,5 +1,5 @@
 [package]
-name = "nuten_oracle"
+name = "nuten-oracle"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,7 +9,7 @@ publish = false
 
 [dependencies]
 jsonc-parser = { workspace = true }
-nuten_format = { workspace = true }
+nuten-format = { workspace = true }
 usage = { workspace = true }
 
 [lints]

@@ -1,2 +1,2 @@
 [alias]
-oracle = "run --package nuten_oracle --"
+oracle = "run --package nuten-oracle --"

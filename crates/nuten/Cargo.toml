@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-nuten_format = { workspace = true }
+nuten-format = { workspace = true }
 usage = { workspace = true }
 
 [lints]

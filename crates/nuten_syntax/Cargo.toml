@@ -1,5 +1,5 @@
 [package]
-name = "nuten_syntax"
+name = "nuten-syntax"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

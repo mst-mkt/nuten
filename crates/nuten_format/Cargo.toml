@@ -1,5 +1,5 @@
 [package]
-name = "nuten_format"
+name = "nuten-format"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,9 +7,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-nuten_doc = { workspace = true }
-nuten_parser = { workspace = true }
-nuten_syntax = { workspace = true }
+nuten-doc = { workspace = true }
+nuten-parser = { workspace = true }
+nuten-syntax = { workspace = true }
 
 [lints]
 workspace = true

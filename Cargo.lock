@@ -165,46 +165,46 @@ dependencies = [
 name = "nuten"
 version = "0.0.0"
 dependencies = [
- "nuten_format",
+ "nuten-format",
  "usage-rs",
 ]
 
 [[package]]
-name = "nuten_doc"
+name = "nuten-doc"
 version = "0.0.0"
 dependencies = [
  "unicode-width",
 ]
 
 [[package]]
-name = "nuten_format"
+name = "nuten-format"
 version = "0.0.0"
 dependencies = [
- "nuten_doc",
- "nuten_parser",
- "nuten_syntax",
+ "nuten-doc",
+ "nuten-parser",
+ "nuten-syntax",
 ]
 
 [[package]]
-name = "nuten_oracle"
+name = "nuten-oracle"
 version = "0.0.0"
 dependencies = [
  "jsonc-parser",
- "nuten_format",
+ "nuten-format",
  "usage-rs",
 ]
 
 [[package]]
-name = "nuten_parser"
+name = "nuten-parser"
 version = "0.0.0"
 dependencies = [
  "insta",
- "nuten_syntax",
+ "nuten-syntax",
  "rowan",
 ]
 
 [[package]]
-name = "nuten_syntax"
+name = "nuten-syntax"
 version = "0.0.0"
 dependencies = [
  "rowan",

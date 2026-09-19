@@ -97,23 +97,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "nuten_fuzz"
+name = "nuten-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
- "nuten_parser",
+ "nuten-parser",
 ]
 
 [[package]]
-name = "nuten_parser"
+name = "nuten-parser"
 version = "0.0.0"
 dependencies = [
- "nuten_syntax",
+ "nuten-syntax",
  "rowan",
 ]
 
 [[package]]
-name = "nuten_syntax"
+name = "nuten-syntax"
 version = "0.0.0"
 dependencies = [
  "rowan",
