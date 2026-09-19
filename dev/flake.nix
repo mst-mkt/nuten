@@ -89,6 +89,7 @@
             "fix"
             "refactor"
             "perf"
+            "style"
             "test"
             "docs"
             "ci"
