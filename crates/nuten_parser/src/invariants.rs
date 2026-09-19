@@ -73,6 +73,16 @@ pub struct Violation {
     pub detail: String,
 }
 
+impl Violation {
+    /// The same, with the lexer mode it was found in at the end of the detail.
+    fn in_mode(self, mode: Mode) -> Violation {
+        Violation {
+            invariant: self.invariant,
+            detail: format!("{} in {mode:?}", self.detail),
+        }
+    }
+}
+
 /// One line.
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -103,12 +113,19 @@ pub(crate) const OPERATORS: &[(SyntaxKind, &[&str])] = &[
     ),
 ];
 
-/// Every violation of the lexer for all of `src` in `mode`, in the order of
-/// the invariants. Tokens that do not cover the source are reported on their
-/// own.
-pub fn lexer_violations(src: &str, mode: Mode) -> Vec<Violation> {
-    let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), mode);
-    lexed_violations(src, &lexed, mode)
+/// Every violation of the lexer for all of `src` in every mode, mode by mode
+/// and in the order of the invariants within one, each detail ending with
+/// its mode. Tokens that do not cover the source are reported on their own.
+pub fn lexer_violations(src: &str) -> Vec<Violation> {
+    Mode::ALL
+        .iter()
+        .flat_map(|&mode| {
+            let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), mode);
+            lexed_violations(src, &lexed, mode)
+                .into_iter()
+                .map(move |violation| violation.in_mode(mode))
+        })
+        .collect()
 }
 
 /// Every violation of `lexed`, the lexing of all of `src` in `mode`.
@@ -433,10 +450,8 @@ mod tests {
     #[test]
     fn lexer_invariants_hold_for_all_short_inputs() {
         for src in short_inputs() {
-            for &mode in Mode::ALL {
-                let violations = lexer_violations(&src, mode);
-                assert!(violations.is_empty(), "{src:?} in {mode:?}: {violations:?}");
-            }
+            let violations = lexer_violations(&src);
+            assert!(violations.is_empty(), "{src:?}: {violations:?}");
         }
     }
 

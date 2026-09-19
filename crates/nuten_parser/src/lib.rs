@@ -2,7 +2,7 @@
 
 mod grammar;
 pub mod invariants;
-pub mod lexer;
+mod lexer;
 mod parser;
 #[cfg(test)]
 mod test_support;
@@ -13,7 +13,8 @@ use std::fmt;
 use nuten_syntax::SyntaxNode;
 use rowan::{GreenNode, TextRange, TextSize};
 
-use crate::lexer::{LexError, LexErrorKind, Mode};
+pub use crate::lexer::LexErrorKind;
+use crate::lexer::{LexError, Mode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Parsed {

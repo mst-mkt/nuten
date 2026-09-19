@@ -6,23 +6,23 @@ use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Token {
-    pub kind: SyntaxKind,
-    pub range: TextRange,
+pub(crate) struct Token {
+    pub(crate) kind: SyntaxKind,
+    pub(crate) range: TextRange,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Lexed {
-    pub tokens: Vec<Token>,
+pub(crate) struct Lexed {
+    pub(crate) tokens: Vec<Token>,
     /// One error per `Error` token, in the same order.
-    pub errors: Vec<LexError>,
+    pub(crate) errors: Vec<LexError>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LexError {
-    pub kind: LexErrorKind,
+pub(crate) struct LexError {
+    pub(crate) kind: LexErrorKind,
     /// Always inside its `Error` token.
-    pub range: TextRange,
+    pub(crate) range: TextRange,
 }
 
 impl LexError {
@@ -61,7 +61,7 @@ impl fmt::Display for LexErrorKind {
 
 /// The part of nu's `lex` settings that decides where items end.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mode {
+pub(crate) struct Mode {
     /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with
     /// the kind of the token it makes on its own at the start of an item.
     /// nu's special tokens, plus `,` where nu treats it as whitespace.
@@ -72,7 +72,7 @@ pub struct Mode {
 }
 
 impl Mode {
-    pub const ALL: &[Mode] = &[
+    pub(crate) const ALL: &[Mode] = &[
         Mode::block(),
         Mode::list(),
         Mode::record(),
@@ -87,7 +87,7 @@ impl Mode {
 
     /// Statements in the top level, `{ }` blocks, closures, and modules.
     /// Also the right-hand side of `let` and assignments.
-    pub const fn block() -> Mode {
+    pub(crate) const fn block() -> Mode {
         Mode {
             special: &[],
             signature: false,
@@ -95,7 +95,7 @@ impl Mode {
     }
 
     /// Lists, tables, and list patterns.
-    pub const fn list() -> Mode {
+    pub(crate) const fn list() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
             signature: false,
@@ -103,7 +103,7 @@ impl Mode {
     }
 
     /// The keys, spreads, and `:` of a record, in the inside of `{ }`.
-    pub const fn record() -> Mode {
+    pub(crate) const fn record() -> Mode {
         Mode {
             special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
             signature: false,
@@ -111,7 +111,7 @@ impl Mode {
     }
 
     /// A value of a record, where nu does not treat `:` as special.
-    pub const fn record_value() -> Mode {
+    pub(crate) const fn record_value() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
             signature: false,
@@ -120,7 +120,7 @@ impl Mode {
 
     /// The inside of `{ }` looked into to tell a record from a closure or a
     /// block.
-    pub const fn brace() -> Mode {
+    pub(crate) const fn brace() -> Mode {
         Mode {
             special: &[(b':', SyntaxKind::Colon)],
             signature: false,
@@ -128,7 +128,7 @@ impl Mode {
     }
 
     /// The type of a variable, as in `let x: int`.
-    pub const fn var_type() -> Mode {
+    pub(crate) const fn var_type() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
             signature: true,
@@ -136,7 +136,7 @@ impl Mode {
     }
 
     /// The inside of the `[ ]` of a `def` or an `extern`.
-    pub const fn signature() -> Mode {
+    pub(crate) const fn signature() -> Mode {
         Mode {
             special: &[
                 (b':', SyntaxKind::Colon),
@@ -149,7 +149,7 @@ impl Mode {
 
     /// The input and output types after the signature, as in
     /// `]: nothing -> string`.
-    pub const fn io_types() -> Mode {
+    pub(crate) const fn io_types() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
             signature: true,
@@ -157,7 +157,7 @@ impl Mode {
     }
 
     /// The inside of the `< >` of a type, as in `record<a: int>`.
-    pub const fn type_params() -> Mode {
+    pub(crate) const fn type_params() -> Mode {
         Mode {
             special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
             signature: true,
@@ -165,7 +165,7 @@ impl Mode {
     }
 
     /// The inside of the `{ }` of a `match`.
-    pub const fn match_arms() -> Mode {
+    pub(crate) const fn match_arms() -> Mode {
         Mode {
             special: &[(b',', SyntaxKind::Comma)],
             signature: false,
@@ -208,7 +208,7 @@ impl fmt::Debug for Mode {
 /// # Panics
 ///
 /// Panics if `range` is outside `src` or splits a char.
-pub fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
+pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     let mut lexer = Lexer::new(src, range, mode);
     Lexed {
         tokens: lexer.by_ref().collect(),
@@ -222,7 +222,7 @@ pub fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
 /// # Panics
 ///
 /// Panics if `range` is outside `src` or splits a char.
-pub fn lex_first(src: &str, range: TextRange, mode: Mode) -> Option<Token> {
+pub(crate) fn lex_first(src: &str, range: TextRange, mode: Mode) -> Option<Token> {
     Lexer::new(src, range, mode).next()
 }
 

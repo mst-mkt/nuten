@@ -4,11 +4,9 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use nuten_parser::{invariants, lexer::Mode};
+use nuten_parser::invariants;
 
 fuzz_target!(|src: &str| {
-    for &mode in Mode::ALL {
-        let violations = invariants::lexer_violations(src, mode);
-        assert!(violations.is_empty(), "{src:?} in {mode:?}: {violations:?}");
-    }
+    let violations = invariants::lexer_violations(src);
+    assert!(violations.is_empty(), "{src:?}: {violations:?}");
 });
