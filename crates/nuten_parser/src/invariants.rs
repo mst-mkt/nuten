@@ -3,7 +3,10 @@
 
 use std::{fmt, iter, ops::Range};
 
-use nuten_syntax::{SyntaxKind, SyntaxNode};
+use nuten_syntax::{
+    SyntaxKind, SyntaxNode,
+    ast::{AstNode, Node},
+};
 use rowan::{TextRange, TextSize};
 
 use crate::{
@@ -30,6 +33,11 @@ pub enum Invariant {
     /// Every node but Root holds text, and its first and last tokens are not
     /// trivia.
     NodeBounds,
+    /// Every node has a node kind and the shape `nuten_syntax::ast` reads: a
+    /// bracketed node opens and closes with its brackets, a block holds its
+    /// parameters right after its brace, and a table holds its column names
+    /// and their `;` first.
+    NodeShape,
     /// The errors match the `Error` elements one to one, in order, each
     /// inside its element.
     ParseErrorPlacement,
@@ -48,6 +56,7 @@ impl Invariant {
             Invariant::LexErrorPlacement => "lex error placement",
             Invariant::Roundtrip => "roundtrip",
             Invariant::NodeBounds => "node bounds",
+            Invariant::NodeShape => "node shape",
             Invariant::ParseErrorPlacement => "parse error placement",
             Invariant::LexErrorsReported => "lex errors reported",
         }
@@ -307,6 +316,7 @@ pub fn violations(src: &str, parsed: &Parsed) -> Vec<Violation> {
     [
         roundtrip(src, &tree),
         node_bounds(&tree),
+        node_shape(&tree),
         parse_error_placement(&tree, parsed.errors()),
         lex_errors_reported(src, parsed.errors()),
     ]
@@ -344,6 +354,20 @@ fn node_bounds(tree: &SyntaxNode) -> Option<Violation> {
             return None;
         };
         Some(Invariant::NodeBounds.violation(format!(
+            "{:?} at {:?} {flaw}",
+            node.kind(),
+            node.text_range()
+        )))
+    })
+}
+
+fn node_shape(tree: &SyntaxNode) -> Option<Violation> {
+    tree.descendants().find_map(|node| {
+        let flaw = match Node::cast(node.clone()) {
+            None => "has a token kind",
+            Some(typed) => typed.flaw()?,
+        };
+        Some(Invariant::NodeShape.violation(format!(
             "{:?} at {:?} {flaw}",
             node.kind(),
             node.text_range()
@@ -394,7 +418,8 @@ fn lex_errors_reported(src: &str, errors: &[ParseError]) -> Option<Violation> {
 #[cfg(test)]
 mod tests {
     use nuten_syntax::SyntaxKind::{
-        self, Call, Error, Newline, Pipe, Pipeline, Root, Whitespace, Word,
+        self, Block, Call, Error, LBrace, LBracket, Newline, Pipe, Pipeline, RBracket, Root, Table,
+        Whitespace, Word,
     };
     use rowan::{GreenNodeBuilder, TextRange};
 
@@ -674,6 +699,34 @@ mod tests {
             assert_eq!(
                 violations("ls", &parsed),
                 [violation(Invariant::NodeBounds, detail)]
+            );
+        }
+    }
+
+    #[test]
+    fn a_node_must_have_the_shape_ast_reads() {
+        for (parsed, detail) in [
+            (
+                one_node(Word, &[(Word, "ls")], vec![]),
+                "Word at 0..2 has a token kind",
+            ),
+            (
+                one_node(Block, &[(LBrace, "{"), (Word, "ls}")], vec![]),
+                "Block at 0..4 does not close with its bracket",
+            ),
+            (
+                one_node(
+                    Table,
+                    &[(LBracket, "["), (Word, "[a]"), (RBracket, "]")],
+                    vec![],
+                ),
+                "Table at 0..5 does not hold its column names and their `;` first",
+            ),
+        ] {
+            let src = parsed.syntax().text().to_string();
+            assert_eq!(
+                violations(&src, &parsed),
+                [violation(Invariant::NodeShape, detail)]
             );
         }
     }
