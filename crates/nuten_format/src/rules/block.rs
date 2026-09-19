@@ -81,7 +81,7 @@ impl<'a> Formatter<'a> {
         } else {
             Some(soft_line_break_or_space())
         };
-        let inner = lead.into_iter().chain(self.statements(body, false));
+        let inner = lead.into_iter().chain(self.statements(&body, false));
         BlockLayout {
             head,
             rest: vec![indent(inner), soft_line_break_or_space(), close],

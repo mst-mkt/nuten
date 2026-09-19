@@ -81,7 +81,8 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
         src,
         next_group: 0,
     };
-    let mut out = formatter.statements(children(root.children_with_tokens()), true);
+    let statements: Vec<_> = children(root.children_with_tokens()).collect();
+    let mut out = formatter.statements(&statements, true);
     out.push(hard_line_break());
     out
 }
@@ -98,54 +99,46 @@ impl<'a> Formatter<'a> {
     /// Blank lines stay, one at most, or two after a statement ending in `|`.
     /// A comment stays on its own line or at the end of its line; `at_start`
     /// is whether nothing comes before the first child on its line.
-    fn statements(
-        &mut self,
-        items: impl IntoIterator<Item = Child>,
-        at_start: bool,
-    ) -> Vec<Element<'a>> {
-        let mut out = Vec::new();
-        let mut prev = None;
-        // Whether a `|` at the end of the last statement still reaches what
-        // comes next.
-        let mut open_pipe = false;
-        for item in items {
-            let Child {
-                element,
-                newlines,
-            } = item;
-            let kind = ast::kind_of(&element);
-            if newlines > 0 && prev.is_some() {
-                out.push(match newlines {
-                    1 => hard_line_break(),
-                    // With one blank line, a `|` at the start of the next line
-                    // would join the statement above, so two stay.
-                    3.. if open_pipe => empty_lines(2),
-                    _ => empty_line(),
-                });
-                // A blank line closes the pipe above, as it did in the source.
-                if newlines > 1 {
-                    open_pipe = false;
-                }
-            }
-            match &element {
-                NodeOrToken::Node(child) => {
-                    if prev == Some(SyntaxKind::Semicolon) && newlines == 0 {
-                        out.push(space());
-                    }
-                    out.extend(self.node(child));
-                    open_pipe = ends_with_pipe(child.syntax());
-                },
-                NodeOrToken::Token(child) => match kind {
-                    SyntaxKind::Semicolon => out.push(self.token(child)),
-                    SyntaxKind::Comment => {
-                        out.extend(self.comment(child, newlines, at_start && prev.is_none()));
-                    },
-                    kind => unreachable!("{kind:?} is not among statements"),
-                },
-            }
-            prev = Some(kind);
-        }
-        out
+    fn statements(&mut self, items: &[Child], at_start: bool) -> Vec<Element<'a>> {
+        items
+            .iter()
+            .enumerate()
+            .flat_map(|(index, item)| self.statement(&items[..index], item, at_start))
+            .collect()
+    }
+
+    /// The statement, `;`, or comment `item` after what separates it from
+    /// the last of `before`, every child before it.
+    fn statement(&mut self, before: &[Child], item: &Child, at_start: bool) -> Vec<Element<'a>> {
+        let Child {
+            element,
+            newlines,
+        } = item;
+        let prev = before.last().map(Child::kind);
+        let separator = match (prev, *newlines) {
+            (None, _) | (_, 0) => None,
+            (_, 1) => Some(hard_line_break()),
+            // With one blank line, a `|` at the start of the next line would
+            // join the statement above, so two stay.
+            (_, 3..) if pipe_open(before) => Some(empty_lines(2)),
+            _ => Some(empty_line()),
+        };
+        let item = match element {
+            NodeOrToken::Node(child) => {
+                let after_semicolon = prev == Some(SyntaxKind::Semicolon) && *newlines == 0;
+                after_semicolon
+                    .then(space)
+                    .into_iter()
+                    .chain(self.node(child))
+                    .collect()
+            },
+            NodeOrToken::Token(child) => match child.kind() {
+                SyntaxKind::Semicolon => vec![self.token(child)],
+                SyntaxKind::Comment => self.comment(child, *newlines, at_start && prev.is_none()),
+                kind => unreachable!("{kind:?} is not among statements"),
+            },
+        };
+        separator.into_iter().chain(item).collect()
     }
 
     /// The entry for every node but Root and those their parent lays out
@@ -264,6 +257,21 @@ impl<'a> Formatter<'a> {
         self.next_group += 1;
         id
     }
+}
+
+/// Whether a `|` at the end of the last statement among `before` still
+/// reaches what comes next: no blank line has come since, which closes the
+/// pipe as it did in the source.
+fn pipe_open(before: &[Child]) -> bool {
+    before
+        .iter()
+        .rev()
+        .find_map(|child| match &child.element {
+            NodeOrToken::Node(statement) => Some(ends_with_pipe(statement.syntax())),
+            NodeOrToken::Token(_) if child.newlines > 1 => Some(false),
+            NodeOrToken::Token(_) => None,
+        })
+        .unwrap_or(false)
 }
 
 /// Whether the statement ends with a `|`; statements never end with
