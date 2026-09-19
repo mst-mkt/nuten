@@ -27,14 +27,16 @@ struct Args {
 fn main() -> ExitCode {
     let args = Args::parse();
     let config = Config::default();
-    let mut failed = false;
-    for path in &args.files {
-        failed |= !format_file(path, &config);
-    }
-    if failed {
-        ExitCode::from(2)
-    } else {
+    // Not `any`: the files after a failure are still to be formatted.
+    let failures = args
+        .files
+        .iter()
+        .filter(|path| !format_file(path, &config))
+        .count();
+    if failures == 0 {
         ExitCode::SUCCESS
+    } else {
+        ExitCode::from(2)
     }
 }
 
