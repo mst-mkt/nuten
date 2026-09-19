@@ -9,7 +9,10 @@ mod pipeline;
 mod signature;
 
 use nuten_doc::{Element, empty_line, empty_lines, hard_line_break, line_suffix, space, text};
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
+use nuten_syntax::{
+    SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken,
+    ast::{AstNode, Node},
+};
 
 use self::{
     block::block,
@@ -120,31 +123,37 @@ fn ends_with_pipe(statement: &SyntaxNode) -> bool {
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
 }
 
-/// The entry for every node but Root.
+/// The entry for every node but Root and those their parent lays out itself.
 fn node<'a>(src: &'a str, node: &SyntaxNode) -> Vec<Element<'a>> {
-    match node.kind() {
-        SyntaxKind::Pipeline => pipeline(src, node),
-        SyntaxKind::PipelineElement
-        | SyntaxKind::Call
-        | SyntaxKind::ExternalCall
-        | SyntaxKind::Redirection
-        | SyntaxKind::Match => spaced(src, node),
-        SyntaxKind::If
-        | SyntaxKind::For
-        | SyntaxKind::While
-        | SyntaxKind::Loop
-        | SyntaxKind::Try => bodies(src, node),
-        SyntaxKind::MatchArms => arms(src, node),
-        SyntaxKind::MatchArm => arm(src, node),
-        SyntaxKind::Def => def(src, node),
-        SyntaxKind::List | SyntaxKind::Record | SyntaxKind::Table | SyntaxKind::Signature => {
+    let kind = node.kind();
+    let Some(typed) = Node::cast(node.clone()) else {
+        unreachable!("{kind:?} is a token kind");
+    };
+    match typed {
+        Node::Pipeline(_) => pipeline(src, node),
+        Node::PipelineElement(_)
+        | Node::Call(_)
+        | Node::ExternalCall(_)
+        | Node::Redirection(_)
+        | Node::Match(_) => spaced(src, node),
+        Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {
+            bodies(src, node)
+        },
+        Node::MatchArms(_) => arms(src, node),
+        Node::MatchArm(_) => arm(src, node),
+        Node::Def(_) => def(src, node),
+        Node::List(_) | Node::Record(_) | Node::Table(_) | Node::Signature(_) => {
             container(src, node)
         },
-        SyntaxKind::Param => param(src, node),
-        SyntaxKind::Type => type_(src, node),
-        SyntaxKind::TypeField => type_field(src, node),
-        SyntaxKind::Block => block(src, node),
-        kind => unreachable!("{kind:?} is not formatted as a node"),
+        Node::Param(_) => param(src, node),
+        Node::Type(_) => type_(src, node),
+        Node::TypeField(_) => type_field(src, node),
+        Node::Block(_) => block(src, node),
+        Node::Root(_) => unreachable!("Root is laid out by file"),
+        Node::Assignment(_) | Node::Let(_) | Node::RecordField(_) | Node::ClosureParams(_) => {
+            unreachable!("{kind:?} is laid out by its parent")
+        },
+        Node::Error(_) => unreachable!("a file with errors is not formatted"),
     }
 }
 
