@@ -81,7 +81,6 @@ impl Violation {
     }
 }
 
-/// One line.
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.invariant, self.detail)

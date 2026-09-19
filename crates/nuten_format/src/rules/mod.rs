@@ -58,8 +58,6 @@ fn children(elements: impl IntoIterator<Item = SyntaxElement>) -> impl Iterator<
         })
 }
 
-/// `children` with every `,` dropped.
-/// The child after one or more dropped `,` counts the most line breaks any of them, or itself, had before it.
 fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item = Child> {
     let mut dropped = 0;
     children.filter_map(move |child| {
@@ -95,8 +93,6 @@ struct Formatter<'a> {
 
 impl<'a> Formatter<'a> {
     /// Statements; line breaks before the first are left to the container.
-    /// Blank lines stay, one at most, or two after a statement ending in `|`.
-    /// A comment stays on its own line or at the end of its line; `at_start` is whether nothing comes before the first child on its line.
     fn statements(&mut self, items: &[Child], at_start: bool) -> Vec<Element<'a>> {
         items
             .iter()
@@ -137,7 +133,6 @@ impl<'a> Formatter<'a> {
         separator.into_iter().chain(item).collect()
     }
 
-    /// The entry for every node but Root and those their parent lays out itself.
     fn node(&mut self, node: &Node) -> Vec<Element<'a>> {
         match node {
             Node::Pipeline(pipeline) => self.pipeline(pipeline),
@@ -184,7 +179,6 @@ impl<'a> Formatter<'a> {
     }
 
     /// `items` one space apart, but those `joined`, by index and by themselves, which touch what comes before them.
-    /// A comment stays where it is, on its own line or at the end of its line, and what follows it starts a line, joined or not.
     fn spaced_children(
         &mut self,
         items: &[Child],
@@ -211,7 +205,6 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// A node as `node` lays it out, or a token as it is.
     fn element(&mut self, element: &ast::Element) -> Vec<Element<'a>> {
         match element {
             NodeOrToken::Node(node) => self.node(node),
@@ -220,7 +213,6 @@ impl<'a> Formatter<'a> {
     }
 
     /// The one place a comment is printed, other than inside text kept as it is.
-    /// `at_start` is whether nothing comes before it on its line.
     fn comment(&self, comment: &SyntaxToken, newlines: u32, at_start: bool) -> Vec<Element<'a>> {
         if newlines > 0 || at_start {
             // The container may have pushed a line break already; the printer keeps the longer of the two.
@@ -231,12 +223,10 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// A token as it is in the source.
     fn token(&self, token: &SyntaxToken) -> Element<'a> {
         self.source(token.text_range())
     }
 
-    /// The source in `range` as it is, trivia included.
     fn source(&self, range: TextRange) -> Element<'a> {
         text(&self.src[range])
     }

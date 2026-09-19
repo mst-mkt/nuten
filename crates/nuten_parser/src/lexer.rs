@@ -46,7 +46,6 @@ pub enum LexErrorKind {
     MissingRawQuote,
 }
 
-/// One line.
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -146,10 +145,6 @@ impl Mode {
 
 /// Lexes `range` of `src` without looking at the bytes around it.
 /// All ranges are absolute in `src`, and the tokens cover `range` exactly.
-///
-/// # Panics
-///
-/// Panics if `range` is outside `src` or splits a char.
 pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     let mut lexer = Lexer::new(src, range, mode);
     Lexed {
@@ -160,10 +155,6 @@ pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
 
 /// The first token of lexing `range` of `src`, without lexing the rest.
 /// An `Error` token comes without its error.
-///
-/// # Panics
-///
-/// Panics if `range` is outside `src` or splits a char.
 pub(crate) fn lex_first(src: &str, range: TextRange, mode: Mode) -> Option<Token> {
     Lexer::new(src, range, mode).next()
 }

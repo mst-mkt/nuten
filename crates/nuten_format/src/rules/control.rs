@@ -4,8 +4,6 @@ use nuten_syntax::{NodeOrToken, SyntaxKind, SyntaxNode, ast::Node};
 use super::{Formatter, children};
 
 impl<'a> Formatter<'a> {
-    /// An `if` with its `else` branches, or a `for`, a `while`, a `loop`, or a `try`, its parts one space apart and its bodies laid out as blocks that break together: always but for an `if` or a `try` that is no statement, which stays on one line when every body holds one statement at most and the whole fits.
-    /// Line breaks in the source do not count.
     pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(keyword.children_with_tokens())
             .map(|child| child.element)

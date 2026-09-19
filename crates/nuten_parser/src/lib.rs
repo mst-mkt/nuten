@@ -74,7 +74,6 @@ pub enum ParseErrorKind {
     SignatureSeparator,
 }
 
-/// One line.
 impl fmt::Display for ParseErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
@@ -115,10 +114,6 @@ impl From<LexError> for ParseError {
 }
 
 /// The tree holds every byte of `src`, even when there are errors.
-///
-/// # Panics
-///
-/// Panics if `src` is 4 GiB or longer.
 pub fn parse(src: &str) -> Parsed {
     let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
     tree::build(src, &parser::parse(src, lexed))

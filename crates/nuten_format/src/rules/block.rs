@@ -18,10 +18,6 @@ pub(super) struct BlockLayout<'a> {
 }
 
 impl<'a> Formatter<'a> {
-    /// A block or a closure.
-    /// The parameters come right after the opening brace, as they are.
-    /// The rest goes on one line when it fits and no line break comes after the parameters, with one space inside the braces; otherwise the statements go indented, with the closing brace on a line of its own.
-    /// Blank lines at the end go, and so do those at the start, unless a comment comes before them.
     pub(super) fn block(&mut self, block: &Block) -> Vec<Element<'a>> {
         let BlockLayout {
             mut head,

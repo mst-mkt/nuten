@@ -9,8 +9,6 @@ use nuten_syntax::{
 use super::{Formatter, children, without_commas};
 
 impl<'a> Formatter<'a> {
-    /// One parameter of a signature: its name, then its `(-f)` joined to it where nu reads the two as one flag, its `:` joined too unless a comment comes before it, its type, and its `=` and default value, each one space apart.
-    /// A `,` is dropped.
     pub(super) fn param(&mut self, param: &Param) -> Vec<Element<'a>> {
         let items: Vec<_> =
             without_commas(children(param.syntax().children_with_tokens())).collect();
@@ -27,8 +25,6 @@ impl<'a> Formatter<'a> {
         })
     }
 
-    /// A type that takes parameters, on one line: its name, `<`, its parameters or fields `, ` apart, and `>`, with no space inside the brackets.
-    /// A `,` is dropped, and one is printed between two parameters whether the source had one or not, which the token invariant cannot see and the nu oracle does.
     /// No comment comes inside, since the parser keeps a type holding one as one token.
     pub(super) fn type_(&mut self, type_: &Type) -> Vec<Element<'a>> {
         let head = [self.token(&type_.name()), self.token(&type_.open())];
@@ -48,7 +44,6 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// One field of a type: its key, its `:` right after it, and its type one space after that.
     /// A `,` here is the type nu takes for the key, so it stays, unlike one among the fields.
     pub(super) fn type_field(&mut self, field: &TypeField) -> Vec<Element<'a>> {
         let items: Vec<_> = children(field.syntax().children_with_tokens()).collect();

@@ -12,10 +12,6 @@ use nuten_syntax::{
 use super::{Child, Formatter, children, separator};
 
 impl<'a> Formatter<'a> {
-    /// On one line when no line break came before a pipe or element in the source and it fits, counting only the first line of an element that ends it; otherwise each `|` starts a line, at the current indent, while `e>|` and `o+e>|` stay on the line of their element.
-    /// What follows a `|` at the start of a line goes two columns further on its lines after the first, so that it lines up after the `| `.
-    /// A comment stays where it is among the pipes and elements, on its own line or at the end of its line.
-    /// A pipe with a comment after it stays at the end of its line, and what comes next starts a line.
     pub(super) fn pipeline(&mut self, pipeline: &Pipeline) -> Vec<Element<'a>> {
         let id = self.groups.fresh();
         let parts = parts(pipeline.syntax());
@@ -38,7 +34,6 @@ impl<'a> Formatter<'a> {
         iter::once(group_with_id(id, head)).chain(tail).collect()
     }
 
-    /// The `|` of `segment` after what separates it from the part before, then its items: those up to a comment aligned as the segment says, the rest as they are.
     fn segment(&mut self, segment: &Segment<'_>, id: GroupId) -> Vec<Element<'a>> {
         let pipe = segment.pipe.map(|pipe| {
             // A pipe with a comment after it stays at the end of its line.
@@ -73,8 +68,6 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// A part after what separates it from `prev`, the kind of the part before it: one space, or a line break after a comment.
-    /// A comment stays where it is, and a joined part has its space whatever comes before.
     fn part(&mut self, prev: Option<SyntaxKind>, part: &Part) -> Vec<Element<'a>> {
         let Child {
             element,
@@ -97,7 +90,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether a `;` comes right before `node`, past whitespace.
 fn follows_semicolon(node: &SyntaxNode) -> bool {
     let mut before = node.prev_sibling_or_token();
     while let Some(sibling) = &before
@@ -130,7 +122,6 @@ impl Part {
         }
     }
 
-    /// Whether it is an `e>|` or an `o+e>|`.
     fn is_redirection_pipe(&self) -> bool {
         matches!(
             self.kind(),
@@ -139,13 +130,11 @@ impl Part {
     }
 }
 
-/// The children of `pipeline`, with each element that holds an `Assignment` or a `Let` laid flat: its parts up to the operator, then any comment, then the children of the pipeline it takes, whose first element joins the operator unless a line break or a comment comes between.
-/// So the pipes of what the operator takes format as those of `pipeline`.
+/// An `Assignment` or a `Let` is laid flat, so that the pipes of what the operator takes format as those of `pipeline`.
 fn parts(pipeline: &SyntaxNode) -> Vec<Part> {
     flatten(pipeline, 0, false)
 }
 
-/// `newlines` come before the first child, and `joined` is whether it joins what comes before when it is an element.
 fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
     children(pipeline.children_with_tokens())
         .enumerate()
@@ -175,7 +164,6 @@ fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
         .collect()
 }
 
-/// The parts of `assignment` for `flatten`: each joins the part before it but a comment, and the first, which joins as `joined` tells.
 fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
     children(assignment.children_with_tokens())
         .enumerate()
@@ -202,12 +190,11 @@ fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool) -> V
         .collect()
 }
 
-/// How what follows a `|` is aligned, two columns further on its lines after the first.
+/// How what follows a `|` is aligned.
 #[derive(Clone, Copy)]
 enum Alignment {
     /// Always, since the `|` starts a line even when the pipeline is on one line.
     Always,
-    /// When the group of the pipeline breaks.
     IfGroupBreaks,
 }
 
@@ -215,22 +202,16 @@ enum Alignment {
 /// The first segment of a pipeline has no `|`, and neither has the tail, the element that ends the pipeline once `split_tail` takes it off the last segment.
 #[derive(Clone, Copy)]
 struct Segment<'p> {
-    /// The kind of the part before the segment, if any.
     prev: Option<SyntaxKind>,
-    /// The `|` it starts with.
     pipe: Option<&'p Part>,
-    /// What follows the `|`.
     items: &'p [Part],
-    /// How the items up to a comment are aligned, if at all.
     align: Option<Alignment>,
 }
 
-/// Whether the first of `items` is a comment.
 fn starts_with_comment(items: &[Part]) -> bool {
     items.first().is_some_and(|part| part.child.is_comment())
 }
 
-/// The segments of `parts`, and apart from them the tail of the last, if it has one; `after_semicolon` is whether the pipeline comes right after a `;` on its line.
 fn segments(parts: &[Part], after_semicolon: bool) -> (Vec<Segment<'_>>, Option<Segment<'_>>) {
     let is_pipe = |part: &Part| part.kind() == SyntaxKind::Pipe;
     let mut runs = parts.split(is_pipe);
@@ -254,7 +235,6 @@ fn segments(parts: &[Part], after_semicolon: bool) -> (Vec<Segment<'_>>, Option<
 }
 
 impl<'p> Segment<'p> {
-    /// The segment of `pipe` with `items` after it, `prev` being the kind of the part before the `|`.
     fn of_pipe(
         prev: Option<SyntaxKind>,
         pipe: &'p Part,
@@ -277,12 +257,10 @@ impl<'p> Segment<'p> {
         }
     }
 
-    /// Whether a comment comes right after the `|`.
     fn starts_with_comment(&self) -> bool {
         starts_with_comment(self.items)
     }
 
-    /// The kind of the part before the item at `index`: an item, the `|`, or the part before the segment.
     fn prev_of(&self, index: usize) -> Option<SyntaxKind> {
         self.items[..index]
             .last()
@@ -291,12 +269,10 @@ impl<'p> Segment<'p> {
             .or(self.prev)
     }
 
-    /// The kind of the last part of the segment, or of the part before it when it has none.
     fn last_kind(&self) -> Option<SyntaxKind> {
         self.prev_of(self.items.len())
     }
 
-    /// Where the alignment ends: at the first comment, or after every item.
     fn aligned_end(&self) -> usize {
         self.items
             .iter()
@@ -304,8 +280,6 @@ impl<'p> Segment<'p> {
             .unwrap_or(self.items.len())
     }
 
-    /// The segment without the element that ends the pipeline, and that element with what joins it as a segment of its own, when the segment ends with one.
-    /// The alignment goes on into it, unless a comment ended it before.
     fn split_tail(&self) -> (Self, Option<Self>) {
         let last = self.items.iter().rposition(|part| !part.joined);
         let Some(tail) = last.filter(|&last| self.items[last].is_element()) else {

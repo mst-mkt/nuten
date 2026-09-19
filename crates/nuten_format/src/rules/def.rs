@@ -7,7 +7,6 @@ use nuten_syntax::{
 use super::{Formatter, block::BlockLayout, children};
 
 impl<'a> Formatter<'a> {
-    /// A `def` or an `extern`: its parts one space apart, with the `:` the input and output types follow right after the parameters, and the body expanded.
     pub(super) fn def(&mut self, def: &Def) -> Vec<Element<'a>> {
         let items: Vec<_> = children(def.syntax().children_with_tokens())
             .map(|child| child.element)

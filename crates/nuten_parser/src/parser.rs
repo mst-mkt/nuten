@@ -65,11 +65,6 @@ pub(crate) enum Affix {
 }
 
 impl Affix {
-    /// The brackets and what they hold, within the word at `range`.
-    ///
-    /// # Panics
-    ///
-    /// Panics when the affix is longer than the word or ends inside one of its characters.
     fn brackets_within(self, range: TextRange) -> TextRange {
         match self {
             Affix::None => range,
@@ -152,12 +147,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// The kind of the next token, or `None` at the end.
     pub(crate) fn peek(&self) -> Option<SyntaxKind> {
         self.nth(0)
     }
 
-    /// The text of the next token, or `None` at the end.
     pub(crate) fn peek_text(&self) -> Option<&'a str> {
         self.nth_text(0)
     }
@@ -194,26 +187,16 @@ impl<'a> Parser<'a> {
             .map(|&token| (token, &self.src[token.range]))
     }
 
-    /// The first token of lexing again in `mode`, from `start` to where the tokens end.
-    ///
-    /// # Panics
-    ///
-    /// Panics when `start` is past where the tokens end.
     pub(crate) fn lex_first(&self, start: TextSize, mode: Mode) -> Option<Token> {
         let end = self.tokens.last()?.range.end();
         lexer::lex_first(self.src, TextRange::new(start, end), mode)
     }
 
-    /// The first error of lexing `range` again in `mode`.
     pub(crate) fn lex_error(&self, range: TextRange, mode: Mode) -> Option<LexError> {
         lexer::lex(self.src, range, mode).errors.into_iter().next()
     }
 
     /// Emits the next `count` tokens, which touch one another, as one `Word`.
-    ///
-    /// # Panics
-    ///
-    /// Panics when `count` is 0 or more than are left, when they do not touch, or when one is trivia or an `Error`.
     pub(crate) fn bump_joined(&mut self, count: usize) {
         self.bump_skipped();
         let tokens = &self.tokens[self.pos..self.pos + count];
@@ -243,10 +226,6 @@ impl<'a> Parser<'a> {
     }
 
     /// As `bracketed`, for a word with `affix` outside its brackets.
-    ///
-    /// # Panics
-    ///
-    /// Panics when `affix` is longer than the word ahead or ends inside one of its characters.
     pub(crate) fn bracketed_affixed(
         &self,
         brackets: &'static Brackets,
@@ -274,10 +253,6 @@ impl<'a> Parser<'a> {
 
     /// Emits the next token as a `node`: its opening bracket, the events `items` makes of what it holds, and its closing bracket.
     /// The token stays a `Word` when a comment inside has no whitespace before its `#`: nu reads the word with that `#` as no comment and counts the brackets in its text, so whitespace put before the `#` may move where the word ends.
-    ///
-    /// # Panics
-    ///
-    /// Panics unless `bracketed` was found in the next token, or when `items` leaves any token of what it holds.
     pub(crate) fn bump_bracketed(
         &mut self,
         node: SyntaxKind,
@@ -290,10 +265,6 @@ impl<'a> Parser<'a> {
     /// As `bump_bracketed`, unless `items` reports an error among the tokens it holds: then its events are dropped and the token stays a `Word`.
     /// Errors inside nested nodes do not count.
     /// For a word that nu may read as a string, where nothing inside may be reported.
-    ///
-    /// # Panics
-    ///
-    /// As `bump_bracketed`.
     pub(crate) fn bump_bracketed_or_word(
         &mut self,
         node: SyntaxKind,
@@ -372,10 +343,6 @@ impl<'a> Parser<'a> {
     }
 
     /// Emits the next token as `kind`, which the mode it was lexed in did not give it, such as the `:` before input and output types.
-    ///
-    /// # Panics
-    ///
-    /// Panics at the end.
     pub(crate) fn bump_as(&mut self, kind: SyntaxKind) {
         self.bump_skipped();
         let token = self.nth_token(0).expect("bump_as at the end");
@@ -383,11 +350,6 @@ impl<'a> Parser<'a> {
         self.push_token(kind, token.range);
     }
 
-    /// Emits the next token.
-    ///
-    /// # Panics
-    ///
-    /// Panics at the end.
     pub(crate) fn bump(&mut self) {
         self.bump_skipped();
         assert!(self.pos < self.tokens.len(), "bump at the end");
@@ -395,10 +357,6 @@ impl<'a> Parser<'a> {
     }
 
     /// Emits the next token inside an `Error` node, reporting `kind` at it.
-    ///
-    /// # Panics
-    ///
-    /// Panics at the end, or at an `Error` token, which already carries an error.
     pub(crate) fn bump_error(&mut self, kind: ParseErrorKind) {
         let token = self.nth_token(0).expect("bump_error at the end");
         self.bump_error_to(
@@ -411,10 +369,6 @@ impl<'a> Parser<'a> {
     }
 
     /// Emits the tokens ahead up to `end` inside an `Error` node, reporting `error`.
-    ///
-    /// # Panics
-    ///
-    /// Panics unless a token ahead ends at `end`, or when an `Error` token comes before `end`.
     pub(crate) fn bump_error_to(&mut self, end: TextSize, error: ParseError) {
         self.start(SyntaxKind::Error);
         self.push_error(error);

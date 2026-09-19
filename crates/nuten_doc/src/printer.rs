@@ -317,7 +317,6 @@ impl<'a> Printer<'a> {
             }));
     }
 
-    /// `indent` one level deeper.
     fn deeper(&self, indent: Indentation) -> Indentation {
         match self.options.indent_style {
             IndentStyle::Space => Indentation {
@@ -399,7 +398,6 @@ impl<'a> Printer<'a> {
     }
 }
 
-/// Whether a `Line` prints a line break in `mode`.
 fn breaks_line(line_mode: LineMode, mode: Mode) -> bool {
     matches!(line_mode, LineMode::Hard { .. }) || mode == Mode::Break
 }

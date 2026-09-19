@@ -78,11 +78,6 @@ syntax_kinds!(nodes);
 /// A node or a token, the node typed.
 pub type Element = NodeOrToken<Node, SyntaxToken>;
 
-/// `element` with its node typed.
-///
-/// # Panics
-///
-/// When the node has a token kind, which the parser never builds and the `NodeShape` invariant holds it to.
 pub fn typed(element: SyntaxElement) -> Element {
     match element {
         NodeOrToken::Node(node) => {
@@ -100,11 +95,6 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
 }
 
 /// A node the parser makes of a word enclosed in brackets: the opening bracket is its first child, or the second after the name of a `Type`, and the closing one its last, whatever comes between.
-///
-/// # Panics
-///
-/// `open` panics when the child it reads is missing or is not a token, `close` when the last is not a token; `inside` calls both, and `following` calls `close`.
-/// `Node::flaw` checks the whole shape, and the `NodeShape` invariant of the parser holds every tree to it.
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
         self.syntax()
@@ -276,10 +266,6 @@ impl Table {
 
     /// The column names, a `List` or a `Word`, and the `;` after them, whitespace and line breaks aside.
     /// The rows are what follows the `;`.
-    ///
-    /// # Panics
-    ///
-    /// When the table has no such header, which the `NodeShape` invariant of the parser rules out.
     pub fn header(&self) -> (Element, SyntaxToken) {
         let (columns, semicolon) = self
             .try_header()
@@ -297,10 +283,6 @@ impl Def {
 
 impl Type {
     /// The name before the `<`; the parameters or fields are what the brackets hold.
-    ///
-    /// # Panics
-    ///
-    /// When the first child is not a token, which the `NodeShape` invariant of the parser rules out.
     pub fn name(&self) -> SyntaxToken {
         self.syntax()
             .first_child_or_token()
