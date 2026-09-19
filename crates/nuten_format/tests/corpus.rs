@@ -53,26 +53,25 @@ fn every_corpus_file_keeps_the_invariants() {
                 continue;
             },
         };
-        // `violations` panics when the parser breaks its invariants.
-        match panic::catch_unwind(|| invariants::violations(&src, &config)) {
-            Ok(Ok(violations)) => {
-                if listed {
-                    problems.push(format!("{name}: in SYNTAX_ERRORS, but no syntax errors"));
-                }
+        // A panic is a bug in nuten itself; catching it keeps the rest of the
+        // corpus checked.
+        match panic::catch_unwind(|| invariants::check(&src, &config)) {
+            Ok(checked) => {
+                let mislisting = match (listed, checked.syntax_errors.first()) {
+                    (true, None) => Some(format!("{name}: in SYNTAX_ERRORS, but no syntax errors")),
+                    (false, Some(error)) => Some(format!(
+                        "{name}: {} at {:?}, but not in SYNTAX_ERRORS",
+                        error.kind, error.range
+                    )),
+                    (true, Some(_)) | (false, None) => None,
+                };
+                problems.extend(mislisting);
                 problems.extend(
-                    violations
+                    checked
+                        .violations
                         .iter()
                         .map(|violation| format!("{name}: {violation}")),
                 );
-            },
-            Ok(Err(error)) => {
-                if !listed {
-                    let error = &error.errors[0];
-                    problems.push(format!(
-                        "{name}: {} at {:?}, but not in SYNTAX_ERRORS",
-                        error.kind, error.range
-                    ));
-                }
             },
             Err(payload) => {
                 let message = payload

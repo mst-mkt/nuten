@@ -3,14 +3,15 @@
 //! A fixture has an expected output; any other input has only these: that
 //! the output keeps every token and every comment, and that formatting the
 //! output changes nothing. What the parser must keep is in
-//! `nuten_parser::invariants`.
+//! `nuten_parser::invariants`, and `check` asks those first.
 
 use std::fmt;
 
+pub use nuten_parser::invariants::Violation;
 use nuten_parser::{Parsed, parse};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
-use crate::{Config, FormatError, format_parsed};
+use crate::{Config, ParseError, format_parsed};
 
 /// One property of the formatter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -44,51 +45,51 @@ impl Invariant {
             Invariant::Idempotency => "idempotency",
         }
     }
-}
 
-/// An invariant that does not hold for one input.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Violation {
-    pub invariant: Invariant,
-    /// What differs, in one line.
-    pub detail: String,
-}
-
-impl Violation {
-    fn new(invariant: Invariant, detail: String) -> Violation {
+    /// A violation of this invariant, given what breaks in one line.
+    fn violation(self, detail: String) -> Violation {
         Violation {
-            invariant,
+            invariant: self.name(),
             detail,
         }
     }
 }
 
-/// One line.
-impl fmt::Display for Violation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.invariant.name(), self.detail)
+/// What asking the invariants of one source finds. The syntax errors are kept
+/// apart from the violations, since a source can have both.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Checked {
+    /// What the parser breaks; where it keeps its invariants and the source
+    /// has no syntax errors, what the formatter breaks.
+    pub violations: Vec<Violation>,
+    /// The syntax errors of the source, which leave no output to ask about.
+    pub syntax_errors: Vec<ParseError>,
+}
+
+/// What asking the invariants of `src` finds, with the violations in their
+/// order.
+pub fn check(src: &str, config: &Config) -> Checked {
+    let parsed = parse(src);
+    Checked {
+        violations: violations(src, &parsed, config),
+        syntax_errors: parsed.errors().to_vec(),
     }
 }
 
-/// Every violation for `src`, in the order of the invariants.
-///
-/// # Errors
-///
-/// When the source has syntax errors.
-///
-/// # Panics
-///
-/// When the parser breaks its invariants on `src`, since the rules rely on
-/// them.
-pub fn violations(src: &str, config: &Config) -> Result<Vec<Violation>, FormatError> {
-    let parsed = parse(src);
-    let broken = nuten_parser::invariants::violations(src, &parsed);
-    assert!(
-        broken.is_empty(),
-        "the parser breaks its invariants: {broken:?}"
-    );
-    let output = format_parsed(src, &parsed, config)?;
-    Ok(against_output(&parsed.syntax(), &output, config))
+/// What `check` puts in `Checked::violations`. `parsed` is the tree of `src`.
+fn violations(src: &str, parsed: &Parsed, config: &Config) -> Vec<Violation> {
+    // The rules read a tree that keeps the invariants of the parser, so what
+    // the formatter makes of one that does not says nothing.
+    let broken = nuten_parser::invariants::violations(src, parsed);
+    if !broken.is_empty() {
+        return broken;
+    }
+    // `format_parsed` fails only on syntax errors, which leave no output;
+    // `Checked` reports them on their own.
+    let Ok(output) = format_parsed(src, parsed, config) else {
+        return Vec::new();
+    };
+    against_output(&parsed.syntax(), &output, config)
 }
 
 /// The invariants of the formatter, asked of the tree of the source against
@@ -98,20 +99,20 @@ fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Viola
     if let Some(error) = parsed.errors().first() {
         // An Error token can swallow several tokens, so the other checks
         // would only repeat this.
-        return vec![Violation::new(
-            Invariant::Idempotency,
-            format!(
-                "the output does not parse: {} at {:?}",
-                error.kind, &output[error.range]
-            ),
-        )];
+        return vec![Invariant::Idempotency.violation(format!(
+            "the output does not parse: {} at {:?}",
+            error.kind, &output[error.range]
+        ))];
     }
     let output_tree = parsed.syntax();
-    let mut violations = Vec::new();
-    violations.extend(tokens(tree, &output_tree));
-    violations.extend(comments(tree, &output_tree));
-    violations.extend(idempotency(output, &parsed, config));
-    violations
+    [
+        tokens(tree, &output_tree),
+        comments(tree, &output_tree),
+        idempotency(output, &parsed, config),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
@@ -152,7 +153,7 @@ fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
         ),
         (None, Some(b)) => format!("token {}, {}, is not in the source", index + 1, describe(b)),
     };
-    Some(Violation::new(Invariant::Tokens, detail))
+    Some(Invariant::Tokens.violation(detail))
 }
 
 fn comments(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
@@ -167,7 +168,7 @@ fn comments(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
         (Some(a), None) => format!("comment {}, {a}, is missing from the output", index + 1),
         (None, Some(b)) => format!("comment {}, {b}, is not in the source", index + 1),
     };
-    Some(Violation::new(Invariant::Comments, detail))
+    Some(Invariant::Comments.violation(detail))
 }
 
 /// A comment and where it stands: on its own line or not, before a blank
@@ -262,7 +263,7 @@ fn idempotency(output: &str, parsed: &Parsed, config: &Config) -> Option<Violati
             mismatch(output.as_bytes(), again.as_bytes())
         ),
     };
-    Some(Violation::new(Invariant::Idempotency, detail))
+    Some(Invariant::Idempotency.violation(detail))
 }
 
 /// The index of the first element that differs, or the length of the
@@ -278,21 +279,34 @@ fn mismatch<T: PartialEq>(a: &[T], b: &[T]) -> usize {
 mod tests {
     use nuten_parser::parse;
 
-    use super::{Invariant, Violation, against_output, violations};
+    use super::{Checked, Invariant, Violation, against_output, check};
     use crate::{Config, LineEnding, ParseErrorKind};
 
     /// The violations of the formatter's invariants for `output` as the
     /// output of `src`.
-    fn check(src: &str, output: &str) -> Vec<Violation> {
+    fn formatter_violations(src: &str, output: &str) -> Vec<Violation> {
         against_output(&parse(src).syntax(), output, &Config::default())
     }
 
-    fn invariants(violations: &[Violation]) -> Vec<Invariant> {
-        violations.iter().map(|v| v.invariant).collect()
+    fn invariant_names(violations: &[Violation]) -> Vec<&'static str> {
+        violations
+            .iter()
+            .map(|violation| violation.invariant)
+            .collect()
+    }
+
+    /// Neither a violation nor a syntax error. The syntax errors count too,
+    /// since a source that has them leaves the violations of the formatter
+    /// unasked, and so empty.
+    fn nothing() -> Checked {
+        Checked {
+            violations: vec![],
+            syntax_errors: vec![],
+        }
     }
 
     #[test]
-    fn ordinary_files_have_no_violations() {
+    fn ordinary_files_leave_nothing_to_report() {
         for src in [
             "# a\n\nls | get name # b\n# c\nls\n",
             "# c",
@@ -304,38 +318,39 @@ mod tests {
             "ls |\n# c\n\n| first\n",
             "ls\r\n# c\r\n\r\nls\r\n",
         ] {
-            assert_eq!(violations(src, &Config::default()).unwrap(), [], "{src:?}");
+            assert_eq!(check(src, &Config::default()), nothing(), "{src:?}");
         }
         let crlf = Config {
             line_ending: LineEnding::CrLf,
             ..Config::default()
         };
-        assert_eq!(violations("ls\r\n# c\r\n\r\nls\r\n", &crlf).unwrap(), []);
+        assert_eq!(check("ls\r\n# c\r\n\r\nls\r\n", &crlf), nothing());
     }
 
     #[test]
     fn a_file_with_syntax_errors_has_no_output_to_ask_about() {
-        let error = violations("ls |", &Config::default()).unwrap_err();
-        assert_eq!(error.errors[0].kind, ParseErrorKind::PipeAtEof);
+        let checked = check("ls |", &Config::default());
+        assert_eq!(checked.syntax_errors[0].kind, ParseErrorKind::PipeAtEof);
+        assert_eq!(checked.violations, []);
     }
 
     #[test]
     fn the_output_must_keep_every_token() {
-        let violations = check("ls | get name\n", "ls | first\n");
-        assert_eq!(invariants(&violations), [Invariant::Tokens]);
+        let violations = formatter_violations("ls | get name\n", "ls | first\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Tokens.name()]);
         assert_eq!(
             violations[0].detail,
             "token 3 is Word \"get\" in the source and Word \"first\" in the output"
         );
 
-        let violations = check("ls | get name\n", "ls | get\n");
-        assert_eq!(invariants(&violations), [Invariant::Tokens]);
+        let violations = formatter_violations("ls | get name\n", "ls | get\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Tokens.name()]);
         assert_eq!(
             violations[0].detail,
             "token 4, Word \"name\", is missing from the output"
         );
-        let violations = check("ls | get\n", "ls | get name\n");
-        assert_eq!(invariants(&violations), [Invariant::Tokens]);
+        let violations = formatter_violations("ls | get\n", "ls | get name\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Tokens.name()]);
         assert_eq!(
             violations[0].detail,
             "token 4, Word \"name\", is not in the source"
@@ -344,25 +359,28 @@ mod tests {
 
     #[test]
     fn the_output_may_move_tokens_between_lines() {
-        assert_eq!(check("ls |\n  get name\n", "ls | get name\n"), []);
+        assert_eq!(
+            formatter_violations("ls |\n  get name\n", "ls | get name\n"),
+            []
+        );
     }
 
     #[test]
     fn line_endings_inside_a_token_do_not_count() {
-        assert_eq!(check("'a\r\nb'\r\n", "'a\nb'\n"), []);
+        assert_eq!(formatter_violations("'a\r\nb'\r\n", "'a\nb'\n"), []);
     }
 
     #[test]
     fn commas_that_are_tokens_do_not_count() {
-        assert_eq!(check("[a, b,]\n", "[a b]\n"), []);
+        assert_eq!(formatter_violations("[a, b,]\n", "[a b]\n"), []);
         assert_eq!(
-            check("[a\n, # c\nb]\n", "[\n    a\n    # c\n    b\n]\n"),
+            formatter_violations("[a\n, # c\nb]\n", "[\n    a\n    # c\n    b\n]\n"),
             []
         );
         for (src, output) in [("echo , a\n", "echo a\n"), ("echo a,b\n", "echo ab\n")] {
             assert_eq!(
-                invariants(&check(src, output)),
-                [Invariant::Tokens],
+                invariant_names(&formatter_violations(src, output)),
+                [Invariant::Tokens.name()],
                 "{src:?}"
             );
         }
@@ -371,27 +389,27 @@ mod tests {
     #[test]
     fn the_output_must_keep_every_comment_where_it_stands() {
         assert_eq!(
-            invariants(&check("ls # c\n", "ls\n")),
-            [Invariant::Comments]
+            invariant_names(&formatter_violations("ls # c\n", "ls\n")),
+            [Invariant::Comments.name()]
         );
-        let violations = check("ls # c\n", "# c\nls\n");
-        assert_eq!(invariants(&violations), [Invariant::Comments]);
+        let violations = formatter_violations("ls # c\n", "# c\nls\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
         assert_eq!(
             violations[0].detail,
             "comment 1 is \"# c\" at the end of a line in the source \
              and \"# c\" on its own line in the output"
         );
-        let violations = check("# c\n\nls\n", "# c\nls\n");
-        assert_eq!(invariants(&violations), [Invariant::Comments]);
+        let violations = formatter_violations("# c\n\nls\n", "# c\nls\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
         assert_eq!(
             violations[0].detail,
             "comment 1 is \"# c\" on its own line with a blank line after it in the source \
              and \"# c\" on its own line in the output"
         );
-        let violations = check("# c\nls\n", "# c\n\nls\n");
-        assert_eq!(invariants(&violations), [Invariant::Comments]);
-        let violations = check("ls\n", "ls # c\n");
-        assert_eq!(invariants(&violations), [Invariant::Comments]);
+        let violations = formatter_violations("# c\nls\n", "# c\n\nls\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+        let violations = formatter_violations("ls\n", "ls # c\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
         assert_eq!(
             violations[0].detail,
             "comment 1, \"# c\" at the end of a line, is not in the source"
@@ -400,11 +418,11 @@ mod tests {
 
     #[test]
     fn trailing_whitespace_and_blank_lines_at_the_end_do_not_count() {
-        assert_eq!(check("ls # c  \n", "ls # c\n"), []);
-        assert_eq!(check("# c\n\n\n", "# c\n"), []);
-        assert_eq!(check("# a\n\n\n# b\n", "# a\n\n# b\n"), []);
+        assert_eq!(formatter_violations("ls # c  \n", "ls # c\n"), []);
+        assert_eq!(formatter_violations("# c\n\n\n", "# c\n"), []);
+        assert_eq!(formatter_violations("# a\n\n\n# b\n", "# a\n\n# b\n"), []);
         assert_eq!(
-            check(
+            formatter_violations(
                 "echo {\nls\n# c\n\n}\nls\n",
                 "echo {\n    ls\n    # c\n}\nls\n"
             ),
@@ -414,40 +432,53 @@ mod tests {
 
     #[test]
     fn blank_lines_between_statements_of_a_block_count() {
-        let violations = check("echo {\n# c\n\nls\n}\n", "echo {\n    # c\n    ls\n}\n");
-        assert_eq!(invariants(&violations), [Invariant::Comments]);
+        let violations =
+            formatter_violations("echo {\n# c\n\nls\n}\n", "echo {\n    # c\n    ls\n}\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
     }
 
     #[test]
     fn blank_lines_between_arms_count() {
-        let violations = check(
+        let violations = formatter_violations(
             "match $x {\n# c\n\n1 => a\n}\n",
             "match $x {\n    # c\n    1 => a\n}\n",
         );
-        assert_eq!(invariants(&violations), [Invariant::Comments]);
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
     }
 
     #[test]
     fn blank_lines_inside_a_statement_do_not_count() {
-        assert_eq!(check("ls |\n# c\n\n| first\n", "ls |\n# c\n| first\n"), []);
+        assert_eq!(
+            formatter_violations("ls |\n# c\n\n| first\n", "ls |\n# c\n| first\n"),
+            []
+        );
     }
 
     #[test]
     fn the_output_must_not_change_when_formatted_again() {
-        let violations = check("ls|first\n", "ls |  first\n");
-        assert_eq!(invariants(&violations), [Invariant::Idempotency]);
+        let violations = formatter_violations("ls|first\n", "ls |  first\n");
+        assert_eq!(
+            invariant_names(&violations),
+            [Invariant::Idempotency.name()]
+        );
         assert_eq!(
             violations[0].detail,
             "line 1 of the output, \"ls |  first\", becomes \"ls | first\" when formatted again"
         );
-        let violations = check("ls\nls\n", "ls\n\n\nls\n");
-        assert_eq!(invariants(&violations), [Invariant::Idempotency]);
+        let violations = formatter_violations("ls\nls\n", "ls\n\n\nls\n");
+        assert_eq!(
+            invariant_names(&violations),
+            [Invariant::Idempotency.name()]
+        );
         assert_eq!(
             violations[0].detail,
             "line 3 of the output, \"\", becomes \"ls\" when formatted again"
         );
-        let violations = check("ls\n", "ls\n\n");
-        assert_eq!(invariants(&violations), [Invariant::Idempotency]);
+        let violations = formatter_violations("ls\n", "ls\n\n");
+        assert_eq!(
+            invariant_names(&violations),
+            [Invariant::Idempotency.name()]
+        );
         assert_eq!(
             violations[0].detail,
             "line 2 of the output, \"\", is dropped when formatted again"
@@ -456,8 +487,11 @@ mod tests {
 
     #[test]
     fn a_change_of_line_ending_is_reported_by_byte() {
-        let violations = check("ls\n", "ls\r\n");
-        assert_eq!(invariants(&violations), [Invariant::Idempotency]);
+        let violations = formatter_violations("ls\n", "ls\r\n");
+        assert_eq!(
+            invariant_names(&violations),
+            [Invariant::Idempotency.name()]
+        );
         assert_eq!(
             violations[0].detail,
             "the output differs from byte 2 when formatted again"
@@ -466,8 +500,11 @@ mod tests {
 
     #[test]
     fn the_output_must_parse() {
-        let violations = check("ls\n", "ls |");
-        assert_eq!(invariants(&violations), [Invariant::Idempotency]);
+        let violations = formatter_violations("ls\n", "ls |");
+        assert_eq!(
+            invariant_names(&violations),
+            [Invariant::Idempotency.name()]
+        );
         assert_eq!(
             violations[0].detail,
             "the output does not parse: no command after `|` at \"|\""
@@ -476,7 +513,7 @@ mod tests {
 
     #[test]
     fn a_violation_prints_in_one_line() {
-        let violation = &check("ls\n", "ls # c\n")[0];
+        let violation = &formatter_violations("ls\n", "ls # c\n")[0];
         assert_eq!(
             violation.to_string(),
             "comment preservation: comment 1, \"# c\" at the end of a line, is not in the source"

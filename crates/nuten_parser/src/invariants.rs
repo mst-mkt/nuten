@@ -37,29 +37,31 @@ impl Invariant {
             Invariant::LexErrorsReported => "lex errors reported",
         }
     }
-}
 
-/// An invariant that does not hold for one input.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Violation {
-    pub invariant: Invariant,
-    /// What breaks first, in one line.
-    pub detail: String,
-}
-
-impl Violation {
-    fn new(invariant: Invariant, detail: String) -> Violation {
+    /// A violation of this invariant, given what breaks in one line.
+    fn violation(self, detail: String) -> Violation {
         Violation {
-            invariant,
+            invariant: self.name(),
             detail,
         }
     }
 }
 
+/// An invariant that does not hold for one input. The invariant is named
+/// rather than typed, so that one list can hold the violations of the parser
+/// and of the formatter, which declare their own.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Violation {
+    /// The name of the invariant, as the layer that declares it reports it.
+    pub invariant: &'static str,
+    /// What breaks first, in one line.
+    pub detail: String,
+}
+
 /// One line.
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.invariant.name(), self.detail)
+        write!(f, "{}: {}", self.invariant, self.detail)
     }
 }
 
@@ -88,10 +90,9 @@ fn roundtrip(src: &str, tree: &SyntaxNode) -> Option<Violation> {
         .zip(text.bytes())
         .position(|(a, b)| a != b)
         .unwrap_or(src.len().min(text.len()));
-    Some(Violation::new(
-        Invariant::Roundtrip,
-        format!("the tree differs from the source from byte {offset}"),
-    ))
+    Some(Invariant::Roundtrip.violation(format!(
+        "the tree differs from the source from byte {offset}"
+    )))
 }
 
 fn node_bounds(tree: &SyntaxNode) -> Option<Violation> {
@@ -107,10 +108,11 @@ fn node_bounds(tree: &SyntaxNode) -> Option<Violation> {
         } else {
             return None;
         };
-        Some(Violation::new(
-            Invariant::NodeBounds,
-            format!("{:?} at {:?} {flaw}", node.kind(), node.text_range()),
-        ))
+        Some(Invariant::NodeBounds.violation(format!(
+            "{:?} at {:?} {flaw}",
+            node.kind(),
+            node.text_range()
+        )))
     })
 }
 
@@ -138,7 +140,7 @@ fn error_placement(tree: &SyntaxNode, errors: &[ParseError]) -> Option<Violation
             errors.len()
         )
     };
-    Some(Violation::new(Invariant::ErrorPlacement, detail))
+    Some(Invariant::ErrorPlacement.violation(detail))
 }
 
 fn lex_errors_reported(src: &str, errors: &[ParseError]) -> Option<Violation> {
@@ -148,10 +150,10 @@ fn lex_errors_reported(src: &str, errors: &[ParseError]) -> Option<Violation> {
         .into_iter()
         .map(ParseError::from)
         .find(|error| !errors.contains(error))?;
-    Some(Violation::new(
-        Invariant::LexErrorsReported,
-        format!("{} at {:?} is not reported", missing.kind, missing.range),
-    ))
+    Some(Invariant::LexErrorsReported.violation(format!(
+        "{} at {:?} is not reported",
+        missing.kind, missing.range
+    )))
 }
 
 #[cfg(test)]
@@ -187,7 +189,7 @@ mod tests {
     }
 
     fn violation(invariant: Invariant, detail: &str) -> Violation {
-        Violation::new(invariant, detail.to_string())
+        invariant.violation(detail.to_string())
     }
 
     #[test]

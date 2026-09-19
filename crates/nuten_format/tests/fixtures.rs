@@ -1,10 +1,14 @@
 //! Each `test_data/<name>.nu` must format to `test_data/<name>.expected.nu`,
 //! which must format to itself, and formatting either must keep every
-//! invariant in `nuten_format::invariants`.
+//! invariant `nuten_format::invariants` asks about, of the parser and of the
+//! formatter alike.
 
 use std::{fs, path::Path};
 
-use nuten_format::{Config, format, invariants};
+use nuten_format::{
+    Config, format,
+    invariants::{self, Checked},
+};
 
 #[test]
 fn fixtures_format_as_expected() {
@@ -26,14 +30,14 @@ fn fixtures_format_as_expected() {
         let src = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(path.with_extension("expected.nu"))
             .unwrap_or_else(|error| panic!("{stem}.expected.nu: {error}"));
-        check(name, &src, &expected);
-        check(&format!("{stem}.expected.nu"), &expected, &expected);
+        formats_to(name, &src, &expected);
+        formats_to(&format!("{stem}.expected.nu"), &expected, &expected);
         checked += 1;
     }
     assert!(checked > 0, "no fixtures");
 }
 
-fn check(name: &str, src: &str, expected: &str) {
+fn formats_to(name: &str, src: &str, expected: &str) {
     let config = Config::default();
     let actual = format(src, &config).unwrap_or_else(|error| panic!("{name}: {:?}", error.errors));
     assert!(
@@ -41,7 +45,11 @@ fn check(name: &str, src: &str, expected: &str) {
         "{name}\n--- expected\n{expected}--- actual\n{actual}--- as strings\n{expected:?}\n\
          {actual:?}"
     );
-    let violations = invariants::violations(src, &config).expect("the source formatted above");
+    let Checked {
+        violations,
+        syntax_errors,
+    } = invariants::check(src, &config);
+    assert!(syntax_errors.is_empty(), "{name}: {syntax_errors:?}");
     assert!(
         violations.is_empty(),
         "{name}\n{}",
