@@ -1,10 +1,6 @@
-//! Each `test_data/<name>.nu` must format to `test_data/<name>.expected.nu`,
-//! which must format to itself, and formatting either must keep every
-//! invariant `nuten_format::invariants` asks about, of the parser and of the
-//! formatter alike.
+//! Each `test_data/<name>.nu` must format to `test_data/<name>.expected.nu`, which must format to itself, and formatting either must keep every invariant `nuten_format::invariants` asks about, of the parser and of the formatter alike.
 //!
-//! A failing fixture does not stop the others, so that a change to a rule
-//! shows all it affects at once.
+//! A failing fixture does not stop the others, so that a change to a rule shows all it affects at once.
 
 mod support;
 
@@ -103,13 +99,11 @@ fn contents_of(name: &str) -> io::Result<String> {
     fs::read_to_string(test_data().join(name))
 }
 
-/// What the checks find wrong with `name`, whose contents are `src` and which
-/// must format to `expected`.
+/// What the checks find wrong with `name`, whose contents are `src` and which must format to `expected`.
 fn failures_in(name: &str, src: &str, expected: &str, config: &Config) -> Vec<String> {
     let formatting = detail_of(|| formats_to(src, expected, config));
     let invariant = detail_of(|| keeps_invariants(src, config));
-    // Where both checks format, a panic in the rules reaches both, which
-    // report it alike; it is one problem, not two.
+    // Where both checks format, a panic in the rules reaches both, which report it alike; it is one problem, not two.
     let details = match (formatting, invariant) {
         (Some(one), Some(other)) if one == other => vec![one],
         (formatting, invariant) => [formatting, invariant].into_iter().flatten().collect(),
@@ -141,8 +135,7 @@ fn formats_to(src: &str, expected: &str, config: &Config) -> Result<(), String> 
 }
 
 fn keeps_invariants(src: &str, config: &Config) -> Result<(), String> {
-    // The syntax errors `check` also finds are left to `formats_to`, which
-    // fails on exactly them.
+    // The syntax errors `check` also finds are left to `formats_to`, which fails on exactly them.
     let violations: Vec<_> = invariants::check(src, config)
         .violations
         .iter()

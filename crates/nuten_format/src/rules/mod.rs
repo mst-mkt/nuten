@@ -35,8 +35,8 @@ impl Child {
     }
 }
 
-/// The children among `elements`, in source order. Line breaks at the end
-/// belong to no child, so nothing is printed for them.
+/// The children among `elements`, in source order.
+/// Line breaks at the end belong to no child, so nothing is printed for them.
 fn children(elements: impl IntoIterator<Item = SyntaxElement>) -> impl Iterator<Item = Child> {
     let mut newlines = 0;
     elements
@@ -58,8 +58,8 @@ fn children(elements: impl IntoIterator<Item = SyntaxElement>) -> impl Iterator<
         })
 }
 
-/// `children` with every `,` dropped. The child after one or more dropped
-/// `,` counts the most line breaks any of them, or itself, had before it.
+/// `children` with every `,` dropped.
+/// The child after one or more dropped `,` counts the most line breaks any of them, or itself, had before it.
 fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item = Child> {
     let mut dropped = 0;
     children.filter_map(move |child| {
@@ -87,8 +87,7 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     out
 }
 
-/// What every rule reads while a file is formatted: the source the elements
-/// borrow their text from, and the group ids given out so far.
+/// What every rule reads while a file is formatted: the source the elements borrow their text from, and the group ids given out so far.
 struct Formatter<'a> {
     src: &'a str,
     groups: GroupIds,
@@ -97,8 +96,7 @@ struct Formatter<'a> {
 impl<'a> Formatter<'a> {
     /// Statements; line breaks before the first are left to the container.
     /// Blank lines stay, one at most, or two after a statement ending in `|`.
-    /// A comment stays on its own line or at the end of its line; `at_start`
-    /// is whether nothing comes before the first child on its line.
+    /// A comment stays on its own line or at the end of its line; `at_start` is whether nothing comes before the first child on its line.
     fn statements(&mut self, items: &[Child], at_start: bool) -> Vec<Element<'a>> {
         items
             .iter()
@@ -107,8 +105,7 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// The statement, `;`, or comment `item` after what separates it from
-    /// the last of `before`, every child before it.
+    /// The statement, `;`, or comment `item` after what separates it from the last of `before`, every child before it.
     fn statement(&mut self, before: &[Child], item: &Child, at_start: bool) -> Vec<Element<'a>> {
         let Child {
             element,
@@ -118,8 +115,7 @@ impl<'a> Formatter<'a> {
         let separator = match (prev, *newlines) {
             (None, _) | (_, 0) => None,
             (_, 1) => Some(hard_line_break()),
-            // With one blank line, a `|` at the start of the next line would
-            // join the statement above, so two stay.
+            // With one blank line, a `|` at the start of the next line would join the statement above, so two stay.
             (_, 3..) if pipe_open(before) => Some(empty_lines(2)),
             _ => Some(empty_line()),
         };
@@ -141,8 +137,7 @@ impl<'a> Formatter<'a> {
         separator.into_iter().chain(item).collect()
     }
 
-    /// The entry for every node but Root and those their parent lays out
-    /// itself.
+    /// The entry for every node but Root and those their parent lays out itself.
     fn node(&mut self, node: &Node) -> Vec<Element<'a>> {
         match node {
             Node::Pipeline(pipeline) => self.pipeline(pipeline),
@@ -174,9 +169,8 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// The children with one space between each two. No line break falls
-    /// among them and no node ends with trivia, so a comment, which runs to
-    /// the end of its line, cannot be here either.
+    /// The children with one space between each two.
+    /// No line break falls among them and no node ends with trivia, so a comment, which runs to the end of its line, cannot be here either.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(parent.children_with_tokens()).collect();
         debug_assert!(
@@ -189,10 +183,8 @@ impl<'a> Formatter<'a> {
         self.spaced_children(&items, |_, _| false)
     }
 
-    /// `items` one space apart, but those `joined`, by index and by
-    /// themselves, which touch what comes before them. A comment stays where
-    /// it is, on its own line or at the end of its line, and what follows it
-    /// starts a line, joined or not.
+    /// `items` one space apart, but those `joined`, by index and by themselves, which touch what comes before them.
+    /// A comment stays where it is, on its own line or at the end of its line, and what follows it starts a line, joined or not.
     fn spaced_children(
         &mut self,
         items: &[Child],
@@ -227,16 +219,14 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// The one place a comment is printed, other than inside text kept as it
-    /// is. `at_start` is whether nothing comes before it on its line.
+    /// The one place a comment is printed, other than inside text kept as it is.
+    /// `at_start` is whether nothing comes before it on its line.
     fn comment(&self, comment: &SyntaxToken, newlines: u32, at_start: bool) -> Vec<Element<'a>> {
         if newlines > 0 || at_start {
-            // The container may have pushed a line break already; the printer
-            // keeps the longer of the two.
+            // The container may have pushed a line break already; the printer keeps the longer of the two.
             vec![hard_line_break(), self.token(comment)]
         } else {
-            // A line suffix, so that it does not count toward the width of the
-            // line.
+            // A line suffix, so that it does not count toward the width of the line.
             vec![line_suffix([space(), self.token(comment)])]
         }
     }
@@ -252,9 +242,7 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether a `|` at the end of the last statement among `before` still
-/// reaches what comes next: no blank line has come since, which closes the
-/// pipe as it did in the source.
+/// Whether a `|` at the end of the last statement among `before` still reaches what comes next: no blank line has come since, which closes the pipe as it did in the source.
 fn pipe_open(before: &[Child]) -> bool {
     before
         .iter()
@@ -267,16 +255,14 @@ fn pipe_open(before: &[Child]) -> bool {
         .unwrap_or(false)
 }
 
-/// Whether the statement ends with a `|`; statements never end with
-/// trivia, so the last child tells.
+/// Whether the statement ends with a `|`; statements never end with trivia, so the last child tells.
 fn ends_with_pipe(statement: &SyntaxNode) -> bool {
     statement
         .last_child_or_token()
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
 }
 
-/// What separates the child after `prev` from it: `plain`, but a line break
-/// after a comment, which runs to the end of its line.
+/// What separates the child after `prev` from it: `plain`, but a line break after a comment, which runs to the end of its line.
 fn separator(
     prev: Option<SyntaxKind>,
     plain: Option<Element<'static>>,

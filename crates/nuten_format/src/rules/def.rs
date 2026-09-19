@@ -7,9 +7,7 @@ use nuten_syntax::{
 use super::{Formatter, block::BlockLayout, children};
 
 impl<'a> Formatter<'a> {
-    /// A `def` or an `extern`: its parts one space apart, with the `:` the
-    /// input and output types follow right after the parameters, and the
-    /// body expanded.
+    /// A `def` or an `extern`: its parts one space apart, with the `:` the input and output types follow right after the parameters, and the body expanded.
     pub(super) fn def(&mut self, def: &Def) -> Vec<Element<'a>> {
         let items: Vec<_> = children(def.syntax().children_with_tokens())
             .map(|child| child.element)
@@ -17,8 +15,7 @@ impl<'a> Formatter<'a> {
         let body = def.body();
         let mut out = Vec::new();
         for (index, item) in items.iter().enumerate() {
-            // Another `:` after it would make nu read the types from
-            // elsewhere.
+            // Another `:` after it would make nu read the types from elsewhere.
             let joined = ast::kind_of(item) == SyntaxKind::Colon
                 && index > 0
                 && ast::kind_of(&items[index - 1]) == SyntaxKind::Signature

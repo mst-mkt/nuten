@@ -41,29 +41,22 @@ pub(crate) fn file(p: &mut Parser<'_>) {
     }
 }
 
-/// What nu takes at a position, as far as it decides whether a word in
-/// brackets is read as a value or kept whole. Nu's `SyntaxShape` decides
-/// more; these are the ones that tell here.
+/// What nu takes at a position, as far as it decides whether a word in brackets is read as a value or kept whole.
+/// Nu's `SyntaxShape` decides more; these are the ones that tell here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Shape {
     /// Any value: `[ ]` makes a list or a table, `{ }` a record or a block.
     Any,
-    /// An argument of a command whose signature is unknown. A `[ ]` stays a
-    /// word, since a command may take it as a string. Nu reads a `{ }` as a
-    /// string for a command it does not know and as a value for one it
-    /// knows, which the signature is to tell; until then one holding a
-    /// record stays a word and one holding a block is a block, as they were.
+    /// An argument of a command whose signature is unknown.
+    /// A `[ ]` stays a word, since a command may take it as a string.
+    /// Nu reads a `{ }` as a string for a command it does not know and as a value for one it knows, which the signature is to tell; until then one holding a record stays a word and one holding a block is a block, as they were.
     Argument,
-    /// An argument of an external command: a `[ ]` is a list, and a `{ }`
-    /// a string.
+    /// An argument of an external command: a `[ ]` is a list, and a `{ }` a string.
     ExternalArgument,
-    /// A block or a closure, as the body of a keyword syntax, what `else`
-    /// takes, and what a `match` arm does. Nu reads a `{ }` there as a
-    /// record only for a `:` second; one with a spread first is a block,
-    /// unlike where nu takes any value.
+    /// A block or a closure, as the body of a keyword syntax, what `else` takes, and what a `match` arm does.
+    /// Nu reads a `{ }` there as a record only for a `:` second; one with a spread first is a block, unlike where nu takes any value.
     Block,
-    /// The body of a `def`, which nu reads as a block without looking at
-    /// what the `{ }` holds.
+    /// The body of a `def`, which nu reads as a block without looking at what the `{ }` holds.
     DefBody,
 }
 
@@ -86,8 +79,7 @@ impl Shape {
         matches!(self, Shape::Any | Shape::Block)
     }
 
-    /// What nu reads a `{ }` as where it takes this shape, given the
-    /// `RecordSign` its first tokens show.
+    /// What nu reads a `{ }` as where it takes this shape, given the `RecordSign` its first tokens show.
     fn braced(self, sign: Option<RecordSign>) -> Braced {
         match (self, sign) {
             (Shape::Any, Some(sign)) | (Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
@@ -125,9 +117,7 @@ const CURLY: Brackets = Brackets {
     always_nested: true,
 };
 
-/// The next token as the value nu reads where it takes `shape`: a `List`,
-/// a `Table`, a `Record`, or a `Block` where the shape has nu read one, or
-/// the token as it is.
+/// The next token as the value nu reads where it takes `shape`: a `List`, a `Table`, a `Record`, or a `Block` where the shape has nu read one, or the token as it is.
 fn value(p: &mut Parser<'_>, shape: Shape) {
     if shape.reads_list()
         && let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
@@ -146,9 +136,8 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
     }
 }
 
-/// The `{ }` ahead as what nu reads where it takes `shape`: a `Record`, a
-/// `Block`, or the word as it is. `bracketed` is what it holds in brace
-/// mode, which tells a record from the rest.
+/// The `{ }` ahead as what nu reads where it takes `shape`: a `Record`, a `Block`, or the word as it is.
+/// `bracketed` is what it holds in brace mode, which tells a record from the rest.
 fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     match shape.braced(record_sign(bracketed.inner().remaining_tokens())) {
         Braced::Record(sign) => record(p, bracketed.lexed_in(Mode::Record), sign),

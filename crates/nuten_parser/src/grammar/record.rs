@@ -6,12 +6,9 @@ use crate::{
     parser::{Bracketed, Parser},
 };
 
-/// The `{ }` ahead as a `Record`, or as a word when its tokens cannot make
-/// nu's split, or when they show another `RecordSign` without the `,` among
-/// them. A `,` is whitespace to nu inside a record, so the formatter drops
-/// every one, and nu would then read the `{ }` by the other sign. `sign` is
-/// what `record_sign` found in brace mode, and `bracketed` is what the `{ }`
-/// holds in record mode.
+/// The `{ }` ahead as a `Record`, or as a word when its tokens cannot make nu's split, or when they show another `RecordSign` without the `,` among them.
+/// A `,` is whitespace to nu inside a record, so the formatter drops every one, and nu would then read the `{ }` by the other sign.
+/// `sign` is what `record_sign` found in brace mode, and `bracketed` is what the `{ }` holds in record mode.
 pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, sign: RecordSign) {
     let without_commas = bracketed
         .inner()
@@ -29,20 +26,16 @@ pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, sign: Rec
     }
 }
 
-/// What makes nu read `{ }` as a record where it takes any value. Nu reads
-/// a `:` second as a record whatever it takes, and a spread first as one
-/// only where it takes neither a closure, a block, nor match arms, so which
-/// sign shows must not depend on a `,`.
+/// What makes nu read `{ }` as a record where it takes any value.
+/// Nu reads a `:` second as a record whatever it takes, and a spread first as one only where it takes neither a closure, a block, nor match arms, so which sign shows must not depend on a `,`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RecordSign {
     ColonSecond,
     SpreadFirst,
 }
 
-/// The `RecordSign` among the first two of `tokens`, the inside of `{ }`,
-/// trivia aside, or `None` when a pipe comes first or neither sign does. Nu
-/// looks with `,` as no whitespace, so brace mode tells what it sees, and
-/// record mode without its `,` what it would see in the output.
+/// The `RecordSign` among the first two of `tokens`, the inside of `{ }`, trivia aside, or `None` when a pipe comes first or neither sign does.
+/// Nu looks with `,` as no whitespace, so brace mode tells what it sees, and record mode without its `,` what it would see in the output.
 pub(super) fn record_sign<'a>(
     tokens: impl Iterator<Item = (Token, &'a str)>,
 ) -> Option<RecordSign> {
@@ -55,15 +48,13 @@ pub(super) fn record_sign<'a>(
     }
 }
 
-/// Whether nu's lexer makes a pipe of the token: `|`, `||`, and what it
-/// reports as a mistaken pipe.
+/// Whether nu's lexer makes a pipe of the token: `|`, `||`, and what it reports as a mistaken pipe.
 fn nu_lexes_as_pipe(kind: SyntaxKind, text: &str) -> bool {
     matches!(kind, SyntaxKind::Pipe | SyntaxKind::PipePipe)
         || matches!(text, "o>|" | "out>|" | "&&" | "2>&1")
 }
 
-/// Whether `text` spreads a record into one, as `...$x`, `...(f)` or
-/// `...{a: 1}`.
+/// Whether `text` spreads a record into one, as `...$x`, `...(f)` or `...{a: 1}`.
 fn is_spread(text: &str) -> bool {
     text.strip_prefix("...")
         .is_some_and(|rest| rest.starts_with(['$', '(', '{']))
@@ -79,11 +70,8 @@ enum RecordItem {
     Pair(usize),
 }
 
-/// The items of a record, given its inside in record mode, or `None` when
-/// the record stays a word: on a lexing error, or where its tokens cannot
-/// make nu's split. nu lexes a key and its `:` as record mode does, but a
-/// value differently, so a value is lexed again in its own mode and must
-/// cover touching tokens, with no comment among them.
+/// The items of a record, given its inside in record mode, or `None` when the record stays a word: on a lexing error, or where its tokens cannot make nu's split.
+/// nu lexes a key and its `:` as record mode does, but a value differently, so a value is lexed again in its own mode and must cover touching tokens, with no comment among them.
 fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
     let tokens: Vec<_> = inner
         .remaining_tokens()
@@ -142,9 +130,9 @@ fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
     Some(items)
 }
 
-/// The `items` that `split_record` gave for the tokens ahead. Unlike `item`,
-/// reports no error. Keys are strings to nu, so a key and its `:` stay
-/// tokens.
+/// The `items` that `split_record` gave for the tokens ahead.
+/// Unlike `item`, reports no error.
+/// Keys are strings to nu, so a key and its `:` stay tokens.
 fn record_items(p: &mut Parser<'_>, items: &[RecordItem]) {
     for item in items {
         bump_separators(p);

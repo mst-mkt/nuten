@@ -8,9 +8,7 @@ use super::{Child, Formatter, children};
 
 /// A block laid out for its container to group.
 pub(super) struct BlockLayout<'a> {
-    /// The opening brace and the parameters, which stay out of the group, so
-    /// that parameters over lines leave the rest to fit after their last
-    /// line.
+    /// The opening brace and the parameters, which stay out of the group, so that parameters over lines leave the rest to fit after their last line.
     pub(super) head: Vec<Element<'a>>,
     pub(super) rest: Vec<Element<'a>>,
     /// Whether a line break comes after the parameters in the source.
@@ -20,12 +18,10 @@ pub(super) struct BlockLayout<'a> {
 }
 
 impl<'a> Formatter<'a> {
-    /// A block or a closure. The parameters come right after the opening
-    /// brace, as they are. The rest goes on one line when it fits and no line
-    /// break comes after the parameters, with one space inside the braces;
-    /// otherwise the statements go indented, with the closing brace on a line
-    /// of its own. Blank lines at the end go, and so do those at the start,
-    /// unless a comment comes before them.
+    /// A block or a closure.
+    /// The parameters come right after the opening brace, as they are.
+    /// The rest goes on one line when it fits and no line break comes after the parameters, with one space inside the braces; otherwise the statements go indented, with the closing brace on a line of its own.
+    /// Blank lines at the end go, and so do those at the start, unless a comment comes before them.
     pub(super) fn block(&mut self, block: &Block) -> Vec<Element<'a>> {
         let BlockLayout {
             mut head,
@@ -75,8 +71,7 @@ impl<'a> Formatter<'a> {
                 .and_then(|statement| statement.syntax().first_child_or_token())
                 .is_some_and(|first| first.kind() == SyntaxKind::Pipe)
         {
-            // Right after the brace and a line break, nu would read the `|` as
-            // the start of parameters.
+            // Right after the brace and a line break, nu would read the `|` as the start of parameters.
             Some(empty_line())
         } else {
             Some(soft_line_break_or_space())

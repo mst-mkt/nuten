@@ -6,15 +6,13 @@ use super::{
 };
 use crate::{ParseErrorKind, parser::Parser};
 
-/// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its
-/// arguments. Returns the streams it redirects; `None` when there is no
-/// command.
+/// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
+/// Returns the streams it redirects; `None` when there is no command.
 pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     let has_call = !p
         .peek()
         .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
-    // Nu runs `else` and `catch` at the start of a statement as external
-    // commands.
+    // Nu runs `else` and `catch` at the start of a statement as external commands.
     let external = p
         .peek_text()
         .is_some_and(|head| head.starts_with('^') || matches!(head, "else" | "catch"));
@@ -43,10 +41,9 @@ fn call(p: &mut Parser<'_>, shape: Shape) {
     p.finish();
 }
 
-/// Items as `shape` and `Redirection`s up to the end of the element, or up
-/// to an assignment operator when `assigning`. `redirected` is what the
-/// element redirects so far; `None` when it has no command. Returns what it
-/// redirects then.
+/// Items as `shape` and `Redirection`s up to the end of the element, or up to an assignment operator when `assigning`.
+/// `redirected` is what the element redirects so far; `None` when it has no command.
+/// Returns what it redirects then.
 pub(super) fn arguments(
     p: &mut Parser<'_>,
     mut redirected: Option<Streams>,
@@ -71,11 +68,9 @@ pub(super) fn arguments(
     redirected
 }
 
-/// `redirected` is what the element redirects so far; `None` when it has
-/// no command for the redirection to apply to.
+/// `redirected` is what the element redirects so far; `None` when it has no command for the redirection to apply to.
 ///
-/// Nu wants an item right after the operator; anything else is a missing
-/// target and stays outside the node.
+/// Nu wants an item right after the operator; anything else is a missing target and stays outside the node.
 fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Streams>) {
     p.start(SyntaxKind::Redirection);
     let has_target =
@@ -102,8 +97,7 @@ fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Str
     p.finish();
 }
 
-/// Stdout and stderr, as what an operator redirects or an element has
-/// redirected.
+/// Stdout and stderr, as what an operator redirects or an element has redirected.
 #[derive(Debug, Clone, Copy, Default)]
 pub(super) struct Streams {
     out: bool,

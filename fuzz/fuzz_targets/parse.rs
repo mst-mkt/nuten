@@ -1,5 +1,4 @@
-//! The parser must not panic, and must keep every parser invariant in
-//! `nuten_parser::invariants`.
+//! The parser must not panic, and must keep every parser invariant in `nuten_parser::invariants`.
 
 #![no_main]
 

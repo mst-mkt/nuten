@@ -1,15 +1,10 @@
-//! Asks nu whether formatting keeps what it parses: each file must give the
-//! same AST and the same flattened tokens, positions, line endings, and the
-//! layout in the tokens aside, before and after formatting. The AST refers to
-//! the blocks inside by id only, so inside them only the tokens are compared,
-//! which show neither `;` nor line breaks between statements. Nu parses each
-//! file in its directory.
+//! Asks nu whether formatting keeps what it parses: each file must give the same AST and the same flattened tokens, positions, line endings, and the layout in the tokens aside, before and after formatting.
+//! The AST refers to the blocks inside by id only, so inside them only the tokens are compared, which show neither `;` nor line breaks between statements.
+//! Nu parses each file in its directory.
 //!
-//! Takes files, and directories to search for `.nu` files. Skips a file that
-//! is too large, is not UTF-8, or has syntax errors, and says so. Exits with 1
-//! when any other file cannot be checked or its AST differs, and with 2 when
-//! the arguments are invalid or name no `.nu` file, or nu cannot be run or is
-//! not of the series the formatter targets.
+//! Takes files, and directories to search for `.nu` files.
+//! Skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
+//! Exits with 1 when any other file cannot be checked or its AST differs, and with 2 when the arguments are invalid or name no `.nu` file, or nu cannot be run or is not of the series the formatter targets.
 
 #![expect(
     clippy::print_stderr,
@@ -84,8 +79,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// `path` if it is not a directory, or else every `.nu` file below it,
-/// hidden directories aside.
+/// `path` if it is not a directory, or else every `.nu` file below it, hidden directories aside.
 fn nu_files(path: &Path, files: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(path).and_then(Iterator::collect::<io::Result<Vec<_>>>) else {
         // A file, or a directory that cannot be read, which `check` reports.

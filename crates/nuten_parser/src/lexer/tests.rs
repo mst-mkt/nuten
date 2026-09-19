@@ -63,9 +63,7 @@ fn split_in(src: &str, mode: Mode) -> Vec<&str> {
         .collect()
 }
 
-/// What nu skips where it lexes in `mode`: whitespace, what its
-/// `additional_whitespace` argument adds to it, and comments where
-/// `skip_comment` is set.
+/// What nu skips where it lexes in `mode`: whitespace, what its `additional_whitespace` argument adds to it, and comments where `skip_comment` is set.
 #[expect(
     clippy::match_same_arms,
     reason = "one arm per recorded mode, to check each against nu on its own"
@@ -78,10 +76,7 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         Mode::RecordValue => &[Whitespace, Newline, Comment, Comma],
         Mode::Brace => &[Whitespace, Newline, Comment],
         // nu adds nothing to whitespace here, so a line break would be a token.
-        // It still sets `skip_comment`, though no row of `NU_VAR_TYPE_SPLITS`
-        // can show either: nu builds the type span out of one pipeline
-        // element, which ends at a line break, and a comment runs to the end
-        // of its line, so it never sits between two parts of one element.
+        // It still sets `skip_comment`, though no row of `NU_VAR_TYPE_SPLITS` can show either: nu builds the type span out of one pipeline element, which ends at a line break, and a comment runs to the end of its line, so it never sits between two parts of one element.
         Mode::VarType => &[Whitespace, Comment],
         Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
             unimplemented!("how nu splits in {mode:?} is not recorded")
@@ -473,8 +468,7 @@ fn list_splits_match_nu() {
     }
 }
 
-/// How nu 0.115.1 splits the inside of a record where it reads a key or
-/// its `:`.
+/// How nu 0.115.1 splits the inside of a record where it reads a key or its `:`.
 const NU_RECORD_SPLITS: &[(&str, &[&str])] = &[
     ("a: 1", &["a", ":", "1"]),
     ("a:1,b:2", &["a", ":", "1", "b", ":", "2"]),
@@ -497,8 +491,7 @@ fn record_splits_match_nu() {
     }
 }
 
-/// How nu 0.115.1 splits the inside of `{ }` to tell a record from a
-/// closure or a block.
+/// How nu 0.115.1 splits the inside of `{ }` to tell a record from a closure or a block.
 const NU_BRACE_SPLITS: &[(&str, &[&str])] = &[
     ("a: 1", &["a", ":", "1"]),
     ("a :b", &["a", ":", "b"]),

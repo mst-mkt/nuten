@@ -27,8 +27,7 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
     // The input and output types stay as they are; only the body is a block.
     let types = shape.rest - usize::from(shape.has_body);
     for at in 0..types {
-        // The `:` nu takes for the one the types follow, which the formatter
-        // moves to the parameters.
+        // The `:` nu takes for the one the types follow, which the formatter moves to the parameters.
         if at == 0 && !shape.attached_colon && p.peek_text() == Some(":") {
             p.bump_as(SyntaxKind::Colon);
         } else {
@@ -42,18 +41,13 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// Where the parts of a `def` or an `extern` are among `items`, when nu reads
-/// them as one: the keyword, `export` before it if there, then flags, the
-/// name, the parameters in `[ ]`, the input and output types after a `:`, and
-/// the body, which only a `def` has and which nu takes from the last item.
+/// Where the parts of a `def` or an `extern` are among `items`, when nu reads them as one: the keyword, `export` before it if there, then flags, the name, the parameters in `[ ]`, the input and output types after a `:`, and the body, which only a `def` has and which nu takes from the last item.
 struct DefShape {
-    /// Where the parameters are, the items before them being the keyword,
-    /// any flags, and the name.
+    /// Where the parameters are, the items before them being the keyword, any flags, and the name.
     signature: usize,
     /// Whether the `:` of the input and output types ends that item.
     attached_colon: bool,
-    /// How many items follow the parameters, the last being the body when the
-    /// definition has one.
+    /// How many items follow the parameters, the last being the body when the definition has one.
     rest: usize,
     has_body: bool,
 }
@@ -69,8 +63,7 @@ fn def_shape(items: &[&str]) -> Option<DefShape> {
     while items.get(at)?.starts_with('-') {
         at += 1;
     }
-    // Nu reads a name holding `[` or `(` as the name and the parameters at
-    // once, and rejects it.
+    // Nu reads a name holding `[` or `(` as the name and the parameters at once, and rejects it.
     if items.get(at)?.contains(['[', '(']) {
         return None;
     }
@@ -85,8 +78,7 @@ fn def_shape(items: &[&str]) -> Option<DefShape> {
     if has_body && !items[items.len() - 1].starts_with('{') {
         return None;
     }
-    // Nu ignores the one item in braces an `extern` may end with, and never
-    // parses it, so it stays a word.
+    // Nu ignores the one item in braces an `extern` may end with, and never parses it, so it stays a word.
     let ignored = external && rest == 1 && items[items.len() - 1].starts_with('{');
     let types = rest - usize::from(has_body || ignored);
     if !attached_colon && types > 0 && items[signature + 1] != ":" {

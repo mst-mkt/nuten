@@ -1,5 +1,4 @@
-//! In every mode, the lexer must not panic, and must keep every lexer
-//! invariant in `nuten_parser::invariants`.
+//! In every mode, the lexer must not panic, and must keep every lexer invariant in `nuten_parser::invariants`.
 
 #![no_main]
 

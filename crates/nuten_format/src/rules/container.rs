@@ -10,15 +10,12 @@ use nuten_syntax::{
 
 use super::{Child, Formatter, children, without_commas};
 
-/// Makes a line break that prints as nothing or as a space when the group is
-/// flat.
+/// Makes a line break that prints as nothing or as a space when the group is flat.
 type SoftLine = fn() -> Element<'static>;
 
 impl<'a> Formatter<'a> {
-    /// A list, a record, the parameters of a `def`, or the arms of a `match`,
-    /// unless it stays as it is: its items after the opening bracket, with no
-    /// space inside the brackets of a list or a signature and one inside
-    /// those of a record. The arms always go one per line.
+    /// A list, a record, the parameters of a `def`, or the arms of a `match`, unless it stays as it is: its items after the opening bracket, with no space inside the brackets of a list or a signature and one inside those of a record.
+    /// The arms always go one per line.
     pub(super) fn container(&mut self, container: &dyn Bracketed) -> Vec<Element<'a>> {
         if stays_as_is(container.syntax()) {
             return vec![self.source(container.syntax().text_range())];
@@ -40,10 +37,8 @@ impl<'a> Formatter<'a> {
         )
     }
 
-    /// A table, unless it stays as it is: its rows as the items of a list,
-    /// after its column names and, glued to them, their `;`, which stay on the
-    /// line of the opening bracket, one space before the rows on one line. A
-    /// line break right after the `[` expands it as one after the `;` does.
+    /// A table, unless it stays as it is: its rows as the items of a list, after its column names and, glued to them, their `;`, which stay on the line of the opening bracket, one space before the rows on one line.
+    /// A line break right after the `[` expands it as one after the `;` does.
     pub(super) fn table(&mut self, table: &Table) -> Vec<Element<'a>> {
         if stays_as_is(table.syntax()) {
             return vec![self.source(table.syntax().text_range())];
@@ -65,13 +60,10 @@ impl<'a> Formatter<'a> {
         )
     }
 
-    /// `items` after `head`, which stays on the line of the opening bracket,
-    /// then the closing bracket `close`. On one line when it fits, `expand` is
-    /// false, no line break comes before the first item, and no comment is
-    /// inside, with `before_first` before the first item and `before_close`
-    /// before the closing bracket; otherwise one item per line, indented, with
-    /// the closing bracket on a line of its own. A `,` is dropped. A blank
-    /// line between items stays.
+    /// `items` after `head`, which stays on the line of the opening bracket, then the closing bracket `close`.
+    /// On one line when it fits, `expand` is false, no line break comes before the first item, and no comment is inside, with `before_first` before the first item and `before_close` before the closing bracket; otherwise one item per line, indented, with the closing bracket on a line of its own.
+    /// A `,` is dropped.
+    /// A blank line between items stays.
     fn items(
         &mut self,
         head: Vec<Element<'a>>,
@@ -104,10 +96,8 @@ impl<'a> Formatter<'a> {
         vec![group(out)]
     }
 
-    /// The item at `index` after what separates it from the one before:
-    /// `before_first` for the first, a blank line where the source had one,
-    /// or else a line break or a space. A comment brings its own line break,
-    /// so only a blank line comes before it.
+    /// The item at `index` after what separates it from the one before: `before_first` for the first, a blank line where the source had one, or else a line break or a space.
+    /// A comment brings its own line break, so only a blank line comes before it.
     fn item(&mut self, index: usize, item: &Child, before_first: SoftLine) -> Vec<Element<'a>> {
         let Child {
             element,
@@ -126,8 +116,7 @@ impl<'a> Formatter<'a> {
                 } else if blank_line {
                     empty_line()
                 } else {
-                    // After a comment, the container is expanded, so the line
-                    // break comes anyway.
+                    // After a comment, the container is expanded, so the line break comes anyway.
                     soft_line_break_or_space()
                 };
                 iter::once(separator).chain(self.element(element)).collect()
@@ -136,7 +125,8 @@ impl<'a> Formatter<'a> {
     }
 
     /// A key, its `:` right after it, and its value one space after that.
-    /// What follows a comment inside starts a line. A `,` is dropped.
+    /// What follows a comment inside starts a line.
+    /// A `,` is dropped.
     pub(super) fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
         let items: Vec<_> =
             without_commas(children(field.syntax().children_with_tokens())).collect();
@@ -151,9 +141,7 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether `container` stays as it is: a comment inside ending in a lone
-/// `\r` keeps it so, since the line break printed after the comment would
-/// make that `\r` part of the line break.
+/// Whether `container` stays as it is: a comment inside ending in a lone `\r` keeps it so, since the line break printed after the comment would make that `\r` part of the line break.
 fn stays_as_is(container: &SyntaxNode) -> bool {
     container
         .children_with_tokens()

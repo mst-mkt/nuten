@@ -3,8 +3,8 @@ use nuten_syntax::SyntaxKind;
 use super::{Shape, value};
 use crate::parser::Parser;
 
-/// A `;` may make it a table, or else a word. A lexing error keeps it a word
-/// too, since nothing inside may be reported.
+/// A `;` may make it a table, or else a word.
+/// A lexing error keeps it a word too, since nothing inside may be reported.
 pub(super) fn is_list(inner: &Parser<'_>) -> bool {
     !inner
         .remaining_kinds()

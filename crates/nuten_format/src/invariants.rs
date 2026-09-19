@@ -1,9 +1,7 @@
 //! What formatting must keep, asked of any input.
 //!
-//! A fixture has an expected output; any other input has only these: that
-//! the output keeps every token and every comment, and that formatting the
-//! output changes nothing. What the parser must keep is in
-//! `nuten_parser::invariants`, and `check` asks those first.
+//! A fixture has an expected output; any other input has only these: that the output keeps every token and every comment, and that formatting the output changes nothing.
+//! What the parser must keep is in `nuten_parser::invariants`, and `check` asks those first.
 
 use std::fmt;
 
@@ -17,20 +15,11 @@ use crate::{Config, ParseError, format_parsed};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
-    /// Line endings inside a token do not count, since the printer rewrites
-    /// them, nor do `Comma` tokens, which separate the items of lists,
-    /// records, and types as whitespace does; so a `,` the formatter prints
-    /// in a type without one in the source goes unseen here, and only the nu
-    /// oracle tells whether it went where nu reads it as a separator. A
-    /// `ShortFlag` counts as one with the token before it, since the
-    /// formatter may join the two, as nu reads them.
+    /// Line endings inside a token do not count, since the printer rewrites them, nor do `Comma` tokens, which separate the items of lists, records, and types as whitespace does; so a `,` the formatter prints in a type without one in the source goes unseen here, and only the nu oracle tells whether it went where nu reads it as a separator.
+    /// A `ShortFlag` counts as one with the token before it, since the formatter may join the two, as nu reads them.
     Tokens,
-    /// The output has the comments of the source, in order, each on its own
-    /// line or at the end of a line as it was, and, between statements or the
-    /// arms of a `match`, with a blank line after it or not as it was. Spaces
-    /// and tabs at the end of a comment do not count, since the printer trims
-    /// them, nor do blank lines at the end of the file, a block, or the arms,
-    /// which the formatter drops, nor `Comma` tokens, which it may drop too.
+    /// The output has the comments of the source, in order, each on its own line or at the end of a line as it was, and, between statements or the arms of a `match`, with a blank line after it or not as it was.
+    /// Spaces and tabs at the end of a comment do not count, since the printer trims them, nor do blank lines at the end of the file, a block, or the arms, which the formatter drops, nor `Comma` tokens, which it may drop too.
     Comments,
     /// Formatting the output succeeds and changes nothing.
     Idempotency,
@@ -55,19 +44,17 @@ impl Invariant {
     }
 }
 
-/// What asking the invariants of one source finds. The syntax errors are kept
-/// apart from the violations, since a source can have both.
+/// What asking the invariants of one source finds.
+/// The syntax errors are kept apart from the violations, since a source can have both.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checked {
-    /// What the parser breaks; where it keeps its invariants and the source
-    /// has no syntax errors, what the formatter breaks.
+    /// What the parser breaks; where it keeps its invariants and the source has no syntax errors, what the formatter breaks.
     pub violations: Vec<Violation>,
     /// The syntax errors of the source, which leave no output to ask about.
     pub syntax_errors: Vec<ParseError>,
 }
 
-/// What asking the invariants of `src` finds, with the violations in their
-/// order.
+/// What asking the invariants of `src` finds, with the violations in their order.
 pub fn check(src: &str, config: &Config) -> Checked {
     let parsed = parse(src);
     Checked {
@@ -76,29 +63,26 @@ pub fn check(src: &str, config: &Config) -> Checked {
     }
 }
 
-/// What `check` puts in `Checked::violations`. `parsed` is the tree of `src`.
+/// What `check` puts in `Checked::violations`.
+/// `parsed` is the tree of `src`.
 fn violations(src: &str, parsed: &Parsed, config: &Config) -> Vec<Violation> {
-    // The rules read a tree that keeps the invariants of the parser, so what
-    // the formatter makes of one that does not says nothing.
+    // The rules read a tree that keeps the invariants of the parser, so what the formatter makes of one that does not says nothing.
     let broken = nuten_parser::invariants::violations(src, parsed);
     if !broken.is_empty() {
         return broken;
     }
-    // `format_parsed` fails only on syntax errors, which leave no output;
-    // `Checked` reports them on their own.
+    // `format_parsed` fails only on syntax errors, which leave no output; `Checked` reports them on their own.
     let Ok(output) = format_parsed(src, parsed, config) else {
         return Vec::new();
     };
     against_output(&parsed.syntax(), &output, config)
 }
 
-/// The invariants of the formatter, asked of the tree of the source against
-/// the output.
+/// The invariants of the formatter, asked of the tree of the source against the output.
 fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Violation> {
     let parsed = parse(output);
     if let Some(error) = parsed.errors().first() {
-        // An Error token can swallow several tokens, so the other checks
-        // would only repeat this.
+        // An Error token can swallow several tokens, so the other checks would only repeat this.
         return vec![Invariant::Idempotency.violation(format!(
             "the output does not parse: {} at {:?}",
             error.kind, &output[error.range]
@@ -116,8 +100,7 @@ fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Viola
 }
 
 fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
-    // The leaves rather than the lexer's tokens, since the parser relabels
-    // some.
+    // The leaves rather than the lexer's tokens, since the parser relabels some.
     fn leaves(tree: &SyntaxNode) -> Vec<(SyntaxKind, String)> {
         let mut leaves: Vec<(SyntaxKind, String)> = Vec::new();
         let tokens = tree
@@ -171,8 +154,7 @@ fn comments(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
     Some(Invariant::Comments.violation(detail))
 }
 
-/// A comment and where it stands: on its own line or not, before a blank
-/// line or not.
+/// A comment and where it stands: on its own line or not, before a blank line or not.
 #[derive(Debug, PartialEq, Eq)]
 struct Comment {
     /// Without the spaces and tabs at its end.
@@ -209,8 +191,7 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
         .filter(|(_, token)| token.kind() == SyntaxKind::Comment)
         .map(|(index, token)| {
             let own_line = index == 0 || tokens[index - 1].kind() == SyntaxKind::Newline;
-            // Inside a statement the formatter drops blank lines, and nu
-            // reads no documentation there.
+            // Inside a statement the formatter drops blank lines, and nu reads no documentation there.
             let between_statements = token.parent().is_some_and(|parent| {
                 matches!(
                     parent.kind(),
@@ -256,8 +237,7 @@ fn idempotency(output: &str, parsed: &Parsed, config: &Config) -> Option<Violati
             "line {}, {twice:?}, is added to the output when formatted again",
             index + 1
         ),
-        // `lines` hides the line endings, so they can change without any
-        // line changing.
+        // `lines` hides the line endings, so they can change without any line changing.
         (None, None) => format!(
             "the output differs from byte {} when formatted again",
             mismatch(output.as_bytes(), again.as_bytes())
@@ -266,8 +246,7 @@ fn idempotency(output: &str, parsed: &Parsed, config: &Config) -> Option<Violati
     Some(Invariant::Idempotency.violation(detail))
 }
 
-/// The index of the first element that differs, or the length of the
-/// shorter one.
+/// The index of the first element that differs, or the length of the shorter one.
 fn mismatch<T: PartialEq>(a: &[T], b: &[T]) -> usize {
     a.iter()
         .zip(b)
@@ -282,8 +261,7 @@ mod tests {
     use super::{Checked, Invariant, Violation, against_output, check};
     use crate::{Config, LineEnding, ParseErrorKind};
 
-    /// The violations of the formatter's invariants for `output` as the
-    /// output of `src`.
+    /// The violations of the formatter's invariants for `output` as the output of `src`.
     fn formatter_violations(src: &str, output: &str) -> Vec<Violation> {
         against_output(&parse(src).syntax(), output, &Config::default())
     }
@@ -295,9 +273,8 @@ mod tests {
             .collect()
     }
 
-    /// Neither a violation nor a syntax error. The syntax errors count too,
-    /// since a source that has them leaves the violations of the formatter
-    /// unasked, and so empty.
+    /// Neither a violation nor a syntax error.
+    /// The syntax errors count too, since a source that has them leaves the violations of the formatter unasked, and so empty.
     fn nothing() -> Checked {
         Checked {
             violations: vec![],

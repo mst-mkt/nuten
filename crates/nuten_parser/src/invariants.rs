@@ -1,5 +1,4 @@
-//! What the lexer and the parser must keep, asked of any input, with syntax
-//! errors or without.
+//! What the lexer and the parser must keep, asked of any input, with syntax errors or without.
 
 use std::{fmt, iter, ops::Range};
 
@@ -17,32 +16,23 @@ use crate::{
 /// One property of the lexer or the parser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
-    /// The tokens cover the source exactly: they leave no gap and nothing
-    /// over, none is empty, and none starts inside a char.
+    /// The tokens cover the source exactly: they leave no gap and nothing over, none is empty, and none starts inside a char.
     TokenCoverage,
-    /// No token that nu reads as one is split in two: no `Whitespace` follows
-    /// another, and no `\r\n` straddles a boundary.
+    /// No token that nu reads as one is split in two: no `Whitespace` follows another, and no `\r\n` straddles a boundary.
     TokenSplits,
     /// The text of every token is one the lexer may give that kind.
     TokenShape,
-    /// The lexing errors match the `Error` tokens one to one, in order, each
-    /// inside its token and over what the error is about.
+    /// The lexing errors match the `Error` tokens one to one, in order, each inside its token and over what the error is about.
     LexErrorPlacement,
     /// The tree restores the source byte for byte.
     Roundtrip,
-    /// Every node but Root holds text, and its first and last tokens are not
-    /// trivia.
+    /// Every node but Root holds text, and its first and last tokens are not trivia.
     NodeBounds,
-    /// Every node has a node kind and the shape `nuten_syntax::ast` reads: a
-    /// bracketed node opens and closes with its brackets, a block holds its
-    /// parameters right after its brace, and a table holds its column names
-    /// and their `;` first.
+    /// Every node has a node kind and the shape `nuten_syntax::ast` reads: a bracketed node opens and closes with its brackets, a block holds its parameters right after its brace, and a table holds its column names and their `;` first.
     NodeShape,
-    /// The errors match the `Error` elements one to one, in order, each
-    /// inside its element.
+    /// The errors match the `Error` elements one to one, in order, each inside its element.
     ParseErrorPlacement,
-    /// Every error of lexing the source is among the errors, so no error is
-    /// lost when a token is split.
+    /// Every error of lexing the source is among the errors, so no error is lost when a token is split.
     LexErrorsReported,
 }
 
@@ -71,9 +61,8 @@ impl Invariant {
     }
 }
 
-/// An invariant that does not hold for one input. The invariant is named
-/// rather than typed, so that one list can hold the violations of the parser
-/// and of the formatter, which declare their own.
+/// An invariant that does not hold for one input.
+/// The invariant is named rather than typed, so that one list can hold the violations of the parser and of the formatter, which declare their own.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Violation {
     /// The name of the invariant, as the layer that declares it reports it.
@@ -99,8 +88,7 @@ impl fmt::Display for Violation {
     }
 }
 
-/// Every spelling of each operator kind, written out apart from how the lexer
-/// reads them, so that one checks the other.
+/// Every spelling of each operator kind, written out apart from how the lexer reads them, so that one checks the other.
 pub(crate) const OPERATORS: &[(SyntaxKind, &[&str])] = &[
     (SyntaxKind::Assign, &["=", "+=", "++=", "-=", "*=", "/="]),
     (SyntaxKind::OutGt, &["o>", "out>"]),
@@ -122,9 +110,8 @@ pub(crate) const OPERATORS: &[(SyntaxKind, &[&str])] = &[
     ),
 ];
 
-/// Every violation of the lexer for all of `src` in every mode, mode by mode
-/// and in the order of the invariants within one, each detail ending with
-/// its mode. Tokens that do not cover the source are reported on their own.
+/// Every violation of the lexer for all of `src` in every mode, mode by mode and in the order of the invariants within one, each detail ending with its mode.
+/// Tokens that do not cover the source are reported on their own.
 pub fn lexer_violations(src: &str) -> Vec<Violation> {
     Mode::ALL
         .iter()
@@ -139,8 +126,7 @@ pub fn lexer_violations(src: &str) -> Vec<Violation> {
 
 /// Every violation of `lexed`, the lexing of all of `src` in `mode`.
 fn lexed_violations(src: &str, lexed: &Lexed, mode: Mode) -> Vec<Violation> {
-    // `token_splits` and `token_shape` read the text a token stands for;
-    // covering the source is what leaves it there to read.
+    // `token_splits` and `token_shape` read the text a token stands for; covering the source is what leaves it there to read.
     if let Some(violation) = token_coverage(src, &lexed.tokens) {
         return vec![violation];
     }
@@ -155,8 +141,7 @@ fn lexed_violations(src: &str, lexed: &Lexed, mode: Mode) -> Vec<Violation> {
 }
 
 fn token_coverage(src: &str, tokens: &[Token]) -> Option<Violation> {
-    // `is_char_boundary` is false of a position past the end of `src` too,
-    // so `start_inside_char` comes after the check that names that flaw.
+    // `is_char_boundary` is false of a position past the end of `src` too, so `start_inside_char` comes after the check that names that flaw.
     let detail = wrong_range(tokens)
         .or_else(|| wrong_end(src, tokens))
         .or_else(|| start_inside_char(src, tokens))?;
@@ -284,8 +269,7 @@ fn well_placed(src: &str, error: LexError, token: Token) -> bool {
     if !token.range.contains_range(error.range) {
         return false;
     }
-    // The tokens covering the source says nothing of where the errors fall,
-    // so a range `src` cannot be cut on is misplaced rather than read.
+    // The tokens covering the source says nothing of where the errors fall, so a range `src` cannot be cut on is misplaced rather than read.
     let Some(text) = src.get(Range::<usize>::from(error.range)) else {
         return false;
     };
@@ -342,8 +326,7 @@ fn roundtrip(src: &str, tree: &SyntaxNode) -> Option<Violation> {
 
 fn node_bounds(tree: &SyntaxNode) -> Option<Violation> {
     tree.descendants().skip(1).find_map(|node| {
-        // A node has no first or last token when an empty node starts or
-        // ends it, which is reported in turn.
+        // A node has no first or last token when an empty node starts or ends it, which is reported in turn.
         let flaw = if node.text_range().is_empty() {
             "is empty"
         } else if node.first_token()?.kind().is_trivia() {
@@ -520,8 +503,7 @@ mod tests {
                 vec![token(Word, 0, 3)],
                 "the tokens end at 3, but the source ends at 2",
             ),
-            // The end is reported rather than the start being inside a char,
-            // which `is_char_boundary` also says of a position past the end.
+            // The end is reported rather than the start being inside a char, which `is_char_boundary` also says of a position past the end.
             (
                 "ls",
                 vec![token(Word, 0, 3), token(Word, 3, 5)],
@@ -543,9 +525,7 @@ mod tests {
 
     #[test]
     fn nothing_else_is_asked_where_the_tokens_do_not_cover_the_source() {
-        // The `Newline` holds `"ls"`, so asking the shape of these tokens
-        // would give a second violation, and `well_formed` would take the
-        // first byte of the empty one.
+        // The `Newline` holds `"ls"`, so asking the shape of these tokens would give a second violation, and `well_formed` would take the first byte of the empty one.
         let lexed = Lexed {
             tokens: vec![token(Word, 0, 0), token(Newline, 0, 2)],
             errors: vec![],

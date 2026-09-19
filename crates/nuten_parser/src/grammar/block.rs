@@ -3,9 +3,8 @@ use nuten_syntax::SyntaxKind;
 use super::{file, shell_operator};
 use crate::parser::{Bracketed, Parser};
 
-/// The `{ }` ahead that is no record as a `Block`, or as a word when nu
-/// reads no block or closure in it. `bracketed` is what it holds in block
-/// mode.
+/// The `{ }` ahead that is no record as a `Block`, or as a word when nu reads no block or closure in it.
+/// `bracketed` is what it holds in block mode.
 pub(super) fn block<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
     if may_be_block(bracketed.inner()) {
         p.bump_bracketed_or_word(SyntaxKind::Block, bracketed, block_items);
@@ -14,11 +13,8 @@ pub(super) fn block<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
     }
 }
 
-/// Whether the inside of `{ }` in block mode has the shape of a block or a
-/// closure: something but trivia, and parameters that close at a `|` with
-/// no `;` or shell operator before it. Its statements must report no error
-/// too, since nothing inside may be reported, which only reading them
-/// tells.
+/// Whether the inside of `{ }` in block mode has the shape of a block or a closure: something but trivia, and parameters that close at a `|` with no `;` or shell operator before it.
+/// Its statements must report no error too, since nothing inside may be reported, which only reading them tells.
 fn may_be_block(inner: &Parser<'_>) -> bool {
     if !inner.remaining_kinds().any(|kind| !kind.is_trivia()) {
         return false;
@@ -26,8 +22,7 @@ fn may_be_block(inner: &Parser<'_>) -> bool {
     params_start(inner) != Some(SyntaxKind::Pipe) || params_close(inner)
 }
 
-/// Whether the `|` that starts parameters has another `|` after it, with no
-/// `;` or shell operator between them.
+/// Whether the `|` that starts parameters has another `|` after it, with no `;` or shell operator between them.
 fn params_close(inner: &Parser<'_>) -> bool {
     inner
         .remaining_tokens()
@@ -40,8 +35,7 @@ fn params_close(inner: &Parser<'_>) -> bool {
         .is_some_and(|(token, _)| token.kind == SyntaxKind::Pipe)
 }
 
-/// The `|` or `||` that starts parameters where nu finds it: first past
-/// whitespace, or a `|` past one line break, which nu's lexer makes that `|`.
+/// The `|` or `||` that starts parameters where nu finds it: first past whitespace, or a `|` past one line break, which nu's lexer makes that `|`.
 fn params_start(p: &Parser<'_>) -> Option<SyntaxKind> {
     let mut kinds = p
         .remaining_kinds()

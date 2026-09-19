@@ -26,8 +26,7 @@ enum Expect {
 enum Action {
     /// Emits it as it is.
     Bump,
-    /// Emits it as an `Error`: a `:`, an `=`, or a `,` where nu takes none,
-    /// or a `(-f)` after a `,`.
+    /// Emits it as an `Error`: a `:`, an `=`, or a `,` where nu takes none, or a `(-f)` after a `,`.
     Reject,
     /// Emits it as the `ShortFlag` of the parameter being read.
     BumpAsShortFlag,
@@ -39,11 +38,8 @@ enum Action {
     StartParam,
 }
 
-/// The parameters of a signature as nu splits them: a `Param` at each item
-/// where nu takes one, holding the `(-f)` as a `ShortFlag`, the `:` and the
-/// type, and the `=` and the default value that nu gives it. A `:`, an `=`,
-/// or a `,` where nu takes none is an `Error`, as is one with nothing after
-/// it.
+/// The parameters of a signature as nu splits them: a `Param` at each item where nu takes one, holding the `(-f)` as a `ShortFlag`, the `:` and the type, and the `=` and the default value that nu gives it.
+/// A `:`, an `=`, or a `,` where nu takes none is an `Error`, as is one with nothing after it.
 pub(super) fn params(p: &mut Parser<'_>) {
     let mut expect = Expect::Param;
     let mut in_param = false;
@@ -74,9 +70,8 @@ pub(super) fn params(p: &mut Parser<'_>) {
     }
 }
 
-/// What `params` does with the token ahead and what it takes after that,
-/// given what it takes now and whether it is inside a `Param`. `None` at the
-/// end.
+/// What `params` does with the token ahead and what it takes after that, given what it takes now and whether it is inside a `Param`.
+/// `None` at the end.
 fn step(p: &Parser<'_>, expect: Expect, in_param: bool) -> Option<(Action, Expect)> {
     let (kind, text) = p.peek().zip(p.peek_text())?;
     Some(match (kind, expect) {
@@ -88,8 +83,8 @@ fn step(p: &Parser<'_>, expect: Expect, in_param: bool) -> Option<(Action, Expec
             (Action::Bump, Expect::AfterComma)
         },
         (SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma, _) => (Action::Reject, expect),
-        // Nu takes a `(-f)` for the parameter before it, and has none after
-        // a `,`. An `Error` token already carries its error.
+        // Nu takes a `(-f)` for the parameter before it, and has none after a `,`.
+        // An `Error` token already carries its error.
         (_, Expect::AfterComma) if kind != SyntaxKind::Error && starts_short_flag(text) => {
             (Action::Reject, expect)
         },
@@ -101,16 +96,13 @@ fn step(p: &Parser<'_>, expect: Expect, in_param: bool) -> Option<(Action, Expec
         (SyntaxKind::Word, _) if in_param && is_short_flag(text) => {
             (Action::BumpAsShortFlag, expect)
         },
-        // An item that is no `(-f)` starts a parameter of its own; nu ignores
-        // `|`, `;`, and redirections, which stay where they are.
+        // An item that is no `(-f)` starts a parameter of its own; nu ignores `|`, `;`, and redirections, which stay where they are.
         _ if is_item(kind) && !starts_short_flag(text) => (Action::StartParam, Expect::Param),
         _ => (Action::Bump, expect),
     })
 }
 
-/// Whether the parameter being read goes on past the line breaks ahead: nu
-/// gives it the type or the default value it promised, the `(-f)`, the type,
-/// or the default value that comes next, or the `,` that ends it.
+/// Whether the parameter being read goes on past the line breaks ahead: nu gives it the type or the default value it promised, the `(-f)`, the type, or the default value that comes next, or the `,` that ends it.
 fn goes_on(p: &Parser<'_>, expect: Expect) -> bool {
     let next = p
         .remaining_tokens()
@@ -134,11 +126,8 @@ const ANGLE: Brackets = Brackets {
     always_nested: false,
 };
 
-/// The type ahead: a `Type` where nu reads parameters in `< >`, or else the
-/// item as it is. The name must be one of the four that take parameters, and
-/// the `< >` must hold nothing but items, `:`, `,`, and whitespace, which
-/// leaves out a comment, since printing the type on one line would put the
-/// `>` inside it.
+/// The type ahead: a `Type` where nu reads parameters in `< >`, or else the item as it is.
+/// The name must be one of the four that take parameters, and the `< >` must hold nothing but items, `:`, `,`, and whitespace, which leaves out a comment, since printing the type on one line would put the `>` inside it.
 fn type_(p: &mut Parser<'_>) {
     let Some((name, named)) = generic_type(p.peek_text()) else {
         p.bump();
@@ -166,11 +155,8 @@ fn type_(p: &mut Parser<'_>) {
     p.bump_bracketed(SyntaxKind::Type, bracketed, items);
 }
 
-/// The name of the type ahead and whether its parameters are fields, when nu
-/// reads it as a type with parameters: one of `list`, `oneof`, `record`, and
-/// `table`, then `< >` around the rest. A `@` anywhere moves where nu ends
-/// the name, which takes a completer after it, so the `< >` here need not be
-/// the one nu reads.
+/// The name of the type ahead and whether its parameters are fields, when nu reads it as a type with parameters: one of `list`, `oneof`, `record`, and `table`, then `< >` around the rest.
+/// A `@` anywhere moves where nu ends the name, which takes a completer after it, so the `< >` here need not be the one nu reads.
 fn generic_type(text: Option<&str>) -> Option<(usize, bool)> {
     let text = text?;
     if text.contains('@') || !text.ends_with('>') {
@@ -184,8 +170,7 @@ fn generic_type(text: Option<&str>) -> Option<(usize, bool)> {
     }
 }
 
-/// The types a `list` or a `oneof` takes, which nu reads one by one, `,`
-/// aside.
+/// The types a `list` or a `oneof` takes, which nu reads one by one, `,` aside.
 fn type_params(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
         if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) {
@@ -196,8 +181,8 @@ fn type_params(p: &mut Parser<'_>) {
     }
 }
 
-/// The fields a `record` or a `table` takes: a key, then the `:` and the type
-/// that follow it. Anything else starts a field of its own, as in nu.
+/// The fields a `record` or a `table` takes: a key, then the `:` and the type that follow it.
+/// Anything else starts a field of its own, as in nu.
 fn type_fields(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
         if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) {
@@ -211,8 +196,7 @@ fn type_fields(p: &mut Parser<'_>) {
                 p.bump();
             }
             p.bump();
-            // Nu takes the token after the `:`, whatever it is, for the type
-            // of the key, and a line break before it is whitespace to it.
+            // Nu takes the token after the `:`, whatever it is, for the type of the key, and a line break before it is whitespace to it.
             if p.remaining_kinds().any(|kind| !kind.is_trivia()) {
                 while p.peek() == Some(SyntaxKind::Newline) {
                     p.bump();
@@ -224,15 +208,13 @@ fn type_fields(p: &mut Parser<'_>) {
     }
 }
 
-/// Whether the key just read has a `:` after it, past line breaks, which
-/// gives it the type that follows.
+/// Whether the key just read has a `:` after it, past line breaks, which gives it the type that follows.
 fn colon_ahead(p: &Parser<'_>) -> bool {
     p.remaining_kinds().find(|kind| !kind.is_trivia()) == Some(SyntaxKind::Colon)
 }
 
 /// Whether any token comes before the parameters end, a comment included.
-/// Nu reports a `:` or an `=` only as the very last token, however little
-/// what follows it has to do with a type or a default value.
+/// Nu reports a `:` or an `=` only as the very last token, however little what follows it has to do with a type or a default value.
 fn token_ahead(p: &Parser<'_>) -> bool {
     p.remaining_kinds()
         .filter(|kind| !matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Newline))
@@ -240,15 +222,13 @@ fn token_ahead(p: &Parser<'_>) -> bool {
         .is_some()
 }
 
-/// Whether nu takes `text` for the short flag of the parameter before it,
-/// whatever it makes of it then.
+/// Whether nu takes `text` for the short flag of the parameter before it, whatever it makes of it then.
 fn starts_short_flag(text: &str) -> bool {
     text.starts_with("(-")
 }
 
 /// Whether `text` is a short flag nu accepts: `(-f)` with one character.
-/// Any other spelling nu rejects, and joined to its parameter it would
-/// reject differently, so it stays a word.
+/// Any other spelling nu rejects, and joined to its parameter it would reject differently, so it stays a word.
 fn is_short_flag(text: &str) -> bool {
     text.strip_prefix("(-")
         .and_then(|rest| rest.strip_suffix(')'))

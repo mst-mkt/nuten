@@ -53,28 +53,24 @@ pub enum ParseErrorKind {
     ShellOutErrRedirect,
     /// `o>|` or `out>|`, which is the same as `|`.
     OutPipe,
-    /// `;` after a plain `|`, however many line breaks and comments come
-    /// between.
+    /// `;` after a plain `|`, however many line breaks and comments come between.
     SemicolonAfterPipe,
-    /// A plain `|` as the last token of the file, past any comment lines right
-    /// below it. A blank line or a line break at the very end makes nu
-    /// accept it.
+    /// A plain `|` as the last token of the file, past any comment lines right below it.
+    /// A blank line or a line break at the very end makes nu accept it.
     PipeAtEof,
-    /// A plain `|` in what an assignment operator takes, where a line break
-    /// ends the statement. Other pipelines end there without an error.
+    /// A plain `|` in what an assignment operator takes, where a line break ends the statement.
+    /// Other pipelines end there without an error.
     PipeEndsAssignment,
     /// A redirection with no command before it to apply to.
     RedirectionAtHead,
-    /// A file redirection without a target item right after it on the same
-    /// line. The operators of other shells do not count as one.
+    /// A file redirection without a target item right after it on the same line.
+    /// The operators of other shells do not count as one.
     /// Reported at the operator, where nu points at what follows it.
     MissingRedirectionTarget,
     /// A redirection of a stream the element already redirects.
     MultipleRedirections,
-    /// A `:`, `=`, or `,` where the parameters of a `def` or an `extern` take
-    /// a parameter or a flag, a `(-f)` after a `,`, or a `:` or an `=` with
-    /// nothing at all after it. nu rejects each of these, and dropping a `,`
-    /// would take the error away.
+    /// A `:`, `=`, or `,` where the parameters of a `def` or an `extern` take a parameter or a flag, a `(-f)` after a `,`, or a `:` or an `=` with nothing at all after it.
+    /// nu rejects each of these, and dropping a `,` would take the error away.
     SignatureSeparator,
 }
 

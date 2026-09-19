@@ -27,8 +27,8 @@ pub(super) fn pipeline(p: &mut Parser<'_>, assigned: bool) {
     p.finish();
 }
 
-/// `element` is what the element before the pipe redirects;
-/// `None` when it has no command. `assigned` is as for `pipeline`.
+/// `element` is what the element before the pipe redirects; `None` when it has no command.
+/// `assigned` is as for `pipeline`.
 fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>, assigned: bool) {
     match kind {
         SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
@@ -50,10 +50,8 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, element: Option<Streams>, assigned
     }
 }
 
-/// Whether the `|` ahead is the last token of the file, past a trailing
-/// comment and comment lines right below it: `Comment? (Newline Comment)*`.
-/// A blank line or a final line break saves it; nu counts the `|` as the
-/// last token only then.
+/// Whether the `|` ahead is the last token of the file, past a trailing comment and comment lines right below it: `Comment? (Newline Comment)*`.
+/// A blank line or a final line break saves it; nu counts the `|` as the last token only then.
 fn pipe_ends_file(p: &Parser<'_>) -> bool {
     let mut kinds = p
         .remaining_kinds()
@@ -69,8 +67,7 @@ fn pipe_ends_file(p: &Parser<'_>) -> bool {
     kinds.next().is_none()
 }
 
-/// Whether the statement ends at the line break right after the `|` ahead,
-/// past a trailing comment.
+/// Whether the statement ends at the line break right after the `|` ahead, past a trailing comment.
 fn pipe_ends_statement(p: &Parser<'_>) -> bool {
     p.remaining_kinds()
         .filter(|&kind| !matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
@@ -85,11 +82,9 @@ pub(super) fn next_line_starts_with_pipe(p: &Parser<'_>) -> bool {
     line_start(&mut next_lines(p)) == Some(SyntaxKind::Pipe)
 }
 
-/// After a `|` at the end of a line, the pipeline goes on at the next line,
-/// past any comment lines. A blank line ends it, unless a line-start `|`
-/// joins that blank line. `;` ends it too; nu rejects it after `|` anyway,
-/// and this keeps the newline out of the pipeline, which must not end with
-/// trivia.
+/// After a `|` at the end of a line, the pipeline goes on at the next line, past any comment lines.
+/// A blank line ends it, unless a line-start `|` joins that blank line.
+/// `;` ends it too; nu rejects it after `|` anyway, and this keeps the newline out of the pipeline, which must not end with trivia.
 fn line_end_continuation(p: &mut Parser<'_>) {
     if p.peek() == Some(SyntaxKind::Newline) && next_line_continues(p) {
         bump_newlines(p);

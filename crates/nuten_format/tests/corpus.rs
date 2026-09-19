@@ -1,8 +1,6 @@
-//! Every UTF-8 `.nu` file of the corpus must keep the invariants of the parser
-//! and, unless it has syntax errors, those of the formatter. Exactly the files
-//! in `SYNTAX_ERRORS` have syntax errors. The corpus is the directory
-//! `NUTEN_CORPUS` names, which the devShell sets; without it the test is
-//! skipped.
+//! Every UTF-8 `.nu` file of the corpus must keep the invariants of the parser and, unless it has syntax errors, those of the formatter.
+//! Exactly the files in `SYNTAX_ERRORS` have syntax errors.
+//! The corpus is the directory `NUTEN_CORPUS` names, which the devShell sets; without it the test is skipped.
 
 #![expect(clippy::print_stderr, reason = "what is skipped is reported")]
 
@@ -18,8 +16,8 @@ use nuten_format::{Config, invariants};
 
 use crate::support::caught;
 
-/// The files with syntax errors, relative to the corpus. Nu rejects each of
-/// them too.
+/// The files with syntax errors, relative to the corpus.
+/// Nu rejects each of them too.
 const SYNTAX_ERRORS: &[&str] = &[
     // The `{` on line 3 is not closed.
     "custom-menus/current_session_history_menu.nu",
@@ -43,8 +41,7 @@ fn every_corpus_file_keeps_the_invariants() {
         let listed = unseen.remove(name.as_str());
         let src = match fs::read_to_string(&path) {
             Ok(src) => src,
-            // Not UTF-8, which `parse` requires; the CLI does not format such a
-            // file either.
+            // Not UTF-8, which `parse` requires; the CLI does not format such a file either.
             Err(error) if error.kind() == io::ErrorKind::InvalidData => {
                 if listed {
                     problems.push(format!("{name}: in SYNTAX_ERRORS, but not UTF-8"));

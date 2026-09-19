@@ -7,10 +7,8 @@ use super::{
 };
 use crate::{ParseError, lexer::Mode, parser::Parser};
 
-/// Where the type ahead ends, after a name ending in `:`, and the first error
-/// of lexing it as nu does, which reads it up to the assignment operator,
-/// leaving out redirections at either end for `const`. `None` also when its
-/// tokens hold an error of their own.
+/// Where the type ahead ends, after a name ending in `:`, and the first error of lexing it as nu does, which reads it up to the assignment operator, leaving out redirections at either end for `const`.
+/// `None` also when its tokens hold an error of their own.
 pub(super) fn var_type_error(p: &Parser<'_>, keyword: &str) -> Option<(TextSize, ParseError)> {
     let mut tokens = p
         .remaining_tokens()
@@ -38,8 +36,8 @@ pub(super) fn var_type_error(p: &Parser<'_>, keyword: &str) -> Option<(TextSize,
     Some((range.end(), error.into()))
 }
 
-/// Whether an assignment operator comes before the element ends. As in nu,
-/// the target of a file redirection is none.
+/// Whether an assignment operator comes before the element ends.
+/// As in nu, the target of a file redirection is none.
 pub(super) fn assignment_ahead(p: &Parser<'_>) -> bool {
     let mut prev = None;
     for kind in p
@@ -57,8 +55,7 @@ pub(super) fn assignment_ahead(p: &Parser<'_>) -> bool {
     false
 }
 
-/// What an assignment operator takes: the rest of the statement, where a
-/// line-start `|` goes on as after a line-end one.
+/// What an assignment operator takes: the rest of the statement, where a line-start `|` goes on as after a line-end one.
 pub(super) fn assigned_pipeline(p: &mut Parser<'_>) {
     if p.peek() == Some(SyntaxKind::Newline) && next_line_starts_with_pipe(p) {
         bump_newlines(p);

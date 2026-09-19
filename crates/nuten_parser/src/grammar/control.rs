@@ -3,8 +3,7 @@ use nuten_syntax::SyntaxKind;
 use super::{Shape, call_items, item, value};
 use crate::parser::Parser;
 
-/// The `For`, `While`, `Loop`, or `Try` ahead, when nu reads the call as
-/// one.
+/// The `For`, `While`, `Loop`, or `Try` ahead, when nu reads the call as one.
 pub(super) fn control(p: &mut Parser<'_>) -> bool {
     let Some(shape) = control_shape(&call_items(p)) else {
         return false;
@@ -25,9 +24,7 @@ pub(super) fn control(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of
-/// a call, when nu reads them as one: the last item is a body, and so is the
-/// second when `catch` follows it.
+/// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of a call, when nu reads them as one: the last item is a body, and so is the second when `catch` follows it.
 struct ControlShape {
     kind: SyntaxKind,
     len: usize,

@@ -4,9 +4,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use jsonc_parser::{JsonValue, Map, ParseOptions, parse_to_value};
 
-/// Where what nu parses in `before` and `after` first differs, positions, line
-/// endings, and the layout in the flattened tokens aside, in one line; `None`
-/// when they are the same. Fails when either is not JSON.
+/// Where what nu parses in `before` and `after` first differs, positions, line endings, and the layout in the flattened tokens aside, in one line; `None` when they are the same.
+/// Fails when either is not JSON.
 pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, String> {
     let (before, after) = (json(before)?, json(after)?);
     let difference = first_difference(
@@ -27,8 +26,7 @@ pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, St
     }))
 }
 
-/// `value` in one line: an array by its length, an object by its keys, a
-/// string quoted and cut to 200 characters, and anything else as JSON.
+/// `value` in one line: an array by its length, an object by its keys, a string quoted and cut to 200 characters, and anything else as JSON.
 fn excerpt(value: JsonValue<'_>) -> String {
     match value {
         JsonValue::Array(array) => format!("an array of length {}", array.len()),
@@ -55,10 +53,8 @@ fn json(text: &str) -> Result<JsonValue<'_>, String> {
         .ok_or_else(|| "nu wrote no JSON".to_string())
 }
 
-/// Without `start` and `end` wherever they stand together, and the
-/// `span_source` beside them, which is the text between.
-/// Nu writes positions as such pairs, in `span` objects and elsewhere, and as
-/// the source excerpt it draws into the message of a `LabeledError`.
+/// Without `start` and `end` wherever they stand together, and the `span_source` beside them, which is the text between.
+/// Nu writes positions as such pairs, in `span` objects and elsewhere, and as the source excerpt it draws into the message of a `LabeledError`.
 fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
     match value {
         JsonValue::Object(object) => {
@@ -92,9 +88,7 @@ fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
     }
 }
 
-/// `error`, the items of a `LabeledError`, without the lines of the excerpt
-/// in its message, from the one that starts with `,-[` to the one that
-/// starts with `` `---- ``.
+/// `error`, the items of a `LabeledError`, without the lines of the excerpt in its message, from the one that starts with `,-[` to the one that starts with `` `---- ``.
 fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
     let JsonValue::Array(items) = error else {
         return error;
@@ -117,8 +111,7 @@ fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
     JsonValue::Array(items.into())
 }
 
-/// With each `\r\n` in a string as `\n`, as the printer writes line endings
-/// everywhere, inside strings too.
+/// With each `\r\n` in a string as `\n`, as the printer writes line endings everywhere, inside strings too.
 fn with_lf(value: JsonValue<'_>) -> JsonValue<'_> {
     match value {
         JsonValue::String(text) if text.contains("\r\n") => {
@@ -156,10 +149,8 @@ fn without_layout(value: JsonValue<'_>) -> JsonValue<'_> {
     JsonValue::Object(map.into())
 }
 
-/// A token of a shape made of layout and words, such as the brackets and
-/// the gaps between the items of a list, with each run of whitespace and `,`
-/// as one space between two words and as nothing elsewhere; `None` when that
-/// leaves it empty. A token of any other shape, such as a string, as it is.
+/// A token of a shape made of layout and words, such as the brackets and the gaps between the items of a list, with each run of whitespace and `,` as one space between two words and as nothing elsewhere; `None` when that leaves it empty.
+/// A token of any other shape, such as a string, as it is.
 fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
     const LAYOUT_SHAPES: [&str; 10] = [
         "shape_block",
@@ -190,10 +181,8 @@ fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
     Some(JsonValue::Object(token.into()))
 }
 
-/// `content` with each run of whitespace and `,` as one space between two
-/// words and as nothing elsewhere. A string that closes in `content` and a
-/// comment stay as they are, a comment without the whitespace it ends with
-/// but with its line break.
+/// `content` with each run of whitespace and `,` as one space between two words and as nothing elsewhere.
+/// A string that closes in `content` and a comment stay as they are, a comment without the whitespace it ends with but with its line break.
 fn words(content: &str) -> String {
     let is_word = |char: char| {
         !matches!(
@@ -235,8 +224,7 @@ fn words(content: &str) -> String {
     out
 }
 
-/// Where the string that `text` starts with closes, if it does: a quote of
-/// the kind it opens with, not escaped when that is `"`.
+/// Where the string that `text` starts with closes, if it does: a quote of the kind it opens with, not escaped when that is `"`.
 fn closing(text: &str) -> Option<usize> {
     let quote = text.as_bytes()[0];
     let mut escaped = false;
@@ -250,8 +238,7 @@ fn closing(text: &str) -> Option<usize> {
 }
 
 /// The first difference: a JSON pointer to it and the two values there.
-/// Keys are compared sorted, so the difference reported does not depend on
-/// nu's key order.
+/// Keys are compared sorted, so the difference reported does not depend on nu's key order.
 fn first_difference<'a>(
     a: JsonValue<'a>,
     b: JsonValue<'a>,

@@ -37,11 +37,9 @@ impl LexError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexErrorKind {
     /// A quote or bracket that never closes.
-    /// The range covers the innermost opener, such as `[`, `$"`, or `r#'`,
-    /// but in interpolation the outermost unclosed `(`.
+    /// The range covers the innermost opener, such as `[`, `$"`, or `r#'`, but in interpolation the outermost unclosed `(`.
     Unclosed,
-    /// A `]`, `}`, or `)` that does not match the innermost opener,
-    /// other than `]` with nothing open.
+    /// A `]`, `}`, or `)` that does not match the innermost opener, other than `]` with nothing open.
     UnmatchedCloser,
     /// `r#` not followed by `'`.
     /// The range covers `r` and the `#`s.
@@ -59,8 +57,8 @@ impl fmt::Display for LexErrorKind {
     }
 }
 
-/// The part of nu's `lex` settings that decides where items end. Each mode
-/// is one of the ways nu calls `lex`.
+/// The part of nu's `lex` settings that decides where items end.
+/// Each mode is one of the ways nu calls `lex`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Mode {
     /// Statements in the top level, `{ }` blocks, closures, and modules.
@@ -72,15 +70,13 @@ pub(crate) enum Mode {
     Record,
     /// A value of a record, where nu does not treat `:` as special.
     RecordValue,
-    /// The inside of `{ }` looked into to tell a record from a closure or a
-    /// block.
+    /// The inside of `{ }` looked into to tell a record from a closure or a block.
     Brace,
     /// The type of a variable, as in `let x: int`.
     VarType,
     /// The inside of the `[ ]` of a `def` or an `extern`.
     Signature,
-    /// The input and output types after the signature, as in
-    /// `]: nothing -> string`.
+    /// The input and output types after the signature, as in `]: nothing -> string`.
     IoTypes,
     /// The inside of the `< >` of a type, as in `record<a: int>`.
     TypeParams,
@@ -102,8 +98,7 @@ impl Mode {
         Mode::MatchArms,
     ];
 
-    /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with
-    /// the kind of the token it makes on its own at the start of an item.
+    /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with the kind of the token it makes on its own at the start of an item.
     /// nu's special tokens, plus `,` where nu treats it as whitespace.
     /// All ASCII, and none of the bytes `next` handles before `item`.
     #[expect(
@@ -129,8 +124,7 @@ impl Mode {
         }
     }
 
-    /// Whether `<` and `>` nest as brackets, as nu's `lex_signature` does
-    /// where it reads a type.
+    /// Whether `<` and `>` nest as brackets, as nu's `lex_signature` does where it reads a type.
     fn nests_angles(self) -> bool {
         matches!(
             self,
@@ -164,8 +158,8 @@ pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     }
 }
 
-/// The first token of lexing `range` of `src`, without lexing the rest. An
-/// `Error` token comes without its error.
+/// The first token of lexing `range` of `src`, without lexing the rest.
+/// An `Error` token comes without its error.
 ///
 /// # Panics
 ///
@@ -400,10 +394,8 @@ impl<'a> Lexer<'a> {
     }
 }
 
-/// Whether a `#` inside an item starts a comment, given the byte before it:
-/// nu takes it as one only after whitespace, as it does at the start of an
-/// item. A byte is whitespace as the Latin-1 character it stands for, as nu
-/// checks it.
+/// Whether a `#` inside an item starts a comment, given the byte before it: nu takes it as one only after whitespace, as it does at the start of an item.
+/// A byte is whitespace as the Latin-1 character it stands for, as nu checks it.
 pub(crate) fn starts_comment_after(prev: Option<u8>) -> bool {
     prev.is_none_or(|byte| char::from(byte).is_whitespace())
 }

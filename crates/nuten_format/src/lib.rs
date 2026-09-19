@@ -29,8 +29,7 @@ impl Default for Config {
     }
 }
 
-/// Not `PrinterOptions` itself: `Config` will hold settings the printer does
-/// not read.
+/// Not `PrinterOptions` itself: `Config` will hold settings the printer does not read.
 impl From<&Config> for PrinterOptions {
     fn from(config: &Config) -> PrinterOptions {
         PrinterOptions {
@@ -49,8 +48,8 @@ pub struct FormatError {
     pub errors: Vec<ParseError>,
 }
 
-/// Formats a whole file. The output ends with one line break, or is empty
-/// when the file is blank.
+/// Formats a whole file.
+/// The output ends with one line break, or is empty when the file is blank.
 ///
 /// # Errors
 ///

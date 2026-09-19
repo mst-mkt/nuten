@@ -3,8 +3,7 @@
 use std::panic::{self, UnwindSafe};
 
 /// What `check` gives, or the message of the panic it raised.
-/// A panic is a bug in nuten itself; catching it keeps the rest of the files
-/// checked.
+/// A panic is a bug in nuten itself; catching it keeps the rest of the files checked.
 pub(crate) fn caught<T>(check: impl FnOnce() -> T + UnwindSafe) -> Result<T, String> {
     panic::catch_unwind(check).map_err(|payload| {
         payload

@@ -1,7 +1,5 @@
-//! Typed views over the nodes of the CST, which rowan calls the AST: one type
-//! per node kind, each wrapping a `SyntaxNode` of that kind, with accessors
-//! for the shape the parser gives it. The `NodeShape` invariant of the parser
-//! holds every tree to that shape, so the accessors can count on it.
+//! Typed views over the nodes of the CST, which rowan calls the AST: one type per node kind, each wrapping a `SyntaxNode` of that kind, with accessors for the shape the parser gives it.
+//! The `NodeShape` invariant of the parser holds every tree to that shape, so the accessors can count on it.
 
 pub use rowan::ast::AstNode;
 use rowan::{NodeOrToken, ast::support};
@@ -84,8 +82,7 @@ pub type Element = NodeOrToken<Node, SyntaxToken>;
 ///
 /// # Panics
 ///
-/// When the node has a token kind, which the parser never builds and the
-/// `NodeShape` invariant holds it to.
+/// When the node has a token kind, which the parser never builds and the `NodeShape` invariant holds it to.
 pub fn typed(element: SyntaxElement) -> Element {
     match element {
         NodeOrToken::Node(node) => {
@@ -102,17 +99,12 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
     }
 }
 
-/// A node the parser makes of a word enclosed in brackets: the opening
-/// bracket is its first child, or the second after the name of a `Type`,
-/// and the closing one its last, whatever comes between.
+/// A node the parser makes of a word enclosed in brackets: the opening bracket is its first child, or the second after the name of a `Type`, and the closing one its last, whatever comes between.
 ///
 /// # Panics
 ///
-/// `open` panics when the child it reads is missing or is not a token,
-/// `close` when the last is not a token; `inside` calls both, and
-/// `following` calls `close`.
-/// `Node::flaw` checks the whole shape, and the `NodeShape` invariant of the
-/// parser holds every tree to it.
+/// `open` panics when the child it reads is missing or is not a token, `close` when the last is not a token; `inside` calls both, and `following` calls `close`.
+/// `Node::flaw` checks the whole shape, and the `NodeShape` invariant of the parser holds every tree to it.
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
         self.syntax()
@@ -133,8 +125,7 @@ pub trait Bracketed: AstNode<Language = NuLanguage> {
         self.following(&self.open().into())
     }
 
-    /// What follows `after`, a child, up to the closing bracket, trivia
-    /// included.
+    /// What follows `after`, a child, up to the closing bracket, trivia included.
     fn following(&self, after: &SyntaxElement) -> Inside {
         Inside {
             next: after.next_sibling_or_token(),
@@ -143,9 +134,8 @@ pub trait Bracketed: AstNode<Language = NuLanguage> {
     }
 }
 
-/// The children of a bracketed node after one of them, up to its closing
-/// bracket, in source order. A struct rather than an `impl Iterator`, so that
-/// `Bracketed` can be a trait object.
+/// The children of a bracketed node after one of them, up to its closing bracket, in source order.
+/// A struct rather than an `impl Iterator`, so that `Bracketed` can be a trait object.
 #[derive(Debug, Clone)]
 pub struct Inside {
     next: Option<SyntaxElement>,
@@ -165,9 +155,7 @@ impl Iterator for Inside {
     }
 }
 
-/// Implements `Bracketed` for the node kinds the parser makes of a bracketed
-/// word, with the methods given in braces, and `Node::brackets` from the
-/// same table.
+/// Implements `Bracketed` for the node kinds the parser makes of a bracketed word, with the methods given in braces, and `Node::brackets` from the same table.
 macro_rules! bracketed {
     ($($name:ident: $open:ident $close:ident $({ $($methods:tt)* })?,)*) => {
         $(impl Bracketed for $name { $($($methods)*)? })*
@@ -205,8 +193,7 @@ bracketed! {
 impl Node {
     /// What the node lacks of the shape the accessors read, if anything.
     pub fn flaw(&self) -> Option<&'static str> {
-        // The inside is read through the brackets, so a missing bracket is
-        // reported before anything inside is read.
+        // The inside is read through the brackets, so a missing bracket is reported before anything inside is read.
         self.bracket_flaw().or_else(|| self.inside_flaw())
     }
 
@@ -267,8 +254,7 @@ impl Block {
         support::child(self.syntax())
     }
 
-    /// What follows the parameters, or the `{`: the statements, the `;` and
-    /// the comments among them, and the trivia around them.
+    /// What follows the parameters, or the `{`: the statements, the `;` and the comments among them, and the trivia around them.
     pub fn statements(&self) -> Inside {
         match self.params() {
             Some(params) => self.following(&params.syntax().clone().into()),
@@ -288,13 +274,12 @@ impl Table {
         Some((columns, semicolon))
     }
 
-    /// The column names, a `List` or a `Word`, and the `;` after them,
-    /// whitespace and line breaks aside. The rows are what follows the `;`.
+    /// The column names, a `List` or a `Word`, and the `;` after them, whitespace and line breaks aside.
+    /// The rows are what follows the `;`.
     ///
     /// # Panics
     ///
-    /// When the table has no such header, which the `NodeShape` invariant of
-    /// the parser rules out.
+    /// When the table has no such header, which the `NodeShape` invariant of the parser rules out.
     pub fn header(&self) -> (Element, SyntaxToken) {
         let (columns, semicolon) = self
             .try_header()
@@ -304,21 +289,18 @@ impl Table {
 }
 
 impl Def {
-    /// The body, its last child when that is a block; an `extern`, or a `def`
-    /// cut short, has none.
+    /// The body, its last child when that is a block; an `extern`, or a `def` cut short, has none.
     pub fn body(&self) -> Option<Block> {
         self.syntax().last_child().and_then(Block::cast)
     }
 }
 
 impl Type {
-    /// The name before the `<`; the parameters or fields are what the
-    /// brackets hold.
+    /// The name before the `<`; the parameters or fields are what the brackets hold.
     ///
     /// # Panics
     ///
-    /// When the first child is not a token, which the `NodeShape` invariant
-    /// of the parser rules out.
+    /// When the first child is not a token, which the `NodeShape` invariant of the parser rules out.
     pub fn name(&self) -> SyntaxToken {
         self.syntax()
             .first_child_or_token()

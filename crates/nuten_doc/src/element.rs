@@ -4,8 +4,8 @@ use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element<'a> {
-    /// Printed as is, but for its line breaks, which come out as the
-    /// printer's line ending. `width` is `TextWidth::of(text)`.
+    /// Printed as is, but for its line breaks, which come out as the printer's line ending.
+    /// `width` is `TextWidth::of(text)`.
     Text {
         text: &'a str,
         width: TextWidth,
@@ -15,25 +15,20 @@ pub enum Element<'a> {
     Line(LineMode),
     /// Breaks every group around it.
     ExpandParent,
-    /// Held back until just before the next line break, or the end of the
-    /// output, then printed with the indent and mode of its own place.
+    /// Held back until just before the next line break, or the end of the output, then printed with the indent and mode of its own place.
     LineSuffix(Vec<Element<'a>>),
     /// A hard line break here if a line suffix is held back.
     LineSuffixBoundary,
-    /// Printed flat when it fits on the line, otherwise with its own `Line`s
-    /// broken. An `Align` after it or inside it can depend on that through
-    /// `id`.
+    /// Printed flat when it fits on the line, otherwise with its own `Line`s broken.
+    /// An `Align` after it or inside it can depend on that through `id`.
     Group {
         id: Option<GroupId>,
         elements: Vec<Element<'a>>,
     },
     /// One level deeper after each line break inside.
     Indent(Vec<Element<'a>>),
-    /// `columns` further, in spaces, after each line break inside, when `group`
-    /// is `None` or names a group that broke, around it or printed before it;
-    /// zero columns are no alignment. With tabs, an alignment that a deeper
-    /// level follows takes a tab instead, so that no space comes before a
-    /// tab.
+    /// `columns` further, in spaces, after each line break inside, when `group` is `None` or names a group that broke, around it or printed before it; zero columns are no alignment.
+    /// With tabs, an alignment that a deeper level follows takes a tab instead, so that no space comes before a tab.
     Align {
         columns: u32,
         group: Option<GroupId>,
@@ -67,8 +62,7 @@ pub enum LineMode {
     Soft,
     /// A space, or a line break.
     SoftOrSpace,
-    /// A line break and `blank_lines` blank lines either way, less what is
-    /// there already.
+    /// A line break and `blank_lines` blank lines either way, less what is there already.
     Hard { blank_lines: u32 },
 }
 
@@ -76,15 +70,13 @@ pub enum LineMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextWidth {
     Width(u32),
-    /// The text has line breaks of its own, so it never fits a group on one
-    /// line.
+    /// The text has line breaks of its own, so it never fits a group on one line.
     Multiline,
 }
 
 impl TextWidth {
-    /// Wide characters and emoji sequences take two columns; control
-    /// characters, tabs included, take one. A line break is a `\n`, with or
-    /// without a `\r` before it; a `\r` alone is an ordinary character.
+    /// Wide characters and emoji sequences take two columns; control characters, tabs included, take one.
+    /// A line break is a `\n`, with or without a `\r` before it; a `\r` alone is an ordinary character.
     pub fn of(text: &str) -> TextWidth {
         if text.contains('\n') {
             TextWidth::Multiline

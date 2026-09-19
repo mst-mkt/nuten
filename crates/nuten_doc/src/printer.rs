@@ -35,10 +35,8 @@ impl LineEnding {
     }
 }
 
-/// Spaces and tabs before a line break of the printer's go, even those of
-/// a text; the lines inside a text stay as they are, but their line breaks
-/// come out as the configured line ending. The output never starts with a
-/// line break.
+/// Spaces and tabs before a line break of the printer's go, even those of a text; the lines inside a text stay as they are, but their line breaks come out as the configured line ending.
+/// The output never starts with a line break.
 pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
     let mut printer = Printer {
         options,
@@ -61,8 +59,7 @@ pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
     printer.out
 }
 
-/// The indent of a line goes out with its first text or space, so an empty
-/// line stays empty.
+/// The indent of a line goes out with its first text or space, so an empty line stays empty.
 struct Printer<'a> {
     options: &'a PrinterOptions,
     /// What is left to print, the next element on top.
@@ -82,8 +79,7 @@ struct Printer<'a> {
 struct Indentation {
     tabs: u32,
     spaces: u32,
-    /// Alignments since the last level, which a deeper level turns into
-    /// tabs when indenting with tabs.
+    /// Alignments since the last level, which a deeper level turns into tabs when indenting with tabs.
     aligns: u32,
 }
 
@@ -113,9 +109,7 @@ enum Mode {
     Break,
 }
 
-/// How `fits` measures an element: in the mode of its place, or inside a
-/// `LineSuffix` among the measured elements, which takes no width since it
-/// prints only at the next line break.
+/// How `fits` measures an element: in the mode of its place, or inside a `LineSuffix` among the measured elements, which takes no width since it prints only at the next line break.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Measure {
     Flat,
@@ -169,8 +163,7 @@ impl<'a> Printer<'a> {
                     self.push_text(" ", TextWidth::Width(1));
                 },
                 Element::LineSuffixBoundary if !self.line_suffixes.is_empty() => {
-                    // In break mode, so that the suffixes measure it as the
-                    // end of the line.
+                    // In break mode, so that the suffixes measure it as the end of the line.
                     self.flush_line_suffixes(Some(Frame {
                         indent,
                         mode: Mode::Break,
@@ -220,15 +213,11 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// Whether `elements` fit on the rest of the line when printed flat,
-    /// along with what follows them up to the next line break.
+    /// Whether `elements` fit on the rest of the line when printed flat, along with what follows them up to the next line break.
     ///
-    /// A hard line break, `ExpandParent`, or multi-line text in `elements`
-    /// never fits, even inside a `LineSuffix`, so every group around one
-    /// breaks. This replaces a separate pass that marks such groups.
-    /// The width of a `LineSuffix` does not count, and a
-    /// `LineSuffixBoundary` after one ends the line: what follows it is not
-    /// measured.
+    /// A hard line break, `ExpandParent`, or multi-line text in `elements` never fits, even inside a `LineSuffix`, so every group around one breaks.
+    /// This replaces a separate pass that marks such groups.
+    /// The width of a `LineSuffix` does not count, and a `LineSuffixBoundary` after one ends the line: what follows it is not measured.
     fn fits(&self, elements: &[Element<'_>]) -> bool {
         let Some(mut remaining) = self.options.line_width.checked_sub(self.column) else {
             return false;
@@ -384,10 +373,8 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// Ends the line, dropping the spaces and tabs before the break, with
-    /// `breaks` line breaks less those the output ends with already, a
-    /// text's own included. Prints nothing at the start of the output,
-    /// which counts as an empty line.
+    /// Ends the line, dropping the spaces and tabs before the break, with `breaks` line breaks less those the output ends with already, a text's own included.
+    /// Prints nothing at the start of the output, which counts as an empty line.
     fn push_line_breaks(&mut self, indent: Indentation, breaks: u32) {
         let trimmed = self.out.trim_end_matches([' ', '\t']).len();
         self.out.truncate(trimmed);
