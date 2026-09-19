@@ -25,6 +25,16 @@ struct Child {
     newlines: u32,
 }
 
+impl Child {
+    fn kind(&self) -> SyntaxKind {
+        ast::kind_of(&self.element)
+    }
+
+    fn is_comment(&self) -> bool {
+        self.kind() == SyntaxKind::Comment
+    }
+}
+
 /// The children among `elements`, in source order. Line breaks at the end
 /// belong to no child, so nothing is printed for them.
 fn children(elements: impl IntoIterator<Item = SyntaxElement>) -> impl Iterator<Item = Child> {
@@ -54,7 +64,7 @@ fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item =
     let mut dropped = 0;
     children.filter_map(move |child| {
         let newlines = child.newlines.max(mem::take(&mut dropped));
-        if ast::kind_of(&child.element) == SyntaxKind::Comma {
+        if child.kind() == SyntaxKind::Comma {
             dropped = newlines;
             return None;
         }
@@ -151,11 +161,12 @@ impl<'a> Formatter<'a> {
             Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {
                 self.bodies(node.syntax())
             },
-            Node::MatchArms(arms) => self.arms(arms),
+            Node::MatchArms(arms) => self.container(arms),
             Node::MatchArm(arm) => self.arm(arm),
             Node::Def(def) => self.def(def),
             Node::List(list) => self.container(list),
             Node::Record(record) => self.container(record),
+            Node::RecordField(field) => self.field(field),
             Node::Signature(signature) => self.container(signature),
             Node::Table(table) => self.table(table),
             Node::Param(param) => self.param(param),
@@ -163,7 +174,7 @@ impl<'a> Formatter<'a> {
             Node::TypeField(field) => self.type_field(field),
             Node::Block(block) => self.block(block),
             Node::Root(_) => unreachable!("Root is laid out by file"),
-            Node::Assignment(_) | Node::Let(_) | Node::RecordField(_) | Node::ClosureParams(_) => {
+            Node::Assignment(_) | Node::Let(_) | Node::ClosureParams(_) => {
                 unreachable!("{:?} is laid out by its parent", node.syntax().kind())
             },
             Node::Error(_) => unreachable!("a file with errors is not formatted"),
@@ -174,19 +185,45 @@ impl<'a> Formatter<'a> {
     /// among them and no node ends with trivia, so a comment, which runs to
     /// the end of its line, cannot be here either.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
-        let mut out = Vec::new();
-        for child in children(parent.children_with_tokens()) {
-            debug_assert!(
-                child.newlines == 0 && ast::kind_of(&child.element) != SyntaxKind::Comment,
-                "{:?} holds a line break or a comment",
-                parent.kind()
-            );
-            if !out.is_empty() {
-                out.push(space());
-            }
-            out.extend(self.element(&child.element));
-        }
-        out
+        let items: Vec<_> = children(parent.children_with_tokens()).collect();
+        debug_assert!(
+            items
+                .iter()
+                .all(|item| item.newlines == 0 && !item.is_comment()),
+            "{:?} holds a line break or a comment",
+            parent.kind()
+        );
+        self.spaced_children(&items, |_, _| false)
+    }
+
+    /// `items` one space apart, but those `joined`, by index and by
+    /// themselves, which touch what comes before them. A comment stays where
+    /// it is, on its own line or at the end of its line, and what follows it
+    /// starts a line, joined or not.
+    fn spaced_children(
+        &mut self,
+        items: &[Child],
+        joined: impl Fn(usize, &Child) -> bool,
+    ) -> Vec<Element<'a>> {
+        items
+            .iter()
+            .enumerate()
+            .flat_map(|(index, item)| {
+                let prev = items[..index].last().map(Child::kind);
+                match &item.element {
+                    NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => {
+                        self.comment(comment, item.newlines, false)
+                    },
+                    element => {
+                        let plain = (!joined(index, item)).then(space);
+                        separator(prev, plain)
+                            .into_iter()
+                            .chain(self.element(element))
+                            .collect()
+                    },
+                }
+            })
+            .collect()
     }
 
     /// A node as `node` lays it out, or a token as it is.
@@ -237,15 +274,15 @@ fn ends_with_pipe(statement: &SyntaxNode) -> bool {
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
 }
 
-/// What separates the child after `prev` from it. A comment runs to the end
-/// of its line, so a line break follows one.
+/// What separates the child after `prev` from it: `plain`, but a line break
+/// after a comment, which runs to the end of its line.
 fn separator(
     prev: Option<SyntaxKind>,
-    plain: impl FnOnce() -> Element<'static>,
+    plain: Option<Element<'static>>,
 ) -> Option<Element<'static>> {
     match prev {
         None => None,
         Some(SyntaxKind::Comment) => Some(hard_line_break()),
-        Some(_) => Some(plain()),
+        Some(_) => plain,
     }
 }

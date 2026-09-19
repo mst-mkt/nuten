@@ -57,7 +57,7 @@ impl<'a> Formatter<'a> {
             match &element {
                 NodeOrToken::Node(child) => {
                     tail = Some(out.len());
-                    out.extend(separator(prev, space));
+                    out.extend(separator(prev, Some(space())));
                     out.extend(self.node(child));
                 },
                 // `let`, or an assignment operator with nothing before it,
@@ -66,19 +66,20 @@ impl<'a> Formatter<'a> {
                     if matches!(kind, SyntaxKind::Word | SyntaxKind::Assign) =>
                 {
                     tail = Some(out.len());
-                    out.extend(separator(prev, space));
+                    out.extend(separator(prev, Some(space())));
                     out.push(self.token(child));
                 },
                 NodeOrToken::Token(child) => match kind {
                     SyntaxKind::Pipe => {
                         let before_comment = comment_follows(child);
-                        out.extend(separator(prev, || {
-                            if before_comment {
+                        out.extend(separator(
+                            prev,
+                            Some(if before_comment {
                                 space()
                             } else {
                                 soft_line_break_or_space()
-                            }
-                        }));
+                            }),
+                        ));
                         out.push(self.token(child));
                         // A statement starts a line in the output but right
                         // after a `;` on the same line, where its `|` never
@@ -93,7 +94,7 @@ impl<'a> Formatter<'a> {
                     // Nu rejects these at the start of a line, so they stay
                     // after their element, which the parser puts right before.
                     SyntaxKind::ErrGtPipe | SyntaxKind::OutErrGtPipe => {
-                        out.extend(separator(prev, space));
+                        out.extend(separator(prev, Some(space())));
                         out.push(self.token(child));
                     },
                     SyntaxKind::Comment => {

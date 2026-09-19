@@ -1,10 +1,11 @@
+use std::iter;
+
 use nuten_doc::{
-    Element, empty_line, expand_parent, group, hard_line_break, indent, soft_line_break,
-    soft_line_break_or_space, space,
+    Element, empty_line, expand_parent, group, indent, soft_line_break, soft_line_break_or_space,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken,
-    ast::{self, AstNode, Bracketed, Node, RecordField, Table},
+    ast::{AstNode, Bracketed, RecordField, Table},
 };
 
 use super::{Child, Formatter, children, without_commas};
@@ -14,14 +15,16 @@ use super::{Child, Formatter, children, without_commas};
 type SoftLine = fn() -> Element<'static>;
 
 impl<'a> Formatter<'a> {
-    /// A list, a record, or the parameters of a `def`, unless it stays as it
-    /// is: its items after the opening bracket, with no space inside the
-    /// brackets of a list or a signature and one inside those of a record.
+    /// A list, a record, the parameters of a `def`, or the arms of a `match`,
+    /// unless it stays as it is: its items after the opening bracket, with no
+    /// space inside the brackets of a list or a signature and one inside
+    /// those of a record. The arms always go one per line.
     pub(super) fn container(&mut self, container: &dyn Bracketed) -> Vec<Element<'a>> {
         if stays_as_is(container.syntax()) {
             return vec![self.source(container.syntax().text_range())];
         }
-        let line = if container.syntax().kind() == SyntaxKind::Record {
+        let kind = container.syntax().kind();
+        let line = if kind == SyntaxKind::Record {
             soft_line_break_or_space
         } else {
             soft_line_break
@@ -30,7 +33,7 @@ impl<'a> Formatter<'a> {
         self.items(
             head,
             children(container.inside()),
-            false,
+            kind == SyntaxKind::MatchArms,
             line,
             line,
             &container.close(),
@@ -78,42 +81,15 @@ impl<'a> Formatter<'a> {
         before_close: SoftLine,
         close: &SyntaxToken,
     ) -> Vec<Element<'a>> {
-        let mut items = without_commas(items).peekable();
-        let mut expand = expand || items.peek().is_some_and(|first| first.newlines > 0);
-        let mut inner = Vec::new();
-        let mut prev = None;
-        for item in items {
-            let Child {
-                element,
-                newlines,
-            } = item;
-            let kind = ast::kind_of(&element);
-            let separator = || match prev {
-                None => before_first(),
-                Some(_) if newlines > 1 => empty_line(),
-                // After a comment, the container is expanded, so the line
-                // break comes anyway.
-                Some(_) => soft_line_break_or_space(),
-            };
-            match &element {
-                NodeOrToken::Node(Node::RecordField(field)) => {
-                    inner.push(separator());
-                    inner.extend(self.field(field));
-                },
-                NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
-                    expand = true;
-                    if prev.is_some() && newlines > 1 {
-                        inner.push(empty_line());
-                    }
-                    inner.extend(self.comment(child, newlines, false));
-                },
-                _ => {
-                    inner.push(separator());
-                    inner.extend(self.element(&element));
-                },
-            }
-            prev = Some(kind);
-        }
+        let items: Vec<_> = without_commas(items).collect();
+        let expand = expand
+            || items.first().is_some_and(|first| first.newlines > 0)
+            || items.iter().any(Child::is_comment);
+        let inner: Vec<_> = items
+            .iter()
+            .enumerate()
+            .flat_map(|(index, item)| self.item(index, item, before_first))
+            .collect();
         let mut out = head;
         if inner.is_empty() {
             out.push(self.token(close));
@@ -128,37 +104,50 @@ impl<'a> Formatter<'a> {
         vec![group(out)]
     }
 
+    /// The item at `index` after what separates it from the one before:
+    /// `before_first` for the first, a blank line where the source had one,
+    /// or else a line break or a space. A comment brings its own line break,
+    /// so only a blank line comes before it.
+    fn item(&mut self, index: usize, item: &Child, before_first: SoftLine) -> Vec<Element<'a>> {
+        let Child {
+            element,
+            newlines,
+        } = item;
+        let blank_line = index > 0 && *newlines > 1;
+        match element {
+            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => blank_line
+                .then(empty_line)
+                .into_iter()
+                .chain(self.comment(comment, *newlines, false))
+                .collect(),
+            _ => {
+                let separator = if index == 0 {
+                    before_first()
+                } else if blank_line {
+                    empty_line()
+                } else {
+                    // After a comment, the container is expanded, so the line
+                    // break comes anyway.
+                    soft_line_break_or_space()
+                };
+                iter::once(separator).chain(self.element(element)).collect()
+            },
+        }
+    }
+
     /// A key, its `:` right after it, and its value one space after that.
     /// What follows a comment inside starts a line. A `,` is dropped.
-    fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
-        let mut out = Vec::new();
-        let mut prev = None;
-        // Parts printed, comments aside; the key is the first.
-        let mut parts = 0;
-        for child in without_commas(children(field.syntax().children_with_tokens())) {
-            let Child {
-                element,
-                newlines,
-            } = child;
-            let kind = ast::kind_of(&element);
-            match &element {
-                NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
-                    out.extend(self.comment(child, newlines, false));
-                },
-                _ => {
-                    match prev {
-                        None => {},
-                        Some(SyntaxKind::Comment) => out.push(hard_line_break()),
-                        Some(_) if parts == 1 && kind == SyntaxKind::Colon => {},
-                        Some(_) => out.push(space()),
-                    }
-                    out.extend(self.element(&element));
-                    parts += 1;
-                },
-            }
-            prev = Some(kind);
-        }
-        out
+    pub(super) fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
+        let items: Vec<_> =
+            without_commas(children(field.syntax().children_with_tokens())).collect();
+        let colon = items
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| !item.is_comment())
+            .nth(1)
+            .filter(|(_, item)| item.kind() == SyntaxKind::Colon)
+            .map(|(index, _)| index);
+        self.spaced_children(&items, |index, _| Some(index) == colon)
     }
 }
 
