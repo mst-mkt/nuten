@@ -42,7 +42,7 @@ pub(super) fn is_table(inner: &Parser<'_>) -> bool {
 /// holds a `;`: nu reads no table there, and drops what follows the `;`.
 pub(super) fn table_items(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
-        if let Some(bracketed) = p.bracketed(&SQUARE, Mode::list())
+        if let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
             && is_list(bracketed.inner())
         {
             p.bump_bracketed(SyntaxKind::List, bracketed, list_items);

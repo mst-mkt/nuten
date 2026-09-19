@@ -403,7 +403,7 @@ fn parse_error_placement(tree: &SyntaxNode, errors: &[ParseError]) -> Option<Vio
 }
 
 fn lex_errors_reported(src: &str, errors: &[ParseError]) -> Option<Violation> {
-    let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::block());
+    let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
     let missing = lexed
         .errors
         .into_iter()
@@ -551,7 +551,7 @@ mod tests {
             errors: vec![],
         };
         assert_eq!(
-            lexed_violations("ls", &lexed, Mode::block()),
+            lexed_violations("ls", &lexed, Mode::Block),
             [violation(Invariant::TokenCoverage, "Word at 0..0 is empty")]
         );
     }
@@ -574,18 +574,18 @@ mod tests {
     #[test]
     fn the_text_of_a_token_must_fit_its_kind() {
         assert_eq!(
-            token_shape("ls", &[token(Newline, 0, 2)], Mode::block()),
+            token_shape("ls", &[token(Newline, 0, 2)], Mode::Block),
             Some(violation(
                 Invariant::TokenShape,
                 "Newline at 0..2 is \"ls\""
             ))
         );
         assert_eq!(
-            token_shape(",", &[token(Word, 0, 1)], Mode::list()),
+            token_shape(",", &[token(Word, 0, 1)], Mode::List),
             Some(violation(Invariant::TokenShape, "Word at 0..1 is \",\""))
         );
         // The same token is well formed where `,` is not special.
-        assert_eq!(token_shape(",", &[token(Word, 0, 1)], Mode::block()), None);
+        assert_eq!(token_shape(",", &[token(Word, 0, 1)], Mode::Block), None);
     }
 
     #[test]

@@ -20,7 +20,7 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
     } else {
         Affix::None
     };
-    match p.bracketed_affixed(&SQUARE, Mode::signature(), affix) {
+    match p.bracketed_affixed(&SQUARE, Mode::Signature, affix) {
         Some(bracketed) => p.bump_bracketed(SyntaxKind::Signature, bracketed, params),
         None => p.bump(),
     }

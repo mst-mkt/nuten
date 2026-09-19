@@ -59,117 +59,83 @@ impl fmt::Display for LexErrorKind {
     }
 }
 
-/// The part of nu's `lex` settings that decides where items end.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Mode {
-    /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with
-    /// the kind of the token it makes on its own at the start of an item.
-    /// nu's special tokens, plus `,` where nu treats it as whitespace.
-    /// All ASCII, and none of the bytes `next` handles before `item`.
-    special: &'static [(u8, SyntaxKind)],
-    /// Whether `<` and `>` nest as brackets, as nu does where it reads a type.
-    signature: bool,
+/// The part of nu's `lex` settings that decides where items end. Each mode
+/// is one of the ways nu calls `lex`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Mode {
+    /// Statements in the top level, `{ }` blocks, closures, and modules.
+    /// Also the right-hand side of `let` and assignments.
+    Block,
+    /// Lists, tables, and list patterns.
+    List,
+    /// The keys, spreads, and `:` of a record, in the inside of `{ }`.
+    Record,
+    /// A value of a record, where nu does not treat `:` as special.
+    RecordValue,
+    /// The inside of `{ }` looked into to tell a record from a closure or a
+    /// block.
+    Brace,
+    /// The type of a variable, as in `let x: int`.
+    VarType,
+    /// The inside of the `[ ]` of a `def` or an `extern`.
+    Signature,
+    /// The input and output types after the signature, as in
+    /// `]: nothing -> string`.
+    IoTypes,
+    /// The inside of the `< >` of a type, as in `record<a: int>`.
+    TypeParams,
+    /// The inside of the `{ }` of a `match`.
+    MatchArms,
 }
 
 impl Mode {
     pub(crate) const ALL: &[Mode] = &[
-        Mode::block(),
-        Mode::list(),
-        Mode::record(),
-        Mode::record_value(),
-        Mode::brace(),
-        Mode::var_type(),
-        Mode::signature(),
-        Mode::io_types(),
-        Mode::type_params(),
-        Mode::match_arms(),
+        Mode::Block,
+        Mode::List,
+        Mode::Record,
+        Mode::RecordValue,
+        Mode::Brace,
+        Mode::VarType,
+        Mode::Signature,
+        Mode::IoTypes,
+        Mode::TypeParams,
+        Mode::MatchArms,
     ];
 
-    /// Statements in the top level, `{ }` blocks, closures, and modules.
-    /// Also the right-hand side of `let` and assignments.
-    pub(crate) const fn block() -> Mode {
-        Mode {
-            special: &[],
-            signature: false,
-        }
-    }
-
-    /// Lists, tables, and list patterns.
-    pub(crate) const fn list() -> Mode {
-        Mode {
-            special: &[(b',', SyntaxKind::Comma)],
-            signature: false,
-        }
-    }
-
-    /// The keys, spreads, and `:` of a record, in the inside of `{ }`.
-    pub(crate) const fn record() -> Mode {
-        Mode {
-            special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
-            signature: false,
-        }
-    }
-
-    /// A value of a record, where nu does not treat `:` as special.
-    pub(crate) const fn record_value() -> Mode {
-        Mode {
-            special: &[(b',', SyntaxKind::Comma)],
-            signature: false,
-        }
-    }
-
-    /// The inside of `{ }` looked into to tell a record from a closure or a
-    /// block.
-    pub(crate) const fn brace() -> Mode {
-        Mode {
-            special: &[(b':', SyntaxKind::Colon)],
-            signature: false,
-        }
-    }
-
-    /// The type of a variable, as in `let x: int`.
-    pub(crate) const fn var_type() -> Mode {
-        Mode {
-            special: &[(b',', SyntaxKind::Comma)],
-            signature: true,
-        }
-    }
-
-    /// The inside of the `[ ]` of a `def` or an `extern`.
-    pub(crate) const fn signature() -> Mode {
-        Mode {
-            special: &[
+    /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with
+    /// the kind of the token it makes on its own at the start of an item.
+    /// nu's special tokens, plus `,` where nu treats it as whitespace.
+    /// All ASCII, and none of the bytes `next` handles before `item`.
+    #[expect(
+        clippy::match_same_arms,
+        reason = "one arm per way nu calls lex, to check each against nu on its own"
+    )]
+    fn special(self) -> &'static [(u8, SyntaxKind)] {
+        match self {
+            Mode::Block => &[],
+            Mode::List => &[(b',', SyntaxKind::Comma)],
+            Mode::Record => &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
+            Mode::RecordValue => &[(b',', SyntaxKind::Comma)],
+            Mode::Brace => &[(b':', SyntaxKind::Colon)],
+            Mode::VarType => &[(b',', SyntaxKind::Comma)],
+            Mode::Signature => &[
                 (b':', SyntaxKind::Colon),
                 (b'=', SyntaxKind::Eq),
                 (b',', SyntaxKind::Comma),
             ],
-            signature: true,
+            Mode::IoTypes => &[(b',', SyntaxKind::Comma)],
+            Mode::TypeParams => &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
+            Mode::MatchArms => &[(b',', SyntaxKind::Comma)],
         }
     }
 
-    /// The input and output types after the signature, as in
-    /// `]: nothing -> string`.
-    pub(crate) const fn io_types() -> Mode {
-        Mode {
-            special: &[(b',', SyntaxKind::Comma)],
-            signature: true,
-        }
-    }
-
-    /// The inside of the `< >` of a type, as in `record<a: int>`.
-    pub(crate) const fn type_params() -> Mode {
-        Mode {
-            special: &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
-            signature: true,
-        }
-    }
-
-    /// The inside of the `{ }` of a `match`.
-    pub(crate) const fn match_arms() -> Mode {
-        Mode {
-            special: &[(b',', SyntaxKind::Comma)],
-            signature: false,
-        }
+    /// Whether `<` and `>` nest as brackets, as nu's `lex_signature` does
+    /// where it reads a type.
+    fn nests_angles(self) -> bool {
+        matches!(
+            self,
+            Mode::VarType | Mode::Signature | Mode::IoTypes | Mode::TypeParams
+        )
     }
 
     fn is_terminator(self, byte: u8) -> bool {
@@ -178,27 +144,9 @@ impl Mode {
     }
 
     pub(crate) fn special_kind(self, byte: u8) -> Option<SyntaxKind> {
-        self.special
+        self.special()
             .iter()
             .find_map(|&(special, kind)| (special == byte).then_some(kind))
-    }
-}
-
-/// The special bytes, and `signature` if `<` and `>` nest, as in
-/// `Mode(",", signature)`.
-impl fmt::Debug for Mode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Mode {
-            special,
-            signature,
-        } = self;
-        let bytes: String = special.iter().map(|&(byte, _)| char::from(byte)).collect();
-        let mut tuple = f.debug_tuple("Mode");
-        tuple.field(&bytes);
-        if *signature {
-            tuple.field(&format_args!("signature"));
-        }
-        tuple.finish()
     }
 }
 
@@ -350,7 +298,7 @@ impl<'a> Lexer<'a> {
                 b'[' => closers.push((b']', at)),
                 b'{' => closers.push((b'}', at)),
                 b'(' => closers.push((b')', at)),
-                b'<' if self.mode.signature => closers.push((b'>', at)),
+                b'<' if self.mode.nests_angles() => closers.push((b'>', at)),
                 b']' | b'}' | b')' | b'>'
                     if closers.last().is_some_and(|&(closer, _)| closer == byte) =>
                 {

@@ -34,7 +34,7 @@ pub(super) fn var_type_error(p: &Parser<'_>, keyword: &str) -> Option<(TextSize,
         prev = token.kind;
     }
     let range = range?;
-    let error = p.lex_error(range, Mode::var_type())?;
+    let error = p.lex_error(range, Mode::VarType)?;
     Some((range.end(), error.into()))
 }
 

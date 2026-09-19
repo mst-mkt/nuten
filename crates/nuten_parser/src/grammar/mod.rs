@@ -130,7 +130,7 @@ const CURLY: Brackets = Brackets {
 /// the token as it is.
 fn value(p: &mut Parser<'_>, shape: Shape) {
     if shape.reads_list()
-        && let Some(bracketed) = p.bracketed(&SQUARE, Mode::list())
+        && let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
     {
         if is_list(bracketed.inner()) {
             p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
@@ -139,7 +139,7 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
         } else {
             p.bump();
         }
-    } else if let Some(bracketed) = p.bracketed(&CURLY, Mode::brace()) {
+    } else if let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace) {
         braced(p, bracketed, shape);
     } else {
         p.bump();
@@ -151,8 +151,8 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
 /// mode, which tells a record from the rest.
 fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     match shape.braced(record_sign(bracketed.inner().remaining_tokens())) {
-        Braced::Record(sign) => record(p, bracketed.lexed_in(Mode::record()), sign),
-        Braced::Block => block(p, bracketed.lexed_in(Mode::block())),
+        Braced::Record(sign) => record(p, bracketed.lexed_in(Mode::Record), sign),
+        Braced::Block => block(p, bracketed.lexed_in(Mode::Block)),
         Braced::Word => p.bump(),
     }
 }

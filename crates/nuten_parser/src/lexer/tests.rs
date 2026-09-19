@@ -12,7 +12,7 @@ use super::{
 use crate::invariants::OPERATORS;
 
 fn lex_all(src: &str) -> Lexed {
-    lex_all_in(src, Mode::block())
+    lex_all_in(src, Mode::Block)
 }
 
 fn lex_all_in(src: &str, mode: Mode) -> Lexed {
@@ -20,7 +20,7 @@ fn lex_all_in(src: &str, mode: Mode) -> Lexed {
 }
 
 fn lexed(src: &str) -> Vec<(SyntaxKind, &str)> {
-    lexed_in(src, Mode::block())
+    lexed_in(src, Mode::Block)
 }
 
 fn lexed_in(src: &str, mode: Mode) -> Vec<(SyntaxKind, &str)> {
@@ -32,7 +32,7 @@ fn lexed_in(src: &str, mode: Mode) -> Vec<(SyntaxKind, &str)> {
 }
 
 fn lexed_ranges(src: &str, range: TextRange) -> Vec<(SyntaxKind, TextRange)> {
-    lex(src, range, Mode::block())
+    lex(src, range, Mode::Block)
         .tokens
         .iter()
         .map(|token| (token.kind, token.range))
@@ -51,25 +51,25 @@ fn error_of(src: &str) -> (LexErrorKind, &str) {
 
 /// The split nu reports, which drops whitespace.
 fn split(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::block(), &[Whitespace])
+    split_skipping(src, Mode::Block, &[Whitespace])
 }
 
 /// The split nu reports inside a list, where it reads `,` and line breaks
 /// as whitespace too.
 fn split_list(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::list(), &[Whitespace, Newline, Comma])
+    split_skipping(src, Mode::List, &[Whitespace, Newline, Comma])
 }
 
 /// The split nu reports inside a record where it reads a key or its `:`,
 /// reading `,` and line breaks as whitespace and skipping comments.
 fn split_record(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::record(), &[Whitespace, Newline, Comment, Comma])
+    split_skipping(src, Mode::Record, &[Whitespace, Newline, Comment, Comma])
 }
 
 /// The split nu reports when it looks into `{ }`, where it reads line
 /// breaks as whitespace and skips comments.
 fn split_brace(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::brace(), &[Whitespace, Newline, Comment])
+    split_skipping(src, Mode::Brace, &[Whitespace, Newline, Comment])
 }
 
 /// The split nu reports where it reads a value of a record, reading `,`
@@ -77,7 +77,7 @@ fn split_brace(src: &str) -> Vec<&str> {
 fn split_record_value(src: &str) -> Vec<&str> {
     split_skipping(
         src,
-        Mode::record_value(),
+        Mode::RecordValue,
         &[Whitespace, Newline, Comment, Comma],
     )
 }
@@ -85,7 +85,7 @@ fn split_record_value(src: &str) -> Vec<&str> {
 /// The split nu reports where it reads the type of a variable, skipping
 /// comments.
 fn split_var_type(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::var_type(), &[Whitespace, Newline, Comment])
+    split_skipping(src, Mode::VarType, &[Whitespace, Newline, Comment])
 }
 
 fn split_skipping<'a>(src: &'a str, mode: Mode, skipped: &[SyntaxKind]) -> Vec<&'a str> {
@@ -570,18 +570,18 @@ fn angle_brackets_nest_in_a_var_type() {
         let Lexed {
             tokens,
             errors,
-        } = lex_all_in(src, Mode::var_type());
+        } = lex_all_in(src, Mode::VarType);
         assert_eq!(tokens.len(), 1, "{src:?}");
         assert_eq!(errors.len(), 1, "{src:?}");
         assert_eq!((errors[0].kind, &src[errors[0].range]), error, "{src:?}");
     }
     for mode in [
-        Mode::block(),
-        Mode::list(),
-        Mode::record(),
-        Mode::record_value(),
-        Mode::brace(),
-        Mode::match_arms(),
+        Mode::Block,
+        Mode::List,
+        Mode::Record,
+        Mode::RecordValue,
+        Mode::Brace,
+        Mode::MatchArms,
     ] {
         assert_eq!(lexed_in("a<b", mode), [(Word, "a<b")], "{mode:?}");
     }
@@ -589,7 +589,7 @@ fn angle_brackets_nest_in_a_var_type() {
 
 #[test]
 fn a_colon_is_a_token_in_record_and_brace_modes() {
-    for mode in [Mode::record(), Mode::brace()] {
+    for mode in [Mode::Record, Mode::Brace] {
         assert_eq!(
             lexed_in("a:b", mode),
             [(Word, "a"), (Colon, ":"), (Word, "b")],
@@ -601,7 +601,7 @@ fn a_colon_is_a_token_in_record_and_brace_modes() {
 #[test]
 fn special_bytes_are_tokens_at_the_start_of_an_item() {
     assert_eq!(
-        lexed_in(",a,,b ,", Mode::list()),
+        lexed_in(",a,,b ,", Mode::List),
         [
             (Comma, ","),
             (Word, "a"),
@@ -624,7 +624,7 @@ fn items_ending_at_a_special_byte_keep_their_kinds() {
         ("e>|,b", ErrGtPipe),
         ("=,b", Assign),
     ] {
-        let tokens = lexed_in(src, Mode::list());
+        let tokens = lexed_in(src, Mode::List);
         assert_eq!(tokens[0].0, kind, "{src:?}");
         assert_eq!(&tokens[1..], [(Comma, ","), (Word, "b")], "{src:?}");
     }
@@ -675,7 +675,7 @@ fn bytes_before_the_range_are_ignored() {
         ]
     );
     assert_eq!(
-        lex(r#"$"a"#, range(1, 3), Mode::block()).errors,
+        lex(r#"$"a"#, range(1, 3), Mode::Block).errors,
         [LexError {
             kind: Unclosed,
             range: range(1, 2),
@@ -686,13 +686,13 @@ fn bytes_before_the_range_are_ignored() {
 #[test]
 #[should_panic(expected = "range splits a char")]
 fn range_must_be_on_char_boundaries() {
-    lex("日", range(0, 1), Mode::block());
+    lex("日", range(0, 1), Mode::Block);
 }
 
 #[test]
 #[should_panic(expected = "range is outside src")]
 fn range_must_be_within_src() {
-    lex("ab", range(1, 3), Mode::block());
+    lex("ab", range(1, 3), Mode::Block);
 }
 
 mod nu_differences {

@@ -51,7 +51,7 @@ impl Brackets {
         let lexed = lexer::lex(
             src,
             TextRange::new(range.start(), close.start()),
-            Mode::block(),
+            Mode::Block,
         );
         matches!(lexed.errors.as_slice(), [error] if error.range == open)
     }
@@ -548,7 +548,7 @@ mod tests {
     };
 
     fn parser(src: &str) -> Parser<'_> {
-        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::block());
+        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
         Parser::new(src, lexed, 0)
     }
 
@@ -556,7 +556,7 @@ mod tests {
     #[should_panic(expected = "bump_bracketed at another token")]
     fn bump_bracketed_emits_only_the_token_bracketed_looked_at() {
         let mut p = parser("[a] [b]");
-        let first = p.bracketed(&SQUARE, Mode::list()).unwrap();
+        let first = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump();
         p.bump_bracketed(SyntaxKind::List, first, |_| {});
     }
@@ -565,14 +565,14 @@ mod tests {
     #[should_panic(expected = "items left some of what the token holds")]
     fn bump_bracketed_needs_items_to_take_everything() {
         let mut p = parser("[a]");
-        let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
+        let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump_bracketed(SyntaxKind::List, bracketed, |_| {});
     }
 
     #[test]
     fn bump_bracketed_or_word_drops_items_that_report_an_error() {
         let mut p = parser(" [a]");
-        let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
+        let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump_bracketed_or_word(SyntaxKind::List, bracketed, |p| {
             p.bump_error(ParseErrorKind::ShellAndAnd);
         });
@@ -597,7 +597,7 @@ mod tests {
     fn bump_bracketed_keeps_a_word_holding_a_comment_with_no_whitespace_before_it() {
         for src in ["[a,#c]", "[a;#c\n]", "[a #c\n,#d]", "[#c\n]"] {
             let mut p = parser(src);
-            let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
+            let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
             p.bump_bracketed(SyntaxKind::List, bracketed, |_| {});
             assert_eq!(
                 p.events,
@@ -614,7 +614,7 @@ mod tests {
     fn bump_bracketed_expands_a_word_holding_a_comment_after_whitespace() {
         for src in ["[a #c\n]", "[a\n#c\n]", "[ #c\n]"] {
             let mut p = parser(src);
-            let bracketed = p.bracketed(&SQUARE, Mode::list()).unwrap();
+            let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
             p.bump_bracketed(SyntaxKind::List, bracketed, |p| {
                 while p.peek().is_some() {
                     p.bump();
@@ -627,9 +627,9 @@ mod tests {
     #[test]
     fn bump_bracketed_or_word_keeps_the_node_over_an_error_inside_a_nested_node() {
         let mut p = parser("[[a]]");
-        let outer = p.bracketed(&SQUARE, Mode::list()).unwrap();
+        let outer = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump_bracketed_or_word(SyntaxKind::List, outer, |p| {
-            let inner = p.bracketed(&SQUARE, Mode::list()).unwrap();
+            let inner = p.bracketed(&SQUARE, Mode::List).unwrap();
             p.bump_bracketed(SyntaxKind::List, inner, |p| {
                 p.bump_error(ParseErrorKind::ShellAndAnd);
             });

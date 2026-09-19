@@ -119,7 +119,7 @@ fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
             items.push(RecordItem::KeyAndColon);
             break;
         };
-        let value = inner.lex_first(tokens[start].0.range.start(), Mode::record_value())?;
+        let value = inner.lex_first(tokens[start].0.range.start(), Mode::RecordValue)?;
         if value.kind == SyntaxKind::Error {
             return None;
         }

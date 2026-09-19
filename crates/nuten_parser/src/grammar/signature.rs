@@ -144,8 +144,7 @@ fn type_(p: &mut Parser<'_>) {
         p.bump();
         return;
     };
-    let Some(bracketed) = p.bracketed_affixed(&ANGLE, Mode::type_params(), Affix::Name(name))
-    else {
+    let Some(bracketed) = p.bracketed_affixed(&ANGLE, Mode::TypeParams, Affix::Name(name)) else {
         p.bump();
         return;
     };

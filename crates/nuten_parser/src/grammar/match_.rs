@@ -15,7 +15,7 @@ pub(super) fn match_(p: &mut Parser<'_>) -> bool {
     for _ in 1..len - 1 {
         item(p, Shape::Any);
     }
-    if let Some(bracketed) = p.bracketed(&CURLY, Mode::match_arms())
+    if let Some(bracketed) = p.bracketed(&CURLY, Mode::MatchArms)
         && is_arms(bracketed.inner())
     {
         p.bump_bracketed(SyntaxKind::MatchArms, bracketed, arms);
