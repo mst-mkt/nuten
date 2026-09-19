@@ -7,7 +7,6 @@ use nuten_doc::PrinterOptions;
 pub use nuten_doc::{IndentStyle, LineEnding};
 use nuten_parser::Parsed;
 pub use nuten_parser::{ParseError, ParseErrorKind};
-use nuten_syntax::SyntaxNode;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
@@ -67,15 +66,8 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
             errors: parsed.errors().to_vec(),
         });
     }
-    let root = preprocess(parsed.syntax());
-    let options = PrinterOptions::from(config);
-    Ok(nuten_doc::print(&rules::file(src, &root), &options))
-}
-
-/// Where tree rewrites before formatting go. None yet.
-/// The rules slice the source by token ranges, so the text must stay.
-fn preprocess(root: SyntaxNode) -> SyntaxNode {
-    root
+    let elements = rules::file(src, &parsed.syntax());
+    Ok(nuten_doc::print(&elements, &PrinterOptions::from(config)))
 }
 
 #[cfg(test)]
