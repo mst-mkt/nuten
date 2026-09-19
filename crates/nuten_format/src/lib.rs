@@ -30,6 +30,19 @@ impl Default for Config {
     }
 }
 
+/// Not `PrinterOptions` itself: `Config` will hold settings the printer does
+/// not read.
+impl From<&Config> for PrinterOptions {
+    fn from(config: &Config) -> PrinterOptions {
+        PrinterOptions {
+            line_width: config.line_width,
+            indent_style: config.indent_style,
+            indent_width: config.indent_width,
+            line_ending: config.line_ending,
+        }
+    }
+}
+
 /// Syntax errors; a file with any is not formatted.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FormatError {
@@ -55,12 +68,7 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
         });
     }
     let root = preprocess(parsed.syntax());
-    let options = PrinterOptions {
-        line_width: config.line_width,
-        indent_style: config.indent_style,
-        indent_width: config.indent_width,
-        line_ending: config.line_ending,
-    };
+    let options = PrinterOptions::from(config);
     Ok(nuten_doc::print(&rules::file(src, &root), &options))
 }
 
