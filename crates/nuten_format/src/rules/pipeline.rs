@@ -22,7 +22,7 @@ impl<'a> Formatter<'a> {
     /// line or at the end of its line. A pipe with a comment after it stays
     /// at the end of its line, and what comes next starts a line.
     pub(super) fn pipeline(&mut self, pipeline: &Pipeline) -> Vec<Element<'a>> {
-        let id = self.group_id();
+        let id = self.groups.fresh();
         let parts = parts(pipeline.syntax());
         let expand = parts.iter().any(|part| part.child.newlines > 0);
         let (segments, tail) = segments(&parts, follows_semicolon(pipeline.syntax()));

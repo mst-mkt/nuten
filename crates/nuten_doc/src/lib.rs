@@ -10,5 +10,5 @@ pub use builder::{
     hard_line_break, indent, line_suffix, line_suffix_boundary, soft_line_break,
     soft_line_break_or_space, space, text,
 };
-pub use element::{Element, GroupId, LineMode, TextWidth};
+pub use element::{Element, GroupId, GroupIds, LineMode, TextWidth};
 pub use printer::{IndentStyle, LineEnding, PrinterOptions, print};

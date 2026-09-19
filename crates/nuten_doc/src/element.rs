@@ -43,7 +43,22 @@ pub enum Element<'a> {
 
 /// Names a group; the document keeps each id to one group.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct GroupId(pub u32);
+pub struct GroupId(pub(crate) u32);
+
+/// Gives out the ids of one document, each once.
+#[derive(Debug, Default)]
+pub struct GroupIds {
+    next: u32,
+}
+
+impl GroupIds {
+    /// An id no group has yet.
+    pub fn fresh(&mut self) -> GroupId {
+        let id = GroupId(self.next);
+        self.next += 1;
+        id
+    }
+}
 
 /// What a `Line` prints, flat or broken.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,7 +106,14 @@ pub(crate) fn columns(text: &str) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::TextWidth;
+    use super::{GroupIds, TextWidth};
+
+    #[test]
+    fn fresh_ids_differ() {
+        let mut ids = GroupIds::default();
+        let first = ids.fresh();
+        assert_ne!(first, ids.fresh());
+    }
 
     #[test]
     fn width_counts_columns() {

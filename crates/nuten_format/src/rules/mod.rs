@@ -11,7 +11,7 @@ mod signature;
 use std::mem;
 
 use nuten_doc::{
-    Element, GroupId, empty_line, empty_lines, hard_line_break, line_suffix, space, text,
+    Element, GroupIds, empty_line, empty_lines, hard_line_break, line_suffix, space, text,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange,
@@ -79,7 +79,7 @@ fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item =
 pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     let mut formatter = Formatter {
         src,
-        next_group: 0,
+        groups: GroupIds::default(),
     };
     let statements: Vec<_> = children(root.children_with_tokens()).collect();
     let mut out = formatter.statements(&statements, true);
@@ -88,10 +88,10 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
 }
 
 /// What every rule reads while a file is formatted: the source the elements
-/// borrow their text from, and how many group ids have been given out.
+/// borrow their text from, and the group ids given out so far.
 struct Formatter<'a> {
     src: &'a str,
-    next_group: u32,
+    groups: GroupIds,
 }
 
 impl<'a> Formatter<'a> {
@@ -249,13 +249,6 @@ impl<'a> Formatter<'a> {
     /// The source in `range` as it is, trivia included.
     fn source(&self, range: TextRange) -> Element<'a> {
         text(&self.src[range])
-    }
-
-    /// An id no other group of this file has.
-    fn group_id(&mut self) -> GroupId {
-        let id = GroupId(self.next_group);
-        self.next_group += 1;
-        id
     }
 }
 
