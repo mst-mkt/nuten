@@ -9,10 +9,8 @@ cargo-fuzz = true
 
 [dependencies]
 nuten_parser = { path = "../crates/nuten_parser" }
-nuten_syntax = { path = "../crates/nuten_syntax" }
 
 libfuzzer-sys = "0.4"
-rowan = "0.17.0"
 
 [[bin]]
 name = "lex"

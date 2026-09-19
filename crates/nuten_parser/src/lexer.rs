@@ -177,7 +177,7 @@ impl Mode {
             || self.special_kind(byte).is_some()
     }
 
-    fn special_kind(self, byte: u8) -> Option<SyntaxKind> {
+    pub(crate) fn special_kind(self, byte: u8) -> Option<SyntaxKind> {
         self.special
             .iter()
             .find_map(|&(special, kind)| (special == byte).then_some(kind))

@@ -102,8 +102,6 @@ version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
  "nuten_parser",
- "nuten_syntax",
- "rowan",
 ]
 
 [[package]]
