@@ -4,87 +4,113 @@ use nuten_doc::{
     Element, empty_line, expand_parent, group, hard_line_break, indent, soft_line_break,
     soft_line_break_or_space, space,
 };
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
+use nuten_syntax::{
+    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken,
+    ast::{self, AstNode, Bracketed, Node, RecordField, Table},
+};
 
 use super::{Child, Formatter, children};
 
+/// Makes a line break that prints as nothing or as a space when the group is
+/// flat.
+type SoftLine = fn() -> Element<'static>;
+
 impl<'a> Formatter<'a> {
-    /// A list, a record, a table, or the parameters of a `def`, unless it
-    /// stays as it is. On one line when it fits, no line break comes right
-    /// after the opening bracket, and no comment is inside, with no space
-    /// inside the brackets of a list and one inside those of a record;
-    /// otherwise one item per line, indented, with the closing bracket on a
-    /// line of its own. A table is laid out as a list of its rows, but its
-    /// column names and, glued to them, their `;` stay on the line of the
-    /// opening bracket, one space before the rows on one line, and a line
-    /// break right after the `;` expands it too. A `,` is dropped. A blank
-    /// line between items stays.
-    pub(super) fn container(&mut self, container: &SyntaxNode) -> Vec<Element<'a>> {
-        if stays_as_is(container) {
-            return vec![self.source(container.text_range())];
+    /// A list, a record, or the parameters of a `def`, unless it stays as it
+    /// is: its items after the opening bracket, with no space inside the
+    /// brackets of a list or a signature and one inside those of a record.
+    pub(super) fn container(&mut self, container: &dyn Bracketed) -> Vec<Element<'a>> {
+        if stays_as_is(container.syntax()) {
+            return vec![self.source(container.syntax().text_range())];
         }
-        let (Some(open), Some(close)) = (container.first_token(), container.last_token()) else {
-            unreachable!("a container has brackets");
-        };
-        let mut children = children(container).skip(1).peekable();
-        // A line break right after the opening bracket.
-        let mut expand = children.peek().is_some_and(|child| child.newlines > 0);
-        let mut head = vec![self.token(&open)];
-        let closing = if container.kind() == SyntaxKind::Record {
+        let line = if container.syntax().kind() == SyntaxKind::Record {
             soft_line_break_or_space
         } else {
             soft_line_break
         };
-        let opening = if container.kind() == SyntaxKind::Table {
-            // The parser puts the column names and their `;` first, with
-            // nothing between.
-            let (Some(names), Some(semicolon)) = (children.next(), children.next()) else {
-                unreachable!("a table has column names and a `;`");
-            };
-            head.extend(self.element(&names.element));
-            let SyntaxElement::Token(semicolon) = &semicolon.element else {
-                unreachable!("a table has a `;` after its column names");
-            };
-            head.push(self.token(semicolon));
-            expand |= children.peek().is_some_and(|child| child.newlines > 0);
-            soft_line_break_or_space
-        } else {
-            closing
-        };
+        let head = vec![self.token(&container.open())];
+        self.items(
+            head,
+            children(container.inside()),
+            false,
+            line,
+            line,
+            &container.close(),
+        )
+    }
+
+    /// A table, unless it stays as it is: its rows as the items of a list,
+    /// after its column names and, glued to them, their `;`, which stay on the
+    /// line of the opening bracket, one space before the rows on one line. A
+    /// line break right after the `[` expands it as one after the `;` does.
+    pub(super) fn table(&mut self, table: &Table) -> Vec<Element<'a>> {
+        if stays_as_is(table.syntax()) {
+            return vec![self.source(table.syntax().text_range())];
+        }
+        let expand = children(table.inside())
+            .next()
+            .is_some_and(|columns| columns.newlines > 0);
+        let (columns, semicolon) = table.header();
+        let mut head = vec![self.token(&table.open())];
+        head.extend(self.element(&columns));
+        head.push(self.token(&semicolon));
+        self.items(
+            head,
+            children(table.following(&semicolon.into())),
+            expand,
+            soft_line_break_or_space,
+            soft_line_break,
+            &table.close(),
+        )
+    }
+
+    /// `items` after `head`, which stays on the line of the opening bracket,
+    /// then the closing bracket `close`. On one line when it fits, `expand` is
+    /// false, no line break comes before the first item, and no comment is
+    /// inside, with `before_first` before the first item and `before_close`
+    /// before the closing bracket; otherwise one item per line, indented, with
+    /// the closing bracket on a line of its own. A `,` is dropped. A blank
+    /// line between items stays.
+    fn items(
+        &mut self,
+        head: Vec<Element<'a>>,
+        items: impl Iterator<Item = Child>,
+        expand: bool,
+        before_first: SoftLine,
+        before_close: SoftLine,
+        close: &SyntaxToken,
+    ) -> Vec<Element<'a>> {
+        let mut items = items.peekable();
+        let mut expand = expand || items.peek().is_some_and(|first| first.newlines > 0);
         let mut inner = Vec::new();
         let mut prev = None;
         // The most line breaks before a `,` dropped since the last item, which
         // count as line breaks before what follows.
         let mut dropped = 0;
-        for child in children {
+        for item in items {
             let Child {
                 element,
                 newlines,
-            } = child;
+            } = item;
             let newlines = newlines.max(mem::take(&mut dropped));
-            let kind = element.kind();
+            let kind = ast::kind_of(&element);
             let separator = || match prev {
-                None => opening(),
+                None => before_first(),
                 Some(_) if newlines > 1 => empty_line(),
                 // After a comment, the container is expanded, so the line
                 // break comes anyway.
                 Some(_) => soft_line_break_or_space(),
             };
             match &element {
-                SyntaxElement::Node(child) if kind == SyntaxKind::RecordField => {
+                NodeOrToken::Node(Node::RecordField(field)) => {
                     inner.push(separator());
-                    inner.extend(self.field(child));
+                    inner.extend(self.field(field));
                 },
-                SyntaxElement::Token(_)
-                    if matches!(kind, SyntaxKind::RBracket | SyntaxKind::RBrace) =>
-                {
-                    break;
-                },
-                SyntaxElement::Token(_) if kind == SyntaxKind::Comma => {
+                NodeOrToken::Token(_) if kind == SyntaxKind::Comma => {
                     dropped = newlines;
                     continue;
                 },
-                SyntaxElement::Token(child) if kind == SyntaxKind::Comment => {
+                NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
                     expand = true;
                     if prev.is_some() && newlines > 1 {
                         inner.push(empty_line());
@@ -98,14 +124,14 @@ impl<'a> Formatter<'a> {
             }
             prev = Some(kind);
         }
-        if inner.is_empty() {
-            head.push(self.token(&close));
-            return head;
-        }
         let mut out = head;
+        if inner.is_empty() {
+            out.push(self.token(close));
+            return out;
+        }
         out.push(indent(inner));
-        out.push(closing());
-        out.push(self.token(&close));
+        out.push(before_close());
+        out.push(self.token(close));
         if expand {
             out.push(expand_parent());
         }
@@ -114,20 +140,20 @@ impl<'a> Formatter<'a> {
 
     /// A key, its `:` right after it, and its value one space after that.
     /// What follows a comment inside starts a line. A `,` is dropped.
-    fn field(&mut self, field: &SyntaxNode) -> Vec<Element<'a>> {
+    fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
         let mut out = Vec::new();
         let mut prev = None;
         // Parts printed, comments and commas aside; the key is the first.
         let mut parts = 0;
-        for child in children(field) {
+        for child in children(field.syntax().children_with_tokens()) {
             let Child {
                 element,
                 newlines,
             } = child;
-            let kind = element.kind();
+            let kind = ast::kind_of(&element);
             match &element {
-                SyntaxElement::Token(_) if kind == SyntaxKind::Comma => continue,
-                SyntaxElement::Token(child) if kind == SyntaxKind::Comment => {
+                NodeOrToken::Token(_) if kind == SyntaxKind::Comma => continue,
+                NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
                     out.extend(self.comment(child, newlines, false));
                 },
                 _ => {

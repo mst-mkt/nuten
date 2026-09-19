@@ -12,23 +12,23 @@ use nuten_doc::{
     Element, GroupId, empty_line, empty_lines, hard_line_break, line_suffix, space, text,
 };
 use nuten_syntax::{
-    SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange,
-    ast::{AstNode, Node},
+    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange,
+    ast::{self, AstNode, Node},
 };
 
 /// A child of a container: neither whitespace nor a line break.
 struct Child {
-    element: SyntaxElement,
+    element: ast::Element,
     /// Line breaks right before it; two or more make a blank line.
     newlines: u32,
 }
 
-/// The children of `parent` in source order. Line breaks at its end, which
-/// only Root has, belong to no child, so nothing is printed for them.
-fn children(parent: &SyntaxNode) -> impl Iterator<Item = Child> {
+/// The children among `elements`, in source order. Line breaks at the end
+/// belong to no child, so nothing is printed for them.
+fn children(elements: impl IntoIterator<Item = SyntaxElement>) -> impl Iterator<Item = Child> {
     let mut newlines = 0;
-    parent
-        .children_with_tokens()
+    elements
+        .into_iter()
         .filter_map(move |element| match element.kind() {
             SyntaxKind::Whitespace => None,
             SyntaxKind::Newline => {
@@ -37,7 +37,7 @@ fn children(parent: &SyntaxNode) -> impl Iterator<Item = Child> {
             },
             _ => {
                 let child = Child {
-                    element,
+                    element: ast::typed(element),
                     newlines,
                 };
                 newlines = 0;
@@ -52,7 +52,7 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
         src,
         next_group: 0,
     };
-    let mut out = formatter.statements(children(root), true);
+    let mut out = formatter.statements(children(root.children_with_tokens()), true);
     out.push(hard_line_break());
     out
 }
@@ -84,7 +84,7 @@ impl<'a> Formatter<'a> {
                 element,
                 newlines,
             } = item;
-            let kind = element.kind();
+            let kind = ast::kind_of(&element);
             if newlines > 0 && prev.is_some() {
                 out.push(match newlines {
                     1 => hard_line_break(),
@@ -99,14 +99,14 @@ impl<'a> Formatter<'a> {
                 }
             }
             match &element {
-                SyntaxElement::Node(child) => {
+                NodeOrToken::Node(child) => {
                     if prev == Some(SyntaxKind::Semicolon) && newlines == 0 {
                         out.push(space());
                     }
                     out.extend(self.node(child));
-                    open_pipe = ends_with_pipe(child);
+                    open_pipe = ends_with_pipe(child.syntax());
                 },
-                SyntaxElement::Token(child) => match kind {
+                NodeOrToken::Token(child) => match kind {
                     SyntaxKind::Semicolon => out.push(self.token(child)),
                     SyntaxKind::Comment => {
                         out.extend(self.comment(child, newlines, at_start && prev.is_none()));
@@ -121,34 +121,31 @@ impl<'a> Formatter<'a> {
 
     /// The entry for every node but Root and those their parent lays out
     /// itself.
-    fn node(&mut self, node: &SyntaxNode) -> Vec<Element<'a>> {
-        let kind = node.kind();
-        let Some(typed) = Node::cast(node.clone()) else {
-            unreachable!("{kind:?} is a token kind");
-        };
-        match typed {
-            Node::Pipeline(_) => self.pipeline(node),
+    fn node(&mut self, node: &Node) -> Vec<Element<'a>> {
+        match node {
+            Node::Pipeline(pipeline) => self.pipeline(pipeline),
             Node::PipelineElement(_)
             | Node::Call(_)
             | Node::ExternalCall(_)
             | Node::Redirection(_)
-            | Node::Match(_) => self.spaced(node),
+            | Node::Match(_) => self.spaced(node.syntax()),
             Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {
-                self.bodies(node)
+                self.bodies(node.syntax())
             },
-            Node::MatchArms(_) => self.arms(node),
-            Node::MatchArm(_) => self.arm(node),
-            Node::Def(_) => self.def(node),
-            Node::List(_) | Node::Record(_) | Node::Table(_) | Node::Signature(_) => {
-                self.container(node)
-            },
-            Node::Param(_) => self.param(node),
-            Node::Type(_) => self.type_(node),
-            Node::TypeField(_) => self.type_field(node),
-            Node::Block(_) => self.block(node),
+            Node::MatchArms(arms) => self.arms(arms),
+            Node::MatchArm(arm) => self.arm(arm),
+            Node::Def(def) => self.def(def),
+            Node::List(list) => self.container(list),
+            Node::Record(record) => self.container(record),
+            Node::Signature(signature) => self.container(signature),
+            Node::Table(table) => self.table(table),
+            Node::Param(param) => self.param(param),
+            Node::Type(type_) => self.type_(type_),
+            Node::TypeField(field) => self.type_field(field),
+            Node::Block(block) => self.block(block),
             Node::Root(_) => unreachable!("Root is laid out by file"),
             Node::Assignment(_) | Node::Let(_) | Node::RecordField(_) | Node::ClosureParams(_) => {
-                unreachable!("{kind:?} is laid out by its parent")
+                unreachable!("{:?} is laid out by its parent", node.syntax().kind())
             },
             Node::Error(_) => unreachable!("a file with errors is not formatted"),
         }
@@ -159,9 +156,9 @@ impl<'a> Formatter<'a> {
     /// the end of its line, cannot be here either.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         let mut out = Vec::new();
-        for child in children(parent) {
+        for child in children(parent.children_with_tokens()) {
             debug_assert!(
-                child.newlines == 0 && child.element.kind() != SyntaxKind::Comment,
+                child.newlines == 0 && ast::kind_of(&child.element) != SyntaxKind::Comment,
                 "{:?} holds a line break or a comment",
                 parent.kind()
             );
@@ -174,10 +171,10 @@ impl<'a> Formatter<'a> {
     }
 
     /// A node as `node` lays it out, or a token as it is.
-    fn element(&mut self, element: &SyntaxElement) -> Vec<Element<'a>> {
+    fn element(&mut self, element: &ast::Element) -> Vec<Element<'a>> {
         match element {
-            SyntaxElement::Node(node) => self.node(node),
-            SyntaxElement::Token(token) => vec![self.token(token)],
+            NodeOrToken::Node(node) => self.node(node),
+            NodeOrToken::Token(token) => vec![self.token(token)],
         }
     }
 

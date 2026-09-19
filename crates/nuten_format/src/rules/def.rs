@@ -1,5 +1,8 @@
 use nuten_doc::{Element, expand_parent, group, space};
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
+use nuten_syntax::{
+    NodeOrToken, SyntaxKind,
+    ast::{self, AstNode, Def, Node},
+};
 
 use super::{Formatter, block::BlockLayout, children};
 
@@ -7,18 +10,18 @@ impl<'a> Formatter<'a> {
     /// A `def` or an `extern`: its parts one space apart, with the `:` the
     /// input and output types follow right after the parameters, and the
     /// body expanded.
-    pub(super) fn def(&mut self, def: &SyntaxNode) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(def).map(|child| child.element).collect();
-        let body = def
-            .last_child()
-            .filter(|last| last.kind() == SyntaxKind::Block);
+    pub(super) fn def(&mut self, def: &Def) -> Vec<Element<'a>> {
+        let items: Vec<_> = children(def.syntax().children_with_tokens())
+            .map(|child| child.element)
+            .collect();
+        let body = def.body();
         let mut out = Vec::new();
         for (index, item) in items.iter().enumerate() {
             // Another `:` after it would make nu read the types from
             // elsewhere.
-            let joined = item.kind() == SyntaxKind::Colon
+            let joined = ast::kind_of(item) == SyntaxKind::Colon
                 && index > 0
-                && items[index - 1].kind() == SyntaxKind::Signature
+                && ast::kind_of(&items[index - 1]) == SyntaxKind::Signature
                 && items
                     .get(index + 1)
                     .is_none_or(|next| next.as_token().is_none_or(|next| next.text() != ":"));
@@ -26,12 +29,12 @@ impl<'a> Formatter<'a> {
                 out.push(space());
             }
             match item {
-                SyntaxElement::Node(child) if Some(child) == body.as_ref() => {
+                NodeOrToken::Node(Node::Block(block)) if Some(block) == body.as_ref() => {
                     let BlockLayout {
                         mut head,
                         mut rest,
                         ..
-                    } = self.block_layout(child);
+                    } = self.block_layout(block);
                     rest.push(expand_parent());
                     head.push(group(rest));
                     out.extend(head);

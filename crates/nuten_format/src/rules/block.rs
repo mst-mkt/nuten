@@ -1,5 +1,8 @@
 use nuten_doc::{Element, empty_line, expand_parent, group, indent, soft_line_break_or_space};
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
+use nuten_syntax::{
+    NodeOrToken, SyntaxKind,
+    ast::{self, AstNode, Block, Bracketed},
+};
 
 use super::{Child, Formatter, children};
 
@@ -23,7 +26,7 @@ impl<'a> Formatter<'a> {
     /// otherwise the statements go indented, with the closing brace on a line
     /// of its own. Blank lines at the end go, and so do those at the start,
     /// unless a comment comes before them.
-    pub(super) fn block(&mut self, block: &SyntaxNode) -> Vec<Element<'a>> {
+    pub(super) fn block(&mut self, block: &Block) -> Vec<Element<'a>> {
         let BlockLayout {
             mut head,
             mut rest,
@@ -37,52 +40,39 @@ impl<'a> Formatter<'a> {
         head
     }
 
-    pub(super) fn block_layout(&mut self, block: &SyntaxNode) -> BlockLayout<'a> {
-        let mut items = children(block).peekable();
-        let Some(Child {
-            element: SyntaxElement::Token(open),
-            ..
-        }) = items.next()
-        else {
-            unreachable!("a block has braces");
-        };
-        let mut head = vec![self.token(&open)];
-        let params = items.next_if(|item| item.element.kind() == SyntaxKind::ClosureParams);
+    pub(super) fn block_layout(&mut self, block: &Block) -> BlockLayout<'a> {
+        let mut head = vec![self.token(&block.open())];
+        let params = block.params();
         if let Some(params) = &params {
-            head.push(self.source(params.element.text_range()));
+            head.push(self.source(params.syntax().text_range()));
         }
-        let mut body: Vec<_> = items.collect();
-        let Some(Child {
-            element: SyntaxElement::Token(close),
-            newlines: close_newlines,
-        }) = body.pop()
-        else {
-            unreachable!("a block has braces");
-        };
+        let close = self.token(&block.close());
+        let body: Vec<_> = children(block.statements()).collect();
         let one_statement = matches!(
             body.as_slice(),
             [] | [Child {
-                element: SyntaxElement::Node(_),
+                element: NodeOrToken::Node(_),
                 ..
             }]
         );
         let Some(first) = body.first() else {
             return BlockLayout {
                 head,
-                rest: vec![self.token(&close)],
+                rest: vec![close],
                 line_break: false,
                 one_statement,
             };
         };
-        // A comment is followed by a line break, so it counts too.
-        let line_break = close_newlines > 0 || body.iter().any(|item| item.newlines > 0);
-        let lead = if first.element.kind() == SyntaxKind::Comment && first.newlines == 0 {
+        let line_break = block
+            .statements()
+            .any(|element| element.kind() == SyntaxKind::Newline);
+        let lead = if ast::kind_of(&first.element) == SyntaxKind::Comment && first.newlines == 0 {
             None
         } else if params.is_none()
             && first
                 .element
                 .as_node()
-                .and_then(SyntaxNode::first_child_or_token)
+                .and_then(|statement| statement.syntax().first_child_or_token())
                 .is_some_and(|first| first.kind() == SyntaxKind::Pipe)
         {
             // Right after the brace and a line break, nu would read the `|` as
@@ -94,11 +84,7 @@ impl<'a> Formatter<'a> {
         let inner = lead.into_iter().chain(self.statements(body, false));
         BlockLayout {
             head,
-            rest: vec![
-                indent(inner),
-                soft_line_break_or_space(),
-                self.token(&close),
-            ],
+            rest: vec![indent(inner), soft_line_break_or_space(), close],
             line_break,
             one_statement,
         }

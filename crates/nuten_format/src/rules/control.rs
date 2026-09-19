@@ -1,5 +1,5 @@
 use nuten_doc::{Element, expand_parent, group, space};
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
+use nuten_syntax::{NodeOrToken, SyntaxKind, SyntaxNode, ast::Node};
 
 use super::{Formatter, children};
 
@@ -11,7 +11,9 @@ impl<'a> Formatter<'a> {
     /// statement at most and the whole fits. Line breaks in the source do not
     /// count.
     pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(keyword).map(|child| child.element).collect();
+        let items: Vec<_> = children(keyword.children_with_tokens())
+            .map(|child| child.element)
+            .collect();
         let mut expand =
             !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try) || is_statement(keyword);
         let mut out = Vec::new();
@@ -27,7 +29,7 @@ impl<'a> Formatter<'a> {
                 })
             });
             match item {
-                SyntaxElement::Node(block) if branch && block.kind() == SyntaxKind::Block => {
+                NodeOrToken::Node(Node::Block(block)) if branch => {
                     let layout = self.block_layout(block);
                     expand |= !layout.one_statement;
                     out.extend(layout.head);

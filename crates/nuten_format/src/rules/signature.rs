@@ -1,5 +1,8 @@
 use nuten_doc::{Element, space, text};
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
+use nuten_syntax::{
+    NodeOrToken, SyntaxKind,
+    ast::{self, AstNode, Param, Type, TypeField},
+};
 
 use super::{Child, Formatter, children, separator};
 
@@ -8,47 +11,45 @@ impl<'a> Formatter<'a> {
     /// where nu reads the two as one flag, its `:` joined too unless a
     /// comment comes before it, its type, and its `=` and default value, each
     /// one space apart. A `,` is dropped.
-    pub(super) fn param(&mut self, param: &SyntaxNode) -> Vec<Element<'a>> {
+    pub(super) fn param(&mut self, param: &Param) -> Vec<Element<'a>> {
         let mut out = Vec::new();
-        let mut prev: Option<SyntaxElement> = None;
-        for child in children(param) {
+        let mut prev: Option<ast::Element> = None;
+        for child in children(param.syntax().children_with_tokens()) {
             let Child {
                 element,
                 newlines,
             } = child;
-            let kind = element.kind();
-            if kind == SyntaxKind::Comma {
-                continue;
-            }
-            if kind == SyntaxKind::Comment {
-                let SyntaxElement::Token(child) = &element else {
-                    unreachable!("a comment is a token");
-                };
-                out.extend(self.comment(child, newlines, false));
-                prev = Some(element);
-                continue;
-            }
-            let joined = match &prev {
-                None => true,
-                // A `:` after a comment stays on the next line: joined, it
-                // would land inside the comment or, as a line suffix, the
-                // comment would land after the `]`, and nu would lose the
-                // description.
-                // A `ShortFlag` joins the name it follows, a long flag; joined
-                // to a type or a default value, it would become part of that.
-                Some(prev) => {
-                    (kind == SyntaxKind::Colon && prev.kind() != SyntaxKind::Comment)
-                        || (kind == SyntaxKind::ShortFlag
-                            && prev.as_token() == param.first_token().as_ref()
-                            && prev
-                                .as_token()
-                                .is_some_and(|name| is_long_flag(name.text())))
+            let kind = ast::kind_of(&element);
+            match &element {
+                NodeOrToken::Token(_) if kind == SyntaxKind::Comma => continue,
+                NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
+                    out.extend(self.comment(child, newlines, false));
                 },
-            };
-            if !joined {
-                out.extend(separator(prev.as_ref().map(SyntaxElement::kind), space));
+                _ => {
+                    let joined = match &prev {
+                        None => true,
+                        // A `:` after a comment stays on the next line: joined,
+                        // it would land inside the comment or, as a line
+                        // suffix, the comment would land after the `]`, and nu
+                        // would lose the description.
+                        // A `ShortFlag` joins the name it follows, a long flag;
+                        // joined to a type or a default value, it would become
+                        // part of that.
+                        Some(prev) => {
+                            (kind == SyntaxKind::Colon && ast::kind_of(prev) != SyntaxKind::Comment)
+                                || (kind == SyntaxKind::ShortFlag
+                                    && prev.as_token() == param.syntax().first_token().as_ref()
+                                    && prev
+                                        .as_token()
+                                        .is_some_and(|name| is_long_flag(name.text())))
+                        },
+                    };
+                    if !joined {
+                        out.extend(separator(prev.as_ref().map(ast::kind_of), space));
+                    }
+                    out.extend(self.element(&element));
+                },
             }
-            out.extend(self.element(&element));
             prev = Some(element);
         }
         out
@@ -60,14 +61,14 @@ impl<'a> Formatter<'a> {
     /// whether the source had one or not, which the token invariant cannot
     /// see and the nu oracle does. No comment comes inside, since the parser
     /// keeps a type holding one as one token.
-    pub(super) fn type_(&mut self, type_: &SyntaxNode) -> Vec<Element<'a>> {
+    pub(super) fn type_(&mut self, type_: &Type) -> Vec<Element<'a>> {
         let mut out = Vec::new();
         // Whether the `<` has been printed, and whether no parameter has
         // since.
         let mut open = false;
         let mut first = true;
-        for child in children(type_) {
-            let kind = child.element.kind();
+        for child in children(type_.syntax().children_with_tokens()) {
+            let kind = ast::kind_of(&child.element);
             if kind == SyntaxKind::Comma {
                 continue;
             }
@@ -91,10 +92,10 @@ impl<'a> Formatter<'a> {
     /// One field of a type: its key, its `:` right after it, and its type one
     /// space after that. A `,` here is the type nu takes for the key, so it
     /// stays, unlike one among the fields.
-    pub(super) fn type_field(&mut self, field: &SyntaxNode) -> Vec<Element<'a>> {
+    pub(super) fn type_field(&mut self, field: &TypeField) -> Vec<Element<'a>> {
         let mut out = Vec::new();
-        for child in children(field) {
-            if !out.is_empty() && child.element.kind() != SyntaxKind::Colon {
+        for child in children(field.syntax().children_with_tokens()) {
+            if !out.is_empty() && ast::kind_of(&child.element) != SyntaxKind::Colon {
                 out.push(space());
             }
             out.extend(self.element(&child.element));

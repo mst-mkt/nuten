@@ -4,7 +4,10 @@ use nuten_doc::{
     Element, GroupId, align, align_if_group_breaks, expand_parent, group_with_id,
     soft_line_break_or_space, space,
 };
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
+use nuten_syntax::{
+    NodeOrToken, SyntaxKind, SyntaxNode, SyntaxToken,
+    ast::{self, AstNode, Node, Pipeline},
+};
 
 use super::{Child, Formatter, children, separator};
 
@@ -18,7 +21,7 @@ impl<'a> Formatter<'a> {
     /// A comment stays where it is among the pipes and elements, on its own
     /// line or at the end of its line. A pipe with a comment after it stays
     /// at the end of its line, and what comes next starts a line.
-    pub(super) fn pipeline(&mut self, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
+    pub(super) fn pipeline(&mut self, pipeline: &Pipeline) -> Vec<Element<'a>> {
         let id = self.group_id();
         let mut out = Vec::new();
         let mut prev = None;
@@ -28,7 +31,7 @@ impl<'a> Formatter<'a> {
         // Where what follows a `|` that may start a line starts in `out`, and
         // whether the `|` starts a line even when the pipeline is on one line.
         let mut after_pipe: Option<(usize, bool)> = None;
-        for part in parts(pipeline) {
+        for part in parts(pipeline.syntax()) {
             let Part {
                 child:
                     Child {
@@ -37,7 +40,7 @@ impl<'a> Formatter<'a> {
                     },
                 joined,
             } = part;
-            let kind = element.kind();
+            let kind = ast::kind_of(&element);
             if matches!(kind, SyntaxKind::Pipe | SyntaxKind::Comment) {
                 align_after_pipe(&mut out, after_pipe.take(), id, &mut tail);
             }
@@ -52,21 +55,21 @@ impl<'a> Formatter<'a> {
             }
             tail = None;
             match &element {
-                SyntaxElement::Node(child) => {
+                NodeOrToken::Node(child) => {
                     tail = Some(out.len());
                     out.extend(separator(prev, space));
                     out.extend(self.node(child));
                 },
                 // `let`, or an assignment operator with nothing before it,
                 // which starts an element laid flat.
-                SyntaxElement::Token(child)
+                NodeOrToken::Token(child)
                     if matches!(kind, SyntaxKind::Word | SyntaxKind::Assign) =>
                 {
                     tail = Some(out.len());
                     out.extend(separator(prev, space));
                     out.push(self.token(child));
                 },
-                SyntaxElement::Token(child) => match kind {
+                NodeOrToken::Token(child) => match kind {
                     SyntaxKind::Pipe => {
                         let before_comment = comment_follows(child);
                         out.extend(separator(prev, || {
@@ -80,7 +83,9 @@ impl<'a> Formatter<'a> {
                         // A statement starts a line in the output but right
                         // after a `;` on the same line, where its `|` never
                         // does; in a block on one line, nothing breaks anyway.
-                        if !before_comment && (prev.is_some() || !follows_semicolon(pipeline)) {
+                        if !before_comment
+                            && (prev.is_some() || !follows_semicolon(pipeline.syntax()))
+                        {
                             let starts_line = matches!(prev, None | Some(SyntaxKind::Comment));
                             after_pipe = Some((out.len(), starts_line));
                         }
@@ -177,13 +182,13 @@ fn parts(pipeline: &SyntaxNode) -> Vec<Part> {
 /// what comes before when it is an element.
 fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
     let mut first = Some((newlines, joined));
-    for child in children(pipeline) {
+    for child in children(pipeline.children_with_tokens()) {
         let (before, joined) = first.take().unwrap_or((0, false));
         let newlines = before + child.newlines;
         let assignment = child
             .element
             .as_node()
-            .and_then(SyntaxNode::first_child)
+            .and_then(|node| node.syntax().first_child())
             .filter(|node| matches!(node.kind(), SyntaxKind::Assignment | SyntaxKind::Let));
         match assignment {
             Some(assignment) => flatten_assignment(&assignment, newlines, joined, out),
@@ -202,20 +207,19 @@ fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Par
 /// a comment, and the first, which joins as `joined` tells.
 fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool, out: &mut Vec<Part>) {
     let mut first = Some((newlines, joined));
-    for child in children(assignment) {
+    for child in children(assignment.children_with_tokens()) {
         let (before, joined) = first.take().unwrap_or((0, true));
         let Child {
             element,
             newlines,
         } = child;
         let newlines = before + newlines;
-        let kind = element.kind();
         match &element {
-            SyntaxElement::Node(pipeline) if kind == SyntaxKind::Pipeline => {
-                flatten(pipeline, newlines, true, out);
+            NodeOrToken::Node(Node::Pipeline(pipeline)) => {
+                flatten(pipeline.syntax(), newlines, true, out);
             },
             _ => out.push(Part {
-                joined: joined && kind != SyntaxKind::Comment,
+                joined: joined && ast::kind_of(&element) != SyntaxKind::Comment,
                 child: Child {
                     element,
                     newlines,
