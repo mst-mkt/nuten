@@ -103,15 +103,16 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
 }
 
 /// A node the parser makes of a word enclosed in brackets: the opening
-/// bracket is its first child and the closing one its last, whatever comes
-/// between.
+/// bracket is its first child, or the second after the name of a `Type`,
+/// and the closing one its last, whatever comes between.
 ///
 /// # Panics
 ///
-/// `open` panics when the first child is not a token, `close` when the last
-/// is not; `inside` calls both, and `following` calls `close`. `Node::flaw`
-/// checks the whole shape, and the `NodeShape` invariant of the parser holds
-/// every tree to it.
+/// `open` panics when the child it reads is missing or is not a token,
+/// `close` when the last is not a token; `inside` calls both, and
+/// `following` calls `close`.
+/// `Node::flaw` checks the whole shape, and the `NodeShape` invariant of the
+/// parser holds every tree to it.
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
         self.syntax()
@@ -165,10 +166,11 @@ impl Iterator for Inside {
 }
 
 /// Implements `Bracketed` for the node kinds the parser makes of a bracketed
-/// word, and `Node::brackets` from the same table.
+/// word, with the methods given in braces, and `Node::brackets` from the
+/// same table.
 macro_rules! bracketed {
-    ($($name:ident: $open:ident $close:ident,)*) => {
-        $(impl Bracketed for $name {})*
+    ($($name:ident: $open:ident $close:ident $({ $($methods:tt)* })?,)*) => {
+        $(impl Bracketed for $name { $($($methods)*)? })*
 
         impl Node {
             /// The kinds of the brackets of a `Bracketed` node.
@@ -189,6 +191,15 @@ bracketed! {
     Record: LBrace RBrace,
     Block: LBrace RBrace,
     MatchArms: LBrace RBrace,
+    Type: LAngle RAngle {
+        /// The `<`, right after the name.
+        fn open(&self) -> SyntaxToken {
+            self.name()
+                .next_sibling_or_token()
+                .and_then(SyntaxElement::into_token)
+                .expect("a type opens its brackets right after its name")
+        }
+    },
 }
 
 impl Node {
@@ -202,14 +213,24 @@ impl Node {
     fn bracket_flaw(&self) -> Option<&'static str> {
         let (open, close) = self.brackets()?;
         let node = self.syntax();
-        let is_bracket = |element: Option<SyntaxElement>, kind| {
+        let is_token = |element: Option<&SyntaxElement>, kind| {
             element
-                .and_then(SyntaxElement::into_token)
+                .and_then(SyntaxElement::as_token)
                 .is_some_and(|token| token.kind() == kind)
         };
-        if !is_bracket(node.first_child_or_token(), open) {
+        let first = node.first_child_or_token();
+        let opening = match self {
+            Node::Type(_) => {
+                if !is_token(first.as_ref(), SyntaxKind::Word) {
+                    return Some("does not start with its name");
+                }
+                first.and_then(|name| name.next_sibling_or_token())
+            },
+            _ => first,
+        };
+        if !is_token(opening.as_ref(), open) {
             Some("does not open with its bracket")
-        } else if !is_bracket(node.last_child_or_token(), close) {
+        } else if !is_token(node.last_child_or_token().as_ref(), close) {
             Some("does not close with its bracket")
         } else {
             None
@@ -290,13 +311,31 @@ impl Def {
     }
 }
 
+impl Type {
+    /// The name before the `<`; the parameters or fields are what the
+    /// brackets hold.
+    ///
+    /// # Panics
+    ///
+    /// When the first child is not a token, which the `NodeShape` invariant
+    /// of the parser rules out.
+    pub fn name(&self) -> SyntaxToken {
+        self.syntax()
+            .first_child_or_token()
+            .and_then(SyntaxElement::into_token)
+            .expect("a type starts with its name")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::iter;
 
     use rowan::{GreenNodeBuilder, NodeOrToken};
 
-    use super::{AstNode, Block, Bracketed, Def, List, Node, Pipeline, Table, kind_of, typed};
+    use super::{
+        AstNode, Block, Bracketed, Def, List, Node, Pipeline, Table, Type, kind_of, typed,
+    };
     use crate::{SyntaxElement, SyntaxKind, SyntaxNode};
 
     /// A tree written down: a node of a kind with what it holds, or a token.
@@ -474,6 +513,35 @@ mod tests {
     }
 
     #[test]
+    fn type_gives_its_name_and_what_its_brackets_hold() {
+        let type_ = Type::cast(build(&node(
+            SyntaxKind::Type,
+            vec![
+                token(SyntaxKind::Word, "list"),
+                token(SyntaxKind::LAngle, "<"),
+                token(SyntaxKind::Word, "int"),
+                token(SyntaxKind::Comma, ","),
+                token(SyntaxKind::Whitespace, " "),
+                token(SyntaxKind::Word, "string"),
+                token(SyntaxKind::RAngle, ">"),
+            ],
+        )))
+        .unwrap();
+        assert_eq!(type_.name().text(), "list");
+        assert_eq!(type_.open().text(), "<");
+        assert_eq!(type_.close().text(), ">");
+        assert_eq!(
+            kinds(type_.inside()),
+            [
+                SyntaxKind::Word,
+                SyntaxKind::Comma,
+                SyntaxKind::Whitespace,
+                SyntaxKind::Word
+            ]
+        );
+    }
+
+    #[test]
     fn def_body_is_its_last_child_when_that_is_block() {
         let block = || {
             node(
@@ -635,6 +703,54 @@ mod tests {
                 None,
             ),
             (node(SyntaxKind::List, bracketed(vec![])), None),
+            (
+                node(SyntaxKind::Type, vec![token(SyntaxKind::LAngle, "<")]),
+                Some("does not start with its name"),
+            ),
+            (
+                node(
+                    SyntaxKind::Type,
+                    vec![node(SyntaxKind::List, bracketed(vec![]))],
+                ),
+                Some("does not start with its name"),
+            ),
+            (
+                node(SyntaxKind::Type, vec![token(SyntaxKind::Word, "list")]),
+                Some("does not open with its bracket"),
+            ),
+            (
+                node(
+                    SyntaxKind::Type,
+                    vec![
+                        token(SyntaxKind::Word, "list"),
+                        token(SyntaxKind::Word, "int"),
+                        token(SyntaxKind::RAngle, ">"),
+                    ],
+                ),
+                Some("does not open with its bracket"),
+            ),
+            (
+                node(
+                    SyntaxKind::Type,
+                    vec![
+                        token(SyntaxKind::Word, "list"),
+                        token(SyntaxKind::LAngle, "<"),
+                        token(SyntaxKind::Word, "int"),
+                    ],
+                ),
+                Some("does not close with its bracket"),
+            ),
+            (
+                node(
+                    SyntaxKind::Type,
+                    vec![
+                        token(SyntaxKind::Word, "list"),
+                        token(SyntaxKind::LAngle, "<"),
+                        token(SyntaxKind::RAngle, ">"),
+                    ],
+                ),
+                None,
+            ),
             (
                 node(SyntaxKind::Pipeline, vec![token(SyntaxKind::Word, "a")]),
                 None,
