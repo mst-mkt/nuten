@@ -114,6 +114,25 @@ enum Mode {
     Break,
 }
 
+/// How `fits` measures an element: in the mode of its place, or inside a
+/// `LineSuffix` among the measured elements, which takes no width since it
+/// prints only at the next line break.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Measure {
+    Flat,
+    Break,
+    InSuffix,
+}
+
+impl From<Mode> for Measure {
+    fn from(mode: Mode) -> Measure {
+        match mode {
+            Mode::Flat => Measure::Flat,
+            Mode::Break => Measure::Break,
+        }
+    }
+}
+
 impl<'a> Printer<'a> {
     fn print_all(&mut self) {
         loop {
@@ -216,19 +235,17 @@ impl<'a> Printer<'a> {
             return false;
         };
         let mut has_line_suffix = !self.line_suffixes.is_empty();
-        let mut queue: Vec<(Mode, &Element<'_>)> =
-            elements.iter().rev().map(|e| (Mode::Flat, e)).collect();
-        // Every frame is in break mode here: a group inside a flat group is
-        // never measured.
+        let mut queue: Vec<(Measure, &Element<'_>)> = measured(elements, Measure::Flat).collect();
         let mut rest = self.stack.iter().rev();
         loop {
-            let next = queue
-                .pop()
-                .or_else(|| rest.next().map(|frame| (frame.mode, frame.element)));
-            let Some((mode, element)) = next else {
+            let next = queue.pop().or_else(|| {
+                rest.next()
+                    .map(|frame| (Measure::from(frame.mode), frame.element))
+            });
+            let Some((measure, element)) = next else {
                 return true;
             };
-            let width = match (element, mode) {
+            let width = match (element, measure) {
                 (
                     Element::Line(LineMode::Hard {
                         ..
@@ -238,38 +255,8 @@ impl<'a> Printer<'a> {
                         width: TextWidth::Multiline,
                         ..
                     },
-                    Mode::Flat,
+                    Measure::Flat | Measure::InSuffix,
                 ) => return false,
-                (Element::LineSuffix(elements), Mode::Flat) if has_forced_break(elements) => {
-                    return false;
-                },
-                (Element::Line(_), Mode::Break) => return true,
-                (
-                    Element::Text {
-                        width: TextWidth::Multiline,
-                        text,
-                    },
-                    Mode::Break,
-                ) => return columns(first_line(text)) <= remaining,
-                (
-                    Element::Text {
-                        width: TextWidth::Width(width),
-                        ..
-                    },
-                    _,
-                ) => *width,
-                (Element::Space | Element::Line(LineMode::SoftOrSpace), _) => 1,
-                (Element::LineSuffix(_), _) => {
-                    has_line_suffix = true;
-                    0
-                },
-                (Element::LineSuffixBoundary, _) if has_line_suffix => return true,
-                (
-                    Element::Line(LineMode::Soft)
-                    | Element::ExpandParent
-                    | Element::LineSuffixBoundary,
-                    _,
-                ) => 0,
                 (
                     Element::Group {
                         elements, ..
@@ -280,9 +267,40 @@ impl<'a> Printer<'a> {
                     },
                     _,
                 ) => {
-                    queue.extend(elements.iter().rev().map(|e| (mode, e)));
+                    queue.extend(measured(elements, measure));
                     0
                 },
+                (Element::LineSuffix(elements), _) => {
+                    has_line_suffix = true;
+                    if measure != Measure::Break {
+                        queue.extend(measured(elements, Measure::InSuffix));
+                    }
+                    0
+                },
+                (_, Measure::InSuffix) => 0,
+                (Element::Line(_), Measure::Break) => return true,
+                (
+                    Element::Text {
+                        width: TextWidth::Multiline,
+                        text,
+                    },
+                    Measure::Break,
+                ) => return columns(first_line(text)) <= remaining,
+                (
+                    Element::Text {
+                        width: TextWidth::Width(width),
+                        ..
+                    },
+                    _,
+                ) => *width,
+                (Element::Space | Element::Line(LineMode::SoftOrSpace), _) => 1,
+                (Element::LineSuffixBoundary, _) if has_line_suffix => return true,
+                (
+                    Element::Line(LineMode::Soft)
+                    | Element::ExpandParent
+                    | Element::LineSuffixBoundary,
+                    _,
+                ) => 0,
             };
             let Some(left) = remaining.checked_sub(width) else {
                 return false;
@@ -400,32 +418,12 @@ fn breaks_line(line_mode: LineMode, mode: Mode) -> bool {
     matches!(line_mode, LineMode::Hard { .. }) || mode == Mode::Break
 }
 
-/// The same elements `fits` rejects in flat mode, through a `LineSuffix`.
-fn has_forced_break(elements: &[Element<'_>]) -> bool {
-    elements.iter().any(|element| match element {
-        Element::Line(LineMode::Hard {
-            ..
-        })
-        | Element::ExpandParent
-        | Element::Text {
-            width: TextWidth::Multiline,
-            ..
-        } => true,
-        Element::LineSuffix(elements)
-        | Element::Group {
-            elements, ..
-        }
-        | Element::Indent(elements)
-        | Element::Align {
-            elements, ..
-        } => has_forced_break(elements),
-        Element::Text {
-            ..
-        }
-        | Element::Space
-        | Element::Line(_)
-        | Element::LineSuffixBoundary => false,
-    })
+/// In reverse, for a queue that pops from the end.
+fn measured<'a>(
+    elements: &'a [Element<'a>],
+    measure: Measure,
+) -> impl Iterator<Item = (Measure, &'a Element<'a>)> {
+    elements.iter().rev().map(move |element| (measure, element))
 }
 
 fn first_line(text: &str) -> &str {

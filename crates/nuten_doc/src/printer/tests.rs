@@ -268,13 +268,42 @@ fn a_forced_break_breaks_the_groups_around() {
 
 #[test]
 fn a_forced_break_inside_a_line_suffix_breaks_the_group_around() {
+    let forced_breaks = [
+        vec![expand_parent()],
+        vec![hard_line_break()],
+        vec![text("\n")],
+        vec![indent(vec![group(vec![hard_line_break()])])],
+        vec![line_suffix(vec![hard_line_break()])],
+    ];
+    for forced_break in forced_breaks {
+        let doc = vec![group(vec![
+            text("a"),
+            line_suffix(forced_break.clone()),
+            soft_line_break_or_space(),
+            text("b"),
+        ])];
+        assert_eq!(printed(doc, &options(80)), "a\nb", "{forced_break:?}");
+    }
+}
+
+#[test]
+fn a_boundary_inside_a_line_suffix_does_not_end_the_measurement() {
     let doc = vec![group(vec![
         text("a"),
-        line_suffix(vec![expand_parent()]),
+        line_suffix(vec![line_suffix_boundary(), hard_line_break()]),
         soft_line_break_or_space(),
         text("b"),
     ])];
     assert_eq!(printed(doc, &options(80)), "a\nb");
+}
+
+#[test]
+fn a_forced_break_inside_a_line_suffix_after_the_group_leaves_it_flat() {
+    let doc = vec![
+        group(vec![text("a"), soft_line_break_or_space(), text("b")]),
+        line_suffix(vec![hard_line_break(), text("# c")]),
+    ];
+    assert_eq!(printed(doc, &options(80)), "a b\n# c");
 }
 
 #[test]
