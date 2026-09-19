@@ -3,11 +3,6 @@
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Document<'a> {
-    pub elements: Vec<Element<'a>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element<'a> {
     /// Printed as is, but for its line breaks, which come out as the
     /// printer's line ending. `width` is `TextWidth::of(text)`.

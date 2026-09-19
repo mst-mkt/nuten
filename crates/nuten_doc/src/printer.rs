@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, iter, mem};
 
-use crate::{Document, Element, GroupId, LineMode, TextWidth, element::columns};
+use crate::{Element, GroupId, LineMode, TextWidth, element::columns};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrinterOptions {
@@ -39,11 +39,10 @@ impl LineEnding {
 /// a text; the lines inside a text stay as they are, but their line breaks
 /// come out as the configured line ending. The output never starts with a
 /// line break.
-pub fn print(document: &Document<'_>, options: &PrinterOptions) -> String {
+pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
     let mut printer = Printer {
         options,
-        stack: document
-            .elements
+        stack: elements
             .iter()
             .rev()
             .map(|element| Frame {

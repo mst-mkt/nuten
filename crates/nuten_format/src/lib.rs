@@ -3,7 +3,7 @@
 pub mod invariants;
 mod rules;
 
-use nuten_doc::{Document, PrinterOptions};
+use nuten_doc::PrinterOptions;
 pub use nuten_doc::{IndentStyle, LineEnding};
 use nuten_parser::Parsed;
 pub use nuten_parser::{ParseError, ParseErrorKind};
@@ -55,16 +55,13 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
         });
     }
     let root = preprocess(parsed.syntax());
-    let document = Document {
-        elements: rules::file(src, &root),
-    };
     let options = PrinterOptions {
         line_width: config.line_width,
         indent_style: config.indent_style,
         indent_width: config.indent_width,
         line_ending: config.line_ending,
     };
-    Ok(nuten_doc::print(&document, &options))
+    Ok(nuten_doc::print(&rules::file(src, &root), &options))
 }
 
 /// Where tree rewrites before formatting go. None yet.
