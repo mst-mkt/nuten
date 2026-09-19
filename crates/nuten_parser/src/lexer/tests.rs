@@ -49,51 +49,38 @@ fn error_of(src: &str) -> (LexErrorKind, &str) {
     (errors[0].kind, &src[errors[0].range])
 }
 
-/// The split nu reports, which drops whitespace.
 fn split(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::Block, &[Whitespace])
+    split_in(src, Mode::Block)
 }
 
-/// The split nu reports inside a list, where it reads `,` and line breaks
-/// as whitespace too.
-fn split_list(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::List, &[Whitespace, Newline, Comma])
-}
-
-/// The split nu reports inside a record where it reads a key or its `:`,
-/// reading `,` and line breaks as whitespace and skipping comments.
-fn split_record(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::Record, &[Whitespace, Newline, Comment, Comma])
-}
-
-/// The split nu reports when it looks into `{ }`, where it reads line
-/// breaks as whitespace and skips comments.
-fn split_brace(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::Brace, &[Whitespace, Newline, Comment])
-}
-
-/// The split nu reports where it reads a value of a record, reading `,`
-/// and line breaks as whitespace and skipping comments.
-fn split_record_value(src: &str) -> Vec<&str> {
-    split_skipping(
-        src,
-        Mode::RecordValue,
-        &[Whitespace, Newline, Comment, Comma],
-    )
-}
-
-/// The split nu reports where it reads the type of a variable, skipping
-/// comments.
-fn split_var_type(src: &str) -> Vec<&str> {
-    split_skipping(src, Mode::VarType, &[Whitespace, Newline, Comment])
-}
-
-fn split_skipping<'a>(src: &'a str, mode: Mode, skipped: &[SyntaxKind]) -> Vec<&'a str> {
+/// What nuten lexes in `mode`, with what nu skips there dropped.
+fn split_in(src: &str, mode: Mode) -> Vec<&str> {
+    let skipped = skipped_in(mode);
     lexed_in(src, mode)
         .into_iter()
         .filter(|(kind, _)| !skipped.contains(kind))
         .map(|(_, text)| text)
         .collect()
+}
+
+/// What to drop from the tokens of `mode` to compare with the split nu
+/// reports there.
+#[expect(
+    clippy::match_same_arms,
+    reason = "one arm per recorded mode, to check each against nu on its own"
+)]
+fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
+    match mode {
+        Mode::Block => &[Whitespace],
+        Mode::List => &[Whitespace, Newline, Comma],
+        Mode::Record => &[Whitespace, Newline, Comment, Comma],
+        Mode::RecordValue => &[Whitespace, Newline, Comment, Comma],
+        Mode::Brace => &[Whitespace, Newline, Comment],
+        Mode::VarType => &[Whitespace, Newline, Comment],
+        Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
+            unimplemented!("how nu splits in {mode:?} is not recorded")
+        },
+    }
 }
 
 fn kind_of(src: &str) -> SyntaxKind {
@@ -474,7 +461,7 @@ const NU_LIST_SPLITS: &[(&str, &[&str])] = &[
 #[test]
 fn list_splits_match_nu() {
     for &(src, expected) in NU_LIST_SPLITS {
-        assert_eq!(split_list(src), expected, "{src:?}");
+        assert_eq!(split_in(src, Mode::List), expected, "{src:?}");
     }
 }
 
@@ -498,7 +485,7 @@ const NU_RECORD_SPLITS: &[(&str, &[&str])] = &[
 #[test]
 fn record_splits_match_nu() {
     for &(src, expected) in NU_RECORD_SPLITS {
-        assert_eq!(split_record(src), expected, "{src:?}");
+        assert_eq!(split_in(src, Mode::Record), expected, "{src:?}");
     }
 }
 
@@ -518,7 +505,7 @@ const NU_BRACE_SPLITS: &[(&str, &[&str])] = &[
 #[test]
 fn brace_splits_match_nu() {
     for &(src, expected) in NU_BRACE_SPLITS {
-        assert_eq!(split_brace(src), expected, "{src:?}");
+        assert_eq!(split_in(src, Mode::Brace), expected, "{src:?}");
     }
 }
 
@@ -534,7 +521,7 @@ const NU_RECORD_VALUE_SPLITS: &[(&str, &[&str])] = &[
 #[test]
 fn record_value_splits_match_nu() {
     for &(src, expected) in NU_RECORD_VALUE_SPLITS {
-        assert_eq!(split_record_value(src), expected, "{src:?}");
+        assert_eq!(split_in(src, Mode::RecordValue), expected, "{src:?}");
     }
 }
 
@@ -552,7 +539,7 @@ const NU_VAR_TYPE_SPLITS: &[(&str, &[&str])] = &[
 #[test]
 fn var_type_splits_match_nu() {
     for &(src, expected) in NU_VAR_TYPE_SPLITS {
-        assert_eq!(split_var_type(src), expected, "{src:?}");
+        assert_eq!(split_in(src, Mode::VarType), expected, "{src:?}");
     }
 }
 
