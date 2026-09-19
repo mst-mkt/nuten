@@ -1,7 +1,9 @@
+use std::iter;
+
 use nuten_doc::{Element, space, text};
 use nuten_syntax::{
     SyntaxKind,
-    ast::{AstNode, Param, Type, TypeField},
+    ast::{AstNode, Bracketed, Param, Type, TypeField},
 };
 
 use super::{Formatter, children, without_commas};
@@ -38,28 +40,21 @@ impl<'a> Formatter<'a> {
     /// see and the nu oracle does. No comment comes inside, since the parser
     /// keeps a type holding one as one token.
     pub(super) fn type_(&mut self, type_: &Type) -> Vec<Element<'a>> {
-        let mut out = Vec::new();
-        // Whether the `<` has been printed, and whether no parameter has
-        // since.
-        let mut open = false;
-        let mut first = true;
-        for child in without_commas(children(type_.syntax().children_with_tokens())) {
-            let kind = child.kind();
-            // The name and the brackets touch what is around them; every
-            // parameter but the first follows a `, `.
-            if open && kind != SyntaxKind::RAngle {
-                if !first {
-                    out.push(text(","));
-                    out.push(space());
-                }
-                first = false;
-            }
-            if kind == SyntaxKind::LAngle {
-                open = true;
-            }
-            out.extend(self.element(&child.element));
-        }
-        out
+        let head = [self.token(&type_.name()), self.token(&type_.open())];
+        let close = self.token(&type_.close());
+        let params = without_commas(children(type_.inside()))
+            .enumerate()
+            .flat_map(|(index, param)| {
+                let comma = (index > 0).then(|| [text(","), space()]);
+                comma
+                    .into_iter()
+                    .flatten()
+                    .chain(self.element(&param.element))
+            });
+        head.into_iter()
+            .chain(params)
+            .chain(iter::once(close))
+            .collect()
     }
 
     /// One field of a type: its key, its `:` right after it, and its type one
