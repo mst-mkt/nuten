@@ -1,5 +1,3 @@
-use std::mem;
-
 use nuten_doc::{
     Element, empty_line, expand_parent, group, hard_line_break, indent, soft_line_break,
     soft_line_break_or_space, space,
@@ -9,7 +7,7 @@ use nuten_syntax::{
     ast::{self, AstNode, Bracketed, Node, RecordField, Table},
 };
 
-use super::{Child, Formatter, children};
+use super::{Child, Formatter, children, without_commas};
 
 /// Makes a line break that prints as nothing or as a space when the group is
 /// flat.
@@ -80,19 +78,15 @@ impl<'a> Formatter<'a> {
         before_close: SoftLine,
         close: &SyntaxToken,
     ) -> Vec<Element<'a>> {
-        let mut items = items.peekable();
+        let mut items = without_commas(items).peekable();
         let mut expand = expand || items.peek().is_some_and(|first| first.newlines > 0);
         let mut inner = Vec::new();
         let mut prev = None;
-        // The most line breaks before a `,` dropped since the last item, which
-        // count as line breaks before what follows.
-        let mut dropped = 0;
         for item in items {
             let Child {
                 element,
                 newlines,
             } = item;
-            let newlines = newlines.max(mem::take(&mut dropped));
             let kind = ast::kind_of(&element);
             let separator = || match prev {
                 None => before_first(),
@@ -105,10 +99,6 @@ impl<'a> Formatter<'a> {
                 NodeOrToken::Node(Node::RecordField(field)) => {
                     inner.push(separator());
                     inner.extend(self.field(field));
-                },
-                NodeOrToken::Token(_) if kind == SyntaxKind::Comma => {
-                    dropped = newlines;
-                    continue;
                 },
                 NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
                     expand = true;
@@ -143,16 +133,15 @@ impl<'a> Formatter<'a> {
     fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
         let mut out = Vec::new();
         let mut prev = None;
-        // Parts printed, comments and commas aside; the key is the first.
+        // Parts printed, comments aside; the key is the first.
         let mut parts = 0;
-        for child in children(field.syntax().children_with_tokens()) {
+        for child in without_commas(children(field.syntax().children_with_tokens())) {
             let Child {
                 element,
                 newlines,
             } = child;
             let kind = ast::kind_of(&element);
             match &element {
-                NodeOrToken::Token(_) if kind == SyntaxKind::Comma => continue,
                 NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
                     out.extend(self.comment(child, newlines, false));
                 },

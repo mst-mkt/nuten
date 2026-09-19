@@ -1,12 +1,10 @@
-use std::mem;
-
 use nuten_doc::{Element, empty_line, hard_line_break, indent, space};
 use nuten_syntax::{
     NodeOrToken, SyntaxKind,
     ast::{self, AstNode, Bracketed, MatchArm, MatchArms},
 };
 
-use super::{Child, Formatter, children, separator};
+use super::{Child, Formatter, children, separator, without_commas};
 
 impl<'a> Formatter<'a> {
     /// The arms of a `match`, one per line, indented, with the closing brace
@@ -17,19 +15,12 @@ impl<'a> Formatter<'a> {
         let mut out = vec![self.token(&arms.open())];
         let mut inner = Vec::new();
         let mut prev = None;
-        // Line breaks before a dropped `,` count as before what follows it.
-        let mut dropped = 0;
-        for child in children(arms.inside()) {
+        for child in without_commas(children(arms.inside())) {
             let Child {
                 element,
                 newlines,
             } = child;
-            let newlines = newlines.max(mem::take(&mut dropped));
             let kind = ast::kind_of(&element);
-            if kind == SyntaxKind::Comma {
-                dropped = newlines;
-                continue;
-            }
             // A comment right after the brace or an arm stays on its line.
             if kind != SyntaxKind::Comment || (newlines > 0 && prev.is_some()) {
                 inner.push(if newlines > 1 && prev.is_some() {

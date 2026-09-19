@@ -8,6 +8,8 @@ mod match_;
 mod pipeline;
 mod signature;
 
+use std::mem;
+
 use nuten_doc::{
     Element, GroupId, empty_line, empty_lines, hard_line_break, line_suffix, space, text,
 };
@@ -44,6 +46,23 @@ fn children(elements: impl IntoIterator<Item = SyntaxElement>) -> impl Iterator<
                 Some(child)
             },
         })
+}
+
+/// `children` with every `,` dropped. The child after one or more dropped
+/// `,` counts the most line breaks any of them, or itself, had before it.
+fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item = Child> {
+    let mut dropped = 0;
+    children.filter_map(move |child| {
+        let newlines = child.newlines.max(mem::take(&mut dropped));
+        if ast::kind_of(&child.element) == SyntaxKind::Comma {
+            dropped = newlines;
+            return None;
+        }
+        Some(Child {
+            element: child.element,
+            newlines,
+        })
+    })
 }
 
 /// `root` is the tree of `src`, with no `Error` element.

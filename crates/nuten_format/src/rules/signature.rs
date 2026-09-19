@@ -4,7 +4,7 @@ use nuten_syntax::{
     ast::{self, AstNode, Param, Type, TypeField},
 };
 
-use super::{Child, Formatter, children, separator};
+use super::{Child, Formatter, children, separator, without_commas};
 
 impl<'a> Formatter<'a> {
     /// One parameter of a signature: its name, then its `(-f)` joined to it
@@ -14,14 +14,13 @@ impl<'a> Formatter<'a> {
     pub(super) fn param(&mut self, param: &Param) -> Vec<Element<'a>> {
         let mut out = Vec::new();
         let mut prev: Option<ast::Element> = None;
-        for child in children(param.syntax().children_with_tokens()) {
+        for child in without_commas(children(param.syntax().children_with_tokens())) {
             let Child {
                 element,
                 newlines,
             } = child;
             let kind = ast::kind_of(&element);
             match &element {
-                NodeOrToken::Token(_) if kind == SyntaxKind::Comma => continue,
                 NodeOrToken::Token(child) if kind == SyntaxKind::Comment => {
                     out.extend(self.comment(child, newlines, false));
                 },
@@ -67,11 +66,8 @@ impl<'a> Formatter<'a> {
         // since.
         let mut open = false;
         let mut first = true;
-        for child in children(type_.syntax().children_with_tokens()) {
+        for child in without_commas(children(type_.syntax().children_with_tokens())) {
             let kind = ast::kind_of(&child.element);
-            if kind == SyntaxKind::Comma {
-                continue;
-            }
             // The name and the brackets touch what is around them; every
             // parameter but the first follows a `, `.
             if open && kind != SyntaxKind::RAngle {
