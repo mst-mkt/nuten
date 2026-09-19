@@ -22,7 +22,7 @@ pub fn soft_line_break_or_space() -> Element<'static> {
 }
 
 pub fn hard_line_break() -> Element<'static> {
-    Element::Line(LineMode::Hard)
+    empty_lines(0)
 }
 
 pub fn empty_line() -> Element<'static> {
@@ -30,7 +30,9 @@ pub fn empty_line() -> Element<'static> {
 }
 
 pub fn empty_lines(blank_lines: u32) -> Element<'static> {
-    Element::Line(LineMode::Empty(blank_lines))
+    Element::Line(LineMode::Hard {
+        blank_lines,
+    })
 }
 
 pub fn expand_parent() -> Element<'static> {

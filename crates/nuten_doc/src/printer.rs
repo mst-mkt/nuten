@@ -103,7 +103,9 @@ struct Suffix<'a> {
     elements: &'a [Element<'a>],
 }
 
-const HARD_LINE_BREAK: Element<'static> = Element::Line(LineMode::Hard);
+const HARD_LINE_BREAK: Element<'static> = Element::Line(LineMode::Hard {
+    blank_lines: 0,
+});
 
 /// Whether the `Line`s of the group around print flat or broken.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,11 +136,13 @@ impl<'a> Printer<'a> {
                 } => self.push_text(text, *width),
                 Element::Line(line_mode) if breaks_line(*line_mode, mode) => {
                     if self.line_suffixes.is_empty() {
-                        let breaks = match *line_mode {
-                            LineMode::Empty(blank_lines) => blank_lines + 1,
-                            _ => 1,
+                        let blank_lines = match *line_mode {
+                            LineMode::Hard {
+                                blank_lines,
+                            } => blank_lines,
+                            LineMode::Soft | LineMode::SoftOrSpace => 0,
                         };
-                        self.push_line_breaks(indent, breaks);
+                        self.push_line_breaks(indent, blank_lines + 1);
                     } else {
                         self.flush_line_suffixes(Some(frame));
                     }
@@ -226,7 +230,9 @@ impl<'a> Printer<'a> {
             };
             let width = match (element, mode) {
                 (
-                    Element::Line(LineMode::Hard | LineMode::Empty(_))
+                    Element::Line(LineMode::Hard {
+                        ..
+                    })
                     | Element::ExpandParent
                     | Element::Text {
                         width: TextWidth::Multiline,
@@ -391,13 +397,15 @@ impl<'a> Printer<'a> {
 
 /// Whether a `Line` prints a line break in `mode`.
 fn breaks_line(line_mode: LineMode, mode: Mode) -> bool {
-    matches!(line_mode, LineMode::Hard | LineMode::Empty(_)) || mode == Mode::Break
+    matches!(line_mode, LineMode::Hard { .. }) || mode == Mode::Break
 }
 
 /// The same elements `fits` rejects in flat mode, through a `LineSuffix`.
 fn has_forced_break(elements: &[Element<'_>]) -> bool {
     elements.iter().any(|element| match element {
-        Element::Line(LineMode::Hard | LineMode::Empty(_))
+        Element::Line(LineMode::Hard {
+            ..
+        })
         | Element::ExpandParent
         | Element::Text {
             width: TextWidth::Multiline,
