@@ -85,6 +85,10 @@ enum Shape {
     /// A `{ }` holding a record stays a word until the signature is read.
     /// One holding a block is a block.
     KnownArgument,
+    /// An argument of a command that takes a row condition.
+    /// Nu reads a `{ }` that shows a `RecordSign` as a block alone, and as a value among others.
+    /// So it stays a word, which reads the same either way.
+    RowCondition,
     /// An argument of a head nuten cannot look up: an alias, one the file defines, or none.
     /// Every bracketed word stays one, since what nu reads it as is unknowable here.
     UnknownArgument,
@@ -123,9 +127,9 @@ impl Shape {
             (Shape::Any, Some(sign)) | (Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
                 Braced::Record(sign)
             },
-            (Shape::KnownArgument, Some(_))
+            (Shape::KnownArgument | Shape::RowCondition, Some(_))
             | (Shape::UnknownArgument | Shape::ExternalArgument, _) => Braced::Word,
-            (Shape::Any | Shape::KnownArgument, None)
+            (Shape::Any | Shape::KnownArgument | Shape::RowCondition, None)
             | (Shape::Block, None | Some(RecordSign::SpreadFirst))
             | (Shape::DefBody, _) => Braced::Block,
         }

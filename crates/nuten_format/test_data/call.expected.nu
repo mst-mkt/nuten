@@ -10,6 +10,9 @@ echo [a,  b]
 docker ps --format {{.Names}}
 alias open = ^open
 open -a {Google Chrome}
+where {a:  1} [a,  b]
+all {...$x}
+any {|x| $x }
 ls | @foo {a:  1}
 @example {a:  1}
 % ls [a,  b]

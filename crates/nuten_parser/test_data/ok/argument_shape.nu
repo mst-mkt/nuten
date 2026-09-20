@@ -14,6 +14,9 @@ ls; | @foo {a:  1}
 %nosuch {a:  1}
 %where {a:  1} [a,  b]
 @example {a:  1} {  1 + 1  }
+where {a:  1} [a,  b]
+all {...$x}
+any {|x| $x}
 ^ls {a:  1}
 ls |
 @foo {a:  1}
