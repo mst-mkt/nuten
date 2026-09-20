@@ -319,14 +319,14 @@ mod tests {
     }
 
     #[test]
-    fn a_file_with_syntax_errors_has_no_output_to_ask_about() {
+    fn file_with_syntax_errors_has_no_output_to_ask_about() {
         let checked = check("ls |", &Config::default());
         assert_eq!(checked.syntax_errors[0].kind, ParseErrorKind::PipeAtEof);
         assert_eq!(checked.violations, []);
     }
 
     #[test]
-    fn the_output_must_keep_every_token() {
+    fn output_keeps_every_token() {
         let violations = formatter_violations("ls | get name\n", "ls | first\n");
         assert_eq!(invariant_names(&violations), [Invariant::Tokens.name()]);
         assert_eq!(
@@ -349,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn the_output_may_move_tokens_between_lines() {
+    fn output_may_move_tokens_between_lines() {
         assert_eq!(
             formatter_violations("ls |\n  get name\n", "ls | get name\n"),
             []
@@ -378,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    fn the_output_must_keep_every_comment_where_it_stands() {
+    fn output_keeps_every_comment_where_it_stands() {
         assert_eq!(
             invariant_names(&formatter_violations("ls # c\n", "ls\n")),
             [Invariant::Comments.name()]
@@ -446,7 +446,7 @@ mod tests {
     }
 
     #[test]
-    fn the_output_must_not_change_when_formatted_again() {
+    fn output_does_not_change_when_formatted_again() {
         let violations = formatter_violations("ls|first\n", "ls |  first\n");
         assert_eq!(
             invariant_names(&violations),
@@ -477,7 +477,7 @@ mod tests {
     }
 
     #[test]
-    fn a_change_of_line_ending_is_reported_by_byte() {
+    fn change_of_line_ending_is_reported_by_byte() {
         let violations = formatter_violations("ls\n", "ls\r\n");
         assert_eq!(
             invariant_names(&violations),
@@ -490,7 +490,7 @@ mod tests {
     }
 
     #[test]
-    fn the_output_must_parse() {
+    fn output_parses() {
         let violations = formatter_violations("ls\n", "ls |");
         assert_eq!(
             invariant_names(&violations),
@@ -503,7 +503,7 @@ mod tests {
     }
 
     #[test]
-    fn a_violation_prints_in_one_line() {
+    fn violation_prints_in_one_line() {
         let violation = &formatter_violations("ls\n", "ls # c\n")[0];
         assert_eq!(
             violation.to_string(),

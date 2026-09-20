@@ -224,7 +224,7 @@ mod tests {
     use super::SyntaxKind;
 
     #[test]
-    fn raw_roundtrip() {
+    fn kind_roundtrips_through_raw() {
         for &kind in SyntaxKind::ALL {
             assert_eq!(SyntaxKind::from_raw(kind.to_raw()), kind);
         }

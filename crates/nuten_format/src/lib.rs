@@ -70,7 +70,7 @@ mod tests {
     use super::{Config, ParseErrorKind, format};
 
     #[test]
-    fn a_file_with_errors_is_rejected() {
+    fn file_with_errors_is_rejected() {
         let error = format("ls |", &Config::default()).unwrap_err();
         assert_eq!(error.errors.len(), 1);
         assert_eq!(error.errors[0].kind, ParseErrorKind::PipeAtEof);
@@ -86,14 +86,14 @@ mod tests {
     }
 
     #[test]
-    fn the_output_ends_with_one_line_break() {
+    fn output_ends_with_one_line_break() {
         for src in ["ls", "ls\n", "ls \n\n", "ls\r\n", "\n\nls\n\n\n"] {
             assert_eq!(format(src, &Config::default()).unwrap(), "ls\n", "{src:?}");
         }
     }
 
     #[test]
-    fn a_blank_line_keeps_a_line_end_pipe_from_joining_the_next_statement() {
+    fn blank_line_keeps_line_end_pipe_from_joining_next_statement() {
         let src = "ls |\n\nlength\n";
         assert_eq!(format(src, &Config::default()).unwrap(), src);
     }

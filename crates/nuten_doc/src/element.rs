@@ -128,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn a_line_break_makes_the_text_multiline() {
+    fn line_break_makes_text_multiline() {
         assert_eq!(TextWidth::of("a\nb"), TextWidth::Multiline);
         assert_eq!(TextWidth::of("a\r\nb"), TextWidth::Multiline);
         assert_eq!(TextWidth::of("a\rb"), TextWidth::Width(3));

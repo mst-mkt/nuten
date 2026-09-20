@@ -478,7 +478,7 @@ mod tests {
     }
 
     #[test]
-    fn the_tokens_must_cover_the_source() {
+    fn tokens_cover_source() {
         for (src, tokens, detail) in [
             (
                 "ls",
@@ -553,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn a_token_nu_reads_as_one_must_not_be_split() {
+    fn token_nu_reads_as_one_is_not_split() {
         assert_eq!(
             token_splits("  ", &[token(Whitespace, 0, 1), token(Whitespace, 1, 2)]),
             Some(violation(
@@ -568,7 +568,7 @@ mod tests {
     }
 
     #[test]
-    fn the_text_of_a_token_must_fit_its_kind() {
+    fn text_of_token_fits_its_kind() {
         assert_eq!(
             token_shape("ls", &[token(Newline, 0, 2)], Mode::Block),
             Some(violation(
@@ -585,7 +585,7 @@ mod tests {
     }
 
     #[test]
-    fn lexing_errors_must_match_error_tokens() {
+    fn lexing_errors_match_error_tokens() {
         let lexed = Lexed {
             tokens: vec![token(Error, 0, 2)],
             errors: vec![],
@@ -634,7 +634,7 @@ mod tests {
     }
 
     #[test]
-    fn the_tree_must_restore_the_source() {
+    fn tree_restores_source() {
         assert_eq!(
             violations("ls | first", &parse("ls | get")),
             [violation(
@@ -652,7 +652,7 @@ mod tests {
     }
 
     #[test]
-    fn a_node_must_have_a_token_that_is_not_trivia_at_each_end() {
+    fn node_has_token_that_is_not_trivia_at_each_end() {
         for (parsed, detail) in [
             (one_node(Pipeline, &[], vec![]), "Pipeline at 0..0 is empty"),
             (
@@ -673,7 +673,7 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_node_is_reported_rather_than_its_parent() {
+    fn empty_node_is_reported_rather_than_its_parent() {
         for (call_at, detail) in [(0, "Call at 0..0 is empty"), (1, "Call at 2..2 is empty")] {
             let mut builder = GreenNodeBuilder::new();
             builder.start_node(Root.to_raw());
@@ -700,7 +700,7 @@ mod tests {
     }
 
     #[test]
-    fn a_node_must_have_the_shape_ast_reads() {
+    fn node_has_shape_ast_reads() {
         for (parsed, detail) in [
             (
                 one_node(Word, &[(Word, "ls")], vec![]),
@@ -728,7 +728,7 @@ mod tests {
     }
 
     #[test]
-    fn errors_must_match_error_elements() {
+    fn errors_match_error_elements() {
         let parsed = one_node(Error, &[(Pipe, "|")], vec![]);
         assert_eq!(
             violations("|", &parsed),
@@ -753,7 +753,7 @@ mod tests {
     }
 
     #[test]
-    fn every_lexing_error_must_be_reported() {
+    fn every_lexing_error_is_reported() {
         let parse_error =
             |kind, start: u32, end: u32| ParseError::from(lex_error(kind, start, end));
         for (kind, errors) in [
@@ -776,7 +776,7 @@ mod tests {
     }
 
     #[test]
-    fn a_violation_prints_in_one_line() {
+    fn violation_prints_in_one_line() {
         assert_eq!(
             violations("ls | first", &parse("ls | get"))[0].to_string(),
             "roundtrip: the tree differs from the source from byte 5"

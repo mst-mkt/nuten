@@ -308,7 +308,7 @@ mod tests {
     }
 
     #[test]
-    fn the_excerpt_in_the_message_of_a_labeled_error_is_dropped() {
+    fn excerpt_in_message_of_labeled_error_is_dropped() {
         let error = |line: u32| {
             format!(
                 concat!(
@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn the_first_difference_is_pointed_at() {
+    fn first_difference_is_pointed_at() {
         let (pointer, a, b) = first_difference(
             value(r#"{"a": [1, {"b": "x"}], "c": true}"#),
             value(r#"{"a": [1, {"b": "y"}], "c": true}"#),
@@ -388,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn a_difference_prints_in_one_line() {
+    fn difference_prints_in_one_line() {
         let line = |before: &str, after: &str| difference(before, after).unwrap().unwrap();
         assert_eq!(
             line(

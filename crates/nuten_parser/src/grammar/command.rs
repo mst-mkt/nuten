@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn a_redirection_gets_one_error_at_most() {
+    fn redirection_gets_one_error_at_most() {
         assert_eq!(errors("o>"), [ParseErrorKind::RedirectionAtHead]);
         assert_eq!(
             errors("ls o> a o> | x"),

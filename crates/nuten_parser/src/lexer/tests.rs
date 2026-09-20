@@ -103,19 +103,19 @@ fn range(start: u32, end: u32) -> TextRange {
 }
 
 #[test]
-fn empty() {
+fn empty_input_makes_no_tokens() {
     assert!(lexed("").is_empty());
 }
 
 #[test]
-fn only_trivia() {
+fn each_trivia_lexes_as_one_token() {
     assert_eq!(lexed(" \t"), [(Whitespace, " \t")]);
     assert_eq!(lexed("\n"), [(Newline, "\n")]);
     assert_eq!(lexed("#"), [(Comment, "#")]);
 }
 
 #[test]
-fn separators() {
+fn separators_split_items_around_them() {
     assert_eq!(
         lexed("ls | get name;a|b || c\n"),
         [
@@ -579,7 +579,7 @@ fn angle_brackets_nest_in_a_var_type() {
 }
 
 #[test]
-fn a_colon_is_a_token_in_record_and_brace_modes() {
+fn colon_is_token_in_record_and_brace_modes() {
     for mode in [Mode::Record, Mode::Brace] {
         assert_eq!(
             lexed_in("a:b", mode),
