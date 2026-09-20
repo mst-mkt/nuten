@@ -80,7 +80,7 @@ enum RecordItem {
 
 /// The items of a record, given its inside in record mode.
 /// `None` when the record stays a word: on a lexing error, or where nu's split cannot be made.
-/// nu lexes a key and its `:` as record mode does, but a value differently.
+/// Nu lexes a key and its `:` as record mode does, but a value differently.
 /// So a value is lexed again in its own mode.
 /// It must cover touching tokens, with no comment among them.
 fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {

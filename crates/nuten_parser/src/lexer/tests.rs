@@ -77,7 +77,7 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         Mode::Record => &[Whitespace, Newline, Comment, Comma],
         Mode::RecordValue => &[Whitespace, Newline, Comment, Comma],
         Mode::Brace => &[Whitespace, Newline, Comment],
-        // nu adds nothing to whitespace here, so a line break would be a token.
+        // Nu adds nothing to whitespace here, so a line break would be a token.
         // It still sets `skip_comment`, though no row of `NU_VAR_TYPE_SPLITS` can show either.
         // Nu builds the type span out of one pipeline element, which ends at a line break.
         // A comment runs to the end of its line, so it never sits inside one element.
@@ -241,8 +241,7 @@ fn comment_inside_brackets_hides_delimiters() {
     assert_eq!(split("[a#] b]"), ["[a#]", "b]"]);
 }
 
-/// nu reads the byte before `#` as Latin-1.
-/// `à` (`C3 A0`) ends in whitespace, so a comment starts inside the item.
+/// `à` (`C3 A0`) ends in a byte Latin-1 makes whitespace, so a comment starts inside the item.
 #[test]
 fn hash_after_latin1_whitespace_byte_starts_comment() {
     assert_eq!(split(r#"à#"b c"#), [r#"à#"b"#, "c"]);
@@ -299,7 +298,7 @@ fn operators_get_their_kinds() {
             assert_eq!(kind_of(text), expected, "{text:?}");
         }
     }
-    // nu reports these, and nuten leaves them to the parser.
+    // Nu reports these, and nuten leaves them to the parser.
     for text in ["o>|", "out>|", "&&", "2>", "2>&1"] {
         assert_eq!(kind_of(text), Word, "{text:?}");
     }

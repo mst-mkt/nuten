@@ -281,7 +281,7 @@ fn well_placed(src: &str, error: LexError, token: Token) -> bool {
     if !token.range.contains_range(error.range) {
         return false;
     }
-    // The tokens covering the source says nothing of where the errors fall.
+    // That the tokens cover the source says nothing of where the errors fall.
     // So a range `src` cannot be cut on is misplaced rather than read.
     let Some(text) = src.get(Range::<usize>::from(error.range)) else {
         return false;

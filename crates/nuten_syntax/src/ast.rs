@@ -238,7 +238,7 @@ impl Node {
     }
 }
 
-/// Whether `kind` is whitespace or a line break.
+/// Trivia that is not a comment.
 fn is_line_trivia(kind: SyntaxKind) -> bool {
     matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Newline)
 }

@@ -71,7 +71,7 @@ pub enum ParseErrorKind {
     MultipleRedirections,
     /// A `:`, `=`, or `,` where the parameters of a `def` or an `extern` take a name or a flag.
     /// Also a `(-f)` after a `,`, and a `:` or an `=` with nothing at all after it.
-    /// nu rejects each of these, and dropping a `,` would take the error away.
+    /// Nu rejects each of these, and dropping a `,` would take the error away.
     SignatureSeparator,
 }
 

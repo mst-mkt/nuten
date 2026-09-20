@@ -101,7 +101,7 @@ impl Mode {
 
     /// Bytes that end an item, on top of whitespace, `|`, and `;`.
     /// Each comes with the kind of the token it makes on its own at the start of an item.
-    /// nu's special tokens, plus `,` where nu treats it as whitespace.
+    /// Nu's special tokens, plus `,` where nu treats it as whitespace.
     /// All ASCII, and none of the bytes `next` handles before `item`.
     #[expect(
         clippy::match_same_arms,
@@ -338,7 +338,7 @@ impl<'a> Lexer<'a> {
         while let Some(&closer) = closers.last() {
             match (closer, self.rest()) {
                 (_, []) => break,
-                // nu ends the item before a final `\` in the outermost string.
+                // Nu ends the item before a final `\` in the outermost string.
                 (b'"', [b'\\']) if closers.len() == 1 => break,
                 (b'"', [b'\\', _, ..]) => self.pos += 1,
                 (b')', &[inner @ (b'\'' | b'"' | b'`'), ..]) => closers.push(inner),

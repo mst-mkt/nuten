@@ -1,7 +1,7 @@
 //! Inputs shared by tests.
 
 /// A sample of each byte class the lexer tells apart.
-/// `à` (`C3 A0`) ends in `A0`, which nu counts as whitespace before `#`.
+/// `à` (`C3 A0`) ends in a byte `starts_comment_after` counts as whitespace.
 const ALPHABET: &[&str] = &[
     "e", "<", ">", "=", "r", "$", "'", "\"", "`", "\\", "(", ")", "[", "]", "{", "}", "#", "|",
     ";", ",", ":", " ", "\n", "\r", "à",
