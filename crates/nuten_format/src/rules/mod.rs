@@ -85,7 +85,8 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     out
 }
 
-/// What every rule reads while a file is formatted: the source the elements borrow their text from, and the group ids given out so far.
+/// What every rule reads while a file is formatted.
+/// The source the elements borrow their text from, and the group ids given out so far.
 struct Formatter<'a> {
     src: &'a str,
     groups: GroupIds,
@@ -101,7 +102,8 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// The statement, `;`, or comment `item` after what separates it from the last of `before`, every child before it.
+    /// The statement, `;`, or comment `item` after what separates it from the last of `before`.
+    /// `before` is every child that comes before it.
     fn statement(&mut self, before: &[Child], item: &Child, at_start: bool) -> Vec<Element<'a>> {
         let Child {
             element,
@@ -111,7 +113,8 @@ impl<'a> Formatter<'a> {
         let separator = match (prev, *newlines) {
             (None, _) | (_, 0) => None,
             (_, 1) => Some(hard_line_break()),
-            // With one blank line, a `|` at the start of the next line would join the statement above, so two stay.
+            // With one blank line, a `|` starting the next line would join the statement above.
+            // So two stay.
             (_, 3..) if pipe_open(before) => Some(empty_lines(2)),
             _ => Some(empty_line()),
         };
@@ -165,7 +168,8 @@ impl<'a> Formatter<'a> {
     }
 
     /// The children with one space between each two.
-    /// No line break falls among them and no node ends with trivia, so a comment, which runs to the end of its line, cannot be here either.
+    /// No line break falls among them, and no node ends with trivia.
+    /// A comment runs to the end of its line, so it cannot be here either.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(parent.children_with_tokens()).collect();
         debug_assert!(
@@ -178,7 +182,8 @@ impl<'a> Formatter<'a> {
         self.spaced_children(&items, |_, _| false)
     }
 
-    /// `items` one space apart, but those `joined`, by index and by themselves, which touch what comes before them.
+    /// `items` one space apart, but those `joined`, by index and by themselves.
+    /// A joined item touches what comes before it.
     fn spaced_children(
         &mut self,
         items: &[Child],
@@ -215,7 +220,8 @@ impl<'a> Formatter<'a> {
     /// The one place a comment is printed, other than inside text kept as it is.
     fn comment(&self, comment: &SyntaxToken, newlines: u32, at_start: bool) -> Vec<Element<'a>> {
         if newlines > 0 || at_start {
-            // The container may have pushed a line break already; the printer keeps the longer of the two.
+            // The container may have pushed a line break already.
+            // The printer keeps the longer of the two.
             vec![hard_line_break(), self.token(comment)]
         } else {
             // A line suffix, so that it does not count toward the width of the line.
@@ -232,7 +238,8 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether a `|` at the end of the last statement among `before` still reaches what comes next: no blank line has come since, which closes the pipe as it did in the source.
+/// Whether a `|` ending the last statement among `before` still reaches what comes next.
+/// It does while no blank line has come since, which closes the pipe as it did in the source.
 fn pipe_open(before: &[Child]) -> bool {
     before
         .iter()
@@ -245,14 +252,16 @@ fn pipe_open(before: &[Child]) -> bool {
         .unwrap_or(false)
 }
 
-/// Whether the statement ends with a `|`; statements never end with trivia, so the last child tells.
+/// Whether the statement ends with a `|`.
+/// Statements never end with trivia, so the last child tells.
 fn ends_with_pipe(statement: &SyntaxNode) -> bool {
     statement
         .last_child_or_token()
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
 }
 
-/// What separates the child after `prev` from it: `plain`, but a line break after a comment, which runs to the end of its line.
+/// What separates the child after `prev` from it: `plain`, but a line break after a comment.
+/// A comment runs to the end of its line.
 fn separator(
     prev: Option<SyntaxKind>,
     plain: Option<Element<'static>>,

@@ -37,9 +37,11 @@ impl LexError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexErrorKind {
     /// A quote or bracket that never closes.
-    /// The range covers the innermost opener, such as `[`, `$"`, or `r#'`, but in interpolation the outermost unclosed `(`.
+    /// The range covers the innermost opener, such as `[`, `$"`, or `r#'`.
+    /// In interpolation it covers the outermost unclosed `(` instead.
     Unclosed,
-    /// A `]`, `}`, or `)` that does not match the innermost opener, other than `]` with nothing open.
+    /// A `]`, `}`, or `)` that does not match the innermost opener.
+    /// A `]` with nothing open is the exception.
     UnmatchedCloser,
     /// `r#` not followed by `'`.
     /// The range covers `r` and the `#`s.
@@ -97,7 +99,8 @@ impl Mode {
         Mode::MatchArms,
     ];
 
-    /// Bytes that end an item, on top of whitespace, `|`, and `;`, each with the kind of the token it makes on its own at the start of an item.
+    /// Bytes that end an item, on top of whitespace, `|`, and `;`.
+    /// Each comes with the kind of the token it makes on its own at the start of an item.
     /// nu's special tokens, plus `,` where nu treats it as whitespace.
     /// All ASCII, and none of the bytes `next` handles before `item`.
     #[expect(
@@ -385,7 +388,8 @@ impl<'a> Lexer<'a> {
     }
 }
 
-/// Whether a `#` inside an item starts a comment, given the byte before it: nu takes it as one only after whitespace, as it does at the start of an item.
+/// Whether a `#` inside an item starts a comment, given the byte before it.
+/// Nu takes it as one only after whitespace, as it does at the start of an item.
 /// A byte is whitespace as the Latin-1 character it stands for, as nu checks it.
 pub(crate) fn starts_comment_after(prev: Option<u8>) -> bool {
     prev.is_none_or(|byte| char::from(byte).is_whitespace())

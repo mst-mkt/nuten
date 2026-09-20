@@ -1,6 +1,8 @@
-//! Every UTF-8 `.nu` file of the corpus must keep the invariants of the parser and, unless it has syntax errors, those of the formatter.
+//! Every UTF-8 `.nu` file of the corpus must keep the invariants of the parser.
+//! Unless it has syntax errors, it must keep those of the formatter too.
 //! Exactly the files in `SYNTAX_ERRORS` have syntax errors.
-//! The corpus is the directory `NUTEN_CORPUS` names, which the devShell sets; without it the test is skipped.
+//! The corpus is the directory `NUTEN_CORPUS` names, which the devShell sets.
+//! Without it the test is skipped.
 
 #![expect(clippy::print_stderr, reason = "what is skipped is reported")]
 

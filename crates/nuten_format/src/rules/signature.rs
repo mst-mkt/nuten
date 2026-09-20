@@ -17,9 +17,13 @@ impl<'a> Formatter<'a> {
             .and_then(|name| name.element.as_token())
             .is_some_and(|name| is_long_flag(name.text()));
         self.spaced_children(&items, |index, item| match item.kind() {
-            // A `:` after a comment stays on the next line all the same: joined, it would land inside the comment or, as a line suffix, the comment would land after the `]`, and nu would lose the description.
+            // A `:` after a comment stays on the next line all the same.
+            // Joined, it would land inside the comment.
+            // As a line suffix, the comment would land after the `]`.
+            // Nu would lose the description either way.
             SyntaxKind::Colon => true,
-            // A `(-f)` joins the name it follows, a long flag; joined to a type or a default value, it would become part of that.
+            // A `(-f)` joins the name it follows, a long flag.
+            // Joined to a type or a default value, it would become part of that.
             SyntaxKind::ShortFlag => index == 1 && name_is_long_flag,
             _ => false,
         })
@@ -52,7 +56,8 @@ impl<'a> Formatter<'a> {
 }
 
 /// Whether `text` is a long flag that takes a `(-f)`.
-/// Nu reads `--` itself as a short flag, and gives a `(-f)` after it to that one; a flag holding a `(` has its short flag already, and nu splits it at the first `(`.
+/// Nu reads `--` itself as a short flag, and gives a `(-f)` after it to that one.
+/// A flag holding a `(` has its short flag already, and nu splits it at the first `(`.
 fn is_long_flag(text: &str) -> bool {
     text.starts_with("--") && text.len() > 2 && !text.contains('(')
 }

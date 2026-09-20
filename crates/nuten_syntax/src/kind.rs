@@ -1,6 +1,7 @@
 //! Kinds of tokens and nodes in the CST.
 
-/// Calls `$callback` with every kind as `tokens { .. } nodes { .. }`: the one list `SyntaxKind` and `ast` are both made from, so that a node kind cannot be in one and not the other.
+/// Calls `$callback` with every kind as `tokens { .. } nodes { .. }`.
+/// `SyntaxKind` and `ast` are both made from this one list, so neither can miss a node kind.
 /// `Error` is among the tokens, and is a node too.
 macro_rules! syntax_kinds {
     ($callback:ident) => {
@@ -73,7 +74,7 @@ macro_rules! syntax_kinds {
                 InterpString,
                 /// Any other item, such as `ls` or a mixture like `a"b"c`.
                 Word,
-                /// A `(-f)` of one character after a parameter of a signature, which nu takes for that parameter.
+                /// A `(-f)` of one character, which nu takes for the parameter before it.
                 /// The parser emits this, not the lexer.
                 ShortFlag,
                 /// An item with a lexing error, or a node wrapping a parse error.
@@ -85,61 +86,95 @@ macro_rules! syntax_kinds {
                 Root,
                 /// A statement.
                 Pipeline,
-                /// An element of a `Pipeline`: a `Call` or an `ExternalCall`, then any `Redirection`s, or else an `Assignment` or a `Let`, which runs to the end of the statement.
+                /// An element of a `Pipeline`: a `Call` or `ExternalCall`, then any `Redirection`s.
+                /// It holds an `Assignment` or a `Let` instead, which runs to the statement's end.
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,
                 /// A command name followed by its arguments.
                 Call,
-                /// Same as `Call`, but the name starts with `^`, or is `else` or `catch`, which nu runs as an external command outside an `if` or a `try`.
+                /// A `Call` whose name starts with `^`, or is `else` or `catch`.
+                /// Nu runs those two as external commands outside an `if` or a `try`.
                 ExternalCall,
-                /// What a `Call` would be for a command named `if` that nu reads as one, with the `if`s that follow its `else`s in one flat node: `if`, the condition, the body, then any number of `else`, `if`, condition, and body, then optionally `else` and one more argument.
+
+                // Keyword syntax, read where nu reads the call as the syntax over a `Call`.
+                // Each is what a `Call` would be for a command of that name.
+                // A body is an argument that starts with `{`.
+                /// `if`, the condition, the body, then any number of `else`, `if`, condition, body.
+                /// A last `else` takes one more argument.
+                /// The `if`s after the `else`s are in this one flat node.
                 If,
-                /// What a `Call` would be for a command named `for` that nu reads as one: `for`, the variable, its type when the variable ends with `:`, `in`, at least one argument of the value, and the body, which starts with `{`.
+                /// `for`, the variable, `in`, the value, and the body.
+                /// A variable ending in `:` takes its type after it.
+                /// The value is at least one argument.
                 For,
-                /// What a `Call` would be for a command named `while` that nu reads as one: `while`, at least one argument of the condition, and the body, which starts with `{`.
+                /// `while`, at least one argument of the condition, and the body.
                 While,
-                /// What a `Call` would be for a command named `loop` that nu reads as one: `loop` and the body, which starts with `{`.
+                /// `loop` and the body.
                 Loop,
-                /// What a `Call` would be for a command named `try` that nu reads as one: `try` and the body, then optionally `catch` and what it takes, each starting with `{`.
+                /// `try` and the body, then optionally `catch` and the body it takes.
                 Try,
-                /// What a `Call` would be for a command named `match` that nu reads as one: `match`, at least one argument of the subject, which nu reads as any value, and the arms, which start with `{`.
+                /// `match`, at least one argument of the subject, and the arms.
+                /// Nu reads the subject as any value.
                 Match,
-                /// The `{ }` of a `match` read as arms: `{`, `MatchArm`s with the `,` between them, and `}`.
+                /// The `{ }` of a `match` read as arms.
+                /// `{`, the `MatchArm`s with the `,` between them, and `}`.
                 MatchArms,
-                /// One arm: the tokens of its pattern and of any `if` guard, `|` among them, then `=>` and the one item nu takes as what the arm does.
+                /// One arm: the tokens of its pattern and of any `if` guard, `|` among them.
+                /// Then `=>` and the one item nu takes as what the arm does.
                 MatchArm,
                 /// A redirection to a file: the operator, such as `o>`, and its target.
                 /// Has no target only when the operator is an `Error`.
                 Redirection,
-                /// What a `PipelineElement` holds when an assignment operator comes before it would end, other than as the target of a file redirection: what comes before the operator as a `PipelineElement` holds it, the operator, then any comments and line breaks before a line-start `|`, and a `Pipeline` of the rest of the statement if anything follows.
+                /// What a `PipelineElement` holds when an assignment operator comes before its end.
+                /// The target of a file redirection is no such operator.
+                /// What comes before the operator is held by a `PipelineElement` of its own.
+                /// Then the operator, with any comments and line breaks before a line-start `|`.
+                /// A `Pipeline` of the rest of the statement follows if anything does.
                 Assignment,
-                /// As an `Assignment`, but for an element that starts a pipeline with `let`, `mut`, or `const`, where that word, not a `Call`, comes before the arguments.
+                /// As an `Assignment`, for an element starting with `let`, `mut`, or `const`.
+                /// That word, not a `Call`, comes before the arguments.
                 Let,
-                /// A `Word` enclosed in `[ ]` where nu reads a list, taking any value, a block, or an argument of an external command: `[`, what it holds, and `]`.
+                /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
+                /// Nu reads one where it takes a value or a block.
+                /// It reads one as an argument of an external command too.
                 List,
-                /// A `Word` enclosed in `[ ]` that nu reads as a table where it takes any value or a block: `[`, the column names, the `;` right after them, the rows, any `,` among them, and `]`.
-                /// The names and each row are a `List`, or a `Word` when they hold a `;`, which nu reads as no table there.
+                /// A `Word` in `[ ]` read as a table where nu takes a value or a block.
+                /// `[`, the column names, their `;`, the rows, any `,` among them, and `]`.
+                /// The names and each row are a `List`.
+                /// One holding a `;` stays a `Word`, since nu reads no table there.
                 Table,
-                /// A `Word` enclosed in `{ }` that nu reads as a record where it takes any value, or where it takes a block unless a spread comes first: `{`, its fields and spreads, and `}`.
+                /// A `Word` in `{ }` read as a record: `{`, its fields and spreads, and `}`.
+                /// Nu reads one where it takes a value, or a block unless a spread comes first.
                 /// It is a `Block` as the body of a `def`.
                 Record,
-                /// A key, then the token nu takes as its `:`, then its value, each while the record lasts.
+                /// A key, the token nu takes as its `:`, then its value.
+                /// Each of those while the record lasts.
                 /// A value of several touching tokens is one `Word`.
                 RecordField,
-                /// A `Word` enclosed in `{ }` that is no record, read as a closure or a block where nu takes any value, a block, or an argument of a command other than an external one, and the body of a `def` whatever it holds: `{`, its parameters if any, its statements, and `}`.
+                /// A `Word` in `{ }` that is no record: `{`, any parameters, the statements, `}`.
+                /// Nu reads one where it takes a value or a block, or an argument of a nu command.
+                /// An external command takes it as a string instead.
+                /// The body of a `def` is one whatever it holds.
                 Block,
                 /// The parameters of a closure as unchecked tokens: `|` to the next `|`, or `||`.
                 ClosureParams,
-                /// A `def` or an `extern` that nu reads as one: `export` if there, the keyword, any flags, the name, a `Signature`, the `:` and the items of the input and output types if there, and the body of a `def`.
+                /// A `def` or an `extern` that nu reads as one.
+                /// `export` if there, the keyword, any flags, the name, and a `Signature`.
+                /// Then the `:` and the items of the input and output types if there.
+                /// Then the body, which only a `def` has.
                 Def,
                 /// The parameters of a `def` or an `extern`: `[`, what it holds, and `]`.
                 Signature,
-                /// One parameter of a `Signature`: its name, then in source order the `ShortFlag`, the `:` and the type, and the `=` and the default value that follow it, each while nu takes them for that parameter.
-                /// It also holds the `,` that ends it, and the `|`, `;`, and redirection tokens nu ignores among them.
+                /// One parameter of a `Signature`, starting with its name.
+                /// Then, in source order, the `ShortFlag`, the `:` and type, the `=` and default.
+                /// Each of those while nu still takes it for that parameter.
+                /// It holds the `,` that ends it, and the `|`, `;`, and redirections nu ignores.
                 Param,
-                /// A type in a `Signature` that takes parameters: its name, `<`, what it holds, and `>`.
+                /// A `Signature` type that takes parameters: its name, `<`, what it holds, `>`.
                 Type,
-                /// One field of a `record` or a `table` type: its key, then the `:` that follows it while nu gives it to that key, and the one item after that `:`, which nu takes for the type whatever it is.
+                /// One field of a `record` or a `table` type, starting with its key.
+                /// Then the `:` that follows the key while nu gives it to that key.
+                /// Then the one item after that `:`, which nu takes for the type whatever it is.
                 TypeField,
             }
         }

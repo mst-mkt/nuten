@@ -1,6 +1,9 @@
 //! The command-line interface.
 //!
-//! Exits with 0 when every file is formatted, and with 2 when the arguments are invalid or any file has syntax errors or cannot be read or written; the other files are still formatted.
+//! Exits with 0 when every file is formatted.
+//! Exits with 2 when the arguments are invalid.
+//! Exits with 2 too when any file has syntax errors or cannot be read or written.
+//! The other files are still formatted then.
 //! Exit code 1 is kept for a future check mode.
 
 #![expect(clippy::print_stderr, reason = "errors go to the user")]

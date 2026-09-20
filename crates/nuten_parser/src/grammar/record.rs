@@ -6,9 +6,13 @@ use crate::{
     parser::{Bracketed, Parser},
 };
 
-/// The `{ }` ahead as a `Record`, or as a word when its tokens cannot make nu's split, or when they show another `RecordSign` without the `,` among them.
-/// A `,` is whitespace to nu inside a record, so the formatter drops every one, and nu would then read the `{ }` by the other sign.
-/// `sign` is what `record_sign` found in brace mode, and `bracketed` is what the `{ }` holds in record mode.
+/// The `{ }` ahead as a `Record`, or as a word.
+/// It stays a word when its tokens cannot make nu's split.
+/// It stays one too when they show another `RecordSign` without the `,` among them.
+/// A `,` is whitespace to nu inside a record, so the formatter drops every one.
+/// Nu would then read the `{ }` by the other sign.
+/// `sign` is what `record_sign` found in brace mode.
+/// `bracketed` is what the `{ }` holds in record mode.
 pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, sign: RecordSign) {
     let without_commas = bracketed
         .inner()
@@ -27,15 +31,19 @@ pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, sign: Rec
 }
 
 /// What makes nu read `{ }` as a record where it takes any value.
-/// Nu reads a `:` second as a record whatever it takes, and a spread first as one only where it takes neither a closure, a block, nor match arms, so which sign shows must not depend on a `,`.
+/// Nu reads a `:` second as a record whatever it takes.
+/// It reads a spread first as one only where it takes no closure, block, or match arms.
+/// So which sign shows must not depend on a `,`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RecordSign {
     ColonSecond,
     SpreadFirst,
 }
 
-/// The `RecordSign` among the first two of `tokens`, the inside of `{ }`, trivia aside, or `None` when a pipe comes first or neither sign does.
-/// Nu looks with `,` as no whitespace, so brace mode tells what it sees, and record mode without its `,` what it would see in the output.
+/// The `RecordSign` among the first two of `tokens`, the inside of `{ }`, trivia aside.
+/// `None` when a pipe comes first, or when neither sign does.
+/// Nu looks with `,` as no whitespace, so brace mode tells what it sees.
+/// Record mode without its `,` tells what it would see in the output.
 pub(super) fn record_sign<'a>(
     tokens: impl Iterator<Item = (Token, &'a str)>,
 ) -> Option<RecordSign> {
@@ -70,8 +78,11 @@ enum RecordItem {
     Pair(usize),
 }
 
-/// The items of a record, given its inside in record mode, or `None` when the record stays a word: on a lexing error, or where its tokens cannot make nu's split.
-/// nu lexes a key and its `:` as record mode does, but a value differently, so a value is lexed again in its own mode and must cover touching tokens, with no comment among them.
+/// The items of a record, given its inside in record mode.
+/// `None` when the record stays a word: on a lexing error, or where nu's split cannot be made.
+/// nu lexes a key and its `:` as record mode does, but a value differently.
+/// So a value is lexed again in its own mode.
+/// It must cover touching tokens, with no comment among them.
 fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
     let tokens: Vec<_> = inner
         .remaining_tokens()

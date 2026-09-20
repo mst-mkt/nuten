@@ -1,5 +1,7 @@
-//! Typed views over the nodes of the CST, which rowan calls the AST: one type per node kind, each wrapping a `SyntaxNode` of that kind, with accessors for the shape the parser gives it.
-//! The `NodeShape` invariant of the parser holds every tree to that shape, so the accessors can count on it.
+//! Typed views over the nodes of the CST, which rowan calls the AST.
+//! One type per node kind, each wrapping a `SyntaxNode` of that kind.
+//! Their accessors read the shape the parser gives a node.
+//! The `NodeShape` invariant holds every tree to that shape, so the accessors can count on it.
 
 pub use rowan::ast::AstNode;
 use rowan::{NodeOrToken, ast::support};
@@ -94,7 +96,9 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
     }
 }
 
-/// A node the parser makes of a word enclosed in brackets: the opening bracket is its first child, or the second after the name of a `Type`, and the closing one its last, whatever comes between.
+/// A node the parser makes of a word enclosed in brackets.
+/// The opening bracket is its first child, or the second after the name of a `Type`.
+/// The closing one is its last, whatever comes between.
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
         self.syntax()
@@ -145,7 +149,8 @@ impl Iterator for Inside {
     }
 }
 
-/// Implements `Bracketed` for the node kinds the parser makes of a bracketed word, with the methods given in braces, and `Node::brackets` from the same table.
+/// Implements `Bracketed` for the node kinds the parser makes of a bracketed word.
+/// Each takes the methods given in braces, and `Node::brackets` comes from the same table.
 macro_rules! bracketed {
     ($($name:ident: $open:ident $close:ident $({ $($methods:tt)* })?,)*) => {
         $(impl Bracketed for $name { $($($methods)*)? })*
@@ -183,7 +188,7 @@ bracketed! {
 impl Node {
     /// What the node lacks of the shape the accessors read, if anything.
     pub fn flaw(&self) -> Option<&'static str> {
-        // The inside is read through the brackets, so a missing bracket is reported before anything inside is read.
+        // The inside is read through the brackets, so a missing one is reported first.
         self.bracket_flaw().or_else(|| self.inside_flaw())
     }
 
@@ -244,7 +249,8 @@ impl Block {
         support::child(self.syntax())
     }
 
-    /// What follows the parameters, or the `{`: the statements, the `;` and the comments among them, and the trivia around them.
+    /// What follows the parameters, or the `{`.
+    /// The statements, the `;` and the comments among them, and the trivia around them.
     pub fn statements(&self) -> Inside {
         match self.params() {
             Some(params) => self.following(&params.syntax().clone().into()),
@@ -264,7 +270,7 @@ impl Table {
         Some((columns, semicolon))
     }
 
-    /// The column names, a `List` or a `Word`, and the `;` after them, whitespace and line breaks aside.
+    /// The column names, a `List` or a `Word`, and the `;` after them, past any trivia.
     /// The rows are what follows the `;`.
     pub fn header(&self) -> (Element, SyntaxToken) {
         let (columns, semicolon) = self

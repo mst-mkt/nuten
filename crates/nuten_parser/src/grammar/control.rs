@@ -24,7 +24,9 @@ pub(super) fn control(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of a call, when nu reads them as one: the last item is a body, and so is the second when `catch` follows it.
+/// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of a call.
+/// It is built only where nu reads those items as one.
+/// The last item is a body, and so is the second when `catch` follows it.
 struct ControlShape {
     kind: SyntaxKind,
     len: usize,

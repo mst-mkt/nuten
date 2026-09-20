@@ -30,13 +30,17 @@ pub(super) fn if_(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// One `if` of a chain: where its body is among the items of the chain, and whether `else` follows the body.
+/// One `if` of a chain: where its body is among the items of the chain.
+/// It carries whether `else` follows that body too.
 struct IfLink {
     body: usize,
     has_else: bool,
 }
 
-/// The `if`s that `items` make when nu reads them as one, in order: each is `if`, a condition, and a body in braces right before its first `else` or last, and after its `else` comes one item or the next `if`.
+/// The `if`s that `items` make when nu reads them as one, in order.
+/// Each is `if`, a condition, and a body in braces.
+/// The body is the item right before the first `else`, or the last item.
+/// After an `else` comes one item, or the next `if`.
 fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
     let mut chain = Vec::new();
     let mut start = 0;

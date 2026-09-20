@@ -7,7 +7,10 @@ use super::{
 };
 use crate::{ParseError, lexer::Mode, parser::Parser};
 
-/// Where the type ahead ends, after a name ending in `:`, and the first error of lexing it as nu does, which reads it up to the assignment operator, leaving out redirections at either end for `const`.
+/// Where the type ahead ends, after a name ending in `:`.
+/// It comes with the first error of lexing that type as nu does.
+/// Nu reads the type up to the assignment operator.
+/// For `const` it leaves out redirections at either end.
 /// `None` also when its tokens hold an error of their own.
 pub(super) fn var_type_error(p: &Parser<'_>, keyword: &str) -> Option<(TextSize, ParseError)> {
     let mut tokens = p
@@ -55,7 +58,8 @@ pub(super) fn assignment_ahead(p: &Parser<'_>) -> bool {
     false
 }
 
-/// What an assignment operator takes: the rest of the statement, where a line-start `|` goes on as after a line-end one.
+/// What an assignment operator takes: the rest of the statement.
+/// A line-start `|` goes on there as it does after a line-end one.
 pub(super) fn assigned_pipeline(p: &mut Parser<'_>) {
     if p.peek() == Some(SyntaxKind::Newline) && next_line_starts_with_pipe(p) {
         bump_newlines(p);

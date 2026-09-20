@@ -35,7 +35,9 @@ impl LineEnding {
     }
 }
 
-/// Spaces and tabs before a line break of the printer's go, even those of a text; the lines inside a text stay as they are, but their line breaks come out as the configured line ending.
+/// Spaces and tabs before a line break of the printer's go, even those of a text.
+/// The lines inside a text stay as they are.
+/// Their line breaks come out as the configured line ending.
 /// The output never starts with a line break.
 pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
     let mut printer = Printer {
@@ -79,7 +81,8 @@ struct Printer<'a> {
 struct Indentation {
     tabs: u32,
     spaces: u32,
-    /// Alignments since the last level, which a deeper level turns into tabs when indenting with tabs.
+    /// Alignments since the last level.
+    /// A deeper level turns them into tabs when indenting with tabs.
     aligns: u32,
 }
 
@@ -109,7 +112,9 @@ enum Mode {
     Break,
 }
 
-/// How `fits` measures an element: in the mode of its place, or inside a `LineSuffix` among the measured elements, which takes no width since it prints only at the next line break.
+/// How `fits` measures an element: in the mode of its place, or inside a `LineSuffix`.
+/// A `LineSuffix` among the measured elements takes no width.
+/// It prints only at the next line break.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Measure {
     Flat,
@@ -213,11 +218,14 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// Whether `elements` fit on the rest of the line when printed flat, along with what follows them up to the next line break.
+    /// Whether `elements` fit on the rest of the line when printed flat.
+    /// What follows them up to the next line break counts too.
     ///
-    /// A hard line break, `ExpandParent`, or multi-line text in `elements` never fits, even inside a `LineSuffix`, so every group around one breaks.
+    /// A hard line break, `ExpandParent`, or multi-line text never fits, even in a `LineSuffix`.
+    /// So every group around one breaks.
     /// This replaces a separate pass that marks such groups.
-    /// The width of a `LineSuffix` does not count, and a `LineSuffixBoundary` after one ends the line: what follows it is not measured.
+    /// The width of a `LineSuffix` does not count.
+    /// A `LineSuffixBoundary` after one ends the line, so what follows it is not measured.
     fn fits(&self, elements: &[Element<'_>]) -> bool {
         let Some(mut remaining) = self.options.line_width.checked_sub(self.column) else {
             return false;
@@ -372,7 +380,9 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// Ends the line, dropping the spaces and tabs before the break, with `breaks` line breaks less those the output ends with already, a text's own included.
+    /// Ends the line, dropping the spaces and tabs before the break.
+    /// Prints `breaks` line breaks, less those the output ends with already.
+    /// A text's own line breaks count among those.
     /// Prints nothing at the start of the output, which counts as an empty line.
     fn push_line_breaks(&mut self, indent: Indentation, breaks: u32) {
         let trimmed = self.out.trim_end_matches([' ', '\t']).len();

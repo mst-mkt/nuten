@@ -15,7 +15,8 @@ pub enum Element<'a> {
     Line(LineMode),
     /// Breaks every group around it.
     ExpandParent,
-    /// Held back until just before the next line break, or the end of the output, then printed with the indent and mode of its own place.
+    /// Held back until just before the next line break, or the end of the output.
+    /// Printed then with the indent and mode of its own place.
     LineSuffix(Vec<Element<'a>>),
     /// A hard line break here if a line suffix is held back.
     LineSuffixBoundary,
@@ -27,8 +28,12 @@ pub enum Element<'a> {
     },
     /// One level deeper after each line break inside.
     Indent(Vec<Element<'a>>),
-    /// `columns` further, in spaces, after each line break inside, when `group` is `None` or names a group that broke, around it or printed before it; zero columns are no alignment.
-    /// With tabs, an alignment that a deeper level follows takes a tab instead, so that no space comes before a tab.
+    /// `columns` further, in spaces, after each line break inside.
+    /// Only when `group` is `None`, or names a group that broke.
+    /// That group must be one around the alignment, or one printed before it.
+    /// Zero columns are no alignment.
+    /// With tabs, an alignment that a deeper level follows takes a tab instead.
+    /// No space then comes before a tab.
     Align {
         columns: u32,
         group: Option<GroupId>,
@@ -75,8 +80,10 @@ pub enum TextWidth {
 }
 
 impl TextWidth {
-    /// Wide characters and emoji sequences take two columns; control characters, tabs included, take one.
-    /// A line break is a `\n`, with or without a `\r` before it; a `\r` alone is an ordinary character.
+    /// Wide characters and emoji sequences take two columns.
+    /// Control characters, tabs included, take one.
+    /// A line break is a `\n`, with or without a `\r` before it.
+    /// A `\r` alone is an ordinary character.
     pub fn of(text: &str) -> TextWidth {
         if text.contains('\n') {
             TextWidth::Multiline

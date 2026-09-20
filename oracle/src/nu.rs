@@ -48,7 +48,8 @@ pub(crate) fn ast(src: &str, dir: Option<&Path>) -> Result<String, String> {
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|error| format!("nu: {error}"))?;
-    // Nu reads all of `src` before it writes, so writing fails only when nu has failed, which its status and stderr tell better.
+    // Nu reads all of `src` before it writes, so writing fails only when nu has failed.
+    // Its status and stderr tell that better.
     let written = nu
         .stdin
         .take()

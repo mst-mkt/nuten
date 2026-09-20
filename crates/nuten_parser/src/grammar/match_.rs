@@ -3,7 +3,10 @@ use nuten_syntax::SyntaxKind;
 use super::{CURLY, Shape, call_items, is_item, item, shell_operator, value};
 use crate::{lexer::Mode, parser::Parser};
 
-/// The `Match` ahead, when nu reads the call as one: `match`, the subject, which nu reads as any value, and the arms, a `MatchArms` where nu reads arms and otherwise the word as it is, which nu rejects.
+/// The `Match` ahead, when nu reads the call as one.
+/// `match`, then the subject, which nu reads as any value, then the arms.
+/// The arms are a `MatchArms` where nu reads arms.
+/// Otherwise the word stays as it is, which nu rejects.
 pub(super) fn match_(p: &mut Parser<'_>) -> bool {
     let Some(len) = match_shape(&call_items(p)) else {
         return false;
@@ -24,14 +27,18 @@ pub(super) fn match_(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// How many items a `match` takes when nu reads `items`, `match` first, as one: the subject, and the arms in braces last.
+/// How many items a `match` takes when nu reads `items`, `match` first, as one.
+/// The subject, and the arms in braces last.
 fn match_shape(items: &[&str]) -> Option<usize> {
     let last = items.len().checked_sub(1)?;
     (last >= 2 && items[last].starts_with('{')).then_some(items.len())
 }
 
-/// Whether the `{ }` of a `match` holds arms as nu reads them, near enough: each a pattern of items, a guard among them, with a `|` between two of them, then `=>` and one item, with any number of `,` between arms.
-/// Nu takes a `,` anywhere and an operator as a pattern too, and rejects some runs of items; it errors on them all the same before and after.
+/// Whether the `{ }` of a `match` holds arms as nu reads them, near enough.
+/// Each arm is a pattern of items, a guard among them, with a `|` between two of them.
+/// Then `=>` and one item, with any number of `,` between arms.
+/// Nu takes a `,` anywhere and an operator as a pattern too, and rejects some runs of items.
+/// It errors on them all the same before and after.
 fn is_arms(inner: &Parser<'_>) -> bool {
     let takes = |kind: SyntaxKind, text: &str| {
         is_item(kind) && kind != SyntaxKind::Error && text != "=>" && shell_operator(text).is_none()

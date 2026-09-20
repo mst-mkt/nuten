@@ -1,6 +1,7 @@
 //! What formatting must keep, asked of any input.
 //!
-//! A fixture has an expected output; any other input has only these: that the output keeps every token and every comment, and that formatting the output changes nothing.
+//! A fixture has an expected output; any other input has only these.
+//! The output keeps every token and every comment, and formatting it again changes nothing.
 //! What the parser must keep is in `nuten_parser::invariants`, and `check` asks those first.
 
 use std::fmt;
@@ -15,11 +16,19 @@ use crate::{Config, ParseError, format_parsed};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
-    /// Line endings inside a token do not count, since the printer rewrites them, nor do `Comma` tokens, which separate the items of lists, records, and types as whitespace does; so a `,` the formatter prints in a type without one in the source goes unseen here, and only the nu oracle tells whether it went where nu reads it as a separator.
-    /// A `ShortFlag` counts as one with the token before it, since the formatter may join the two, as nu reads them.
+    /// Line endings inside a token do not count, since the printer rewrites them.
+    /// Nor do `Comma` tokens, which separate items as whitespace does in lists, records and types.
+    /// So a `,` the formatter prints in a type without one in the source goes unseen here.
+    /// Only the nu oracle tells whether it went where nu reads it as a separator.
+    /// A `ShortFlag` counts as one with the token before it.
+    /// The formatter may join the two, as nu reads them.
     Tokens,
-    /// The output has the comments of the source, in order, each on its own line or at the end of a line as it was, and, between statements or the arms of a `match`, with a blank line after it or not as it was.
-    /// Spaces and tabs at the end of a comment do not count, since the printer trims them, nor do blank lines at the end of the file, a block, or the arms, which the formatter drops, nor `Comma` tokens, which it may drop too.
+    /// The output has the comments of the source, in order.
+    /// Each stands on its own line or at the end of a line, as it was.
+    /// Between statements or the arms of a `match`, a blank line follows it or not, as it was.
+    /// Spaces and tabs at the end of a comment do not count, since the printer trims them.
+    /// Nor do blank lines at the end of the file, a block, or the arms, which the formatter drops.
+    /// Nor do `Comma` tokens, which it may drop too.
     Comments,
     /// Formatting the output succeeds and changes nothing.
     Idempotency,
@@ -48,7 +57,8 @@ impl Invariant {
 /// The syntax errors are kept apart from the violations, since a source can have both.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checked {
-    /// What the parser breaks; where it keeps its invariants and the source has no syntax errors, what the formatter breaks.
+    /// What the parser breaks.
+    /// Or what the formatter breaks, where the parser holds and the source has no syntax errors.
     pub violations: Vec<Violation>,
     /// The syntax errors of the source, which leave no output to ask about.
     pub syntax_errors: Vec<ParseError>,
@@ -66,12 +76,14 @@ pub fn check(src: &str, config: &Config) -> Checked {
 /// What `check` puts in `Checked::violations`.
 /// `parsed` is the tree of `src`.
 fn violations(src: &str, parsed: &Parsed, config: &Config) -> Vec<Violation> {
-    // The rules read a tree that keeps the invariants of the parser, so what the formatter makes of one that does not says nothing.
+    // The rules read a tree that keeps the invariants of the parser.
+    // What the formatter makes of one that does not says nothing.
     let broken = nuten_parser::invariants::violations(src, parsed);
     if !broken.is_empty() {
         return broken;
     }
-    // `format_parsed` fails only on syntax errors, which leave no output; `Checked` reports them on their own.
+    // `format_parsed` fails only on syntax errors, which leave no output.
+    // `Checked` reports them on their own.
     let Ok(output) = format_parsed(src, parsed, config) else {
         return Vec::new();
     };
@@ -191,7 +203,8 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
         .filter(|(_, token)| token.kind() == SyntaxKind::Comment)
         .map(|(index, token)| {
             let own_line = index == 0 || tokens[index - 1].kind() == SyntaxKind::Newline;
-            // Inside a statement the formatter drops blank lines, and nu reads no documentation there.
+            // Inside a statement the formatter drops blank lines.
+            // Nu reads no documentation there either.
             let between_statements = token.parent().is_some_and(|parent| {
                 matches!(
                     parent.kind(),
@@ -274,7 +287,8 @@ mod tests {
     }
 
     /// Neither a violation nor a syntax error.
-    /// The syntax errors count too, since a source that has them leaves the violations of the formatter unasked, and so empty.
+    /// The syntax errors count too.
+    /// A source that has them leaves the violations of the formatter unasked, and so empty.
     fn nothing() -> Checked {
         Checked {
             violations: vec![],

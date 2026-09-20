@@ -15,7 +15,8 @@ impl<'a> Formatter<'a> {
             if index > 0 {
                 out.push(space());
             }
-            // A body comes right before an `else` or a `catch`, and the last item is a body or what the last `else` takes.
+            // A body comes right before an `else` or a `catch`.
+            // The last item is a body, or what the last `else` takes.
             let branch = items.get(index + 1).is_none_or(|next| {
                 next.as_token().is_some_and(|next| {
                     next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
@@ -38,7 +39,10 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether `node`, an `If` or a `Try`, is a statement: the only element of a pipeline, redirections aside, that is a statement of Root, or of a block holding anything else but its braces, parameters, and comments.
+/// Whether `node`, an `If` or a `Try`, is a statement.
+/// It must be the only element of its pipeline, redirections aside.
+/// That pipeline must be a statement of Root, or of a block.
+/// A block counts only when it holds more than that pipeline, its braces, and its parameters.
 fn is_statement(node: &SyntaxNode) -> bool {
     let Some(pipeline) = node.parent().and_then(|element| element.parent()) else {
         return false;

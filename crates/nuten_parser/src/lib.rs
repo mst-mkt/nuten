@@ -69,7 +69,8 @@ pub enum ParseErrorKind {
     MissingRedirectionTarget,
     /// A redirection of a stream the element already redirects.
     MultipleRedirections,
-    /// A `:`, `=`, or `,` where the parameters of a `def` or an `extern` take a parameter or a flag, a `(-f)` after a `,`, or a `:` or an `=` with nothing at all after it.
+    /// A `:`, `=`, or `,` where the parameters of a `def` or an `extern` take a name or a flag.
+    /// Also a `(-f)` after a `,`, and a `:` or an `=` with nothing at all after it.
     /// nu rejects each of these, and dropping a `,` would take the error away.
     SignatureSeparator,
 }

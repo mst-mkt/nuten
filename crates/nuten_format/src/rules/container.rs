@@ -128,7 +128,9 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether `container` stays as it is: a comment inside ending in a lone `\r` keeps it so, since the line break printed after the comment would make that `\r` part of the line break.
+/// Whether `container` stays as it is.
+/// A comment inside ending in a lone `\r` keeps it so.
+/// The line break printed after the comment would make that `\r` part of the break.
 fn stays_as_is(container: &SyntaxNode) -> bool {
     container
         .children_with_tokens()

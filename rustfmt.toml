@@ -17,4 +17,4 @@ format_code_in_doc_comments = true
 format_macro_matchers = true
 
 error_on_line_overflow = true
-error_on_unformatted = false
+error_on_unformatted = true

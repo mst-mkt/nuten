@@ -47,7 +47,8 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, in_as
     }
 }
 
-/// Whether the `|` ahead is the last token of the file, past a trailing comment and comment lines right below it: `Comment? (Newline Comment)*`.
+/// Whether the `|` ahead is the last token of the file.
+/// A trailing comment and comment lines right below it may follow: `Comment? (Newline Comment)*`.
 /// A blank line or a final line break saves it; nu counts the `|` as the last token only then.
 fn pipe_ends_file(p: &Parser<'_>) -> bool {
     let mut kinds = p
@@ -81,7 +82,8 @@ pub(super) fn next_line_starts_with_pipe(p: &Parser<'_>) -> bool {
 
 /// After a `|` at the end of a line, the pipeline goes on at the next line, past any comment lines.
 /// A blank line ends it, unless a line-start `|` joins that blank line.
-/// `;` ends it too; nu rejects it after `|` anyway, and this keeps the newline out of the pipeline, which must not end with trivia.
+/// `;` ends it too, and nu rejects it after `|` anyway.
+/// Ending there keeps the newline out of the pipeline, which must not end with trivia.
 fn line_end_continuation(p: &mut Parser<'_>) {
     if p.peek() == Some(SyntaxKind::Newline) && next_line_continues(p) {
         bump_newlines(p);

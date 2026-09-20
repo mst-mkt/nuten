@@ -63,7 +63,9 @@ fn split_in(src: &str, mode: Mode) -> Vec<&str> {
         .collect()
 }
 
-/// What nu skips where it lexes in `mode`: whitespace, what its `additional_whitespace` argument adds to it, and comments where `skip_comment` is set.
+/// What nu skips where it lexes in `mode`.
+/// Whitespace, and what its `additional_whitespace` argument adds to it.
+/// Comments too, where `skip_comment` is set.
 #[expect(
     clippy::match_same_arms,
     reason = "one arm per recorded mode, to check each against nu on its own"
@@ -76,7 +78,9 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         Mode::RecordValue => &[Whitespace, Newline, Comment, Comma],
         Mode::Brace => &[Whitespace, Newline, Comment],
         // nu adds nothing to whitespace here, so a line break would be a token.
-        // It still sets `skip_comment`, though no row of `NU_VAR_TYPE_SPLITS` can show either: nu builds the type span out of one pipeline element, which ends at a line break, and a comment runs to the end of its line, so it never sits between two parts of one element.
+        // It still sets `skip_comment`, though no row of `NU_VAR_TYPE_SPLITS` can show either.
+        // Nu builds the type span out of one pipeline element, which ends at a line break.
+        // A comment runs to the end of its line, so it never sits inside one element.
         Mode::VarType => &[Whitespace, Comment],
         Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
             unimplemented!("how nu splits in {mode:?} is not recorded")

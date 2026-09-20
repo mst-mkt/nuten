@@ -41,7 +41,8 @@ fn call(p: &mut Parser<'_>, shape: Shape) {
     p.finish();
 }
 
-/// Items as `shape` and `Redirection`s up to the end of the element, or up to an assignment operator when `assigning`.
+/// Items as `shape` and `Redirection`s up to the end of the element.
+/// Up to an assignment operator instead when `assigning`.
 /// `redirected` is what the element redirects so far; `None` when it has no command.
 /// Returns what it redirects then.
 pub(super) fn arguments(
@@ -68,9 +69,11 @@ pub(super) fn arguments(
     redirected
 }
 
-/// `redirected` is what the element redirects so far; `None` when it has no command for the redirection to apply to.
+/// `redirected` is what the element redirects so far.
+/// `None` when it has no command for the redirection to apply to.
 ///
-/// Nu wants an item right after the operator; anything else is a missing target and stays outside the node.
+/// Nu wants an item right after the operator.
+/// Anything else is a missing target and stays outside the node.
 fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Streams>) {
     p.start(SyntaxKind::Redirection);
     let has_target =

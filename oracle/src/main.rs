@@ -1,10 +1,15 @@
-//! Asks nu whether formatting keeps what it parses: each file must give the same AST and the same flattened tokens, positions, line endings, and the layout in the tokens aside, before and after formatting.
-//! The AST refers to the blocks inside by id only, so inside them only the tokens are compared, which show neither `;` nor line breaks between statements.
+//! Asks nu whether formatting keeps what it parses.
+//! Each file must give the same AST and the same flattened tokens before and after formatting.
+//! Positions, line endings, and the layout in the tokens are left aside.
+//! The AST refers to the blocks inside by id only, so inside them only the tokens are compared.
+//! Those show neither `;` nor line breaks between statements.
 //! Nu parses each file in its directory.
 //!
 //! Takes files, and directories to search for `.nu` files.
 //! Skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
-//! Exits with 1 when any other file cannot be checked or its AST differs, and with 2 when the arguments are invalid or name no `.nu` file, or nu cannot be run or is not of the series the formatter targets.
+//! Exits with 1 when any other file cannot be checked, or its AST differs.
+//! Exits with 2 when the arguments are invalid or name no `.nu` file.
+//! Exits with 2 too when nu cannot be run, or is not of the series the formatter targets.
 
 #![expect(
     clippy::print_stderr,

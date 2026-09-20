@@ -26,7 +26,8 @@ impl<'a> Formatter<'a> {
                     .flat_map(|segment| self.segment(segment, id)),
             )
             .collect();
-        // The tail is measured in break mode, so its first line break ends the measure instead of breaking the group.
+        // The tail is measured in break mode.
+        // Its first line break then ends the measure instead of breaking the group.
         let tail = tail.map_or_else(Vec::new, |tail| self.segment(&tail, id));
         if head.is_empty() {
             return tail;
@@ -80,7 +81,8 @@ impl<'a> Formatter<'a> {
             NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => {
                 self.comment(comment, *newlines, prev.is_none())
             },
-            // Nu rejects `e>|` and `o+e>|` at the start of a line, so they stay after their element, which the parser puts right before.
+            // Nu rejects `e>|` and `o+e>|` starting a line, so they stay after their element.
+            // The parser puts that element right before them.
             _ if part.is_element() || part.is_redirection_pipe() => separator(prev, Some(space()))
                 .into_iter()
                 .chain(self.element(element))
@@ -112,7 +114,8 @@ impl Part {
         self.child.kind()
     }
 
-    /// Whether it is an element of the pipeline, or `let` or an assignment operator laid flat, which starts one: what the pipeline may end with.
+    /// Whether it is an element of the pipeline, or `let` or an assignment operator laid flat.
+    /// Those two start an element, so they are what the pipeline may end with.
     fn is_element(&self) -> bool {
         match &self.child.element {
             NodeOrToken::Node(_) => true,
@@ -130,7 +133,8 @@ impl Part {
     }
 }
 
-/// An `Assignment` or a `Let` is laid flat, so that the pipes of what the operator takes format as those of `pipeline`.
+/// An `Assignment` or a `Let` is laid flat.
+/// The pipes of what the operator takes then format as those of `pipeline`.
 fn parts(pipeline: &SyntaxNode) -> Vec<Part> {
     flatten(pipeline, 0, false)
 }
@@ -199,7 +203,8 @@ enum Alignment {
 }
 
 /// A `|` and what follows it, up to the next `|`.
-/// The first segment of a pipeline has no `|`, and neither has the tail, the element that ends the pipeline once `split_tail` takes it off the last segment.
+/// The first segment of a pipeline has no `|`, and neither has the tail.
+/// The tail is the element that ends the pipeline, once `split_tail` takes it off the last segment.
 #[derive(Clone, Copy)]
 struct Segment<'p> {
     prev: Option<SyntaxKind>,
@@ -241,7 +246,9 @@ impl<'p> Segment<'p> {
         items: &'p [Part],
         after_semicolon: bool,
     ) -> Self {
-        // A statement starts a line in the output but right after a `;` on the same line, where its `|` never does; in a block on one line, nothing breaks anyway.
+        // A statement starts a line in the output, but not right after a `;` on the same line.
+        // Its `|` never starts a line there.
+        // In a block on one line, nothing breaks anyway.
         let align = if starts_with_comment(items) || (prev.is_none() && after_semicolon) {
             None
         } else if matches!(prev, None | Some(SyntaxKind::Comment)) {

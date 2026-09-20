@@ -3,9 +3,11 @@ use crate::parser::Parser;
 
 /// The keyword syntax nu reads the call ahead as, if any.
 /// Each syntax reads its node and returns whether it did.
-/// Only a syntax that a call holds whole belongs here; `let` and the rest that reach past an assignment operator are read where the element is.
+/// Only a syntax that a call holds whole belongs here.
+/// `let` and the rest reach past an assignment operator, so they are read with the element.
 ///
-/// The keyword alone decides which syntax to try, so the shape of the items is that syntax's own to check.
+/// The keyword alone decides which syntax to try.
+/// The shape of the items is then that syntax's own to check.
 pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
     match p.peek_text() {
         Some("if") => if_(p),

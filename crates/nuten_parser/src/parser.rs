@@ -28,13 +28,14 @@ pub(crate) struct Brackets {
     pub(crate) open_kind: SyntaxKind,
     pub(crate) close_kind: SyntaxKind,
     /// Whether nu's lexer nests them in every mode.
-    /// Then lexing a word in block mode tells whether its first bracket closes at its last byte and not before, as in `[a].b]`.
+    /// Then lexing a word in block mode tells whether its first bracket closes at its last byte.
+    /// It must not close before that, as in `[a].b]`.
     /// `< >` nest only where a type is read, so the caller checks what they hold by lexing it.
     pub(crate) always_nested: bool,
 }
 
 impl Brackets {
-    /// Whether `range` of `src` starts with the opening bracket and ends with the one that closes it.
+    /// Whether `range` of `src` starts with the opening bracket and ends with its closer.
     fn enclose(&self, src: &str, range: TextRange) -> bool {
         let bytes = src[range].as_bytes();
         if bytes.first() != Some(&self.open) || bytes.last() != Some(&self.close) {
@@ -58,9 +59,11 @@ impl Brackets {
 #[derive(Clone, Copy)]
 pub(crate) enum Affix {
     None,
-    /// This many bytes before the opening bracket, as the name of a type before its `< >`, which `bump_bracketed` emits as a `Word` inside the node.
+    /// This many bytes before the opening bracket, as the name of a type before its `< >`.
+    /// `bump_bracketed` emits them as a `Word` inside the node.
     Name(usize),
-    /// One byte after the closing bracket, such as the `:` of a signature with input and output types, which `bump_bracketed` emits as this kind after the node.
+    /// One byte after the closing bracket, such as the `:` before input and output types.
+    /// `bump_bracketed` emits it as this kind after the node.
     Suffix(SyntaxKind),
 }
 
@@ -119,7 +122,9 @@ pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
     parser.events
 }
 
-/// Whitespace and comments are skipped when looking ahead and emitted just before the next token or node, or at the end of the tokens, so no node but Root starts or ends with them.
+/// Whitespace and comments are skipped when looking ahead.
+/// They are emitted just before the next token or node, or at the end of the tokens.
+/// So no node but Root starts or ends with them.
 /// Newlines are not skipped, since they end statements.
 pub(crate) struct Parser<'a> {
     src: &'a str,
@@ -130,7 +135,8 @@ pub(crate) struct Parser<'a> {
     /// Brackets around the tokens.
     depth: usize,
     /// How many errors were reported among these tokens.
-    /// Those inside a bracketed word read as a node are not counted: whether `{ }` reads as a block depends on its own statements alone.
+    /// Those inside a bracketed word read as a node are not counted.
+    /// Whether `{ }` reads as a block depends on its own statements alone.
     errors: usize,
 }
 
@@ -251,8 +257,11 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// Emits the next token as a `node`: its opening bracket, the events `items` makes of what it holds, and its closing bracket.
-    /// The token stays a `Word` when a comment inside has no whitespace before its `#`: nu reads the word with that `#` as no comment and counts the brackets in its text, so whitespace put before the `#` may move where the word ends.
+    /// Emits the next token as a `node`.
+    /// Its opening bracket, the events `items` makes of what it holds, then its closing bracket.
+    /// The token stays a `Word` when a comment inside has no whitespace before its `#`.
+    /// Nu reads a word with that `#` as no comment, and counts the brackets in its text.
+    /// So whitespace put before the `#` may move where the word ends.
     pub(crate) fn bump_bracketed(
         &mut self,
         node: SyntaxKind,
@@ -262,7 +271,8 @@ impl<'a> Parser<'a> {
         self.emit_bracketed(node, bracketed, items);
     }
 
-    /// As `bump_bracketed`, unless `items` reports an error among the tokens it holds: then its events are dropped and the token stays a `Word`.
+    /// As `bump_bracketed`, unless `items` reports an error among the tokens it holds.
+    /// Then its events are dropped and the token stays a `Word`.
     /// Errors inside nested nodes do not count.
     /// For a word that nu may read as a string, where nothing inside may be reported.
     pub(crate) fn bump_bracketed_or_word(
@@ -342,7 +352,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Emits the next token as `kind`, which the mode it was lexed in did not give it, such as the `:` before input and output types.
+    /// Emits the next token as `kind`, which the mode it was lexed in did not give it.
+    /// The `:` before input and output types is one.
     pub(crate) fn bump_as(&mut self, kind: SyntaxKind) {
         self.bump_skipped();
         let token = self.nth_token(0).expect("bump_as at the end");
@@ -436,7 +447,9 @@ fn is_skipped(kind: SyntaxKind) -> bool {
     matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment)
 }
 
-/// Whether a comment among `tokens`, the inside of a bracketed word of `src`, has no whitespace before its `#`, which the lexer reads as no comment when it reads the word.
+/// Whether a comment among `tokens` has no whitespace before its `#`.
+/// `tokens` is the inside of a bracketed word of `src`.
+/// The lexer reads such a `#` as no comment when it reads the word.
 fn has_glued_comment(src: &str, tokens: &[Token]) -> bool {
     tokens
         .iter()
