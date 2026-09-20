@@ -135,7 +135,7 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
                 p.bump();
                 p.bump_error_to(end, error);
             }
-            arguments(p, Some(Streams::default()), Shape::Argument, true);
+            arguments(p, Some(Streams::default()), Shape::KnownArgument, true);
         } else {
             p.start(SyntaxKind::Assignment);
             command(p, true);

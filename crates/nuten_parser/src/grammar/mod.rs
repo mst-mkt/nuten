@@ -52,7 +52,7 @@ enum Shape {
     /// Nu reads a `{ }` as a string for an unknown command, and as a value for a known one.
     /// The signature is to tell which, and until then the `{ }` stays as it was.
     /// One holding a record stays a word; one holding a block is a block.
-    Argument,
+    KnownArgument,
     /// An argument of an external command: a `[ ]` is a list, and a `{ }` a string.
     ExternalArgument,
     /// A block or a closure: the body of a keyword syntax, what `else` takes, what an arm does.
@@ -88,8 +88,8 @@ impl Shape {
             (Shape::Any, Some(sign)) | (Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
                 Braced::Record(sign)
             },
-            (Shape::Argument, Some(_)) | (Shape::ExternalArgument, _) => Braced::Word,
-            (Shape::Any | Shape::Argument, None)
+            (Shape::KnownArgument, Some(_)) | (Shape::ExternalArgument, _) => Braced::Word,
+            (Shape::Any | Shape::KnownArgument, None)
             | (Shape::Block, None | Some(RecordSign::SpreadFirst))
             | (Shape::DefBody, _) => Braced::Block,
         }

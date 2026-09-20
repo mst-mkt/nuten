@@ -19,7 +19,7 @@ pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     let shape = if external {
         Shape::ExternalArgument
     } else {
-        Shape::Argument
+        Shape::KnownArgument
     };
     if has_call && !keyword(p) {
         call(p, shape);
