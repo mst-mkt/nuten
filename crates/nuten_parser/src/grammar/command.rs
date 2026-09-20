@@ -16,7 +16,11 @@ pub(super) fn command(
     let has_call = !p
         .peek()
         .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
-    let shape = argument_shape(p, heads_pipeline);
+    let shape = if has_call {
+        argument_shape(p, heads_pipeline)
+    } else {
+        Shape::UnknownArgument
+    };
     if has_call && !keyword(p) {
         call(p, shape);
     }
@@ -60,7 +64,9 @@ fn percent_shape(name: &str) -> Shape {
 }
 
 fn command_shape(name: &str) -> Shape {
-    if builtin::takes_row_condition(name) {
+    if builtin::takes_variable_name(name) {
+        Shape::UnknownArgument
+    } else if builtin::takes_row_condition(name) {
         Shape::RowCondition
     } else if builtin::is_command(name) {
         Shape::KnownArgument

@@ -14,7 +14,9 @@ where {a:  1} [a,  b]
 all {...$x}
 any {|x| $x }
 ls | @foo {a:  1}
+ls | const {a:  1}
 @example {a:  1}
 % ls [a,  b]
 %where {a:  1}
 %echo {a:  1}
+let {ls  x} = 1

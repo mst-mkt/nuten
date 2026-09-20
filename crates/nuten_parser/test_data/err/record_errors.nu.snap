@@ -2,9 +2,9 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/record_errors.nu
 ---
-Root@0..10
-  Pipeline@0..9
-    PipelineElement@0..9
+Root@0..18
+  Pipeline@0..17
+    PipelineElement@0..17
       Redirection@0..9
         Error@0..2
           OutGt@0..2 "o>"
@@ -17,5 +17,7 @@ Root@0..10
             Whitespace@6..7 " "
             Word@7..8 "1"
           RBrace@8..9 "}"
-  Newline@9..10 "\n"
+      Whitespace@9..10 " "
+      Word@10..17 "{ls  x}"
+  Newline@17..18 "\n"
 error 0..2 "o>": RedirectionAtHead

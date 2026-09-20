@@ -8,6 +8,7 @@ export alias each = ^each
 open -a {Google Chrome}
 do { each {a:  1} }
 ls | @foo {a:  1}
+ls | const {a:  1}
 ls; | @foo {a:  1}
 % ls [a,  b]
 %echo {a:  1}

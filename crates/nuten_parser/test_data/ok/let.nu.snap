@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/let.nu
 ---
-Root@0..359
+Root@0..375
   Pipeline@0..11
     Pipe@0..1 "|"
     Whitespace@1..2 " "
@@ -392,3 +392,17 @@ Root@0..359
             Call@357..358
               Word@357..358 "1"
   Newline@358..359 "\n"
+  Pipeline@359..374
+    PipelineElement@359..374
+      Let@359..374
+        Word@359..362 "let"
+        Whitespace@362..363 " "
+        Word@363..370 "{ls  x}"
+        Whitespace@370..371 " "
+        Assign@371..372 "="
+        Whitespace@372..373 " "
+        Pipeline@373..374
+          PipelineElement@373..374
+            Call@373..374
+              Word@373..374 "1"
+  Newline@374..375 "\n"

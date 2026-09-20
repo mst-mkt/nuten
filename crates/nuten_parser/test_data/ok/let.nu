@@ -20,3 +20,4 @@ let x: a<b c o> f = 1
 let x:a<b = 1
 const x: int o> a< = 1
 const x: o> a< int = 1
+let {ls  x} = 1
