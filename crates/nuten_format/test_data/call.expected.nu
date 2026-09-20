@@ -8,6 +8,8 @@ else {  2  }
 ^echo [a b] [[a]; [1]]
 echo [a,  b]
 docker ps --format {{.Names}}
+alias open = ^open
+open -a {Google Chrome}
 ls | @foo {a:  1}
 @example {a:  1}
 % ls [a,  b]

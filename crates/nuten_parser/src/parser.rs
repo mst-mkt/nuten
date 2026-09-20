@@ -1,6 +1,6 @@
 //! Parser that turns tokens into events for the tree builder.
 
-use std::{mem, vec};
+use std::{mem, rc::Rc, vec};
 
 use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
@@ -100,20 +100,21 @@ impl<'a> Bracketed<'a> {
     pub(crate) fn lexed_in(self, mode: Mode) -> Bracketed<'a> {
         let Parser {
             src,
+            alias_names,
             depth,
             ..
         } = self.inner;
         let (_, inside, _) = split(self.range);
         let lexed = lexer::lex(src, inside, mode);
         Bracketed {
-            inner: Parser::new(src, lexed, depth),
+            inner: Parser::new(src, lexed, alias_names, depth),
             ..self
         }
     }
 }
 
 pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
-    let mut parser = Parser::new(src, lexed, 0);
+    let mut parser = Parser::new(src, lexed, grammar::alias_names(src), 0);
     // Not `start`: that would put leading trivia outside Root.
     parser.events.push(Event::Start(SyntaxKind::Root));
     grammar::file(&mut parser);
@@ -132,6 +133,8 @@ pub(crate) struct Parser<'a> {
     lex_errors: vec::IntoIter<LexError>,
     pos: usize,
     events: Vec<Event>,
+    /// The names the file aliases, shared with the `Parser` of every level of brackets.
+    alias_names: Rc<[&'a str]>,
     /// Brackets around the tokens.
     depth: usize,
     /// How many errors were reported among these tokens.
@@ -141,16 +144,21 @@ pub(crate) struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn new(src: &'a str, lexed: Lexed, depth: usize) -> Parser<'a> {
+    fn new(src: &'a str, lexed: Lexed, alias_names: Rc<[&'a str]>, depth: usize) -> Parser<'a> {
         Parser {
             src,
             tokens: lexed.tokens,
             lex_errors: lexed.errors.into_iter(),
             pos: 0,
             events: Vec::new(),
+            alias_names,
             depth,
             errors: 0,
         }
+    }
+
+    pub(crate) fn is_aliased(&self, name: &str) -> bool {
+        self.alias_names.binary_search(&name).is_ok()
     }
 
     pub(crate) fn peek(&self) -> Option<SyntaxKind> {
@@ -249,7 +257,12 @@ impl<'a> Parser<'a> {
         let (_, inside, _) = split(range);
         let lexed = lexer::lex(self.src, inside, mode);
         Some(Bracketed {
-            inner: Parser::new(self.src, lexed, self.depth + 1),
+            inner: Parser::new(
+                self.src,
+                lexed,
+                Rc::clone(&self.alias_names),
+                self.depth + 1,
+            ),
             token,
             range,
             brackets,
@@ -478,14 +491,14 @@ mod tests {
 
     use super::{Event, Parser};
     use crate::{
-        ParseErrorKind,
+        ParseErrorKind, grammar,
         grammar::SQUARE,
         lexer::{self, Mode, Token},
     };
 
     fn parser(src: &str) -> Parser<'_> {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-        Parser::new(src, lexed, 0)
+        Parser::new(src, lexed, grammar::alias_names(src), 0)
     }
 
     #[test]
