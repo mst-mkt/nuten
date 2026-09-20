@@ -12,13 +12,17 @@ pub(super) fn pipeline(p: &mut Parser<'_>, in_assignment: bool) {
     p.start(SyntaxKind::Pipeline);
     let mut element = None;
     let mut first = true;
+    let mut piped = false;
     while let Some(kind) = p.peek() {
         match kind {
-            kind if is_pipe(kind) => pipe(p, kind, element.take(), in_assignment),
+            kind if is_pipe(kind) => {
+                pipe(p, kind, element.take(), in_assignment);
+                piped = true;
+            },
             SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
             kind if ends_statement(kind) => break,
             _ => {
-                element = pipeline_element(p, first);
+                element = pipeline_element(p, first, first && !piped);
                 first = false;
             },
         }
@@ -125,7 +129,9 @@ pub(super) fn bump_newlines(p: &mut Parser<'_>) {
 }
 
 /// Returns the streams the element redirects; `None` when it has no command.
-fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
+/// `first` is whether it is the first element, which is where nu declares a variable.
+/// `heads_pipeline` is whether no `|` came before it either, which is where nu reads an attribute.
+fn pipeline_element(p: &mut Parser<'_>, first: bool, heads_pipeline: bool) -> Option<Streams> {
     p.start(SyntaxKind::PipelineElement);
     let redirected = if assignment_ahead(p) {
         if first && let Some(keyword @ ("let" | "mut" | "const")) = p.peek_text() {
@@ -138,7 +144,7 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
             arguments(p, Some(Streams::default()), Shape::KnownArgument, true);
         } else {
             p.start(SyntaxKind::Assignment);
-            command(p, true);
+            command(p, heads_pipeline, true);
         }
         p.bump();
         assigned_pipeline(p);
@@ -146,7 +152,7 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool) -> Option<Streams> {
         // No pipe follows what the assignment operator takes.
         None
     } else {
-        command(p, false)
+        command(p, heads_pipeline, false)
     };
     p.finish();
     redirected

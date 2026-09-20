@@ -2,6 +2,7 @@
 
 mod assignment;
 mod block;
+mod builtin;
 mod command;
 mod control;
 mod def;
@@ -47,12 +48,14 @@ pub(crate) fn file(p: &mut Parser<'_>) {
 enum Shape {
     /// Any value: `[ ]` makes a list or a table, `{ }` a record or a block.
     Any,
-    /// An argument of a command whose signature is unknown.
-    /// A `[ ]` stays a word, since a command may take it as a string.
-    /// Nu reads a `{ }` as a string for an unknown command, and as a value for a known one.
-    /// The signature is to tell which, and until then the `{ }` stays as it was.
-    /// One holding a record stays a word; one holding a block is a block.
+    /// An argument of a command nu resolves to one of its own.
+    /// A `[ ]` stays a word, since the signature may take it as a string.
+    /// A `{ }` holding a record stays a word until the signature is read.
+    /// One holding a block is a block.
     KnownArgument,
+    /// An argument of a head nuten cannot look up: an alias, one the file defines, or none.
+    /// Every bracketed word stays one, since what nu reads it as is unknowable here.
+    UnknownArgument,
     /// An argument of an external command: a `[ ]` is a list, and a `{ }` a string.
     ExternalArgument,
     /// A block or a closure: the body of a keyword syntax, what `else` takes, what an arm does.
@@ -88,7 +91,8 @@ impl Shape {
             (Shape::Any, Some(sign)) | (Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
                 Braced::Record(sign)
             },
-            (Shape::KnownArgument, Some(_)) | (Shape::ExternalArgument, _) => Braced::Word,
+            (Shape::KnownArgument, Some(_))
+            | (Shape::UnknownArgument | Shape::ExternalArgument, _) => Braced::Word,
             (Shape::Any | Shape::KnownArgument, None)
             | (Shape::Block, None | Some(RecordSign::SpreadFirst))
             | (Shape::DefBody, _) => Braced::Block,

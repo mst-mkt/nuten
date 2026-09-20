@@ -1,30 +1,68 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, ends_call, ends_element, is_file_redirection, is_item, item, keyword::keyword,
+    Shape, builtin, ends_call, ends_element, is_file_redirection, is_item, item, keyword::keyword,
     shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
 
 /// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
 /// Returns the streams it redirects; `None` when there is no command.
-pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
+pub(super) fn command(
+    p: &mut Parser<'_>,
+    heads_pipeline: bool,
+    assigning: bool,
+) -> Option<Streams> {
     let has_call = !p
         .peek()
         .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
-    // Nu runs `else` and `catch` at the start of a statement as external commands.
-    let external = p
-        .peek_text()
-        .is_some_and(|head| head.starts_with('^') || matches!(head, "else" | "catch"));
-    let shape = if external {
-        Shape::ExternalArgument
-    } else {
-        Shape::KnownArgument
-    };
+    let shape = argument_shape(p, heads_pipeline);
     if has_call && !keyword(p) {
         call(p, shape);
     }
     arguments(p, has_call.then_some(Streams::default()), shape, assigning)
+}
+
+/// Nu runs a head it finds no declaration for as an external command.
+/// Whether the file declares one is unknowable here, so an unlisted head stays unknown instead.
+/// A `^` skips the lookup.
+/// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
+/// Nu reads a `@` as an attribute only where a pipeline starts.
+fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
+    let Some(head) = p.peek_text() else {
+        return Shape::UnknownArgument;
+    };
+    if head.starts_with('^') {
+        Shape::ExternalArgument
+    } else if let Some(name) = head.strip_prefix('%') {
+        percent_shape(name)
+    } else if matches!(head, "else" | "catch") {
+        Shape::ExternalArgument
+    } else if heads_pipeline && head.starts_with('@') {
+        Shape::KnownArgument
+    } else {
+        command_shape(head)
+    }
+}
+
+/// Nu runs a head whose `%` finds no built-in as an external command.
+/// A `%` alone leaves the head in the token after it, which is not read here.
+fn percent_shape(name: &str) -> Shape {
+    if name.is_empty() {
+        Shape::UnknownArgument
+    } else if builtin::resolves_after_percent(name) {
+        command_shape(name)
+    } else {
+        Shape::ExternalArgument
+    }
+}
+
+fn command_shape(name: &str) -> Shape {
+    if builtin::is_command(name) {
+        Shape::KnownArgument
+    } else {
+        Shape::UnknownArgument
+    }
 }
 
 /// The head, which nu reads as any value, then the arguments as `shape`.

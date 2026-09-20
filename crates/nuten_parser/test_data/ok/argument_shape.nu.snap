@@ -1,0 +1,143 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/argument_shape.nu
+---
+Root@0..251
+  Pipeline@0..29
+    PipelineElement@0..29
+      Call@0..29
+        Word@0..6 "docker"
+        Whitespace@6..7 " "
+        Word@7..9 "ps"
+        Whitespace@9..10 " "
+        Word@10..18 "--format"
+        Whitespace@18..19 " "
+        Word@19..29 "{{.Names}}"
+  Newline@29..30 "\n"
+  Pipeline@30..49
+    PipelineElement@30..49
+      Call@30..49
+        Word@30..36 "printf"
+        Whitespace@36..37 " "
+        Word@37..41 "{%s}"
+        Whitespace@41..42 " "
+        Word@42..49 "[a,  b]"
+  Newline@49..50 "\n"
+  Pipeline@50..88
+    PipelineElement@50..88
+      Call@50..88
+        Word@50..54 "echo"
+        Whitespace@54..55 " "
+        Word@55..62 "{a:  1}"
+        Whitespace@62..63 " "
+        Word@63..80 "{...$x, print hi}"
+        Whitespace@80..81 " "
+        Word@81..88 "[a,  b]"
+  Newline@88..89 "\n"
+  Pipeline@89..106
+    PipelineElement@89..91
+      Call@89..91
+        Word@89..91 "ls"
+    Whitespace@91..92 " "
+    Pipe@92..93 "|"
+    Whitespace@93..94 " "
+    PipelineElement@94..106
+      Call@94..106
+        Word@94..98 "@foo"
+        Whitespace@98..99 " "
+        Word@99..106 "{a:  1}"
+  Newline@106..107 "\n"
+  Pipeline@107..109
+    PipelineElement@107..109
+      Call@107..109
+        Word@107..109 "ls"
+  Semicolon@109..110 ";"
+  Whitespace@110..111 " "
+  Pipeline@111..125
+    Pipe@111..112 "|"
+    Whitespace@112..113 " "
+    PipelineElement@113..125
+      Call@113..125
+        Word@113..117 "@foo"
+        Whitespace@117..118 " "
+        Word@118..125 "{a:  1}"
+  Newline@125..126 "\n"
+  Pipeline@126..138
+    PipelineElement@126..138
+      Call@126..138
+        Word@126..127 "%"
+        Whitespace@127..128 " "
+        Word@128..130 "ls"
+        Whitespace@130..131 " "
+        Word@131..138 "[a,  b]"
+  Newline@138..139 "\n"
+  Pipeline@139..152
+    PipelineElement@139..152
+      Call@139..152
+        Word@139..144 "%echo"
+        Whitespace@144..145 " "
+        Word@145..152 "{a:  1}"
+  Newline@152..153 "\n"
+  Pipeline@153..168
+    PipelineElement@153..168
+      ExternalCall@153..168
+        Word@153..160 "%nosuch"
+        Whitespace@160..161 " "
+        Word@161..168 "{a:  1}"
+  Newline@168..169 "\n"
+  Pipeline@169..191
+    PipelineElement@169..191
+      ExternalCall@169..191
+        Word@169..175 "%where"
+        Whitespace@175..176 " "
+        Word@176..183 "{a:  1}"
+        Whitespace@183..184 " "
+        List@184..191
+          LBracket@184..185 "["
+          Word@185..186 "a"
+          Comma@186..187 ","
+          Whitespace@187..189 "  "
+          Word@189..190 "b"
+          RBracket@190..191 "]"
+  Newline@191..192 "\n"
+  Pipeline@192..220
+    PipelineElement@192..220
+      Call@192..220
+        Word@192..200 "@example"
+        Whitespace@200..201 " "
+        Word@201..208 "{a:  1}"
+        Whitespace@208..209 " "
+        Block@209..220
+          LBrace@209..210 "{"
+          Whitespace@210..212 "  "
+          Pipeline@212..217
+            PipelineElement@212..217
+              Call@212..217
+                Word@212..213 "1"
+                Whitespace@213..214 " "
+                Word@214..215 "+"
+                Whitespace@215..216 " "
+                Word@216..217 "1"
+          Whitespace@217..219 "  "
+          RBrace@219..220 "}"
+  Newline@220..221 "\n"
+  Pipeline@221..232
+    PipelineElement@221..232
+      ExternalCall@221..232
+        Word@221..224 "^ls"
+        Whitespace@224..225 " "
+        Word@225..232 "{a:  1}"
+  Newline@232..233 "\n"
+  Pipeline@233..250
+    PipelineElement@233..235
+      Call@233..235
+        Word@233..235 "ls"
+    Whitespace@235..236 " "
+    Pipe@236..237 "|"
+    Newline@237..238 "\n"
+    PipelineElement@238..250
+      Call@238..250
+        Word@238..242 "@foo"
+        Whitespace@242..243 " "
+        Word@243..250 "{a:  1}"
+  Newline@250..251 "\n"
