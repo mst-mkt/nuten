@@ -11,13 +11,13 @@ pub(super) fn resolves_after_percent(head: &str) -> bool {
     is_command(head) && EXTERNAL_AFTER_PERCENT.binary_search(&head).is_err()
 }
 
+pub(super) fn takes_row_condition(head: &str) -> bool {
+    matches!(head, "all" | "any" | "where")
+}
+
 /// A name of a variable stands where these take their first argument, never a value.
 pub(super) fn takes_variable_name(head: &str) -> bool {
     matches!(head, "let" | "mut" | "const")
-}
-
-pub(super) fn takes_row_condition(head: &str) -> bool {
-    matches!(head, "all" | "any" | "where")
 }
 
 /// Sorted, so that `resolves_after_percent` can bisect.

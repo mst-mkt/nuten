@@ -1,6 +1,7 @@
-echo {a:  1,b: 2} {
-  c: 3
-      d: 4 }
+echo { a: 1 b: 2 } {
+    c: 3
+    d: 4
+}
 { a: 1 b: 2 } | to json
 let r = { a: 1 b: 2 }
 let s = { a: 1 b: [1 2] c: { d: 3 } }
@@ -25,7 +26,7 @@ let long = {
     bbbbbbbbbbbbbbbbbbbb: 222222222222222
     ccccccccccccc: 3333333333333
 }
-echo {a: 1}
+echo { a: 1 }
 let x = { a: b:c }
 let y = { "a b": 1 'c': 2 }
 let r = {a:# [

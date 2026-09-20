@@ -58,6 +58,7 @@ pub(crate) fn alias_names(src: &str) -> Rc<[&str]> {
 fn breaks_statement(char: char) -> bool {
     matches!(char, '\n' | '\r' | ';' | '|' | '{' | '}' | '(' | ')')
 }
+
 const NAME_QUOTES: [char; 3] = ['"', '\'', '`'];
 
 fn alias_name(statement: &str) -> Option<&str> {
@@ -82,8 +83,8 @@ enum Shape {
     Any,
     /// An argument of a command nu resolves to one of its own.
     /// A `[ ]` stays a word, since the signature may take it as a string.
-    /// A `{ }` holding a record stays a word until the signature is read.
-    /// One holding a block is a block.
+    /// A `{ }` is never a string, unlike for an external command.
+    /// A spread first stays a word: only the signature tells a record from a closure there.
     KnownArgument,
     /// An argument of a command that takes a row condition.
     /// Nu reads a `{ }` that shows a `RecordSign` as a block alone, and as a value among others.
@@ -124,10 +125,12 @@ impl Shape {
     /// What nu reads a `{ }` as here, given the `RecordSign` its first tokens show.
     fn braced(self, sign: Option<RecordSign>) -> Braced {
         match (self, sign) {
-            (Shape::Any, Some(sign)) | (Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
+            (Shape::Any, Some(sign))
+            | (Shape::KnownArgument | Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
                 Braced::Record(sign)
             },
-            (Shape::KnownArgument | Shape::RowCondition, Some(_))
+            (Shape::KnownArgument, Some(RecordSign::SpreadFirst))
+            | (Shape::RowCondition, Some(_))
             | (Shape::UnknownArgument | Shape::ExternalArgument, _) => Braced::Word,
             (Shape::Any | Shape::KnownArgument | Shape::RowCondition, None)
             | (Shape::Block, None | Some(RecordSign::SpreadFirst))
@@ -321,12 +324,14 @@ mod tests {
         assert_eq!(*alias_names("do { alias f = ^f }"), ["f"]);
         assert_eq!(*alias_names("(alias g = ^g)"), ["g"]);
     }
+
     #[test]
     fn alias_names_drop_quotes_around_name() {
         assert_eq!(*alias_names("alias \"a\" = ^a"), ["a"]);
         assert_eq!(*alias_names("alias 'b' = ^b"), ["b"]);
         assert_eq!(*alias_names("alias `c` = ^c"), ["c"]);
     }
+
     #[test]
     fn alias_names_come_sorted_without_repeats() {
         assert_eq!(
@@ -334,11 +339,13 @@ mod tests {
             ["a", "b"]
         );
     }
+
     #[test]
     fn alias_names_leave_out_what_heads_no_statement() {
         assert!(alias_names("# alias a = ^a").is_empty());
         assert!(alias_names("print \"alias b = ^b\"").is_empty());
     }
+
     #[test]
     fn alias_names_leave_out_statement_that_names_nothing() {
         assert!(alias_names("alias").is_empty());

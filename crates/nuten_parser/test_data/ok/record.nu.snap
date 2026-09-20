@@ -385,7 +385,14 @@ Root@0..777
             Word@409..410 "1"
           RBrace@410..411 "}"
       Whitespace@411..412 " "
-      Word@412..418 "{b: 2}"
+      Record@412..418
+        LBrace@412..413 "{"
+        RecordField@413..417
+          Word@413..414 "b"
+          Colon@414..415 ":"
+          Whitespace@415..416 " "
+          Word@416..417 "2"
+        RBrace@417..418 "}"
   Newline@418..419 "\n"
   Pipeline@419..441
     PipelineElement@419..441

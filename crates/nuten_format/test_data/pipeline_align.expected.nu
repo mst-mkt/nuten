@@ -44,8 +44,8 @@ let x = ls
   }
 ls
 | get {
-a: 1
-}
+      a: 1
+  }
 ls
 | each {|x|
       $x
