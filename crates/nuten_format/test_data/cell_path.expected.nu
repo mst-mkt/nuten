@@ -30,6 +30,7 @@ print (
 { a: 1 }.a?
 print { a: 1 }.a
 if true { } else [1].0
+[1] | get $.0?
 {
     alpha: 1
     beta: 2

@@ -151,6 +151,7 @@ macro_rules! syntax_kinds {
                 /// A `Word` nu reads as a value and a path into it, as in `$x.a?` or `(ls).name`.
                 /// The value, then the members and the `.`, `?`, and `!` among them, all touching.
                 /// The value is what it would be alone: a node where nu reads one, or else a token.
+                /// A cell path literal, as in `$.a`, has a `Word` `$` in its place.
                 /// A member nu reads is a `Word` or a `String`.
                 CellPath,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.

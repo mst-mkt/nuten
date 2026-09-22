@@ -14,6 +14,8 @@ use crate::{
 /// The word ahead split as nu splits a full cell path: the value, then the path into it.
 pub(super) struct CellPathAhead<'a> {
     relexed: Relexed<'a>,
+    /// Whether it is a cell path literal, as in `$.a`, whose `$` nu reads as no value.
+    literal: bool,
     links: Vec<Link>,
 }
 
@@ -40,13 +42,19 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
         return None;
     }
     // Nu reads a `$` or a `( )` with `..` in its path as a range where it can.
+    let literal = text.starts_with("$.");
     // Ranges are not read yet, so such a word stays whole.
-    if text.starts_with(['$', '(']) && text[usize::from(head.range.len())..].contains("..") {
+    // Nu reads a literal as a cell path before it tries a range.
+    if !literal
+        && text.starts_with(['$', '('])
+        && text[usize::from(head.range.len())..].contains("..")
+    {
         return None;
     }
     let links = links(path)?;
     Some(CellPathAhead {
         relexed,
+        literal,
         links,
     })
 }
@@ -54,10 +62,13 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
 /// Whether nu reads `head`, which `inner` starts with, as the value of a cell path for `shape`.
 /// Nu reads a `[ ]` there only where it takes any value.
 /// It reads a `{ }` there only as a record with a `:` second.
-/// A variable name must be one nu takes, and each bracket must close at the last byte of `head`.
+/// A variable name must be one nu takes, or none for a literal.
+/// Each bracket must close at the last byte of `head`.
 fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
     match head.as_bytes() {
-        [b'$', ..] => reads_dollar(head, shape) && is_variable_name(&head[1..]),
+        [b'$', name @ ..] => {
+            reads_dollar(head, shape) && (name.is_empty() || is_variable_name(&head[1..]))
+        },
         [b'(', ..] => shape.takes_value() && inner.bracketed(&PAREN, Mode::Paren).is_some(),
         [b'[', ..] => shape.takes_any_value() && inner.bracketed(&SQUARE, Mode::List).is_some(),
         [b'{', ..] => inner.bracketed(&CURLY, Mode::Brace).is_some_and(|braced| {
@@ -146,15 +157,20 @@ fn member(text: &str) -> Option<Link> {
     }
 }
 
-/// The cell path that `cell_path_ahead` found, with the value as `value` reads it for `shape`.
+/// The cell path that `cell_path_ahead` found, with any value as `value` reads it for `shape`.
 /// A member lexed as neither a word nor a string is a `Word`, since nu reads it as a plain string.
 pub(super) fn cell_path<'a>(p: &mut Parser<'a>, ahead: CellPathAhead<'a>, shape: Shape) {
     let CellPathAhead {
         relexed,
+        literal,
         links,
     } = ahead;
     p.bump_relexed(SyntaxKind::CellPath, relexed, |p| {
-        value(p, shape);
+        if literal {
+            p.bump();
+        } else {
+            value(p, shape);
+        }
         for link in links {
             match link {
                 Link::Member
@@ -233,6 +249,7 @@ mod tests {
         for src in [
             "let $x.a = 1",
             "let (x).a = 1",
+            "let $.a = 1",
             "^echo [1 2].0",
             "{...$r}.a",
             "{a}.b",

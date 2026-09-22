@@ -43,6 +43,10 @@ match 1 { _ => {a: 1}.a }
 loop {a: 1}.a
 ls | where {a: 1}.a
 {}.a
+$.a?
+$.
+$.?.b!
+get $.a.0
 (1..2).0
 (ls).a..
 (a)b.c
@@ -54,3 +58,7 @@ ls | where (ls).a
 {a: 1..2}.a
 [1 2].0..
 {a: 1}.a..
+foo $.a
+^echo $.a
+if true { } else $.a
+get $.a..
