@@ -1,7 +1,9 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, at_call_item, builtin, call_items, ends_element, is_file_redirection, item,
+    Shape, at_call_item,
+    binary::is_binary_like,
+    builtin, call_items, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_after_operator},
     number::is_number,
     range::is_number_range,
@@ -232,7 +234,7 @@ fn unknown_operator(text: &str) -> Option<ParseErrorKind> {
 /// Ported from nu's `is_math_expression_like`.
 ///
 /// True only where nu reads an expression too: a call read as one loses the shape of its items.
-/// A filesize, a duration, a date, and a binary are left out, so each stays a head.
+/// A filesize, a duration, and a date are left out, so each stays a head.
 /// So are `if` and `match`, which `keyword` reads as their own syntax instead.
 /// So is a range with a value other than a number.
 /// Nu reads it as an expression only where each value reads without an error.
@@ -242,6 +244,7 @@ fn is_math_expression_like(text: &str) -> bool {
         || text.starts_with("r#")
         || text.starts_with(['(', '{', '[', '$', '"', '\'', '-'])
         || is_number(text)
+        || is_binary_like(text)
         || is_number_range(text)
 }
 
@@ -561,7 +564,7 @@ mod tests {
 
     #[test]
     fn values_left_out_of_the_port_stay_heads() {
-        for text in ["1kb", "1sec", "2024-01-01", "0x[ff]", "if", "match"] {
+        for text in ["1kb", "1sec", "2024-01-01", "if", "match"] {
             assert!(!is_math_expression_like(text), "{text:?}");
         }
     }
@@ -571,6 +574,14 @@ mod tests {
         for text in ["1..$x", "1..(2)", "..$x", "1..2..$x"] {
             assert!(!is_math_expression_like(text), "{text:?}");
         }
+    }
+
+    #[test]
+    fn binary_nu_decodes_or_reports_is_math_expression_like() {
+        for text in ["0x[ff]", "0o[777]", "0x[zz]"] {
+            assert!(is_math_expression_like(text), "{text:?}");
+        }
+        assert!(!is_math_expression_like("0x[ff|00]"));
     }
 
     #[test]

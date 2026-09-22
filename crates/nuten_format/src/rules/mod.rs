@@ -1,5 +1,6 @@
 //! Turns each node of the tree into document elements.
 
+mod binary;
 mod block;
 mod container;
 mod control;
@@ -170,6 +171,7 @@ impl<'a> Formatter<'a> {
             Node::Table(table) => self.table(table),
             Node::Param(param) => self.param(param),
             Node::Type(type_) => self.type_(type_),
+            Node::Binary(binary) => self.binary(binary),
             Node::TypeField(field) => self.type_field(field),
             Node::Block(block) => self.block(block),
             Node::Subexpression(subexpression) => self.subexpression(subexpression),

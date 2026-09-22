@@ -97,7 +97,8 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
 }
 
 /// A node the parser makes of a word enclosed in brackets.
-/// The opening bracket is its first child, or the second after the name of a `Type`.
+/// The opening bracket is its first child.
+/// It is the second instead, after the name of a `Type` or the prefix of a `Binary`.
 /// The closing one is its last, whatever comes between.
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
@@ -178,10 +179,13 @@ bracketed! {
     Type: LAngle RAngle {
         /// The `<`, right after the name.
         fn open(&self) -> SyntaxToken {
-            self.name()
-                .next_sibling_or_token()
-                .and_then(SyntaxElement::into_token)
-                .expect("a type opens its brackets right after its name")
+            token_after(&self.name()).expect("a type opens its brackets right after its name")
+        }
+    },
+    Binary: LBracket RBracket {
+        /// The `[`, right after the prefix.
+        fn open(&self) -> SyntaxToken {
+            token_after(&self.prefix()).expect("a binary opens its brackets right after its prefix")
         }
     },
 }
@@ -197,14 +201,20 @@ impl Node {
         let pairs = self.brackets()?;
         let node = self.syntax();
         let first = node.first_child_or_token();
-        let opening = match self {
-            Node::Type(_) => {
+        // A word before the brackets, and what is wrong without it.
+        let lead = match self {
+            Node::Type(_) => Some("does not start with its name"),
+            Node::Binary(_) => Some("does not start with its prefix"),
+            _ => None,
+        };
+        let opening = match lead {
+            Some(flaw) => {
                 if first.as_ref().and_then(kind_if_token) != Some(SyntaxKind::Word) {
-                    return Some("does not start with its name");
+                    return Some(flaw);
                 }
-                first.and_then(|name| name.next_sibling_or_token())
+                first.and_then(|word| word.next_sibling_or_token())
             },
-            _ => first,
+            None => first,
         };
         let Some(close) = opening
             .as_ref()
@@ -240,6 +250,13 @@ impl Node {
             _ => None,
         }
     }
+}
+
+/// The token right after `token`, if the next sibling is one.
+fn token_after(token: &SyntaxToken) -> Option<SyntaxToken> {
+    token
+        .next_sibling_or_token()
+        .and_then(SyntaxElement::into_token)
 }
 
 /// The kind of `element`, when it is a token and not a node.
@@ -310,6 +327,16 @@ impl Type {
             .first_child_or_token()
             .and_then(SyntaxElement::into_token)
             .expect("a type starts with its name")
+    }
+}
+
+impl Binary {
+    /// The `0x`, `0o`, or `0b` before the `[`.
+    pub fn prefix(&self) -> SyntaxToken {
+        self.syntax()
+            .first_child_or_token()
+            .and_then(SyntaxElement::into_token)
+            .expect("a binary starts with its prefix")
     }
 }
 
@@ -853,6 +880,19 @@ mod tests {
                     ],
                 ),
                 Some("holds trivia among its pieces"),
+            ),
+            (
+                node(SyntaxKind::Binary, bracketed(vec![])),
+                Some("does not start with its prefix"),
+            ),
+            (
+                node(
+                    SyntaxKind::Binary,
+                    iter::once(token(SyntaxKind::Word, "0x"))
+                        .chain(bracketed(vec![token(SyntaxKind::Word, "ff")]))
+                        .collect(),
+                ),
+                None,
             ),
             (
                 node(SyntaxKind::Pipeline, vec![token(SyntaxKind::Word, "a")]),

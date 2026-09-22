@@ -1,0 +1,204 @@
+use nuten_syntax::SyntaxKind;
+use rowan::{TextRange, TextSize};
+
+use super::{SQUARE, Shape, is_file_redirection};
+use crate::{
+    lexer::{self, Mode, Token},
+    parser::{Affix, Bracketed, Parser},
+};
+
+/// The prefix of a binary, as `0x`, with the base of its digits and how many make a byte.
+/// Ported from nu's `parse_binary`, which takes only these, in lower case.
+const PREFIXES: [(&str, u32, usize); 3] = [("0x", 16, 2), ("0o", 8, 3), ("0b", 2, 8)];
+
+/// What the word ahead holds, when nu reads it as a binary where it takes `shape`.
+/// Nu reads a binary only where it takes any value.
+/// A binary nu cannot decode stays a word.
+pub(super) fn binary_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<Bracketed<'a>> {
+    if !shape.takes_any_value() {
+        return None;
+    }
+    let text = p.peek_text()?;
+    let &(prefix, base, digits) = PREFIXES.iter().find(|(prefix, ..)| {
+        text.strip_prefix(prefix)
+            .is_some_and(|rest| rest.starts_with('['))
+    })?;
+    let bracketed = p.bracketed_affixed(&SQUARE, Mode::Binary, Affix::Name(prefix.len()))?;
+    let tokens: Vec<_> = bracketed.inner().remaining_tokens().collect();
+    if tokens
+        .iter()
+        .any(|&(token, text)| token.kind == SyntaxKind::Error || ends_item(token.kind, text))
+    {
+        return None;
+    }
+    // Nu skips a `;` among the items, but the formatter would print it as an item.
+    let holds_semicolon = tokens
+        .iter()
+        .any(|(token, _)| token.kind == SyntaxKind::Semicolon);
+    let decodes = decode(&items(&tokens), base, digits).is_some();
+    (decodes && !holds_semicolon).then_some(bracketed)
+}
+
+/// The binary `binary_ahead` found, as a `Binary`.
+pub(super) fn binary<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
+    p.bump_bracketed(SyntaxKind::Binary, bracketed, |p| {
+        while p.peek().is_some() {
+            p.bump();
+        }
+    });
+}
+
+/// Whether nu reads `text` as a binary, or as one it reports it cannot decode.
+/// Nu's `is_math_expression_like` takes both for the start of an expression.
+pub(super) fn is_binary_like(text: &str) -> bool {
+    let Some(inside) = PREFIXES
+        .iter()
+        .find_map(|(prefix, ..)| text.strip_prefix(prefix)?.strip_prefix('['))
+        .and_then(|rest| rest.strip_suffix(']'))
+    else {
+        return false;
+    };
+    let start = TextSize::of(text) - TextSize::of(inside) - TextSize::of("]");
+    let range = TextRange::at(start, TextSize::of(inside));
+    lexer::lex(text, range, Mode::Binary)
+        .tokens
+        .iter()
+        .all(|&token| !ends_item(token.kind, &text[token.range]))
+}
+
+/// Whether nu's lexer makes a pipe, a redirection, or an assignment of the token.
+/// Nu reads no binary where it finds one among the items.
+fn ends_item(kind: SyntaxKind, text: &str) -> bool {
+    matches!(
+        kind,
+        SyntaxKind::Pipe
+            | SyntaxKind::PipePipe
+            | SyntaxKind::ErrGtPipe
+            | SyntaxKind::OutErrGtPipe
+            | SyntaxKind::Assign
+    ) || is_file_redirection(kind)
+        || matches!(text, "o>|" | "out>|" | "&&" | "2>" | "2>&1")
+}
+
+/// The items among `tokens`, joined, as nu joins them before it decodes them.
+fn items(tokens: &[(Token, &str)]) -> String {
+    tokens
+        .iter()
+        .filter(|(token, _)| token.kind.is_item())
+        .map(|&(_, text)| text)
+        .collect()
+}
+
+/// The bytes nu decodes `joined` to, in `base` with `digits` to a byte, if it can.
+/// Ported from nu's `parse_binary_with_base` and `decode_with_base`.
+/// Nu pads the digits with `0`s at the front to a whole number of bytes, counting bytes of UTF-8.
+/// It then cuts them into bytes by chars.
+fn decode(joined: &str, base: u32, digits: usize) -> Option<Vec<u8>> {
+    let padding = (digits - joined.len() % digits) % digits;
+    let padded: Vec<char> = "0".repeat(padding).chars().chain(joined.chars()).collect();
+    padded
+        .chunks(digits)
+        .map(|chunk| u8::from_str_radix(&chunk.iter().collect::<String>(), base).ok())
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use nuten_syntax::SyntaxKind;
+
+    use super::{decode, is_binary_like};
+    use crate::parse;
+
+    #[test]
+    fn digits_decode_as_nu_decodes_them() {
+        for (joined, base, digits, expected) in [
+            ("ff00", 16, 2, Some(vec![0xff, 0x00])),
+            ("FF", 16, 2, Some(vec![0xff])),
+            ("f", 16, 2, Some(vec![0x0f])),
+            ("fff", 16, 2, Some(vec![0x0f, 0xff])),
+            ("", 16, 2, Some(vec![])),
+            ("+f", 16, 2, Some(vec![0x0f])),
+            ("f+f", 16, 2, Some(vec![0x0f, 0x0f])),
+            ("+ff", 16, 2, None),
+            ("zz", 16, 2, None),
+            ("f_f", 16, 2, None),
+            ("日", 16, 2, None),
+            ("377", 8, 3, Some(vec![0xff])),
+            ("400", 8, 3, None),
+            ("1", 8, 3, Some(vec![1])),
+            ("0101", 2, 8, Some(vec![5])),
+            ("2", 2, 8, None),
+        ] {
+            assert_eq!(decode(joined, base, digits), expected, "{joined:?}");
+        }
+    }
+
+    #[test]
+    fn binary_like_word_has_prefix_brackets_and_no_pipe_redirection_or_assignment_among_items() {
+        for text in [
+            "0x[ff]",
+            "0x[]",
+            "0o[777]",
+            "0b[2]",
+            "0x[zz]",
+            "0x[ff;00]",
+            "0x[ff # c\n00]",
+            "0x[ff][00]",
+            "0x[\"ff\"]",
+        ] {
+            assert!(is_binary_like(text), "{text:?}");
+        }
+        for text in [
+            "0X[ff]",
+            "0x[ff",
+            "0x[ff]a",
+            "0x ff",
+            "0x[ff|00]",
+            "0x[ff || 00]",
+            "0x[ff = 00]",
+            "0x[ff o> 00]",
+            "0x[ff e>| 00]",
+            "0x[ff && 00]",
+            "0x[ff 2> 00]",
+            "0x[ff 2>&1 00]",
+            "0x[ff o>| 00]",
+            "0z[ff]",
+        ] {
+            assert!(!is_binary_like(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn binary_nu_cannot_decode_stays_word_without_error() {
+        for src in [
+            "0x[zz]",
+            "0o[400]",
+            "0b[2]",
+            "0x[+ff]",
+            "0x[\"ff\"]",
+            "0x[zz;]",
+        ] {
+            let parsed = parse(src);
+            assert!(
+                !parsed
+                    .syntax()
+                    .descendants()
+                    .any(|node| node.kind() == SyntaxKind::Binary),
+                "{src:?}"
+            );
+            assert!(parsed.errors().is_empty(), "{src:?}");
+        }
+    }
+
+    #[test]
+    fn binary_nu_decodes_holding_semicolon_stays_word() {
+        let parsed = parse("0x[ff;00]");
+        assert!(
+            !parsed
+                .syntax()
+                .descendants()
+                .any(|node| node.kind() == SyntaxKind::Binary)
+        );
+        assert!(parsed.errors().is_empty());
+    }
+}

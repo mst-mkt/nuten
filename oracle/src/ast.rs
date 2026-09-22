@@ -158,11 +158,13 @@ fn without_layout(value: JsonValue<'_>) -> JsonValue<'_> {
 
 /// A token of a shape made of layout and words, normalized.
 /// Such a shape is the brackets and the gaps between the items of a list.
+/// A binary is one too: nu gives its brackets and items one token, and the AST holds its bytes.
 /// Each run of whitespace and `,` becomes one space between two words, and nothing elsewhere.
 /// `None` when that leaves the token empty.
 /// A token of any other shape, such as a string, comes back as it is.
 fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
-    const LAYOUT_SHAPES: [&str; 10] = [
+    const LAYOUT_SHAPES: [&str; 11] = [
+        "shape_binary",
         "shape_block",
         "shape_closure",
         "shape_garbage",
@@ -334,6 +336,7 @@ mod tests {
                 {"content": ", ", "shape": "shape_list"},
                 {"content": "export  def", "shape": "shape_internalcall"},
                 {"content": "[x: int, # a  b\r\n]", "shape": "shape_signature"},
+                {"content": "0x[ff,  00 # c\n 01]", "shape": "shape_binary"},
                 {"content": "a,  b\r\n", "shape": "shape_string"},
                 {"content": "1"}]}"#,
         );
@@ -344,6 +347,7 @@ mod tests {
                     {"content": "{|x y|", "shape": "shape_closure"},
                     {"content": "export def", "shape": "shape_internalcall"},
                     {"content": "[x:int # a  b\n]", "shape": "shape_signature"},
+                    {"content": "0x[ff 00 # c\n01]", "shape": "shape_binary"},
                     {"content": "a,  b\r\n", "shape": "shape_string"},
                     {"content": "1"}]}"#
             )

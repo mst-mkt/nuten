@@ -173,6 +173,10 @@ macro_rules! syntax_kinds {
                 /// It reads one as an argument of an external command too.
                 /// One as an argument of another command stays a `Word`.
                 Spread,
+                /// A `Word` nu reads as a binary, as in `0x[ff 00]`.
+                /// Its prefix as a `Word`, `[`, the items and any `,` and comments among them, `]`.
+                /// Nu reads one where it takes any value.
+                Binary,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
                 /// Nu reads one where it takes a value or a block.
                 /// It reads one as an argument of an external command too.

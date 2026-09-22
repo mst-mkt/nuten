@@ -1,6 +1,7 @@
 //! Grammar rules of Nushell.
 
 mod assignment;
+mod binary;
 mod block;
 mod builtin;
 mod cell_path;
@@ -26,6 +27,7 @@ use nuten_syntax::SyntaxKind;
 
 use self::{
     assignment::Assigned,
+    binary::{binary, binary_ahead},
     block::block,
     cell_path::{cell_path, cell_path_ahead},
     list::{is_list, list_items},
@@ -209,13 +211,15 @@ const CURLY: Brackets = Brackets {
 };
 
 /// The next token as the value nu reads where it takes `shape`.
-/// A `Range`, `CellPath`, or `Subexpression` where nu reads one.
+/// A `Binary`, `Range`, `CellPath`, or `Subexpression` where nu reads one.
 /// A `List`, `Table`, `Record`, or `Block` too.
 /// Otherwise the token as it is, in an `Error` where nu reports one at a variable.
 ///
 /// The `Def` rule reads the one a signature stands in before `value` sees it.
 fn value(p: &mut Parser<'_>, shape: Shape) {
-    if let Some(ahead) = range_ahead(p, shape) {
+    if let Some(ahead) = binary_ahead(p, shape) {
+        binary(p, ahead);
+    } else if let Some(ahead) = range_ahead(p, shape) {
         range(p, ahead);
     } else if let Some(ahead) = cell_path_ahead(p, shape) {
         cell_path(p, ahead, shape);

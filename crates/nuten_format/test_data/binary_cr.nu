@@ -1,0 +1,7 @@
+0x[ff # c00] | length
+[0x[ff # c00] 1]
+0x[ff # c]
+0x[
+    ff # c
+    00
+]
