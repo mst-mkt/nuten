@@ -86,6 +86,8 @@ pub(crate) enum Mode {
     TypeParams,
     /// The inside of the `{ }` of a `match`.
     MatchArms,
+    /// A word nu reads as a value and a path into it, as in `$x.a?` or `(ls).name`.
+    CellPath,
 }
 
 impl Mode {
@@ -101,6 +103,7 @@ impl Mode {
         Mode::IoTypes,
         Mode::TypeParams,
         Mode::MatchArms,
+        Mode::CellPath,
     ];
 
     /// Bytes that end an item, on top of whitespace, `|`, and `;`.
@@ -128,6 +131,11 @@ impl Mode {
             Mode::IoTypes => &[(b',', SyntaxKind::Comma)],
             Mode::TypeParams => &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
             Mode::MatchArms => &[(b',', SyntaxKind::Comma)],
+            Mode::CellPath => &[
+                (b'.', SyntaxKind::Dot),
+                (b'?', SyntaxKind::Question),
+                (b'!', SyntaxKind::Bang),
+            ],
         }
     }
 

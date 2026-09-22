@@ -83,6 +83,8 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         // Nu builds the type span out of one pipeline element, which ends at a line break.
         // A comment runs to the end of its line, so it never sits inside one element.
         Mode::VarType => &[Whitespace, Comment],
+        // No row can show whitespace or a line break skipped, since nu lexes one word here.
+        Mode::CellPath => &[Whitespace, Newline, Comment],
         Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
             unimplemented!("how nu splits in {mode:?} is not recorded")
         },
@@ -567,6 +569,42 @@ fn var_type_splits_match_nu() {
     }
 }
 
+/// How nu 0.115.1 splits a value and the path into it.
+const NU_CELL_PATH_SPLITS: &[(&str, &[&str])] = &[
+    ("$x.a", &["$x", ".", "a"]),
+    (
+        "$x.a?!.b!?",
+        &["$x", ".", "a", "?", "!", ".", "b", "!", "?"],
+    ),
+    ("$x.?", &["$x", ".", "?"]),
+    ("$x.a.", &["$x", ".", "a", "."]),
+    (r#"$x."a.b".c"#, &["$x", ".", r#""a.b""#, ".", "c"]),
+    ("$x.'a?'.b", &["$x", ".", "'a?'", ".", "b"]),
+    ("$x.`a!`", &["$x", ".", "`a!`"]),
+    ("$x.r#'a.b'#", &["$x", ".", "r#'a.b'#"]),
+    ("$x.a[0].b", &["$x", ".", "a[0]", ".", "b"]),
+    ("$x.a{b.c}", &["$x", ".", "a{b.c}"]),
+    ("$x.a(b.c)", &["$x", ".", "a(b.c)"]),
+    ("$x.a<b.c>", &["$x", ".", "a<b", ".", "c>"]),
+    ("$x.a-b", &["$x", ".", "a-b"]),
+    ("$x.a:b", &["$x", ".", "a:b"]),
+    ("$x.a,b", &["$x", ".", "a,b"]),
+    ("$x.a=b", &["$x", ".", "a=b"]),
+    ("$x.a#b.c", &["$x", ".", "a#b", ".", "c"]),
+    ("$x.#a", &["$x", "."]),
+    ("$x.a?#b", &["$x", ".", "a", "?"]),
+    (r#"("a.b").c"#, &[r#"("a.b")"#, ".", "c"]),
+    (r#"["a.b"].c"#, &[r#"["a.b"]"#, ".", "c"]),
+    (r#"{a: "b.c"}.d"#, &[r#"{a: "b.c"}"#, ".", "d"]),
+];
+
+#[test]
+fn cell_path_splits_match_nu() {
+    for &(src, expected) in NU_CELL_PATH_SPLITS {
+        assert_eq!(split_in(src, Mode::CellPath), expected, "{src:?}");
+    }
+}
+
 #[test]
 fn angle_brackets_nest_in_a_var_type() {
     for (src, error) in [
@@ -594,6 +632,7 @@ fn angle_brackets_nest_in_a_var_type() {
         Mode::RecordValue,
         Mode::Brace,
         Mode::MatchArms,
+        Mode::CellPath,
     ] {
         assert_eq!(lexed_in("a<b", mode), [(Word, "a<b")], "{mode:?}");
     }
