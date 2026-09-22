@@ -1,0 +1,147 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression.nu
+---
+Root@0..149
+  Pipeline@0..14
+    PipelineElement@0..5
+      List@0..5
+        LBracket@0..1 "["
+        Word@1..2 "1"
+        Whitespace@2..3 " "
+        Word@3..4 "2"
+        RBracket@4..5 "]"
+    Whitespace@5..6 " "
+    Pipe@6..7 "|"
+    Whitespace@7..8 " "
+    PipelineElement@8..14
+      Call@8..14
+        Word@8..14 "length"
+  Newline@14..15 "\n"
+  Pipeline@15..29
+    PipelineElement@15..21
+      Record@15..21
+        LBrace@15..16 "{"
+        RecordField@16..20
+          Word@16..17 "a"
+          Colon@17..18 ":"
+          Whitespace@18..19 " "
+          Word@19..20 "1"
+        RBrace@20..21 "}"
+    Whitespace@21..22 " "
+    Pipe@22..23 "|"
+    Whitespace@23..24 " "
+    PipelineElement@24..29
+      Call@24..29
+        Word@24..27 "get"
+        Whitespace@27..28 " "
+        Word@28..29 "a"
+  Newline@29..30 "\n"
+  Pipeline@30..36
+    PipelineElement@30..36
+      Block@30..36
+        LBrace@30..31 "{"
+        Whitespace@31..32 " "
+        Pipeline@32..34
+          PipelineElement@32..34
+            Call@32..34
+              Word@32..34 "ls"
+        Whitespace@34..35 " "
+        RBrace@35..36 "}"
+  Newline@36..37 "\n"
+  Pipeline@37..54
+    PipelineElement@37..41
+      String@37..41 "\"hi\""
+    Whitespace@41..42 " "
+    Pipe@42..43 "|"
+    Whitespace@43..44 " "
+    PipelineElement@44..54
+      Call@44..54
+        Word@44..47 "str"
+        Whitespace@47..48 " "
+        Word@48..54 "length"
+  Newline@54..55 "\n"
+  Pipeline@55..63
+    PipelineElement@55..63
+      RawString@55..63 "r#'raw'#"
+  Newline@63..64 "\n"
+  Pipeline@64..77
+    PipelineElement@64..68
+      Word@64..68 "(ls)"
+    Whitespace@68..69 " "
+    Pipe@69..70 "|"
+    Whitespace@70..71 " "
+    PipelineElement@71..77
+      Call@71..77
+        Word@71..77 "length"
+  Newline@77..78 "\n"
+  Pipeline@78..79
+    PipelineElement@78..79
+      Word@78..79 "1"
+  Newline@79..80 "\n"
+  Pipeline@80..84
+    PipelineElement@80..84
+      Word@80..84 "true"
+  Newline@84..85 "\n"
+  Pipeline@85..87
+    PipelineElement@85..87
+      Word@85..87 "-x"
+  Newline@87..88 "\n"
+  Pipeline@88..96
+    PipelineElement@88..96
+      Word@88..91 "not"
+      Whitespace@91..92 " "
+      Word@92..96 "true"
+  Newline@96..97 "\n"
+  Pipeline@97..102
+    PipelineElement@97..102
+      Word@97..98 "1"
+      Whitespace@98..99 " "
+      Word@99..100 "+"
+      Whitespace@100..101 " "
+      Word@101..102 "2"
+  Newline@102..103 "\n"
+  Pipeline@103..110
+    PipelineElement@103..110
+      List@103..108
+        LBracket@103..104 "["
+        Word@104..105 "1"
+        Whitespace@105..106 " "
+        Word@106..107 "2"
+        RBracket@107..108 "]"
+      Whitespace@108..109 " "
+      Word@109..110 "3"
+  Newline@110..111 "\n"
+  Pipeline@111..123
+    PipelineElement@111..123
+      Word@111..112 "1"
+      Whitespace@112..113 " "
+      Redirection@113..123
+        OutGt@113..115 "o>"
+        Whitespace@115..116 " "
+        Word@116..123 "out.txt"
+  Newline@123..124 "\n"
+  Pipeline@124..132
+    PipelineElement@124..126
+      Call@124..126
+        Word@124..126 "ls"
+    Whitespace@126..127 " "
+    Pipe@127..128 "|"
+    Whitespace@128..129 " "
+    PipelineElement@129..132
+      Word@129..132 "$in"
+  Newline@132..133 "\n"
+  Pipeline@133..139
+    PipelineElement@133..139
+      Call@133..139
+        Word@133..137 "1abc"
+        Whitespace@137..138 " "
+        Word@138..139 "2"
+  Newline@139..140 "\n"
+  Pipeline@140..148
+    PipelineElement@140..148
+      Call@140..148
+        Word@140..142 "ls"
+        Whitespace@142..143 " "
+        Word@143..148 "[1 2]"
+  Newline@148..149 "\n"

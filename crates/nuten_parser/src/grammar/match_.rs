@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{CURLY, Shape, call_items, is_item, item, shell_operator, value};
+use super::{CURLY, Shape, call_items, item, shell_operator, value};
 use crate::{lexer::Mode, parser::Parser};
 
 /// The `Match` ahead, when nu reads the call as one.
@@ -41,7 +41,10 @@ fn match_shape(items: &[&str]) -> Option<usize> {
 /// It errors on them all the same before and after.
 fn is_arms(inner: &Parser<'_>) -> bool {
     let takes = |kind: SyntaxKind, text: &str| {
-        is_item(kind) && kind != SyntaxKind::Error && text != "=>" && shell_operator(text).is_none()
+        kind.is_item()
+            && kind != SyntaxKind::Error
+            && text != "=>"
+            && shell_operator(text).is_none()
     };
     let mut tokens = inner
         .remaining_tokens()

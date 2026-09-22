@@ -1,30 +1,93 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, builtin, ends_call, ends_element, is_file_redirection, is_item, item, keyword::keyword,
+    Shape, builtin, ends_call, ends_element, is_file_redirection, item, keyword::keyword,
     shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
 
 /// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
+/// A value where the head would be is an expression, which no node holds.
 /// Returns the streams it redirects; `None` when there is no command.
 pub(super) fn command(
     p: &mut Parser<'_>,
     heads_pipeline: bool,
     assigning: bool,
 ) -> Option<Streams> {
-    let has_call = !p
-        .peek()
-        .is_some_and(|kind| is_file_redirection(kind) || kind == SyntaxKind::Assign);
-    let shape = if has_call {
-        argument_shape(p, heads_pipeline)
-    } else {
-        Shape::UnknownArgument
-    };
-    if has_call && !keyword(p) {
-        call(p, shape);
+    let head = Head::of(p, heads_pipeline);
+    match head {
+        Head::Missing => {},
+        Head::Expression => item(p, Shape::Any),
+        Head::Call(shape) => {
+            if !keyword(p) {
+                call(p, shape);
+            }
+        },
     }
-    arguments(p, has_call.then_some(Streams::default()), shape, assigning)
+    arguments(p, head.redirected(), head.shape(), assigning)
+}
+
+/// What stands where the head of a call would.
+#[derive(Clone, Copy)]
+enum Head {
+    /// A file redirection or an assignment operator, which leaves the element with no command.
+    Missing,
+    /// A value, which nu reads as the start of an expression.
+    Expression,
+    /// A head, with the shape nu reads the items after it as.
+    Call(Shape),
+}
+
+impl Head {
+    fn of(p: &Parser<'_>, heads_pipeline: bool) -> Head {
+        match p.peek() {
+            Some(kind) if is_file_redirection(kind) || kind == SyntaxKind::Assign => Head::Missing,
+            _ if p.peek_text().is_some_and(is_math_expression_like) => Head::Expression,
+            _ => Head::Call(argument_shape(p, heads_pipeline)),
+        }
+    }
+
+    /// The shape of what follows the head, which is an argument only after the head of a call.
+    fn shape(self) -> Shape {
+        match self {
+            Head::Call(shape) => shape,
+            Head::Missing | Head::Expression => Shape::UnknownArgument,
+        }
+    }
+
+    /// `None` when the element has no command, which is what a redirection would apply to.
+    fn redirected(self) -> Option<Streams> {
+        match self {
+            Head::Missing => None,
+            Head::Expression | Head::Call(_) => Some(Streams::default()),
+        }
+    }
+}
+
+/// Whether nu reads `text` as the start of an expression, not as the head of a call.
+/// Ported from nu's `is_math_expression_like`.
+///
+/// True only where nu reads an expression too: a call read as one loses the shape of its items.
+/// A filesize, a duration, a date, a binary, and a range are left out, so each stays a head.
+/// So are `if` and `match`, which `keyword` reads as their own syntax instead.
+fn is_math_expression_like(text: &str) -> bool {
+    matches!(text, "true" | "false" | "null" | "not")
+        || text.starts_with("r#")
+        || text.starts_with(['(', '{', '[', '$', '"', '\'', '-'])
+        || is_number(text)
+}
+
+/// Whether nu's `parse_number` reads `text` as a number.
+/// Nu drops every `_` before reading one.
+fn is_number(text: &str) -> bool {
+    let text = text.replace('_', "");
+    let prefixed = [("0b", 2), ("0o", 8), ("0x", 16)]
+        .into_iter()
+        .find_map(|(prefix, radix)| Some((text.strip_prefix(prefix)?, radix)));
+    match prefixed {
+        Some((digits, radix)) => u64::from_str_radix(digits, radix).is_ok(),
+        None => text.parse::<f64>().is_ok(),
+    }
 }
 
 /// Nu runs a head it finds no declaration for as an external command.
@@ -124,8 +187,8 @@ pub(super) fn arguments(
 /// Anything else is a missing target and stays outside the node.
 fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Streams>) {
     p.start(SyntaxKind::Redirection);
-    let has_target =
-        p.nth(1).is_some_and(is_item) && p.nth_text(1).and_then(shell_operator).is_none();
+    let has_target = p.nth(1).is_some_and(SyntaxKind::is_item)
+        && p.nth_text(1).and_then(shell_operator).is_none();
     let streams = Streams::redirected_by(kind);
     let error = match redirected {
         None => Some(ParseErrorKind::RedirectionAtHead),
@@ -183,10 +246,35 @@ impl Streams {
 
 #[cfg(test)]
 mod tests {
+    use super::is_math_expression_like;
     use crate::{ParseErrorKind, parse};
 
     fn errors(src: &str) -> Vec<ParseErrorKind> {
         parse(src).errors().iter().map(|error| error.kind).collect()
+    }
+
+    #[test]
+    fn items_that_start_a_value_are_math_expression_like() {
+        for text in [
+            "true", "false", "null", "not", "r#'a'#", "(ls)", "{a: 1}", "[1]", "$env", "\"a\"",
+            "'a'", "--flag", "1", "1_000", "1.5", "1e5", "inf", "0x10", "0o7", "0b1_0",
+        ] {
+            assert!(is_math_expression_like(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn items_that_head_a_call_are_not_math_expression_like() {
+        for text in ["ls", "rm", "nu-highlight", "1abc", "0x", "0xZZ", "_", ""] {
+            assert!(!is_math_expression_like(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn values_left_out_of_the_port_stay_heads() {
+        for text in ["1kb", "1sec", "2024-01-01", "0x[ff]", "1..3", "if", "match"] {
+            assert!(!is_math_expression_like(text), "{text:?}");
+        }
     }
 
     #[test]

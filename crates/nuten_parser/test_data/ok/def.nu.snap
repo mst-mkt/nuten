@@ -181,8 +181,7 @@ Root@0..1506
           Whitespace@269..270 " "
           Pipeline@270..273
             PipelineElement@270..273
-              Call@270..273
-                String@270..273 "\"a\""
+              String@270..273 "\"a\""
           Whitespace@273..274 " "
           RBrace@274..275 "}"
   Newline@275..276 "\n"
@@ -210,8 +209,7 @@ Root@0..1506
           Whitespace@299..300 " "
           Pipeline@300..301
             PipelineElement@300..301
-              Call@300..301
-                Word@300..301 "1"
+              Word@300..301 "1"
           Whitespace@301..302 " "
           RBrace@302..303 "}"
   Newline@303..304 "\n"
@@ -234,8 +232,7 @@ Root@0..1506
           Whitespace@347..348 " "
           Pipeline@348..351
             PipelineElement@348..351
-              Call@348..351
-                String@348..351 "\"a\""
+              String@348..351 "\"a\""
           Whitespace@351..352 " "
           RBrace@352..353 "}"
   Newline@353..354 "\n"

@@ -123,13 +123,16 @@ impl Part {
         self.child.kind()
     }
 
-    /// Whether it is an element of the pipeline, or `let` or an assignment operator laid flat.
-    /// Those two start an element, so they are what the pipeline may end with.
+    /// Whether it is an element of the pipeline, or what starts one of a flattened assignment.
+    /// A `let`, the head, and the operator each start one.
+    /// The head is a bare item where nu reads an expression instead of a call.
+    /// So they are what the pipeline may end with.
     fn is_element(&self) -> bool {
         match &self.child.element {
             NodeOrToken::Node(_) => true,
             NodeOrToken::Token(token) => {
-                matches!(token.kind(), SyntaxKind::Word | SyntaxKind::Assign)
+                let kind = token.kind();
+                kind.is_item() || kind == SyntaxKind::Assign
             },
         }
     }

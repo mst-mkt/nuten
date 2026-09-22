@@ -23,8 +23,7 @@ Root@0..448
           Whitespace@14..15 " "
           Pipeline@15..22
             PipelineElement@15..22
-              Call@15..22
-                Word@15..22 "$x.name"
+              Word@15..22 "$x.name"
           Whitespace@22..23 " "
           RBrace@23..24 "}"
   Newline@24..25 "\n"
@@ -61,16 +60,15 @@ Root@0..448
   Newline@58..59 "\n"
   Pipeline@59..74
     PipelineElement@59..65
-      Call@59..65
-        Block@59..65
-          LBrace@59..60 "{"
-          Whitespace@60..61 " "
-          Pipeline@61..63
-            PipelineElement@61..63
-              Call@61..63
-                Word@61..63 "ls"
-          Whitespace@63..64 " "
-          RBrace@64..65 "}"
+      Block@59..65
+        LBrace@59..60 "{"
+        Whitespace@60..61 " "
+        Pipeline@61..63
+          PipelineElement@61..63
+            Call@61..63
+              Word@61..63 "ls"
+        Whitespace@63..64 " "
+        RBrace@64..65 "}"
     Whitespace@65..66 " "
     Pipe@66..67 "|"
     Whitespace@67..68 " "
@@ -90,8 +88,7 @@ Root@0..448
           Whitespace@83..84 " "
           Pipeline@84..85
             PipelineElement@84..85
-              Call@84..85
-                Word@84..85 "1"
+              Word@84..85 "1"
           RBrace@85..86 "}"
         Whitespace@86..87 " "
         Block@87..92
@@ -119,8 +116,7 @@ Root@0..448
           Whitespace@105..106 " "
           Pipeline@106..108
             PipelineElement@106..108
-              Call@106..108
-                Word@106..108 "$x"
+              Word@106..108 "$x"
           RBrace@108..109 "}"
   Newline@109..110 "\n"
   Pipeline@110..164
@@ -231,42 +227,39 @@ Root@0..448
           LBrace@262..263 "{"
           Pipeline@263..269
             PipelineElement@263..269
-              Call@263..269
-                Record@263..269
-                  LBrace@263..264 "{"
-                  RecordField@264..268
-                    Word@264..265 "a"
-                    Colon@265..266 ":"
-                    Whitespace@266..267 " "
-                    Word@267..268 "1"
-                  RBrace@268..269 "}"
+              Record@263..269
+                LBrace@263..264 "{"
+                RecordField@264..268
+                  Word@264..265 "a"
+                  Colon@265..266 ":"
+                  Whitespace@266..267 " "
+                  Word@267..268 "1"
+                RBrace@268..269 "}"
           RBrace@269..270 "}"
         Whitespace@270..271 " "
         Block@271..278
           LBrace@271..272 "{"
           Pipeline@272..277
             PipelineElement@272..277
-              Call@272..277
-                List@272..277
-                  LBracket@272..273 "["
-                  Word@273..274 "1"
-                  Whitespace@274..275 " "
-                  Word@275..276 "2"
-                  RBracket@276..277 "]"
+              List@272..277
+                LBracket@272..273 "["
+                Word@273..274 "1"
+                Whitespace@274..275 " "
+                Word@275..276 "2"
+                RBracket@276..277 "]"
           RBrace@277..278 "}"
         Whitespace@278..279 " "
         Block@279..285
           LBrace@279..280 "{"
           Pipeline@280..284
             PipelineElement@280..284
-              Call@280..284
-                Block@280..284
-                  LBrace@280..281 "{"
-                  Pipeline@281..283
-                    PipelineElement@281..283
-                      Call@281..283
-                        Word@281..283 "ls"
-                  RBrace@283..284 "}"
+              Block@280..284
+                LBrace@280..281 "{"
+                Pipeline@281..283
+                  PipelineElement@281..283
+                    Call@281..283
+                      Word@281..283 "ls"
+                RBrace@283..284 "}"
           RBrace@284..285 "}"
         Whitespace@285..286 " "
         Word@286..292 "{ls}.a"

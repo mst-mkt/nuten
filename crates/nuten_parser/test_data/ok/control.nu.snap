@@ -47,8 +47,7 @@ Root@0..706
           Whitespace@44..45 " "
           Pipeline@45..47
             PipelineElement@45..47
-              Call@45..47
-                Word@45..47 "$x"
+              Word@45..47 "$x"
           Whitespace@47..48 " "
           RBrace@48..49 "}"
   Newline@49..50 "\n"
@@ -69,8 +68,7 @@ Root@0..706
           Whitespace@66..68 "  "
           Pipeline@68..70
             PipelineElement@68..70
-              Call@68..70
-                Word@68..70 "$x"
+              Word@68..70 "$x"
           Newline@70..71 "\n"
           RBrace@71..72 "}"
   Newline@72..73 "\n"
@@ -91,15 +89,13 @@ Root@0..706
           Pipeline@88..95
             PipelineElement@88..95
               Assignment@88..95
-                Call@88..90
-                  Word@88..90 "$a"
+                Word@88..90 "$a"
                 Whitespace@90..91 " "
                 Assign@91..93 "+="
                 Whitespace@93..94 " "
                 Pipeline@94..95
                   PipelineElement@94..95
-                    Call@94..95
-                      Word@94..95 "1"
+                    Word@94..95 "1"
           Whitespace@95..96 " "
           RBrace@96..97 "}"
   Newline@97..98 "\n"
@@ -199,8 +195,7 @@ Root@0..706
                 Whitespace@190..191 " "
                 Pipeline@191..192
                   PipelineElement@191..192
-                    Call@191..192
-                      Word@191..192 "1"
+                    Word@191..192 "1"
                 Whitespace@192..193 " "
                 RBrace@193..194 "}"
               Whitespace@194..195 " "
@@ -211,8 +206,7 @@ Root@0..706
                 Whitespace@202..203 " "
                 Pipeline@203..204
                   PipelineElement@203..204
-                    Call@203..204
-                      Word@203..204 "2"
+                    Word@203..204 "2"
                 Whitespace@204..205 " "
                 RBrace@205..206 "}"
   Newline@206..207 "\n"
@@ -238,8 +232,7 @@ Root@0..706
           Whitespace@226..227 " "
           Pipeline@227..229
             PipelineElement@227..229
-              Call@227..229
-                Word@227..229 "$x"
+              Word@227..229 "$x"
           Whitespace@229..230 " "
           RBrace@230..231 "}"
     Whitespace@231..232 " "
@@ -592,8 +585,7 @@ Root@0..706
           Whitespace@573..574 " "
           Pipeline@574..578
             PipelineElement@574..578
-              Call@574..578
-                Word@574..578 "true"
+              Word@574..578 "true"
           RBrace@578..579 "}"
         Whitespace@579..580 " "
         Block@580..589

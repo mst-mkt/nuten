@@ -87,6 +87,7 @@ macro_rules! syntax_kinds {
                 /// A statement.
                 Pipeline,
                 /// An element of a `Pipeline`: a `Call` or `ExternalCall`, then any `Redirection`s.
+                /// Where nu reads an expression, its items stand bare in place of the call.
                 /// It holds an `Assignment` or a `Let` instead, which runs to the statement's end.
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,
@@ -208,6 +209,20 @@ impl SyntaxKind {
         matches!(
             self,
             SyntaxKind::Whitespace | SyntaxKind::Newline | SyntaxKind::Comment
+        )
+    }
+
+    /// Whether nu reads a token of this kind as one item, such as the head of a call.
+    /// An `Error` is one too: it is the item the lexer could not read.
+    /// A `ShortFlag` is not, since nu reads it as part of the item before it.
+    pub fn is_item(self) -> bool {
+        matches!(
+            self,
+            SyntaxKind::Word
+                | SyntaxKind::String
+                | SyntaxKind::RawString
+                | SyntaxKind::InterpString
+                | SyntaxKind::Error
         )
     }
 

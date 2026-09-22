@@ -17,8 +17,7 @@ Root@0..132
         Whitespace@12..13 " "
         Pipeline@13..14
           PipelineElement@13..14
-            Call@13..14
-              Word@13..14 "1"
+            Word@13..14 "1"
   Newline@14..15 "\n"
   Pipeline@15..42
     PipelineElement@15..42
@@ -36,8 +35,7 @@ Root@0..132
         Whitespace@39..40 " "
         Pipeline@40..42
           PipelineElement@40..42
-            Call@40..42
-              Word@40..42 "{}"
+            Word@40..42 "{}"
   Newline@42..43 "\n"
   Pipeline@43..66
     PipelineElement@43..66
@@ -52,10 +50,9 @@ Root@0..132
         Whitespace@63..64 " "
         Pipeline@64..66
           PipelineElement@64..66
-            Call@64..66
-              List@64..66
-                LBracket@64..65 "["
-                RBracket@65..66 "]"
+            List@64..66
+              LBracket@64..65 "["
+              RBracket@65..66 "]"
   Newline@66..67 "\n"
   Pipeline@67..90
     PipelineElement@67..90
@@ -77,8 +74,7 @@ Root@0..132
         Whitespace@88..89 " "
         Pipeline@89..90
           PipelineElement@89..90
-            Call@89..90
-              Word@89..90 "1"
+            Word@89..90 "1"
   Newline@90..91 "\n"
   Pipeline@91..111
     PipelineElement@91..111
@@ -100,8 +96,7 @@ Root@0..132
         Whitespace@109..110 " "
         Pipeline@110..111
           PipelineElement@110..111
-            Call@110..111
-              Word@110..111 "1"
+            Word@110..111 "1"
   Newline@111..112 "\n"
   Pipeline@112..131
     PipelineElement@112..131
@@ -122,8 +117,7 @@ Root@0..132
         Whitespace@129..130 " "
         Pipeline@130..131
           PipelineElement@130..131
-            Call@130..131
-              Word@130..131 "1"
+            Word@130..131 "1"
   Newline@131..132 "\n"
 error 8..9 "<": Lex(Unclosed)
 error 35..36 "]": Lex(UnmatchedCloser)

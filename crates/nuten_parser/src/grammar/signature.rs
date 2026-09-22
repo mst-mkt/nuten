@@ -1,6 +1,5 @@
 use nuten_syntax::SyntaxKind;
 
-use super::is_item;
 use crate::{
     ParseErrorKind,
     lexer::Mode,
@@ -101,7 +100,7 @@ fn step(p: &Parser<'_>, expect: Expect, in_param: bool) -> Option<(Action, Expec
         },
         // An item that is no `(-f)` starts a parameter of its own.
         // Nu ignores `|`, `;`, and redirections, which stay where they are.
-        _ if is_item(kind) && !starts_short_flag(text) => (Action::StartParam, Expect::Param),
+        _ if kind.is_item() && !starts_short_flag(text) => (Action::StartParam, Expect::Param),
         _ => (Action::Bump, expect),
     })
 }
@@ -147,7 +146,7 @@ fn type_(p: &mut Parser<'_>) {
         return;
     };
     let takes = bracketed.inner().remaining_kinds().all(|kind| {
-        (is_item(kind) && kind != SyntaxKind::Error)
+        (kind.is_item() && kind != SyntaxKind::Error)
             || matches!(
                 kind,
                 SyntaxKind::Colon

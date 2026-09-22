@@ -256,17 +256,6 @@ fn shell_operator(text: &str) -> Option<ParseErrorKind> {
     Some(kind)
 }
 
-fn is_item(kind: SyntaxKind) -> bool {
-    matches!(
-        kind,
-        SyntaxKind::Word
-            | SyntaxKind::String
-            | SyntaxKind::RawString
-            | SyntaxKind::InterpString
-            | SyntaxKind::Error
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use nuten_syntax::SyntaxKind;

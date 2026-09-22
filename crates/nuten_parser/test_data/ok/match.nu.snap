@@ -355,12 +355,11 @@ Root@0..956
           Whitespace@490..491 " "
           Pipeline@491..497
             PipelineElement@491..497
-              Call@491..497
-                Word@491..492 "1"
-                Whitespace@492..493 " "
-                Word@493..495 "=>"
-                Whitespace@495..496 " "
-                Word@496..497 "a"
+              Word@491..492 "1"
+              Whitespace@492..493 " "
+              Word@493..495 "=>"
+              Whitespace@495..496 " "
+              Word@496..497 "a"
           Whitespace@497..498 " "
           RBrace@498..499 "}"
         Whitespace@499..500 " "
