@@ -90,12 +90,10 @@ impl<'a> Formatter<'a> {
             },
             // Nu rejects `e>|` and `o+e>|` starting a line, so they stay after their element.
             // The parser puts that element right before them.
-            _ if part.joined || part.is_element() || part.is_redirection_pipe() => {
-                separator(prev, Some(space()))
-                    .into_iter()
-                    .chain(self.element(element))
-                    .collect()
-            },
+            _ if part.is_element() || part.is_redirection_pipe() => separator(prev, Some(space()))
+                .into_iter()
+                .chain(self.element(element))
+                .collect(),
             _ => unreachable!("{:?} is not a child of Pipeline", part.kind()),
         }
     }
