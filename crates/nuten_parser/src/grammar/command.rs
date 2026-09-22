@@ -3,6 +3,7 @@ use nuten_syntax::SyntaxKind;
 use super::{
     Shape, at_call_item, builtin, call_items, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_after_operator},
+    number::is_number,
     shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
@@ -237,19 +238,6 @@ fn is_math_expression_like(text: &str) -> bool {
         || text.starts_with("r#")
         || text.starts_with(['(', '{', '[', '$', '"', '\'', '-'])
         || is_number(text)
-}
-
-/// Whether nu's `parse_number` reads `text` as a number.
-/// Nu drops every `_` before reading one.
-fn is_number(text: &str) -> bool {
-    let text = text.replace('_', "");
-    let prefixed = [("0b", 2), ("0o", 8), ("0x", 16)]
-        .into_iter()
-        .find_map(|(prefix, radix)| Some((text.strip_prefix(prefix)?, radix)));
-    match prefixed {
-        Some((digits, radix)) => u64::from_str_radix(digits, radix).is_ok(),
-        None => text.parse::<f64>().is_ok(),
-    }
 }
 
 /// Nu runs a head it finds no declaration for as an external command.

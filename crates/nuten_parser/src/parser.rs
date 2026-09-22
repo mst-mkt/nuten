@@ -103,18 +103,24 @@ impl<'a> Bracketed<'a> {
 
     /// The same token, with what it holds lexed again in `mode`.
     pub(crate) fn lexed_in(self, mode: Mode) -> Bracketed<'a> {
-        let Parser {
-            src,
-            alias_names,
-            depth,
-            ..
-        } = self.inner;
         let (_, inside, _) = split(self.range);
-        let lexed = lexer::lex(src, inside, mode);
         Bracketed {
-            inner: Parser::new(src, lexed, mode, alias_names, depth),
+            inner: self.inner.nested(inside, mode, self.inner.depth),
             ..self
         }
+    }
+}
+
+/// What `Parser::relexed` found in the next token.
+pub(crate) struct Relexed<'a> {
+    inner: Parser<'a>,
+    token: Token,
+}
+
+impl<'a> Relexed<'a> {
+    /// A parser of the pieces of the token, to look into before emitting it.
+    pub(crate) fn inner(&self) -> &Parser<'a> {
+        &self.inner
     }
 }
 
@@ -279,15 +285,8 @@ impl<'a> Parser<'a> {
             return None;
         }
         let (_, inside, _) = split(range);
-        let lexed = lexer::lex(self.src, inside, mode);
         Some(Bracketed {
-            inner: Parser::new(
-                self.src,
-                lexed,
-                mode,
-                Rc::clone(&self.alias_names),
-                self.depth + 1,
-            ),
+            inner: self.nested(inside, mode, self.depth + 1),
             token,
             range,
             brackets,
@@ -362,21 +361,67 @@ impl<'a> Parser<'a> {
             );
         }
         self.push_token(brackets.open_kind, open);
-        // Lent, so that nested brackets do not copy the events inside.
-        inner.events = mem::take(&mut self.events);
-        items(&mut inner);
-        inner.bump_skipped();
-        assert!(
-            inner.pos == inner.tokens.len(),
-            "items left some of what the token holds"
-        );
-        self.events = mem::take(&mut inner.events);
+        self.read_inner(&mut inner, items);
         self.push_token(brackets.close_kind, close);
         self.finish();
         if let Affix::Suffix(kind) = affix {
             self.push_token(kind, TextRange::new(close.end(), token.range.end()));
         }
         inner.errors
+    }
+
+    /// The next token lexed again in `mode`, when it is a word.
+    pub(crate) fn relexed(&self, mode: Mode) -> Option<Relexed<'a>> {
+        let token = self
+            .nth_token(0)
+            .filter(|token| token.kind == SyntaxKind::Word)?;
+        Some(Relexed {
+            inner: self.nested(token.range, mode, self.depth),
+            token,
+        })
+    }
+
+    /// Emits the next token as a `node` of the events `items` makes of its pieces.
+    /// Unlike what brackets hold, the pieces stand among these tokens, so their errors count here.
+    pub(crate) fn bump_relexed(
+        &mut self,
+        node: SyntaxKind,
+        relexed: Relexed<'a>,
+        items: impl FnOnce(&mut Parser<'a>),
+    ) {
+        let Relexed {
+            mut inner,
+            token,
+        } = relexed;
+        assert_eq!(
+            self.nth_token(0),
+            Some(token),
+            "bump_relexed at another token"
+        );
+        self.start(node);
+        self.pos += 1;
+        self.read_inner(&mut inner, items);
+        self.errors += inner.errors;
+        self.finish();
+    }
+
+    /// A parser of `range` of the source lexed in `mode`, inside `depth` brackets.
+    fn nested(&self, range: TextRange, mode: Mode, depth: usize) -> Parser<'a> {
+        let lexed = lexer::lex(self.src, range, mode);
+        Parser::new(self.src, lexed, mode, Rc::clone(&self.alias_names), depth)
+    }
+
+    /// Runs `items` to the end of `inner`, a parser of what the token emitted as a node holds.
+    /// The events are lent to it, so that nested nodes do not copy the events inside.
+    fn read_inner(&mut self, inner: &mut Parser<'a>, items: impl FnOnce(&mut Parser<'a>)) {
+        inner.events = mem::take(&mut self.events);
+        items(inner);
+        inner.bump_skipped();
+        assert!(
+            inner.pos == inner.tokens.len(),
+            "items left some of what the token holds"
+        );
+        self.events = mem::take(&mut inner.events);
     }
 
     /// Emits the skipped tokens ahead, so that a node does not start or end with them.
@@ -524,7 +569,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "bump_bracketed at another token")]
-    fn bump_bracketed_emits_only_the_token_bracketed_looked_at() {
+    fn bump_bracketed_emits_only_token_bracketed_looked_at() {
         let mut p = parser("[a] [b]");
         let first = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump();
@@ -537,6 +582,41 @@ mod tests {
         let mut p = parser("[a]");
         let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump_bracketed(SyntaxKind::List, bracketed, |_| {});
+    }
+
+    #[test]
+    #[should_panic(expected = "bump_relexed at another token")]
+    fn bump_relexed_emits_only_token_relexed_looked_at() {
+        let mut p = parser("$a.b $c.d");
+        let first = p.relexed(Mode::CellPath).unwrap();
+        p.bump();
+        p.bump_relexed(SyntaxKind::CellPath, first, |_| {});
+    }
+
+    #[test]
+    #[should_panic(expected = "items left some of what the token holds")]
+    fn bump_relexed_needs_items_to_take_everything() {
+        let mut p = parser("$a.b");
+        let relexed = p.relexed(Mode::CellPath).unwrap();
+        p.bump_relexed(SyntaxKind::CellPath, relexed, |_| {});
+    }
+
+    #[test]
+    fn bump_relexed_counts_errors_among_pieces_as_its_own() {
+        let mut p = parser("$a?");
+        let relexed = p.relexed(Mode::CellPath).unwrap();
+        p.bump_relexed(SyntaxKind::CellPath, relexed, |p| {
+            p.bump();
+            p.bump_error(ParseErrorKind::ShellAndAnd);
+        });
+        assert_eq!(p.errors, 1);
+    }
+
+    #[test]
+    fn relexed_takes_only_word() {
+        for src in ["\"a.b\"", "e>", ""] {
+            assert!(parser(src).relexed(Mode::CellPath).is_none(), "{src:?}");
+        }
     }
 
     #[test]

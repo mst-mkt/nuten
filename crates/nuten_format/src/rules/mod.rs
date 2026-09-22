@@ -156,6 +156,7 @@ impl<'a> Formatter<'a> {
             | Node::MathExpression(_)
             | Node::Redirection(_)
             | Node::Match(_) => self.spaced(node.syntax()),
+            Node::CellPath(_) => self.touching(node.syntax()),
             Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {
                 self.bodies(node.syntax())
             },
@@ -184,6 +185,14 @@ impl<'a> Formatter<'a> {
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(parent.children_with_tokens()).collect();
         self.spaced_children(&items, |_, item| Some(line_break_or_space(item)))
+    }
+
+    /// Children that touch one another, as the pieces of one word do.
+    fn touching(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
+        parent
+            .children_with_tokens()
+            .flat_map(|child| self.element(&ast::typed(child)))
+            .collect()
     }
 
     /// `items` with what `plain` puts before each.

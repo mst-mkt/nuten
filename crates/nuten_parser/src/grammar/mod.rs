@@ -3,6 +3,7 @@
 mod assignment;
 mod block;
 mod builtin;
+mod cell_path;
 mod command;
 mod control;
 mod def;
@@ -10,10 +11,12 @@ mod if_;
 mod keyword;
 mod list;
 mod match_;
+mod number;
 mod pipeline;
 mod record;
 mod signature;
 mod table;
+mod variable;
 
 use std::rc::Rc;
 
@@ -22,6 +25,7 @@ use nuten_syntax::SyntaxKind;
 use self::{
     assignment::Assigned,
     block::block,
+    cell_path::{cell_path, cell_path_ahead},
     list::{is_list, list_items},
     pipeline::pipeline,
     record::{RecordSign, record, record_sign},
@@ -76,7 +80,7 @@ fn alias_name(statement: &str) -> Option<&str> {
     Some(words.next()?.trim_matches(NAME_QUOTES))
 }
 
-/// What nu takes at a position, as far as it tells a bracketed word from a whole one.
+/// What nu takes at a position, as far as it tells how nuten reads a word there.
 /// Nu's `SyntaxShape` decides more; these are the ones that tell here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Shape {
@@ -116,8 +120,9 @@ enum Braced {
 }
 
 impl Shape {
-    /// Whether nu reads a `( )` as a subexpression where it takes this shape.
-    fn reads_subexpression(self) -> bool {
+    /// Whether nu reads a value here at all.
+    /// It reads a `$` or a `( )` as one before it looks at the shape.
+    fn takes_value(self) -> bool {
         self != Shape::VariableName
     }
 
@@ -183,13 +188,14 @@ const CURLY: Brackets = Brackets {
 };
 
 /// The next token as the value nu reads where it takes `shape`.
-/// A `Subexpression`, a `List`, a `Table`, a `Record`, or a `Block` where nu reads one.
+/// A `CellPath`, `Subexpression`, `List`, `Table`, `Record`, or `Block` where nu reads one.
 /// Otherwise the token as it is.
 ///
-/// Nu reads a `(` before it looks at the shape, so every shape that takes a value reads one.
 /// The `Def` rule reads the one a signature stands in before `value` sees it.
 fn value(p: &mut Parser<'_>, shape: Shape) {
-    if shape.reads_subexpression()
+    if let Some(ahead) = cell_path_ahead(p, shape) {
+        cell_path(p, ahead, shape);
+    } else if shape.takes_value()
         && let Some(bracketed) = p.bracketed(&PAREN, Mode::Paren)
     {
         p.bump_bracketed(SyntaxKind::Subexpression, bracketed, file);

@@ -23,7 +23,10 @@ Root@0..461
           Whitespace@14..15 " "
           Pipeline@15..22
             PipelineElement@15..22
-              Word@15..22 "$x.name"
+              CellPath@15..22
+                Word@15..17 "$x"
+                Dot@17..18 "."
+                Word@18..22 "name"
           Whitespace@22..23 " "
           RBrace@23..24 "}"
   Newline@24..25 "\n"

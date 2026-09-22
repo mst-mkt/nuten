@@ -35,7 +35,10 @@ Root@0..285
   Pipeline@25..48
     PipelineElement@25..48
       Assignment@25..48
-        Word@25..33 "$env.FOO"
+        CellPath@25..33
+          Word@25..29 "$env"
+          Dot@29..30 "."
+          Word@30..33 "FOO"
         Whitespace@33..34 " "
         Assign@34..35 "="
         Whitespace@35..36 " "

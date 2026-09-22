@@ -1,0 +1,245 @@
+use nuten_syntax::SyntaxKind;
+
+use super::{
+    PAREN, Shape,
+    number::int,
+    value,
+    variable::{is_variable_name, reads_dollar},
+};
+use crate::{
+    lexer::{Mode, Token},
+    parser::{Parser, Relexed},
+};
+
+/// The word ahead split as nu splits a full cell path: the value, then the path into it.
+pub(super) struct CellPathAhead<'a> {
+    relexed: Relexed<'a>,
+    links: Vec<Link>,
+}
+
+/// A token of the path, as nu's `parse_cell_path` reads it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Link {
+    /// A `.`, `?`, or `!` where nu takes one.
+    Separator,
+    /// A member, which nu reads as an int or a string.
+    Member,
+}
+
+/// The cell path ahead, when nu reads the word as a value and a path where it takes `shape`.
+/// The word stays whole where nuten does not read it as nu does yet.
+pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPathAhead<'a>> {
+    let text = p.peek_text()?;
+    if !text.starts_with(['$', '(']) || !text.contains(['.', '?', '!']) {
+        return None;
+    }
+    let relexed = p.relexed(Mode::CellPath)?;
+    let tokens: Vec<_> = relexed.inner().remaining_tokens().collect();
+    let (&(head, head_text), path) = tokens.split_first()?;
+    if path.is_empty() || !reads_head(relexed.inner(), head_text, shape) {
+        return None;
+    }
+    // Nu reads a `$` or a `( )` with `..` in its path as a range where it can.
+    // Ranges are not read yet, so such a word stays whole.
+    if text[usize::from(head.range.len())..].contains("..") {
+        return None;
+    }
+    let links = links(path)?;
+    Some(CellPathAhead {
+        relexed,
+        links,
+    })
+}
+
+/// Whether nu reads `head`, which `inner` starts with, as the value of a cell path for `shape`.
+/// A variable name must be one nu takes, and a `( )` must close at the last byte of `head`.
+fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
+    match head.as_bytes() {
+        [b'$', ..] => reads_dollar(head, shape) && is_variable_name(&head[1..]),
+        [b'(', ..] => shape.takes_value() && inner.bracketed(&PAREN, Mode::Paren).is_some(),
+        _ => false,
+    }
+}
+
+/// What nu takes next in a path, as its `parse_cell_path` tracks it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Expect {
+    /// Only `.`, as right after the value or after both `?` and `!`.
+    Dot,
+    /// `.`, `?`, or `!`, as right after a member.
+    DotOrSign,
+    /// `.` or `!`, as after a `?`.
+    DotOrBang,
+    /// `.` or `?`, as after a `!`.
+    DotOrQuestion,
+    /// A member, as after a `.`.
+    Member,
+}
+
+impl Expect {
+    /// What nu makes of the token of `kind` and `text` here.
+    /// `None` where nu rejects it, or for a member whose error is not checked here.
+    fn read(self, kind: SyntaxKind, text: &str) -> Option<Link> {
+        if self == Expect::Member {
+            return member(text);
+        }
+        self.after(kind).map(|_| Link::Separator)
+    }
+
+    /// What nu takes next after a token of `kind` here; `None` for a separator it rejects.
+    fn after(self, kind: SyntaxKind) -> Option<Expect> {
+        match (self, kind) {
+            (Expect::Member, _) => Some(Expect::DotOrSign),
+            (_, SyntaxKind::Dot) => Some(Expect::Member),
+            (Expect::DotOrSign, SyntaxKind::Question) => Some(Expect::DotOrBang),
+            (Expect::DotOrSign, SyntaxKind::Bang) => Some(Expect::DotOrQuestion),
+            (Expect::DotOrBang, SyntaxKind::Bang)
+            | (Expect::DotOrQuestion, SyntaxKind::Question) => Some(Expect::Dot),
+            _ => None,
+        }
+    }
+}
+
+/// The links of `path`, the tokens after the value, when nu reads them all without an error.
+/// `None` for a comment among them, which nu drops.
+/// The formatter would print a comment inside the node away from where it stands.
+/// `None` too for a member whose error is not checked here.
+fn links(path: &[(Token, &str)]) -> Option<Vec<Link>> {
+    if path
+        .iter()
+        .any(|(token, _)| token.kind == SyntaxKind::Comment)
+    {
+        return None;
+    }
+    path.iter()
+        .scan(Some(Expect::Dot), |state, &(token, text)| {
+            let expect = (*state)?;
+            let link = expect.read(token.kind, text);
+            *state = link.and_then(|_| expect.after(token.kind));
+            Some(link)
+        })
+        .collect()
+}
+
+/// How nu reads `text` as a member: an int that is not negative, or else a string.
+/// `None` where nu rejects it.
+/// `None` too for a `"` string with a `\`, since whether nu takes its escapes is not checked here.
+fn member(text: &str) -> Option<Link> {
+    if let Some(int) = int(text) {
+        return (int >= 0).then_some(Link::Member);
+    }
+    match text.as_bytes() {
+        [b'"', .., b'"'] if text.contains('\\') => None,
+        [b'"', .., b'"'] | [b'\'', .., b'\''] | [b'`', ..] => Some(Link::Member),
+        // Nu takes nothing after the closing quote of a `'` or `"` string.
+        [b'"' | b'\'', ..] => None,
+        // Nu reads a member with a `(` and no quote first as an interpolation, which is no string.
+        _ if text.contains('(') => None,
+        _ => Some(Link::Member),
+    }
+}
+
+/// The cell path that `cell_path_ahead` found, with the value as `value` reads it for `shape`.
+/// A member lexed as neither a word nor a string is a `Word`, since nu reads it as a plain string.
+pub(super) fn cell_path<'a>(p: &mut Parser<'a>, ahead: CellPathAhead<'a>, shape: Shape) {
+    let CellPathAhead {
+        relexed,
+        links,
+    } = ahead;
+    p.bump_relexed(SyntaxKind::CellPath, relexed, |p| {
+        value(p, shape);
+        for link in links {
+            match link {
+                Link::Member
+                    if !matches!(p.peek(), Some(SyntaxKind::Word | SyntaxKind::String)) =>
+                {
+                    p.bump_as(SyntaxKind::Word);
+                },
+                Link::Separator | Link::Member => p.bump(),
+            }
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use nuten_syntax::SyntaxKind;
+
+    use super::{Link, member};
+    use crate::parse;
+
+    #[test]
+    fn member_nu_reads_as_string_or_non_negative_int_is_member() {
+        for text in [
+            "a",
+            "0",
+            "-0",
+            "9223372036854775808",
+            "a-b",
+            "a#b",
+            "?",
+            "$'a'",
+            "r#'a'#",
+            "\"a b\"",
+            "\"(a)\"",
+            "'(a)'",
+            "'a\\q'",
+            "'a'b'c'",
+            "\"a\"b\"c\"",
+            "`(a)`",
+            "`a`b",
+            "`a`(b)",
+        ] {
+            assert_eq!(member(text), Some(Link::Member), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn member_nu_rejects_or_nuten_does_not_check_is_none() {
+        for text in [
+            "-1",
+            "-_1",
+            "0xffffffffffffffff",
+            "a(b)",
+            "(a)",
+            "$'(a)'",
+            "r#'(a)'#",
+            "'a'b",
+            "\"a\"b",
+            "\"a\\n\"",
+            "\"a\\q\"",
+        ] {
+            assert_eq!(member(text), None, "{text:?}");
+        }
+    }
+
+    fn cell_paths(src: &str) -> usize {
+        parse(src)
+            .syntax()
+            .descendants()
+            .filter(|node| node.kind() == SyntaxKind::CellPath)
+            .count()
+    }
+
+    #[test]
+    fn word_nu_rejects_where_nuten_does_not_check_it_stays_whole_without_error() {
+        for src in [
+            "let $x.a = 1",
+            "let (x).a = 1",
+            "$\"a\".b",
+            "$'a'.b",
+            "$x?",
+            "$x.-1",
+            "$a-b.c",
+        ] {
+            assert_eq!(cell_paths(src), 0, "{src:?}");
+            assert!(parse(src).errors().is_empty(), "{src:?}");
+        }
+    }
+
+    #[test]
+    fn cell_paths_nested_too_deep_stay_word() {
+        let src = format!("{}ls{}", "(".repeat(130), ").a".repeat(130));
+        assert_eq!(cell_paths(&src), 128);
+    }
+}

@@ -148,6 +148,11 @@ macro_rules! syntax_kinds {
                 /// A `Word` in `( )` read as a subexpression: `(`, the statements, and `)`.
                 /// Nu reads one wherever it takes a value, a `def` signature aside.
                 Subexpression,
+                /// A `Word` nu reads as a value and a path into it, as in `$x.a?` or `(ls).name`.
+                /// The value, then the members and the `.`, `?`, and `!` among them, all touching.
+                /// The value is what it would be alone: a node where nu reads one, or else a token.
+                /// A member nu reads is a `Word` or a `String`.
+                CellPath,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
                 /// Nu reads one where it takes a value or a block.
                 /// It reads one as an argument of an external command too.
