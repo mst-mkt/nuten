@@ -85,6 +85,9 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         Mode::VarType => &[Whitespace, Comment],
         // No row can show whitespace or a line break skipped, since nu lexes one word here.
         Mode::CellPath => &[Whitespace, Newline, Comment],
+        // Nu adds nothing to whitespace here, so a line break is a token, as in `Block`.
+        // Unlike there, it sets `skip_comment`.
+        Mode::RangeFrom => &[Whitespace, Comment],
         Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
             unimplemented!("how nu splits in {mode:?} is not recorded")
         },
@@ -605,6 +608,52 @@ fn cell_path_splits_match_nu() {
     }
 }
 
+/// How nu 0.115.1 splits what comes before the first `..` of a range.
+const NU_RANGE_FROM_SPLITS: &[(&str, &[&str])] = &[
+    ("1", &["1"]),
+    ("-1.5", &["-1", ".", "5"]),
+    ("$x.a?!", &["$x", ".", "a", "?", "!"]),
+    ("$x..", &["$x", ".", "."]),
+    (r#"("a.b").c"#, &[r#"("a.b")"#, ".", "c"]),
+    ("$x.a#b", &["$x", ".", "a#b"]),
+    ("$x.a\nb", &["$x", ".", "a", "\n", "b"]),
+    ("$x.#(\n)", &["$x", ".", "\n", ")"]),
+    (r#"$x."a"#, &["$x", ".", r#""a"#]),
+    ("$x.[a", &["$x", ".", "[a"]),
+    ("a)b", &["a)", "b"]),
+];
+
+/// The rows where nu reports a lexing error, so that it reads no range.
+const NU_RANGE_FROM_ERRORS: &[(&str, LexErrorKind)] = &[
+    ("$x.#(\n)", UnmatchedCloser),
+    (r#"$x."a"#, Unclosed),
+    ("$x.[a", Unclosed),
+    ("a)b", UnmatchedCloser),
+];
+
+#[test]
+fn range_from_splits_match_nu() {
+    for &(src, expected) in NU_RANGE_FROM_SPLITS {
+        assert_eq!(split_in(src, Mode::RangeFrom), expected, "{src:?}");
+    }
+}
+
+#[test]
+fn range_from_errors_match_nu() {
+    for &(src, _) in NU_RANGE_FROM_SPLITS {
+        let kinds: Vec<_> = lex_all_in(src, Mode::RangeFrom)
+            .errors
+            .iter()
+            .map(|error| error.kind)
+            .collect();
+        let expected = NU_RANGE_FROM_ERRORS
+            .iter()
+            .find(|&&(row, _)| row == src)
+            .map(|&(_, kind)| kind);
+        assert_eq!(kinds, expected.as_slice(), "{src:?}");
+    }
+}
+
 #[test]
 fn angle_brackets_nest_in_a_var_type() {
     for (src, error) in [
@@ -633,6 +682,7 @@ fn angle_brackets_nest_in_a_var_type() {
         Mode::Brace,
         Mode::MatchArms,
         Mode::CellPath,
+        Mode::RangeFrom,
     ] {
         assert_eq!(lexed_in("a<b", mode), [(Word, "a<b")], "{mode:?}");
     }

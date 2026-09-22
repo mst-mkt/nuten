@@ -88,6 +88,9 @@ pub(crate) enum Mode {
     MatchArms,
     /// A word nu reads as a value and a path into it, as in `$x.a?` or `(ls).name`.
     CellPath,
+    /// What comes before the first `..` of a range, as the `$x.a` of `$x.a..3`.
+    /// Nu lexes it only to see that it holds no error before it reads the range.
+    RangeFrom,
 }
 
 impl Mode {
@@ -104,6 +107,7 @@ impl Mode {
         Mode::TypeParams,
         Mode::MatchArms,
         Mode::CellPath,
+        Mode::RangeFrom,
     ];
 
     /// Bytes that end an item, on top of whitespace, `|`, and `;`.
@@ -132,6 +136,11 @@ impl Mode {
             Mode::TypeParams => &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
             Mode::MatchArms => &[(b',', SyntaxKind::Comma)],
             Mode::CellPath => &[
+                (b'.', SyntaxKind::Dot),
+                (b'?', SyntaxKind::Question),
+                (b'!', SyntaxKind::Bang),
+            ],
+            Mode::RangeFrom => &[
                 (b'.', SyntaxKind::Dot),
                 (b'?', SyntaxKind::Question),
                 (b'!', SyntaxKind::Bang),
