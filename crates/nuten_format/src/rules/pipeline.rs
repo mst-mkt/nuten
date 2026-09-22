@@ -1,5 +1,3 @@
-use std::iter;
-
 use nuten_doc::{
     Element, GroupId, align, align_if_group_breaks, expand_parent, group_with_id,
     soft_line_break_or_space, space,
@@ -86,19 +84,18 @@ impl<'a> Formatter<'a> {
             element,
             newlines,
         } = &part.child;
-        if part.joined {
-            return iter::once(space()).chain(self.element(element)).collect();
-        }
         match element {
             NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => {
                 self.comment(comment, *newlines, prev.is_none())
             },
             // Nu rejects `e>|` and `o+e>|` starting a line, so they stay after their element.
             // The parser puts that element right before them.
-            _ if part.is_element() || part.is_redirection_pipe() => separator(prev, Some(space()))
-                .into_iter()
-                .chain(self.element(element))
-                .collect(),
+            _ if part.joined || part.is_element() || part.is_redirection_pipe() => {
+                separator(prev, Some(space()))
+                    .into_iter()
+                    .chain(self.element(element))
+                    .collect()
+            },
             _ => unreachable!("{:?} is not a child of Pipeline", part.kind()),
         }
     }
@@ -117,7 +114,7 @@ fn follows_semicolon(node: &SyntaxNode) -> bool {
 /// A child of a pipeline as `pipeline` formats it.
 struct Part {
     child: Child,
-    /// Whether it belongs to the element before it, one space after.
+    /// Whether it belongs to the element before it, so the pipeline does not end at it.
     joined: bool,
 }
 

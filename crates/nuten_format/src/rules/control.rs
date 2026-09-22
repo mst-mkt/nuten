@@ -1,35 +1,39 @@
-use nuten_doc::{Element, expand_parent, group, space};
+use nuten_doc::{Element, expand_parent, group};
 use nuten_syntax::{NodeOrToken, SyntaxKind, SyntaxNode, ast::Node};
 
-use super::{Formatter, children};
+use super::{Child, Formatter, children, line_break_or_space, separator};
 
 impl<'a> Formatter<'a> {
     pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(keyword.children_with_tokens())
-            .map(|child| child.element)
-            .collect();
+        let items: Vec<_> = children(keyword.children_with_tokens()).collect();
         let mut expand =
             !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try) || is_statement(keyword);
         let mut out = Vec::new();
         for (index, item) in items.iter().enumerate() {
-            if index > 0 {
-                out.push(space());
+            if let Some(comment) = item.as_comment() {
+                out.extend(self.comment(comment, item.newlines, false));
+                continue;
             }
+            let prev = items[..index].last().map(Child::kind);
+            out.extend(separator(prev, Some(line_break_or_space(item))));
             // A body comes right before an `else` or a `catch`.
-            // The last item is a body, or what the last `else` takes.
-            let branch = items.get(index + 1).is_none_or(|next| {
-                next.as_token().is_some_and(|next| {
-                    next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
-                })
-            });
-            match item {
+            // The last item but a comment is a body, or what the last `else` takes.
+            let branch = items[index + 1..]
+                .iter()
+                .find(|next| !next.is_comment())
+                .is_none_or(|next| {
+                    next.element.as_token().is_some_and(|next| {
+                        next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
+                    })
+                });
+            match &item.element {
                 NodeOrToken::Node(Node::Block(block)) if branch => {
                     let layout = self.block_layout(block);
                     expand |= !layout.one_statement;
                     out.extend(layout.head);
                     out.extend(layout.rest);
                 },
-                _ => out.extend(self.element(item)),
+                element => out.extend(self.element(element)),
             }
         }
         if expand {

@@ -30,8 +30,14 @@ impl Child {
         ast::kind_of(&self.element)
     }
 
+    fn as_comment(&self) -> Option<&SyntaxToken> {
+        self.element
+            .as_token()
+            .filter(|token| token.kind() == SyntaxKind::Comment)
+    }
+
     fn is_comment(&self) -> bool {
-        self.kind() == SyntaxKind::Comment
+        self.as_comment().is_some()
     }
 
     fn is_statement(&self) -> bool {
@@ -171,44 +177,30 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// The children with one space between each two.
-    /// No line break falls among them, and no node ends with trivia.
-    /// A comment runs to the end of its line, so it cannot be here either.
+    /// Nu lexes a line break inside `( )` as whitespace, so one can fall among these children.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(parent.children_with_tokens()).collect();
-        debug_assert!(
-            items
-                .iter()
-                .all(|item| item.newlines == 0 && !item.is_comment()),
-            "{:?} holds a line break or a comment",
-            parent.kind()
-        );
-        self.spaced_children(&items, |_, _| false)
+        self.spaced_children(&items, |_, item| Some(line_break_or_space(item)))
     }
 
-    /// `items` one space apart, but those `joined`, by index and by themselves.
-    /// A joined item touches what comes before it.
+    /// `items` with what `plain` puts before each.
+    /// A child `plain` gives nothing for touches what comes before it.
     fn spaced_children(
         &mut self,
         items: &[Child],
-        joined: impl Fn(usize, &Child) -> bool,
+        plain: impl Fn(usize, &Child) -> Option<Element<'static>>,
     ) -> Vec<Element<'a>> {
         items
             .iter()
             .enumerate()
             .flat_map(|(index, item)| {
                 let prev = items[..index].last().map(Child::kind);
-                match &item.element {
-                    NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => {
-                        self.comment(comment, item.newlines, false)
-                    },
-                    element => {
-                        let plain = (!joined(index, item)).then(space);
-                        separator(prev, plain)
-                            .into_iter()
-                            .chain(self.element(element))
-                            .collect()
-                    },
+                match item.as_comment() {
+                    Some(comment) => self.comment(comment, item.newlines, false),
+                    None => separator(prev, plain(index, item))
+                        .into_iter()
+                        .chain(self.element(&item.element))
+                        .collect(),
                 }
             })
             .collect()
@@ -262,6 +254,14 @@ fn ends_with_pipe(statement: &SyntaxNode) -> bool {
     statement
         .last_child_or_token()
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
+}
+
+fn line_break_or_space(item: &Child) -> Element<'static> {
+    if item.newlines > 0 {
+        hard_line_break()
+    } else {
+        space()
+    }
 }
 
 /// What separates the child after `prev` from it: `plain`, but a line break after a comment.

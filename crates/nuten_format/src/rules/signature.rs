@@ -21,11 +21,11 @@ impl<'a> Formatter<'a> {
             // Joined, it would land inside the comment.
             // As a line suffix, the comment would land after the `]`.
             // Nu would lose the description either way.
-            SyntaxKind::Colon => true,
+            SyntaxKind::Colon => None,
             // A `(-f)` joins the name it follows, a long flag.
             // Joined to a type or a default value, it would become part of that.
-            SyntaxKind::ShortFlag => index == 1 && name_is_long_flag,
-            _ => false,
+            SyntaxKind::ShortFlag if index == 1 && name_is_long_flag => None,
+            _ => Some(space()),
         })
     }
 
@@ -51,7 +51,9 @@ impl<'a> Formatter<'a> {
     /// A `,` here is the type nu takes for the key, so it stays, unlike one among the fields.
     pub(super) fn type_field(&mut self, field: &TypeField) -> Vec<Element<'a>> {
         let items: Vec<_> = children(field.syntax().children_with_tokens()).collect();
-        self.spaced_children(&items, |_, item| item.kind() == SyntaxKind::Colon)
+        self.spaced_children(&items, |_, item| {
+            (item.kind() != SyntaxKind::Colon).then(space)
+        })
     }
 }
 

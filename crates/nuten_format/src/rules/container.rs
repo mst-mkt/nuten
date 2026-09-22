@@ -2,6 +2,7 @@ use std::iter;
 
 use nuten_doc::{
     Element, empty_line, expand_parent, group, indent, soft_line_break, soft_line_break_or_space,
+    space,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken,
@@ -124,7 +125,7 @@ impl<'a> Formatter<'a> {
             .nth(1)
             .filter(|(_, item)| item.kind() == SyntaxKind::Colon)
             .map(|(index, _)| index);
-        self.spaced_children(&items, |index, _| Some(index) == colon)
+        self.spaced_children(&items, |index, _| (Some(index) != colon).then(space))
     }
 }
 
