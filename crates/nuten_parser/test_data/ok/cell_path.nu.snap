@@ -624,8 +624,10 @@ Root@0..754
           LParen@588..589 "("
           Pipeline@589..593
             PipelineElement@589..593
-              Call@589..593
-                Word@589..593 "1..2"
+              Range@589..593
+                Word@589..590 "1"
+                RangeOperator@590..592 ".."
+                Word@592..593 "2"
           RParen@593..594 ")"
         Dot@594..595 "."
         Word@595..596 "0"
@@ -716,7 +718,10 @@ Root@0..754
       CellPath@663..671
         List@663..669
           LBracket@663..664 "["
-          Word@664..668 "1..2"
+          Range@664..668
+            Word@664..665 "1"
+            RangeOperator@665..667 ".."
+            Word@667..668 "2"
           RBracket@668..669 "]"
         Dot@669..670 "."
         Word@670..671 "0"
@@ -730,7 +735,10 @@ Root@0..754
             Word@673..674 "a"
             Colon@674..675 ":"
             Whitespace@675..676 " "
-            Word@676..680 "1..2"
+            Range@676..680
+              Word@676..677 "1"
+              RangeOperator@677..679 ".."
+              Word@679..680 "2"
           RBrace@680..681 "}"
         Dot@681..682 "."
         Word@682..683 "a"

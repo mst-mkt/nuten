@@ -40,7 +40,10 @@ Root@0..706
         Whitespace@34..35 " "
         Word@35..37 "in"
         Whitespace@37..38 " "
-        Word@38..42 "1..3"
+        Range@38..42
+          Word@38..39 "1"
+          RangeOperator@39..41 ".."
+          Word@41..42 "3"
         Whitespace@42..43 " "
         Block@43..49
           LBrace@43..44 "{"

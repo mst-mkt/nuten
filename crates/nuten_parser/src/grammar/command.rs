@@ -4,6 +4,7 @@ use super::{
     Shape, at_call_item, builtin, call_items, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_after_operator},
     number::is_number,
+    range::is_number_range,
     shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
@@ -231,13 +232,17 @@ fn unknown_operator(text: &str) -> Option<ParseErrorKind> {
 /// Ported from nu's `is_math_expression_like`.
 ///
 /// True only where nu reads an expression too: a call read as one loses the shape of its items.
-/// A filesize, a duration, a date, a binary, and a range are left out, so each stays a head.
+/// A filesize, a duration, a date, and a binary are left out, so each stays a head.
 /// So are `if` and `match`, which `keyword` reads as their own syntax instead.
+/// So is a range with a value other than a number.
+/// Nu reads it as an expression only where each value reads without an error.
+/// For a `$` or a `( )`, that depends on what is in scope.
 fn is_math_expression_like(text: &str) -> bool {
     matches!(text, "true" | "false" | "null" | "not")
         || text.starts_with("r#")
         || text.starts_with(['(', '{', '[', '$', '"', '\'', '-'])
         || is_number(text)
+        || is_number_range(text)
 }
 
 /// Nu runs a head it finds no declaration for as an external command.
@@ -291,14 +296,18 @@ fn command_shape(name: &str) -> Shape {
     }
 }
 
-/// The head, which nu reads as any value, then the arguments as `shape`.
+/// The head, then the arguments as `shape`.
+/// Nu reads the head as the name of a command, never as a value.
 fn call(p: &mut Parser<'_>, shape: Shape) {
     p.start(if shape == Shape::ExternalArgument {
         SyntaxKind::ExternalCall
     } else {
         SyntaxKind::Call
     });
-    item(p, Shape::Any);
+    match p.peek_text().and_then(shell_operator) {
+        Some(kind) => p.bump_error(kind),
+        None => p.bump(),
+    }
     while at_call_item(p) {
         item(p, shape);
     }
@@ -552,8 +561,22 @@ mod tests {
 
     #[test]
     fn values_left_out_of_the_port_stay_heads() {
-        for text in ["1kb", "1sec", "2024-01-01", "0x[ff]", "1..3", "if", "match"] {
+        for text in ["1kb", "1sec", "2024-01-01", "0x[ff]", "if", "match"] {
             assert!(!is_math_expression_like(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn range_with_variable_or_subexpression_as_value_stays_head() {
+        for text in ["1..$x", "1..(2)", "..$x", "1..2..$x"] {
+            assert!(!is_math_expression_like(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn range_of_numbers_alone_is_math_expression_like() {
+        for text in ["1..3", "..5", "1..", "0x10..=1e3", "1..2..<10", "1..."] {
+            assert!(is_math_expression_like(text), "{text:?}");
         }
     }
 

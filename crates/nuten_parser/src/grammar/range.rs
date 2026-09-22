@@ -24,20 +24,34 @@ pub(super) enum RangeAhead<'a> {
     Whole,
 }
 
+/// Which values nuten takes for those of a range nu reads.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ValuesTaken {
+    /// Numbers, and a `$` or a `( )` that `value` reads as nu does, with no error.
+    Read,
+    /// Numbers alone.
+    Numbers,
+}
+
 /// The range nu reads the word ahead as where it takes `shape`, if any.
 /// Nu tries a range on a word with a `$` or a `( )` first wherever it reads a value.
+/// It tries one on another word only where it takes any value.
+/// It reads the one item after `else` or `=>` as the head of an expression, though.
+/// A head is a range only where each value reads without an error.
+/// For a `$` or a `( )`, that depends on what is in scope, so only numbers are taken there.
 pub(super) fn range_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<RangeAhead<'a>> {
     let text = p.peek_text()?;
-    let tries = match text.as_bytes() {
-        // Nu reads a cell path literal as such, with no range.
-        [b'$', b'.', ..] => false,
-        [b'$', ..] => reads_dollar(text, shape),
-        [b'(', ..] => shape.takes_value(),
-        _ => false,
+    let taken = match text.as_bytes() {
+        // Nu reads a cell path literal, a `[ ]`, a `{ }`, and a raw string as such, with no range.
+        [b'$', b'.', ..] | [b'[' | b'{', ..] | [b'r', b'#', ..] => return None,
+        [b'$', ..] => reads_dollar(text, shape).then_some(ValuesTaken::Read)?,
+        [b'(', ..] => shape.takes_value().then_some(ValuesTaken::Read)?,
+        _ => match shape {
+            Shape::Any => ValuesTaken::Read,
+            Shape::Block => ValuesTaken::Numbers,
+            _ => return None,
+        },
     };
-    if !tries {
-        return None;
-    }
     let start = p.peek_range()?.start();
     let in_source = |range: Range<usize>| absolute(start, range);
     let operators = operators(text)?;
@@ -53,7 +67,7 @@ pub(super) fn range_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<RangeAhead
     let values = operators.values(text)?;
     if !values
         .ranges()
-        .all(|range| reads_value(p, in_source(range)))
+        .all(|range| reads_value(p, in_source(range), taken))
     {
         return None;
     }
@@ -88,6 +102,13 @@ pub(super) fn range<'a>(p: &mut Parser<'a>, ahead: RangeAhead<'a>) {
         }),
         RangeAhead::Whole => p.bump(),
     }
+}
+
+/// Whether nu reads `text` as a range with numbers alone as its values.
+pub(super) fn is_number_range(text: &str) -> bool {
+    operators(text)
+        .and_then(|operators| operators.values(text))
+        .is_some_and(|values| values.ranges().all(|range| is_number(&text[range])))
 }
 
 /// Where nu's `parse_range` finds the operators of a range in a word.
@@ -188,15 +209,15 @@ impl Values {
 /// Nu reads no range where a value reads with an error, so a word holding one stays whole.
 /// Nu reads a record and other values too, then reports that no range takes their type.
 /// Nuten does not check types, so those stay in the word.
-fn reads_value(p: &Parser<'_>, range: TextRange) -> bool {
+fn reads_value(p: &Parser<'_>, range: TextRange, taken: ValuesTaken) -> bool {
     let Some(piece) = p.item_at(range) else {
         return false;
     };
     let text = piece.peek_text().expect("an item at the range");
-    match text.as_bytes() {
-        [b'$', b'"' | b'\'' | b'.', ..] => false,
-        [b'$', ..] => reads_variable(&piece),
-        [b'(', ..] => {
+    match (taken, text.as_bytes()) {
+        (ValuesTaken::Read, [b'$', b'"' | b'\'' | b'.', ..]) => false,
+        (ValuesTaken::Read, [b'$', ..]) => reads_variable(&piece),
+        (ValuesTaken::Read, [b'(', ..]) => {
             piece.bracketed(&PAREN, Mode::Paren).is_some() || path_rejects_nothing(&piece)
         },
         _ => piece.peek() == Some(SyntaxKind::Word) && is_number(text),

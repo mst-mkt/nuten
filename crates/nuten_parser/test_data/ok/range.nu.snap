@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/range.nu
 ---
-Root@0..354
+Root@0..749
   Pipeline@0..6
     PipelineElement@0..6
       Range@0..6
@@ -125,8 +125,10 @@ Root@0..354
         LParen@109..110 "("
         Pipeline@110..115
           PipelineElement@110..115
-            Call@110..115
-              Word@110..115 "1..<2"
+            Range@110..115
+              Word@110..111 "1"
+              RangeOperator@111..114 "..<"
+              Word@114..115 "2"
         RParen@115..116 ")"
   Newline@116..117 "\n"
   Pipeline@117..137
@@ -317,36 +319,347 @@ Root@0..354
     PipelineElement@302..309
       Word@302..309 "$\"a\"..3"
   Newline@309..310 "\n"
-  Pipeline@310..323
-    PipelineElement@310..323
-      Let@310..323
-        Word@310..313 "let"
-        Whitespace@313..314 " "
-        Word@314..319 "$x..3"
-        Whitespace@319..320 " "
-        Assign@320..321 "="
-        Whitespace@321..322 " "
-        Pipeline@322..323
-          PipelineElement@322..323
-            Word@322..323 "1"
+  Pipeline@310..315
+    PipelineElement@310..315
+      Range@310..315
+        Word@310..311 "1"
+        RangeOperator@311..313 ".."
+        Word@313..315 "10"
+  Newline@315..316 "\n"
+  Pipeline@316..319
+    PipelineElement@316..319
+      Range@316..319
+        RangeOperator@316..318 ".."
+        Word@318..319 "5"
+  Newline@319..320 "\n"
+  Pipeline@320..323
+    PipelineElement@320..323
+      Range@320..323
+        Word@320..321 "1"
+        RangeOperator@321..323 ".."
   Newline@323..324 "\n"
-  Pipeline@324..338
-    PipelineElement@324..338
-      Let@324..338
-        Word@324..327 "let"
-        Whitespace@327..328 " "
-        Word@328..334 "(1)..3"
-        Whitespace@334..335 " "
-        Assign@335..336 "="
-        Whitespace@336..337 " "
-        Pipeline@337..338
-          PipelineElement@337..338
-            Word@337..338 "1"
-  Newline@338..339 "\n"
-  Pipeline@339..353
-    PipelineElement@339..353
-      List@339..353
-        LBracket@339..340 "["
-        Word@340..352 "(ls).#(\n)..3"
-        RBracket@352..353 "]"
-  Newline@353..354 "\n"
+  Pipeline@324..332
+    PipelineElement@324..332
+      Range@324..332
+        Word@324..325 "1"
+        RangeOperator@325..327 ".."
+        Word@327..328 "2"
+        RangeOperator@328..330 ".."
+        Word@330..332 "10"
+  Newline@332..333 "\n"
+  Pipeline@333..341
+    PipelineElement@333..341
+      Range@333..341
+        Word@333..335 "-1"
+        RangeOperator@335..338 "..<"
+        Word@338..341 "1.5"
+  Newline@341..342 "\n"
+  Pipeline@342..352
+    PipelineElement@342..352
+      Range@342..352
+        Word@342..346 "0x10"
+        RangeOperator@346..349 "..="
+        Word@349..352 "1e3"
+  Newline@352..353 "\n"
+  Pipeline@353..356
+    PipelineElement@353..356
+      Range@353..356
+        Word@353..354 "1"
+        RangeOperator@354..356 ".."
+  Newline@356..357 "\n"
+  Pipeline@357..386
+    PipelineElement@357..386
+      List@357..386
+        LBracket@357..358 "["
+        Range@358..362
+          Word@358..359 "1"
+          RangeOperator@359..361 ".."
+          Word@361..362 "3"
+        Whitespace@362..363 " "
+        Range@363..368
+          Word@363..364 "1"
+          RangeOperator@364..366 ".."
+          Word@366..368 "$x"
+        Whitespace@368..369 " "
+        Range@369..375
+          Word@369..370 "1"
+          RangeOperator@370..372 ".."
+          Subexpression@372..375
+            LParen@372..373 "("
+            Pipeline@373..374
+              PipelineElement@373..374
+                Word@373..374 "2"
+            RParen@374..375 ")"
+        Whitespace@375..376 " "
+        Word@376..380 "a..b"
+        Whitespace@380..381 " "
+        Word@381..385 "1..."
+        RBracket@385..386 "]"
+  Newline@386..387 "\n"
+  Pipeline@387..397
+    PipelineElement@387..397
+      Record@387..397
+        LBrace@387..388 "{"
+        RecordField@388..396
+          Word@388..389 "a"
+          Colon@389..390 ":"
+          Whitespace@390..391 " "
+          Range@391..396
+            Word@391..392 "1"
+            RangeOperator@392..394 ".."
+            Word@394..396 "$x"
+        RBrace@396..397 "}"
+  Newline@397..398 "\n"
+  Pipeline@398..420
+    PipelineElement@398..402
+      Range@398..402
+        Word@398..399 "1"
+        RangeOperator@399..401 ".."
+        Word@401..402 "3"
+    Whitespace@402..403 " "
+    Pipe@403..404 "|"
+    Whitespace@404..405 " "
+    PipelineElement@405..420
+      Call@405..420
+        Word@405..409 "each"
+        Whitespace@409..410 " "
+        Block@410..420
+          LBrace@410..411 "{"
+          Whitespace@411..412 " "
+          ClosureParams@412..415
+            Pipe@412..413 "|"
+            Word@413..414 "i"
+            Pipe@414..415 "|"
+          Whitespace@415..416 " "
+          Pipeline@416..418
+            PipelineElement@416..418
+              Word@416..418 "$i"
+          Whitespace@418..419 " "
+          RBrace@419..420 "}"
+  Newline@420..421 "\n"
+  Pipeline@421..444
+    PipelineElement@421..426
+      Call@421..426
+        Word@421..426 "1..$n"
+    Whitespace@426..427 " "
+    Pipe@427..428 "|"
+    Whitespace@428..429 " "
+    PipelineElement@429..444
+      Call@429..444
+        Word@429..433 "each"
+        Whitespace@433..434 " "
+        Block@434..444
+          LBrace@434..435 "{"
+          Whitespace@435..436 " "
+          ClosureParams@436..439
+            Pipe@436..437 "|"
+            Word@437..438 "i"
+            Pipe@438..439 "|"
+          Whitespace@439..440 " "
+          Pipeline@440..442
+            PipelineElement@440..442
+              Word@440..442 "$i"
+          Whitespace@442..443 " "
+          RBrace@443..444 "}"
+  Newline@444..445 "\n"
+  Pipeline@445..461
+    PipelineElement@445..452
+      Call@445..452
+        Word@445..452 "1..(ls)"
+    Whitespace@452..453 " "
+    Pipe@453..454 "|"
+    Whitespace@454..455 " "
+    PipelineElement@455..461
+      Call@455..461
+        Word@455..461 "length"
+  Newline@461..462 "\n"
+  Pipeline@462..466
+    PipelineElement@462..466
+      Word@462..466 "1..."
+  Newline@466..467 "\n"
+  Pipeline@467..488
+    PipelineElement@467..488
+      If@467..488
+        Word@467..469 "if"
+        Whitespace@469..470 " "
+        Word@470..474 "true"
+        Whitespace@474..475 " "
+        Word@475..478 "{ }"
+        Whitespace@478..479 " "
+        Word@479..483 "else"
+        Whitespace@483..484 " "
+        Range@484..488
+          Word@484..485 "1"
+          RangeOperator@485..487 ".."
+          Word@487..488 "3"
+  Newline@488..489 "\n"
+  Pipeline@489..511
+    PipelineElement@489..511
+      If@489..511
+        Word@489..491 "if"
+        Whitespace@491..492 " "
+        Word@492..496 "true"
+        Whitespace@496..497 " "
+        Word@497..500 "{ }"
+        Whitespace@500..501 " "
+        Word@501..505 "else"
+        Whitespace@505..506 " "
+        Word@506..511 "1..$n"
+  Newline@511..512 "\n"
+  Pipeline@512..546
+    PipelineElement@512..546
+      Match@512..546
+        Word@512..517 "match"
+        Whitespace@517..518 " "
+        Word@518..520 "$x"
+        Whitespace@520..521 " "
+        MatchArms@521..546
+          LBrace@521..522 "{"
+          Whitespace@522..523 " "
+          MatchArm@523..532
+            Word@523..524 "_"
+            Whitespace@524..525 " "
+            FatArrow@525..527 "=>"
+            Whitespace@527..528 " "
+            Range@528..532
+              Word@528..529 "1"
+              RangeOperator@529..531 ".."
+              Word@531..532 "3"
+          Comma@532..533 ","
+          Whitespace@533..534 " "
+          MatchArm@534..544
+            Word@534..535 "_"
+            Whitespace@535..536 " "
+            FatArrow@536..538 "=>"
+            Whitespace@538..539 " "
+            Word@539..544 "1..$n"
+          Whitespace@544..545 " "
+          RBrace@545..546 "}"
+  Newline@546..547 "\n"
+  Pipeline@547..565
+    PipelineElement@547..565
+      For@547..565
+        Word@547..550 "for"
+        Whitespace@550..551 " "
+        Word@551..552 "i"
+        Whitespace@552..553 " "
+        Word@553..555 "in"
+        Whitespace@555..556 " "
+        Range@556..561
+          Word@556..557 "1"
+          RangeOperator@557..559 ".."
+          Word@559..561 "$n"
+        Whitespace@561..562 " "
+        Word@562..565 "{ }"
+  Newline@565..566 "\n"
+  Pipeline@566..575
+    PipelineElement@566..575
+      Call@566..575
+        Word@566..570 "echo"
+        Whitespace@570..571 " "
+        Word@571..575 "1..3"
+  Newline@575..576 "\n"
+  Pipeline@576..586
+    PipelineElement@576..586
+      ExternalCall@576..586
+        Word@576..580 "^seq"
+        Whitespace@580..581 " "
+        Word@581..586 "1..$n"
+  Newline@586..587 "\n"
+  Pipeline@587..597
+    PipelineElement@587..597
+      MathExpression@587..597
+        Word@587..589 "$x"
+        Whitespace@589..590 " "
+        Operator@590..591 "+"
+        Whitespace@591..592 " "
+        Range@592..597
+          Word@592..593 "1"
+          RangeOperator@593..595 ".."
+          Word@595..597 "$n"
+  Newline@597..598 "\n"
+  Pipeline@598..608
+    PipelineElement@598..608
+      Call@598..600
+        Word@598..600 "ls"
+      Whitespace@600..601 " "
+      Redirection@601..608
+        OutGt@601..603 "o>"
+        Whitespace@603..604 " "
+        Range@604..608
+          Word@604..605 "1"
+          RangeOperator@605..607 ".."
+          Word@607..608 "3"
+  Newline@608..609 "\n"
+  Pipeline@609..617
+    PipelineElement@609..617
+      Call@609..617
+        Word@609..617 "1kb..2kb"
+  Newline@617..618 "\n"
+  Pipeline@618..623
+    PipelineElement@618..623
+      Call@618..623
+        Word@618..623 "1..3?"
+  Newline@623..624 "\n"
+  Pipeline@624..630
+    PipelineElement@624..630
+      Word@624..630 "\"a\"..3"
+  Newline@630..631 "\n"
+  Pipeline@631..640
+    PipelineElement@631..640
+      Word@631..640 "r#'a'#..3"
+  Newline@640..641 "\n"
+  Pipeline@641..704
+    PipelineElement@641..704
+      List@641..704
+        LBracket@641..642 "["
+        Word@642..648 "1..$.a"
+        Whitespace@648..649 " "
+        Word@649..655 "1..$x?"
+        Whitespace@655..656 " "
+        Word@656..663 "1..(1)!"
+        Whitespace@663..664 " "
+        Word@664..672 "1..$x.-1"
+        Whitespace@672..673 " "
+        Word@673..677 "1..$"
+        Whitespace@677..678 " "
+        Word@678..685 "1..$a-b"
+        Whitespace@685..686 " "
+        Word@686..695 "1..$a-b.c"
+        Whitespace@695..696 " "
+        Word@696..703 "1..$-.a"
+        RBracket@703..704 "]"
+  Newline@704..705 "\n"
+  Pipeline@705..718
+    PipelineElement@705..718
+      Let@705..718
+        Word@705..708 "let"
+        Whitespace@708..709 " "
+        Word@709..714 "$x..3"
+        Whitespace@714..715 " "
+        Assign@715..716 "="
+        Whitespace@716..717 " "
+        Pipeline@717..718
+          PipelineElement@717..718
+            Word@717..718 "1"
+  Newline@718..719 "\n"
+  Pipeline@719..733
+    PipelineElement@719..733
+      Let@719..733
+        Word@719..722 "let"
+        Whitespace@722..723 " "
+        Word@723..729 "(1)..3"
+        Whitespace@729..730 " "
+        Assign@730..731 "="
+        Whitespace@731..732 " "
+        Pipeline@732..733
+          PipelineElement@732..733
+            Word@732..733 "1"
+  Newline@733..734 "\n"
+  Pipeline@734..748
+    PipelineElement@734..748
+      List@734..748
+        LBracket@734..735 "["
+        Word@735..747 "(ls).#(\n)..3"
+        RBracket@747..748 "]"
+  Newline@748..749 "\n"
