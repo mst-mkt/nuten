@@ -31,3 +31,13 @@ $a and not ($b > 1)
 not not $a and $b
 1 + not [2]
 not and $a
+not [1 2]
+not (ls)
+not {a: 1}
+not not not $a
+not not
+$a and not
+not | length
+$x = not [1 2]
+(not # c
+true)

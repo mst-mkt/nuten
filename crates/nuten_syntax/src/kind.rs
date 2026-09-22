@@ -66,7 +66,7 @@ macro_rules! syntax_kinds {
                 OutErrGtPipe,
 
                 // Operators.
-                /// An operator of a `MathExpression`, such as `+` or `not-in`.
+                /// An operator of a `MathExpression`: `+`, `not-in`, or the `not` before a term.
                 /// The parser emits this, not the lexer.
                 Operator,
 
@@ -102,7 +102,8 @@ macro_rules! syntax_kinds {
                 /// A `Call` whose name starts with `^`, or is `else` or `catch`.
                 /// Nu runs those two as external commands outside an `if` or a `try`.
                 ExternalCall,
-                /// A value, then an `Operator` and a value while the element lasts.
+                /// A term, then an `Operator` and a term while the element lasts.
+                /// A term is a value after the `not`s that take it, which are `Operator`s too.
                 /// An item where nu takes an operator but reads none stays as it is written.
                 MathExpression,
 

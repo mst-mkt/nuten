@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/math_expression.nu
 ---
-Root@0..343
+Root@0..450
   Pipeline@0..5
     PipelineElement@0..5
       MathExpression@0..5
@@ -309,7 +309,7 @@ Root@0..343
   Pipeline@262..281
     PipelineElement@262..281
       MathExpression@262..281
-        Word@262..265 "not"
+        Operator@262..265 "not"
         Whitespace@265..266 " "
         Subexpression@266..274
           LParen@266..267 "("
@@ -334,7 +334,7 @@ Root@0..343
         Whitespace@284..285 " "
         Operator@285..288 "and"
         Whitespace@288..289 " "
-        Word@289..292 "not"
+        Operator@289..292 "not"
         Whitespace@292..293 " "
         Subexpression@293..301
           LParen@293..294 "("
@@ -351,9 +351,9 @@ Root@0..343
   Pipeline@302..319
     PipelineElement@302..319
       MathExpression@302..319
-        Word@302..305 "not"
+        Operator@302..305 "not"
         Whitespace@305..306 " "
-        Word@306..309 "not"
+        Operator@306..309 "not"
         Whitespace@309..310 " "
         Word@310..312 "$a"
         Whitespace@312..313 " "
@@ -368,7 +368,7 @@ Root@0..343
         Whitespace@321..322 " "
         Operator@322..323 "+"
         Whitespace@323..324 " "
-        Word@324..327 "not"
+        Operator@324..327 "not"
         Whitespace@327..328 " "
         List@328..331
           LBracket@328..329 "["
@@ -378,9 +378,118 @@ Root@0..343
   Pipeline@332..342
     PipelineElement@332..342
       MathExpression@332..342
-        Word@332..335 "not"
+        Operator@332..335 "not"
         Whitespace@335..336 " "
         Word@336..339 "and"
         Whitespace@339..340 " "
         Word@340..342 "$a"
   Newline@342..343 "\n"
+  Pipeline@343..352
+    PipelineElement@343..352
+      MathExpression@343..352
+        Operator@343..346 "not"
+        Whitespace@346..347 " "
+        List@347..352
+          LBracket@347..348 "["
+          Word@348..349 "1"
+          Whitespace@349..350 " "
+          Word@350..351 "2"
+          RBracket@351..352 "]"
+  Newline@352..353 "\n"
+  Pipeline@353..361
+    PipelineElement@353..361
+      MathExpression@353..361
+        Operator@353..356 "not"
+        Whitespace@356..357 " "
+        Subexpression@357..361
+          LParen@357..358 "("
+          Pipeline@358..360
+            PipelineElement@358..360
+              Call@358..360
+                Word@358..360 "ls"
+          RParen@360..361 ")"
+  Newline@361..362 "\n"
+  Pipeline@362..372
+    PipelineElement@362..372
+      MathExpression@362..372
+        Operator@362..365 "not"
+        Whitespace@365..366 " "
+        Record@366..372
+          LBrace@366..367 "{"
+          RecordField@367..371
+            Word@367..368 "a"
+            Colon@368..369 ":"
+            Whitespace@369..370 " "
+            Word@370..371 "1"
+          RBrace@371..372 "}"
+  Newline@372..373 "\n"
+  Pipeline@373..387
+    PipelineElement@373..387
+      MathExpression@373..387
+        Operator@373..376 "not"
+        Whitespace@376..377 " "
+        Operator@377..380 "not"
+        Whitespace@380..381 " "
+        Operator@381..384 "not"
+        Whitespace@384..385 " "
+        Word@385..387 "$a"
+  Newline@387..388 "\n"
+  Pipeline@388..395
+    PipelineElement@388..395
+      MathExpression@388..395
+        Operator@388..391 "not"
+        Whitespace@391..392 " "
+        Word@392..395 "not"
+  Newline@395..396 "\n"
+  Pipeline@396..406
+    PipelineElement@396..406
+      MathExpression@396..406
+        Word@396..398 "$a"
+        Whitespace@398..399 " "
+        Operator@399..402 "and"
+        Whitespace@402..403 " "
+        Word@403..406 "not"
+  Newline@406..407 "\n"
+  Pipeline@407..419
+    PipelineElement@407..410
+      Word@407..410 "not"
+    Whitespace@410..411 " "
+    Pipe@411..412 "|"
+    Whitespace@412..413 " "
+    PipelineElement@413..419
+      Call@413..419
+        Word@413..419 "length"
+  Newline@419..420 "\n"
+  Pipeline@420..434
+    PipelineElement@420..434
+      Assignment@420..434
+        Word@420..422 "$x"
+        Whitespace@422..423 " "
+        Assign@423..424 "="
+        Whitespace@424..425 " "
+        Pipeline@425..434
+          PipelineElement@425..434
+            MathExpression@425..434
+              Operator@425..428 "not"
+              Whitespace@428..429 " "
+              List@429..434
+                LBracket@429..430 "["
+                Word@430..431 "1"
+                Whitespace@431..432 " "
+                Word@432..433 "2"
+                RBracket@433..434 "]"
+  Newline@434..435 "\n"
+  Pipeline@435..449
+    PipelineElement@435..449
+      Subexpression@435..449
+        LParen@435..436 "("
+        Pipeline@436..448
+          PipelineElement@436..448
+            MathExpression@436..448
+              Operator@436..439 "not"
+              Whitespace@439..440 " "
+              Comment@440..443 "# c"
+              Newline@443..444 "\n"
+              Word@444..448 "true"
+        RParen@448..449 ")"
+  Newline@449..450 "\n"

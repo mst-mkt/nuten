@@ -95,9 +95,10 @@ Root@0..149
   Newline@87..88 "\n"
   Pipeline@88..96
     PipelineElement@88..96
-      Word@88..91 "not"
-      Whitespace@91..92 " "
-      Word@92..96 "true"
+      MathExpression@88..96
+        Operator@88..91 "not"
+        Whitespace@91..92 " "
+        Word@92..96 "true"
   Newline@96..97 "\n"
   Pipeline@97..102
     PipelineElement@97..102

@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/argument_shape.nu
 ---
-Root@0..525
+Root@0..540
   Pipeline@0..29
     PipelineElement@0..29
       Call@0..29
@@ -338,16 +338,25 @@ Root@0..525
         Whitespace@498..499 " "
         Word@499..506 "{a:  1}"
   Newline@506..507 "\n"
-  Pipeline@507..524
-    PipelineElement@507..509
-      Call@507..509
-        Word@507..509 "ls"
-    Whitespace@509..510 " "
-    Pipe@510..511 "|"
-    Newline@511..512 "\n"
-    PipelineElement@512..524
-      Call@512..524
-        Word@512..516 "@foo"
-        Whitespace@516..517 " "
-        Word@517..524 "{a:  1}"
-  Newline@524..525 "\n"
+  Pipeline@507..521
+    PipelineElement@507..521
+      Call@507..521
+        Word@507..511 "echo"
+        Whitespace@511..512 " "
+        Word@512..515 "not"
+        Whitespace@515..516 " "
+        Word@516..521 "[1 2]"
+  Newline@521..522 "\n"
+  Pipeline@522..539
+    PipelineElement@522..524
+      Call@522..524
+        Word@522..524 "ls"
+    Whitespace@524..525 " "
+    Pipe@525..526 "|"
+    Newline@526..527 "\n"
+    PipelineElement@527..539
+      Call@527..539
+        Word@527..531 "@foo"
+        Whitespace@531..532 " "
+        Word@532..539 "{a:  1}"
+  Newline@539..540 "\n"

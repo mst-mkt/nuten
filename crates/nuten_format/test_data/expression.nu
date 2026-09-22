@@ -7,3 +7,4 @@
 not  true
 1 o> out.txt
 ls | $in
+not  [ 1  2 ]

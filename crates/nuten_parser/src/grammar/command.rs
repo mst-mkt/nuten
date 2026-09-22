@@ -7,7 +7,7 @@ use super::{
 use crate::{ParseErrorKind, parser::Parser};
 
 /// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
-/// A value where the head would be is an expression: a `MathExpression`, or the value alone.
+/// A value or a `not` where the head would be is an expression: a `MathExpression`, or the value.
 /// Returns the streams it redirects; `None` when there is no command.
 pub(super) fn command(
     p: &mut Parser<'_>,
@@ -32,7 +32,7 @@ pub(super) fn command(
 enum Head {
     /// A file redirection or an assignment operator, which leaves the element with no command.
     Missing,
-    /// A value, which nu reads as an expression of its own.
+    /// A value or a `not`, which nu reads as an expression of its own.
     Expression,
     /// A head, with the shape nu reads the items after it as.
     Call(Shape),
@@ -65,12 +65,21 @@ impl Head {
 }
 
 /// The items nu reads as an expression, as a `MathExpression` when an operator joins them.
-/// Nu reads the first item as a value and only then takes an operator, so that one is skipped.
 fn expression(p: &mut Parser<'_>) {
-    if call_items(p).into_iter().skip(1).any(is_operator) {
+    if joined_by_operator(&call_items(p)) {
         math_expression(p);
     } else {
         item(p, Shape::Any);
+    }
+}
+
+/// Whether an operator joins the items of an expression.
+/// Nu reads the first item as a value unless it is a `not`, which takes the term after it.
+fn joined_by_operator(items: &[&str]) -> bool {
+    match items {
+        ["not", _, ..] => true,
+        [_, rest @ ..] => rest.iter().copied().any(is_operator),
+        [] => false,
     }
 }
 
@@ -99,11 +108,11 @@ fn joined_term(p: &mut Parser<'_>) {
     }
 }
 
-/// The value a term holds, past the `not`s nu reads as a prefix of it.
+/// The `not`s nu reads as prefix operators, then the value they take.
 /// A `not` with nothing after it is the value itself, which nu rejects.
 fn term(p: &mut Parser<'_>) {
     while p.peek_text() == Some("not") && p.nth(1).is_some_and(|kind| !ends_call(kind)) {
-        p.bump();
+        p.bump_as(SyntaxKind::Operator);
     }
     item(p, Shape::Any);
 }
@@ -112,6 +121,7 @@ fn term(p: &mut Parser<'_>) {
 /// Its arms are in nu's order, so that the port can be checked against them.
 /// The spellings it takes only to reject, such as `^` and `%`, are left out.
 /// So is an assignment operator, which the lexer gives a kind of its own.
+/// So is `not`, which nu reads as a prefix of a term, though `term` emits it as an `Operator` too.
 fn is_operator(text: &str) -> bool {
     matches!(
         text,
@@ -333,7 +343,7 @@ impl Streams {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_math_expression_like, is_operator};
+    use super::{is_math_expression_like, is_operator, joined_by_operator};
     use crate::{ParseErrorKind, parse};
 
     fn errors(src: &str) -> Vec<ParseErrorKind> {
@@ -418,8 +428,31 @@ mod tests {
 
     #[test]
     fn items_and_shell_operators_are_no_operator() {
-        for text in ["1", "$a", "ls", "not", "-2", "bit", "", "||", "&&", "2>&1"] {
+        for text in ["1", "$a", "ls", "-2", "bit", "", "||", "&&", "2>&1"] {
             assert!(!is_operator(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn not_is_no_operator_that_joins_two_terms() {
+        assert!(!is_operator("not"));
+    }
+
+    #[test]
+    fn operator_past_the_first_item_joins_terms() {
+        assert!(joined_by_operator(&["1", "+", "2"]));
+    }
+
+    #[test]
+    fn not_with_an_item_after_it_joins_terms() {
+        assert!(joined_by_operator(&["not", "$a"]));
+        assert!(joined_by_operator(&["not", "not", "$a"]));
+    }
+
+    #[test]
+    fn items_with_no_operator_to_join_them_are_one_value() {
+        for items in [["1"].as_slice(), &[], &["not"], &["-", "1"]] {
+            assert!(!joined_by_operator(items), "{items:?}");
         }
     }
 

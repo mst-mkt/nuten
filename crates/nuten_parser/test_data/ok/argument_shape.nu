@@ -24,5 +24,6 @@ where {a:  1} [a,  b]
 all {...$x}
 any {|x| $x}
 ^ls {a:  1}
+echo not [1 2]
 ls |
 @foo {a:  1}
