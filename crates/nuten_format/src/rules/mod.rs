@@ -33,6 +33,10 @@ impl Child {
     fn is_comment(&self) -> bool {
         self.kind() == SyntaxKind::Comment
     }
+
+    fn is_statement(&self) -> bool {
+        self.kind() == SyntaxKind::Pipeline
+    }
 }
 
 /// The children among `elements`, in source order.
