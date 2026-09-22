@@ -137,10 +137,11 @@ impl Expect {
 /// `None` for a comment among them, which nu drops.
 /// The formatter would print a comment inside the node away from where it stands.
 /// `None` too for a member whose error is not checked here.
+/// `None` too for a token with a lexing error, which the word read whole holds none of.
 fn links(path: &[(Token, &str)]) -> Option<Vec<Link>> {
     if path
         .iter()
-        .any(|(token, _)| token.kind == SyntaxKind::Comment)
+        .any(|(token, _)| matches!(token.kind, SyntaxKind::Comment | SyntaxKind::Error))
     {
         return None;
     }
@@ -295,6 +296,15 @@ mod tests {
         ] {
             assert_eq!(cell_paths(src), 0, "{src:?}");
             assert!(parse(src).errors().is_empty(), "{src:?}");
+        }
+    }
+
+    /// A `#` after a vertical tab or a form feed starts a comment that runs to the end of the word.
+    /// Lexed again as a path, it runs only to the next `.`, which leaves a `)` unmatched.
+    #[test]
+    fn path_holding_token_with_lexing_error_stays_whole() {
+        for src in ["$\u{b}#.)[", "$\u{c}#.)", "$\u{b}#..)"] {
+            assert_eq!(cell_paths(src), 0, "{src:?}");
         }
     }
 
