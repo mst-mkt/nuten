@@ -86,6 +86,7 @@
 
           commitTypes = [
             "feat"
+            "add"
             "fix"
             "refactor"
             "perf"
