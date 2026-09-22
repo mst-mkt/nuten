@@ -89,6 +89,15 @@ pub enum ParseErrorKind {
     MissingVariableName,
     /// A `$` and a name with a character no variable name takes, as `$a-b`, where nu takes a value.
     InvalidVariableName,
+    /// A token of a cell path where nu takes only the separators `expected` names.
+    /// Nu reads no more of the path after it.
+    CellPathSeparator {
+        expected: &'static str,
+    },
+    /// A member of a cell path nu reads as a negative int.
+    NegativeCellPathIndex,
+    /// A member of a cell path nu reads as no string.
+    CellPathMember,
 }
 
 impl fmt::Display for ParseErrorKind {
@@ -126,6 +135,11 @@ impl fmt::Display for ParseErrorKind {
             ParseErrorKind::InvalidVariableName => {
                 "variable name with a character no variable name takes"
             },
+            ParseErrorKind::CellPathSeparator {
+                expected,
+            } => return write!(f, "token where a cell path takes {expected}"),
+            ParseErrorKind::NegativeCellPathIndex => "negative index in a cell path",
+            ParseErrorKind::CellPathMember => "member of a cell path that is no string",
         };
         f.write_str(message)
     }
@@ -167,6 +181,13 @@ mod tests {
             }
             .to_string(),
             "`%` is not an operator; use `mod`"
+        );
+        assert_eq!(
+            ParseErrorKind::CellPathSeparator {
+                expected: "`.`"
+            }
+            .to_string(),
+            "token where a cell path takes `.`"
         );
     }
 }

@@ -5,6 +5,7 @@ use super::{
     variable::reads_dollar,
 };
 use crate::{
+    ParseErrorKind,
     lexer::{Mode, Token},
     parser::{Parser, Relexed},
 };
@@ -14,6 +15,7 @@ pub(super) struct CellPathAhead<'a> {
     relexed: Relexed<'a>,
     /// Whether it is a cell path literal, as in `$.a`, whose `$` nu reads as no value.
     literal: bool,
+    /// The links of the path up to the first one nu rejects, after which nu reads no more of it.
     links: Vec<Link>,
 }
 
@@ -24,6 +26,8 @@ enum Link {
     Separator,
     /// A member, which nu reads as an int or a string.
     Member,
+    /// A token nu rejects where it stands, with its error.
+    Rejected(ParseErrorKind),
 }
 
 /// The cell path ahead, when nu reads the word as a value and a path where it takes `shape`.
@@ -39,8 +43,8 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
     if path.is_empty() || !reads_head(relexed.inner(), head_text, shape) {
         return None;
     }
-    // Nu reads a `$` or a `( )` with `..` in its path as a range where it can.
     let literal = text.starts_with("$.");
+    // Nu reads a `$` or a `( )` with `..` in its path as a range where it can.
     // Ranges are not read yet, so such a word stays whole.
     // Nu reads a literal as a cell path before it tries a range.
     if !literal
@@ -91,12 +95,17 @@ enum Expect {
 
 impl Expect {
     /// What nu makes of the token of `kind` and `text` here.
-    /// `None` where nu rejects it, or for a member whose error is not checked here.
+    /// `None` for a member whose error is not checked here.
     fn read(self, kind: SyntaxKind, text: &str) -> Option<Link> {
         if self == Expect::Member {
             return member(text);
         }
-        self.after(kind).map(|_| Link::Separator)
+        Some(match self.after(kind) {
+            Some(_) => Link::Separator,
+            None => Link::Rejected(ParseErrorKind::CellPathSeparator {
+                expected: self.separators(),
+            }),
+        })
     }
 
     /// What nu takes next after a token of `kind` here; `None` for a separator it rejects.
@@ -111,9 +120,20 @@ impl Expect {
             _ => None,
         }
     }
+
+    /// The separators nu says it takes, where it takes no member.
+    fn separators(self) -> &'static str {
+        match self {
+            Expect::Dot => "`.`",
+            Expect::DotOrSign => "`.`, `?`, or `!`",
+            Expect::DotOrBang => "`.` or `!`",
+            Expect::DotOrQuestion => "`.` or `?`",
+            Expect::Member => unreachable!("a member is never rejected as a separator"),
+        }
+    }
 }
 
-/// The links of `path`, the tokens after the value, when nu reads them all without an error.
+/// The links of `path`, the tokens after the value, up to the first one nu rejects.
 /// `None` for a comment among them, which nu drops.
 /// The formatter would print a comment inside the node away from where it stands.
 /// `None` too for a member whose error is not checked here.
@@ -128,26 +148,32 @@ fn links(path: &[(Token, &str)]) -> Option<Vec<Link>> {
         .scan(Some(Expect::Dot), |state, &(token, text)| {
             let expect = (*state)?;
             let link = expect.read(token.kind, text);
-            *state = link.and_then(|_| expect.after(token.kind));
+            *state = match link {
+                Some(Link::Separator | Link::Member) => expect.after(token.kind),
+                Some(Link::Rejected(_)) | None => None,
+            };
             Some(link)
         })
         .collect()
 }
 
 /// How nu reads `text` as a member: an int that is not negative, or else a string.
-/// `None` where nu rejects it.
-/// `None` too for a `"` string with a `\`, since whether nu takes its escapes is not checked here.
+/// `None` for a `"` string with a `\`, since whether nu takes its escapes is not checked here.
 fn member(text: &str) -> Option<Link> {
     if let Some(int) = int(text) {
-        return (int >= 0).then_some(Link::Member);
+        return Some(if int < 0 {
+            Link::Rejected(ParseErrorKind::NegativeCellPathIndex)
+        } else {
+            Link::Member
+        });
     }
     match text.as_bytes() {
         [b'"', .., b'"'] if text.contains('\\') => None,
         [b'"', .., b'"'] | [b'\'', .., b'\''] | [b'`', ..] => Some(Link::Member),
         // Nu takes nothing after the closing quote of a `'` or `"` string.
-        [b'"' | b'\'', ..] => None,
+        [b'"' | b'\'', ..] => Some(Link::Rejected(ParseErrorKind::CellPathMember)),
         // Nu reads a member with a `(` and no quote first as an interpolation, which is no string.
-        _ if text.contains('(') => None,
+        _ if text.contains('(') => Some(Link::Rejected(ParseErrorKind::CellPathMember)),
         _ => Some(Link::Member),
     }
 }
@@ -173,8 +199,12 @@ pub(super) fn cell_path<'a>(p: &mut Parser<'a>, ahead: CellPathAhead<'a>, shape:
                 {
                     p.bump_as(SyntaxKind::Word);
                 },
+                Link::Rejected(error) => p.bump_error(error),
                 Link::Separator | Link::Member => p.bump(),
             }
+        }
+        while p.peek().is_some() {
+            p.bump();
         }
     });
 }
@@ -184,7 +214,7 @@ mod tests {
     use nuten_syntax::SyntaxKind;
 
     use super::{Link, member};
-    use crate::parse;
+    use crate::{ParseErrorKind, parse};
 
     #[test]
     fn member_nu_reads_as_string_or_non_negative_int_is_member() {
@@ -213,20 +243,30 @@ mod tests {
     }
 
     #[test]
-    fn member_nu_rejects_or_nuten_does_not_check_is_none() {
-        for text in [
-            "-1",
-            "-_1",
-            "0xffffffffffffffff",
-            "a(b)",
-            "(a)",
-            "$'(a)'",
-            "r#'(a)'#",
-            "'a'b",
-            "\"a\"b",
-            "\"a\\n\"",
-            "\"a\\q\"",
-        ] {
+    fn negative_int_member_is_rejected() {
+        for text in ["-1", "-_1", "0xffffffffffffffff"] {
+            assert_eq!(
+                member(text),
+                Some(Link::Rejected(ParseErrorKind::NegativeCellPathIndex)),
+                "{text:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn member_nu_reads_as_no_string_is_rejected() {
+        for text in ["a(b)", "(a)", "$'(a)'", "r#'(a)'#", "'a'b", "\"a\"b"] {
+            assert_eq!(
+                member(text),
+                Some(Link::Rejected(ParseErrorKind::CellPathMember)),
+                "{text:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn double_quoted_member_with_backslash_is_not_checked() {
+        for text in ["\"a\\n\"", "\"a\\q\""] {
             assert_eq!(member(text), None, "{text:?}");
         }
     }
@@ -248,16 +288,21 @@ mod tests {
             "^echo [1 2].0",
             "{...$r}.a",
             "{a}.b",
-            "[a]b.c",
             "$\"a\".b",
             "$'a'.b",
-            "$x?",
-            "$x.-1",
             "$'a'-b",
+            "[a]b.c",
         ] {
             assert_eq!(cell_paths(src), 0, "{src:?}");
             assert!(parse(src).errors().is_empty(), "{src:?}");
         }
+    }
+
+    #[test]
+    fn cell_path_error_inside_block_leaves_block_whole() {
+        let src = "if true { $x? }";
+        assert_eq!(cell_paths(src), 0);
+        assert!(parse(src).errors().is_empty());
     }
 
     #[test]

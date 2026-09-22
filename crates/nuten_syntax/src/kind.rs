@@ -153,6 +153,7 @@ macro_rules! syntax_kinds {
                 /// The value is what it would be alone: a node where nu reads one, or else a token.
                 /// A cell path literal, as in `$.a`, has a `Word` `$` in its place.
                 /// A member nu reads is a `Word` or a `String`.
+                /// A token nu rejects is in an `Error`, and those past it stay as they are lexed.
                 CellPath,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
                 /// Nu reads one where it takes a value or a block.
