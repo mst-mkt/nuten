@@ -209,7 +209,7 @@ fn ends_call(kind: SyntaxKind) -> bool {
 /// The texts of the items ahead that a call takes.
 fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
     p.remaining_tokens()
-        .filter(|(token, _)| !matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
+        .filter(|(token, _)| !p.is_skipped(token.kind))
         .take_while(|(token, _)| !ends_call(token.kind))
         .map(|(_, text)| text)
         .collect()

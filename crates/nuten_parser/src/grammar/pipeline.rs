@@ -54,7 +54,15 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, in_as
 /// Whether the `|` ahead is the last token of the file.
 /// A trailing comment and comment lines right below it may follow: `Comment? (Newline Comment)*`.
 /// A blank line or a final line break saves it; nu counts the `|` as the last token only then.
+/// Where the parser skips a line break, nu drops every comment too.
 fn pipe_ends_file(p: &Parser<'_>) -> bool {
+    if p.is_skipped(SyntaxKind::Newline) {
+        return p
+            .remaining_kinds()
+            .filter(|&kind| !p.is_skipped(kind))
+            .nth(1)
+            .is_none();
+    }
     let mut kinds = p
         .remaining_kinds()
         .filter(|&kind| kind != SyntaxKind::Whitespace)

@@ -107,14 +107,14 @@ impl<'a> Bracketed<'a> {
         let (_, inside, _) = split(self.range);
         let lexed = lexer::lex(src, inside, mode);
         Bracketed {
-            inner: Parser::new(src, lexed, alias_names, depth),
+            inner: Parser::new(src, lexed, mode, alias_names, depth),
             ..self
         }
     }
 }
 
 pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
-    let mut parser = Parser::new(src, lexed, grammar::alias_names(src), 0);
+    let mut parser = Parser::new(src, lexed, Mode::Block, grammar::alias_names(src), 0);
     // Not `start`: that would put leading trivia outside Root.
     parser.events.push(Event::Start(SyntaxKind::Root));
     grammar::file(&mut parser);
@@ -123,16 +123,16 @@ pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
     parser.events
 }
 
-/// Whitespace and comments are skipped when looking ahead.
+/// Whitespace and comments are skipped when looking ahead, as is a line break in some modes.
 /// They are emitted just before the next token or node, or at the end of the tokens.
 /// So no node but Root starts or ends with them.
-/// Newlines are not skipped, since they end statements.
 pub(crate) struct Parser<'a> {
     src: &'a str,
     tokens: Vec<Token>,
     lex_errors: vec::IntoIter<LexError>,
     pos: usize,
     events: Vec<Event>,
+    skips_newline: bool,
     /// The names the file aliases, shared with the `Parser` of every level of brackets.
     alias_names: Rc<[&'a str]>,
     /// Brackets around the tokens.
@@ -144,13 +144,20 @@ pub(crate) struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn new(src: &'a str, lexed: Lexed, alias_names: Rc<[&'a str]>, depth: usize) -> Parser<'a> {
+    fn new(
+        src: &'a str,
+        lexed: Lexed,
+        mode: Mode,
+        alias_names: Rc<[&'a str]>,
+        depth: usize,
+    ) -> Parser<'a> {
         Parser {
             src,
             tokens: lexed.tokens,
             lex_errors: lexed.errors.into_iter(),
             pos: 0,
             events: Vec::new(),
+            skips_newline: mode.skips_newline(),
             alias_names,
             depth,
             errors: 0,
@@ -159,6 +166,11 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn is_aliased(&self, name: &str) -> bool {
         self.alias_names.binary_search(&name).is_ok()
+    }
+
+    pub(crate) fn is_skipped(&self, kind: SyntaxKind) -> bool {
+        matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment)
+            || (kind == SyntaxKind::Newline && self.skips_newline)
     }
 
     pub(crate) fn peek(&self) -> Option<SyntaxKind> {
@@ -188,7 +200,7 @@ impl<'a> Parser<'a> {
             .find(|kind| !kind.is_trivia())
     }
 
-    /// The kinds of every token ahead, whitespace and comments included.
+    /// The kinds of every token ahead, trivia included.
     /// Only for looking past what `peek` sees.
     pub(crate) fn remaining_kinds(&self) -> impl Iterator<Item = SyntaxKind> {
         self.tokens[self.pos..].iter().map(|token| token.kind)
@@ -260,6 +272,7 @@ impl<'a> Parser<'a> {
             inner: Parser::new(
                 self.src,
                 lexed,
+                mode,
                 Rc::clone(&self.alias_names),
                 self.depth + 1,
             ),
@@ -354,12 +367,12 @@ impl<'a> Parser<'a> {
         inner.errors
     }
 
-    /// Emits the whitespace and comments ahead, so that a node does not start or end with them.
+    /// Emits the skipped tokens ahead, so that a node does not start or end with them.
     pub(crate) fn bump_skipped(&mut self) {
         while self
             .tokens
             .get(self.pos)
-            .is_some_and(|token| is_skipped(token.kind))
+            .is_some_and(|token| self.is_skipped(token.kind))
         {
             self.bump_one();
         }
@@ -429,7 +442,7 @@ impl<'a> Parser<'a> {
         self.tokens[self.pos..]
             .iter()
             .copied()
-            .filter(|token| !is_skipped(token.kind))
+            .filter(|token| !self.is_skipped(token.kind))
             .nth(n)
     }
 
@@ -454,10 +467,6 @@ impl<'a> Parser<'a> {
         self.errors += 1;
         self.events.push(Event::Error(error));
     }
-}
-
-fn is_skipped(kind: SyntaxKind) -> bool {
-    matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment)
 }
 
 /// Whether a comment among `tokens` has no whitespace before its `#`.
@@ -498,7 +507,7 @@ mod tests {
 
     fn parser(src: &str) -> Parser<'_> {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-        Parser::new(src, lexed, grammar::alias_names(src), 0)
+        Parser::new(src, lexed, Mode::Block, grammar::alias_names(src), 0)
     }
 
     #[test]

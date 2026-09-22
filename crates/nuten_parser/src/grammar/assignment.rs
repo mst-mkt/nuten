@@ -43,10 +43,7 @@ pub(super) fn var_type_error(p: &Parser<'_>, keyword: &str) -> Option<(TextSize,
 /// As in nu, the target of a file redirection is none.
 pub(super) fn assignment_ahead(p: &Parser<'_>) -> bool {
     let mut prev = None;
-    for kind in p
-        .remaining_kinds()
-        .filter(|&kind| !matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
-    {
+    for kind in p.remaining_kinds().filter(|&kind| !p.is_skipped(kind)) {
         if ends_element(kind) {
             return false;
         }

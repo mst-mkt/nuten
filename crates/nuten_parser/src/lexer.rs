@@ -144,6 +144,11 @@ impl Mode {
             || self.special_kind(byte).is_some()
     }
 
+    /// Whether the parser skips a line break instead of reading it.
+    pub(crate) fn skips_newline(self) -> bool {
+        matches!(self, Mode::Paren)
+    }
+
     pub(crate) fn special_kind(self, byte: u8) -> Option<SyntaxKind> {
         self.special()
             .iter()
