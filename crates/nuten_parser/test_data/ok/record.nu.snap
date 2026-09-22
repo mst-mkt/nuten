@@ -325,7 +325,17 @@ Root@0..777
     PipelineElement@343..361
       List@343..361
         LBracket@343..344 "["
-        Word@344..352 "{a: 1}.a"
+        CellPath@344..352
+          Record@344..350
+            LBrace@344..345 "{"
+            RecordField@345..349
+              Word@345..346 "a"
+              Colon@346..347 ":"
+              Whitespace@347..348 " "
+              Word@348..349 "1"
+            RBrace@349..350 "}"
+          Dot@350..351 "."
+          Word@351..352 "a"
         Whitespace@352..353 " "
         Word@353..360 "{a: 1}b"
         RBracket@360..361 "]"

@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/cell_path.nu
 ---
-Root@0..471
+Root@0..680
   Pipeline@0..4
     PipelineElement@0..4
       CellPath@0..4
@@ -413,86 +413,303 @@ Root@0..471
     PipelineElement@386..395
       InterpString@386..395 "$\"($x.a)\""
   Newline@395..396 "\n"
-  Pipeline@396..404
-    PipelineElement@396..404
-      CellPath@396..404
-        Subexpression@396..402
-          LParen@396..397 "("
-          Pipeline@397..401
-            PipelineElement@397..401
-              Call@397..401
-                Word@397..401 "1..2"
-          RParen@401..402 ")"
-        Dot@402..403 "."
-        Word@403..404 "0"
-  Newline@404..405 "\n"
-  Pipeline@405..413
-    PipelineElement@405..413
-      Word@405..413 "(ls).a.."
-  Newline@413..414 "\n"
-  Pipeline@414..420
-    PipelineElement@414..420
-      Word@414..420 "(a)b.c"
-  Newline@420..421 "\n"
-  Pipeline@421..428
-    PipelineElement@421..428
-      CellPath@421..428
-        Word@421..423 "$x"
+  Pipeline@396..403
+    PipelineElement@396..403
+      CellPath@396..403
+        List@396..401
+          LBracket@396..397 "["
+          Word@397..398 "1"
+          Whitespace@398..399 " "
+          Word@399..400 "2"
+          RBracket@400..401 "]"
+        Dot@401..402 "."
+        Word@402..403 "0"
+  Newline@403..404 "\n"
+  Pipeline@404..416
+    PipelineElement@404..416
+      CellPath@404..416
+        Table@404..414
+          LBracket@404..405 "["
+          List@405..408
+            LBracket@405..406 "["
+            Word@406..407 "a"
+            RBracket@407..408 "]"
+          Semicolon@408..409 ";"
+          Whitespace@409..410 " "
+          List@410..413
+            LBracket@410..411 "["
+            Word@411..412 "1"
+            RBracket@412..413 "]"
+          RBracket@413..414 "]"
+        Dot@414..415 "."
+        Word@415..416 "a"
+  Newline@416..417 "\n"
+  Pipeline@417..426
+    PipelineElement@417..426
+      CellPath@417..426
+        Record@417..423
+          LBrace@417..418 "{"
+          RecordField@418..422
+            Word@418..419 "a"
+            Colon@419..420 ":"
+            Whitespace@420..421 " "
+            Word@421..422 "1"
+          RBrace@422..423 "}"
         Dot@423..424 "."
-        Word@424..425 "="
-        Dot@425..426 "."
-        Word@426..428 "o>"
-  Newline@428..429 "\n"
-  Pipeline@429..436
-    PipelineElement@429..436
-      CellPath@429..436
-        Word@429..431 "$x"
-        Dot@431..432 "."
-        Word@432..433 "a"
-        Bang@433..434 "!"
-        Dot@434..435 "."
-        Word@435..436 "b"
-  Newline@436..437 "\n"
-  Pipeline@437..452
-    PipelineElement@437..452
-      Call@437..452
-        Word@437..440 "foo"
+        Word@424..425 "a"
+        Question@425..426 "?"
+  Newline@426..427 "\n"
+  Pipeline@427..434
+    PipelineElement@427..434
+      CellPath@427..434
+        Word@427..432 "[a;b]"
+        Dot@432..433 "."
+        Word@433..434 "0"
+  Newline@434..435 "\n"
+  Pipeline@435..457
+    PipelineElement@435..457
+      Call@435..457
+        Word@435..440 "print"
         Whitespace@440..441 " "
-        CellPath@441..445
-          Word@441..443 "$x"
-          Dot@443..444 "."
-          Word@444..445 "a"
-        Whitespace@445..446 " "
-        CellPath@446..452
-          Subexpression@446..450
-            LParen@446..447 "("
-            Pipeline@447..449
-              PipelineElement@447..449
-                Call@447..449
-                  Word@447..449 "ls"
-            RParen@449..450 ")"
-          Dot@450..451 "."
-          Word@451..452 "a"
-  Newline@452..453 "\n"
-  Pipeline@453..470
-    PipelineElement@453..455
-      Call@453..455
-        Word@453..455 "ls"
-    Whitespace@455..456 " "
-    Pipe@456..457 "|"
-    Whitespace@457..458 " "
-    PipelineElement@458..470
-      Call@458..470
-        Word@458..463 "where"
+        Word@441..448 "[1 2].0"
+        Whitespace@448..449 " "
+        CellPath@449..457
+          Record@449..455
+            LBrace@449..450 "{"
+            RecordField@450..454
+              Word@450..451 "a"
+              Colon@451..452 ":"
+              Whitespace@452..453 " "
+              Word@453..454 "1"
+            RBrace@454..455 "}"
+          Dot@455..456 "."
+          Word@456..457 "a"
+  Newline@457..458 "\n"
+  Pipeline@458..472
+    PipelineElement@458..472
+      ExternalCall@458..472
+        Word@458..463 "^echo"
         Whitespace@463..464 " "
-        CellPath@464..470
-          Subexpression@464..468
-            LParen@464..465 "("
-            Pipeline@465..467
-              PipelineElement@465..467
-                Call@465..467
-                  Word@465..467 "ls"
-            RParen@467..468 ")"
-          Dot@468..469 "."
-          Word@469..470 "a"
-  Newline@470..471 "\n"
+        Word@464..472 "{a: 1}.b"
+  Newline@472..473 "\n"
+  Pipeline@473..497
+    PipelineElement@473..497
+      If@473..497
+        Word@473..475 "if"
+        Whitespace@475..476 " "
+        Word@476..480 "true"
+        Whitespace@480..481 " "
+        Word@481..484 "{ }"
+        Whitespace@484..485 " "
+        Word@485..489 "else"
+        Whitespace@489..490 " "
+        CellPath@490..497
+          List@490..495
+            LBracket@490..491 "["
+            Word@491..492 "1"
+            Whitespace@492..493 " "
+            Word@493..494 "2"
+            RBracket@494..495 "]"
+          Dot@495..496 "."
+          Word@496..497 "0"
+  Newline@497..498 "\n"
+  Pipeline@498..523
+    PipelineElement@498..523
+      Match@498..523
+        Word@498..503 "match"
+        Whitespace@503..504 " "
+        Word@504..505 "1"
+        Whitespace@505..506 " "
+        MatchArms@506..523
+          LBrace@506..507 "{"
+          Whitespace@507..508 " "
+          MatchArm@508..521
+            Word@508..509 "_"
+            Whitespace@509..510 " "
+            FatArrow@510..512 "=>"
+            Whitespace@512..513 " "
+            CellPath@513..521
+              Record@513..519
+                LBrace@513..514 "{"
+                RecordField@514..518
+                  Word@514..515 "a"
+                  Colon@515..516 ":"
+                  Whitespace@516..517 " "
+                  Word@517..518 "1"
+                RBrace@518..519 "}"
+              Dot@519..520 "."
+              Word@520..521 "a"
+          Whitespace@521..522 " "
+          RBrace@522..523 "}"
+  Newline@523..524 "\n"
+  Pipeline@524..537
+    PipelineElement@524..537
+      Loop@524..537
+        Word@524..528 "loop"
+        Whitespace@528..529 " "
+        CellPath@529..537
+          Record@529..535
+            LBrace@529..530 "{"
+            RecordField@530..534
+              Word@530..531 "a"
+              Colon@531..532 ":"
+              Whitespace@532..533 " "
+              Word@533..534 "1"
+            RBrace@534..535 "}"
+          Dot@535..536 "."
+          Word@536..537 "a"
+  Newline@537..538 "\n"
+  Pipeline@538..557
+    PipelineElement@538..540
+      Call@538..540
+        Word@538..540 "ls"
+    Whitespace@540..541 " "
+    Pipe@541..542 "|"
+    Whitespace@542..543 " "
+    PipelineElement@543..557
+      Call@543..557
+        Word@543..548 "where"
+        Whitespace@548..549 " "
+        Word@549..557 "{a: 1}.a"
+  Newline@557..558 "\n"
+  Pipeline@558..562
+    PipelineElement@558..562
+      Word@558..562 "{}.a"
+  Newline@562..563 "\n"
+  Pipeline@563..571
+    PipelineElement@563..571
+      CellPath@563..571
+        Subexpression@563..569
+          LParen@563..564 "("
+          Pipeline@564..568
+            PipelineElement@564..568
+              Call@564..568
+                Word@564..568 "1..2"
+          RParen@568..569 ")"
+        Dot@569..570 "."
+        Word@570..571 "0"
+  Newline@571..572 "\n"
+  Pipeline@572..580
+    PipelineElement@572..580
+      Word@572..580 "(ls).a.."
+  Newline@580..581 "\n"
+  Pipeline@581..587
+    PipelineElement@581..587
+      Word@581..587 "(a)b.c"
+  Newline@587..588 "\n"
+  Pipeline@588..595
+    PipelineElement@588..595
+      CellPath@588..595
+        Word@588..590 "$x"
+        Dot@590..591 "."
+        Word@591..592 "="
+        Dot@592..593 "."
+        Word@593..595 "o>"
+  Newline@595..596 "\n"
+  Pipeline@596..603
+    PipelineElement@596..603
+      CellPath@596..603
+        Word@596..598 "$x"
+        Dot@598..599 "."
+        Word@599..600 "a"
+        Bang@600..601 "!"
+        Dot@601..602 "."
+        Word@602..603 "b"
+  Newline@603..604 "\n"
+  Pipeline@604..619
+    PipelineElement@604..619
+      Call@604..619
+        Word@604..607 "foo"
+        Whitespace@607..608 " "
+        CellPath@608..612
+          Word@608..610 "$x"
+          Dot@610..611 "."
+          Word@611..612 "a"
+        Whitespace@612..613 " "
+        CellPath@613..619
+          Subexpression@613..617
+            LParen@613..614 "("
+            Pipeline@614..616
+              PipelineElement@614..616
+                Call@614..616
+                  Word@614..616 "ls"
+            RParen@616..617 ")"
+          Dot@617..618 "."
+          Word@618..619 "a"
+  Newline@619..620 "\n"
+  Pipeline@620..637
+    PipelineElement@620..622
+      Call@620..622
+        Word@620..622 "ls"
+    Whitespace@622..623 " "
+    Pipe@623..624 "|"
+    Whitespace@624..625 " "
+    PipelineElement@625..637
+      Call@625..637
+        Word@625..630 "where"
+        Whitespace@630..631 " "
+        CellPath@631..637
+          Subexpression@631..635
+            LParen@631..632 "("
+            Pipeline@632..634
+              PipelineElement@632..634
+                Call@632..634
+                  Word@632..634 "ls"
+            RParen@634..635 ")"
+          Dot@635..636 "."
+          Word@636..637 "a"
+  Newline@637..638 "\n"
+  Pipeline@638..646
+    PipelineElement@638..646
+      CellPath@638..646
+        List@638..644
+          LBracket@638..639 "["
+          Word@639..643 "1..2"
+          RBracket@643..644 "]"
+        Dot@644..645 "."
+        Word@645..646 "0"
+  Newline@646..647 "\n"
+  Pipeline@647..658
+    PipelineElement@647..658
+      CellPath@647..658
+        Record@647..656
+          LBrace@647..648 "{"
+          RecordField@648..655
+            Word@648..649 "a"
+            Colon@649..650 ":"
+            Whitespace@650..651 " "
+            Word@651..655 "1..2"
+          RBrace@655..656 "}"
+        Dot@656..657 "."
+        Word@657..658 "a"
+  Newline@658..659 "\n"
+  Pipeline@659..668
+    PipelineElement@659..668
+      CellPath@659..668
+        List@659..664
+          LBracket@659..660 "["
+          Word@660..661 "1"
+          Whitespace@661..662 " "
+          Word@662..663 "2"
+          RBracket@663..664 "]"
+        Dot@664..665 "."
+        Word@665..666 "0"
+        Dot@666..667 "."
+        Word@667..668 "."
+  Newline@668..669 "\n"
+  Pipeline@669..679
+    PipelineElement@669..679
+      CellPath@669..679
+        Record@669..675
+          LBrace@669..670 "{"
+          RecordField@670..674
+            Word@670..671 "a"
+            Colon@671..672 ":"
+            Whitespace@672..673 " "
+            Word@673..674 "1"
+          RBrace@674..675 "}"
+        Dot@675..676 "."
+        Word@676..677 "a"
+        Dot@677..678 "."
+        Word@678..679 "."
+  Newline@679..680 "\n"

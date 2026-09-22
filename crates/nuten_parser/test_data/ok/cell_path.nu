@@ -32,6 +32,17 @@ $env.FOO = $x.a
 $x.a + (ls).b
 let y = $x.a
 $"($x.a)"
+[1 2].0
+[[a]; [1]].a
+{a: 1}.a?
+[a;b].0
+print [1 2].0 {a: 1}.a
+^echo {a: 1}.b
+if true { } else [1 2].0
+match 1 { _ => {a: 1}.a }
+loop {a: 1}.a
+ls | where {a: 1}.a
+{}.a
 (1..2).0
 (ls).a..
 (a)b.c
@@ -39,3 +50,7 @@ $x.=.o>
 $x.a!.b
 foo $x.a (ls).a
 ls | where (ls).a
+[1..2].0
+{a: 1..2}.a
+[1 2].0..
+{a: 1}.a..

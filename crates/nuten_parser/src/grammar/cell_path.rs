@@ -1,9 +1,9 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    PAREN, Shape,
+    Braced, CURLY, PAREN, RecordSign, SQUARE, Shape,
     number::int,
-    value,
+    record_sign, value,
     variable::{is_variable_name, reads_dollar},
 };
 use crate::{
@@ -30,7 +30,7 @@ enum Link {
 /// The word stays whole where nuten does not read it as nu does yet.
 pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPathAhead<'a>> {
     let text = p.peek_text()?;
-    if !text.starts_with(['$', '(']) || !text.contains(['.', '?', '!']) {
+    if !text.starts_with(['$', '(', '[', '{']) || !text.contains(['.', '?', '!']) {
         return None;
     }
     let relexed = p.relexed(Mode::CellPath)?;
@@ -41,7 +41,7 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
     }
     // Nu reads a `$` or a `( )` with `..` in its path as a range where it can.
     // Ranges are not read yet, so such a word stays whole.
-    if text[usize::from(head.range.len())..].contains("..") {
+    if text.starts_with(['$', '(']) && text[usize::from(head.range.len())..].contains("..") {
         return None;
     }
     let links = links(path)?;
@@ -52,11 +52,18 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
 }
 
 /// Whether nu reads `head`, which `inner` starts with, as the value of a cell path for `shape`.
-/// A variable name must be one nu takes, and a `( )` must close at the last byte of `head`.
+/// Nu reads a `[ ]` there only where it takes any value.
+/// It reads a `{ }` there only as a record with a `:` second.
+/// A variable name must be one nu takes, and each bracket must close at the last byte of `head`.
 fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
     match head.as_bytes() {
         [b'$', ..] => reads_dollar(head, shape) && is_variable_name(&head[1..]),
         [b'(', ..] => shape.takes_value() && inner.bracketed(&PAREN, Mode::Paren).is_some(),
+        [b'[', ..] => shape.takes_any_value() && inner.bracketed(&SQUARE, Mode::List).is_some(),
+        [b'{', ..] => inner.bracketed(&CURLY, Mode::Brace).is_some_and(|braced| {
+            let sign = record_sign(braced.inner().remaining_tokens());
+            matches!(shape.braced(sign), Braced::Record(RecordSign::ColonSecond))
+        }),
         _ => false,
     }
 }
@@ -226,6 +233,10 @@ mod tests {
         for src in [
             "let $x.a = 1",
             "let (x).a = 1",
+            "^echo [1 2].0",
+            "{...$r}.a",
+            "{a}.b",
+            "[a]b.c",
             "$\"a\".b",
             "$'a'.b",
             "$x?",

@@ -133,6 +133,11 @@ impl Shape {
 
     /// Whether nu reads a `[ ]` as a table where it takes this shape.
     fn reads_table(self) -> bool {
+        self.takes_any_value()
+    }
+
+    /// Whether nu reads a `[ ]` here as it does where it takes any value.
+    fn takes_any_value(self) -> bool {
         matches!(self, Shape::Any | Shape::Block)
     }
 
