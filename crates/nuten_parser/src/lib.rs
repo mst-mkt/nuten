@@ -70,9 +70,14 @@ pub enum ParseErrorKind {
     /// A redirection of a stream the element already redirects.
     MultipleRedirections,
     /// An item where nu takes an operator of a math expression.
-    /// A spelling nu takes only to reject, such as `^` or `%`, is one of these for now.
-    /// So is one of another shell, which is reported as itself only where a call takes it.
+    /// A spelling with an error of its own, `||` or one of `UnknownOperator`, is reported as that.
     MissingOperator,
+    /// A spelling nu takes for an operator only to reject, with what it says to write instead.
+    /// Only where nu takes an operator: `^` and `%` head calls of their own elsewhere.
+    UnknownOperator {
+        spelling: &'static str,
+        instead: &'static str,
+    },
     /// An operator of a math expression with no term after it.
     /// Reported at the operator, where nu points at what follows it.
     MissingTerm,
@@ -102,6 +107,10 @@ impl fmt::Display for ParseErrorKind {
             ParseErrorKind::RedirectionAtHead => "redirection with no command before it",
             ParseErrorKind::MissingRedirectionTarget => "redirection with no target after it",
             ParseErrorKind::MissingOperator => "term with no operator before it",
+            ParseErrorKind::UnknownOperator {
+                spelling,
+                instead,
+            } => return write!(f, "`{spelling}` is not an operator; use {instead}"),
             ParseErrorKind::MissingTerm => "operator with no term after it",
             ParseErrorKind::SignatureSeparator => {
                 "`:`, `=`, or `,` with no parameter, type, or default value for it"
@@ -142,6 +151,14 @@ mod tests {
         assert_eq!(
             ParseErrorKind::PipeAtEof.to_string(),
             "no command after `|`"
+        );
+        assert_eq!(
+            ParseErrorKind::UnknownOperator {
+                spelling: "%",
+                instead: "`mod`",
+            }
+            .to_string(),
+            "`%` is not an operator; use `mod`"
         );
     }
 }

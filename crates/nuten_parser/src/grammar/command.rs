@@ -101,7 +101,7 @@ fn joined_term(p: &mut Parser<'_>) {
     if !p.peek_text().is_some_and(is_operator) {
         let error = p
             .peek_text()
-            .and_then(shell_operator)
+            .and_then(|text| shell_operator(text).or_else(|| unknown_operator(text)))
             .unwrap_or(ParseErrorKind::MissingOperator);
         return p.bump_error(error);
     }
@@ -158,7 +158,7 @@ fn takes_term(p: &Parser<'_>) -> bool {
 
 /// Whether nu's `parse_operator` reads `text` as an operator.
 /// Its arms are in nu's order, so that the port can be checked against them.
-/// The spellings it takes only to reject, such as `^` and `%`, are left out.
+/// The spellings it takes only to reject are left out; `unknown_operator` holds them.
 /// So is an assignment operator, which the lexer gives a kind of its own.
 /// So is `not`, which nu reads as a prefix of a term, though `term` emits it as an `Operator` too.
 fn is_operator(text: &str) -> bool {
@@ -198,6 +198,32 @@ fn is_operator(text: &str) -> bool {
             | "xor"
             | "and"
     )
+}
+
+/// What nu says to write instead of `text`, among the spellings it takes only to reject.
+/// Ported from the arms of nu's `parse_operator` that report an unknown operator, in their order.
+fn unknown_operator(text: &str) -> Option<ParseErrorKind> {
+    let (spelling, instead) = match text {
+        "^" => ("^", "`**` to raise to a power, or `bit-xor` to xor bits"),
+        "pow" => ("pow", "`**` to raise to a power, or `bit-xor` to xor bits"),
+        "is" => ("is", "`==`"),
+        "===" => ("===", "`==`"),
+        "contains" => ("contains", "`has`"),
+        "%" => ("%", "`mod`"),
+        "&" => ("&", "`bit-and`"),
+        "<<" => ("<<", "`bit-shl`"),
+        ">>" => (">>", "`bit-shr`"),
+        "bits-and" => ("bits-and", "`bit-and`"),
+        "bits-xor" => ("bits-xor", "`bit-xor`"),
+        "bits-or" => ("bits-or", "`bit-or`"),
+        "bits-shl" => ("bits-shl", "`bit-shl`"),
+        "bits-shr" => ("bits-shr", "`bit-shr`"),
+        _ => return None,
+    };
+    Some(ParseErrorKind::UnknownOperator {
+        spelling,
+        instead,
+    })
 }
 
 /// Whether nu reads `text` as the start of an expression, not as the head of a call.
@@ -382,7 +408,7 @@ impl Streams {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_math_expression_like, is_operator, takes_operator};
+    use super::{is_math_expression_like, is_operator, takes_operator, unknown_operator};
     use crate::{ParseErrorKind, parse};
 
     fn errors(src: &str) -> Vec<ParseErrorKind> {
@@ -455,6 +481,42 @@ mod tests {
             "bits-xor", "bits-shl", "bits-shr",
         ] {
             assert!(!is_operator(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn spellings_nu_takes_only_to_reject_say_what_to_write_instead() {
+        for (text, instead) in [
+            ("^", "`**` to raise to a power, or `bit-xor` to xor bits"),
+            ("pow", "`**` to raise to a power, or `bit-xor` to xor bits"),
+            ("is", "`==`"),
+            ("===", "`==`"),
+            ("contains", "`has`"),
+            ("%", "`mod`"),
+            ("&", "`bit-and`"),
+            ("<<", "`bit-shl`"),
+            (">>", "`bit-shr`"),
+            ("bits-and", "`bit-and`"),
+            ("bits-xor", "`bit-xor`"),
+            ("bits-or", "`bit-or`"),
+            ("bits-shl", "`bit-shl`"),
+            ("bits-shr", "`bit-shr`"),
+        ] {
+            let expected = ParseErrorKind::UnknownOperator {
+                spelling: text,
+                instead,
+            };
+            assert_eq!(unknown_operator(text), Some(expected), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn spellings_nu_never_takes_for_an_operator_have_nothing_to_write_instead() {
+        for text in [
+            "1", "$a", "ls", "not", "+", "and", "bit-and", "mod", "", "||", "&&", "2>", "2>&1",
+            "o>|", "out>|",
+        ] {
+            assert!(unknown_operator(text).is_none(), "{text:?}");
         }
     }
 

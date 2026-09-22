@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/math_expression_errors.nu
 ---
-Root@0..202
+Root@0..221
   Pipeline@0..3
     PipelineElement@0..3
       MathExpression@0..3
@@ -51,222 +51,248 @@ Root@0..202
         Error@25..26
           Word@25..26 "2"
   Newline@26..27 "\n"
-  Pipeline@27..34
-    PipelineElement@27..34
-      MathExpression@27..34
+  Pipeline@27..32
+    PipelineElement@27..32
+      MathExpression@27..32
         Word@27..28 "1"
         Whitespace@28..29 " "
-        Operator@29..30 "+"
+        Error@29..30
+          Word@29..30 "%"
         Whitespace@30..31 " "
-        Word@31..32 "+"
-        Whitespace@32..33 " "
-        Error@33..34
-          Word@33..34 "2"
-  Newline@34..35 "\n"
-  Pipeline@35..42
-    PipelineElement@35..42
-      MathExpression@35..42
-        Word@35..36 "1"
-        Whitespace@36..37 " "
-        Operator@37..38 "+"
-        Whitespace@38..39 " "
-        Word@39..40 "2"
-        Whitespace@40..41 " "
-        Error@41..42
-          Word@41..42 "3"
-  Newline@42..43 "\n"
-  Pipeline@43..54
-    PipelineElement@43..54
-      MathExpression@43..54
-        Word@43..44 "1"
-        Whitespace@44..45 " "
-        Operator@45..46 "+"
-        Whitespace@46..47 " "
-        Word@47..48 "2"
-        Whitespace@48..49 " "
-        Error@49..54
-          Word@49..54 "[3 4]"
-  Newline@54..55 "\n"
-  Pipeline@55..58
-    PipelineElement@55..58
-      MathExpression@55..58
-        Word@55..56 "1"
-        Whitespace@56..57 " "
-        Error@57..58
-          Word@57..58 "+"
-  Newline@58..59 "\n"
-  Pipeline@59..62
-    PipelineElement@59..62
-      MathExpression@59..62
-        Error@59..62
-          Word@59..62 "not"
-  Newline@62..63 "\n"
-  Pipeline@63..70
-    PipelineElement@63..70
-      MathExpression@63..70
-        Operator@63..66 "not"
-        Whitespace@66..67 " "
-        Error@67..70
-          Word@67..70 "not"
-  Newline@70..71 "\n"
-  Pipeline@71..81
-    PipelineElement@71..81
-      MathExpression@71..81
-        Word@71..73 "$a"
-        Whitespace@73..74 " "
-        Operator@74..77 "and"
-        Whitespace@77..78 " "
+        Error@31..32
+          Word@31..32 "2"
+  Newline@32..33 "\n"
+  Pipeline@33..45
+    PipelineElement@33..45
+      MathExpression@33..45
+        Word@33..34 "1"
+        Whitespace@34..35 " "
+        Error@35..43
+          Word@35..43 "bits-and"
+        Whitespace@43..44 " "
+        Error@44..45
+          Word@44..45 "2"
+  Newline@45..46 "\n"
+  Pipeline@46..53
+    PipelineElement@46..53
+      MathExpression@46..53
+        Word@46..47 "1"
+        Whitespace@47..48 " "
+        Operator@48..49 "+"
+        Whitespace@49..50 " "
+        Word@50..51 "+"
+        Whitespace@51..52 " "
+        Error@52..53
+          Word@52..53 "2"
+  Newline@53..54 "\n"
+  Pipeline@54..61
+    PipelineElement@54..61
+      MathExpression@54..61
+        Word@54..55 "1"
+        Whitespace@55..56 " "
+        Operator@56..57 "+"
+        Whitespace@57..58 " "
+        Word@58..59 "2"
+        Whitespace@59..60 " "
+        Error@60..61
+          Word@60..61 "3"
+  Newline@61..62 "\n"
+  Pipeline@62..73
+    PipelineElement@62..73
+      MathExpression@62..73
+        Word@62..63 "1"
+        Whitespace@63..64 " "
+        Operator@64..65 "+"
+        Whitespace@65..66 " "
+        Word@66..67 "2"
+        Whitespace@67..68 " "
+        Error@68..73
+          Word@68..73 "[3 4]"
+  Newline@73..74 "\n"
+  Pipeline@74..77
+    PipelineElement@74..77
+      MathExpression@74..77
+        Word@74..75 "1"
+        Whitespace@75..76 " "
+        Error@76..77
+          Word@76..77 "+"
+  Newline@77..78 "\n"
+  Pipeline@78..81
+    PipelineElement@78..81
+      MathExpression@78..81
         Error@78..81
           Word@78..81 "not"
   Newline@81..82 "\n"
-  Pipeline@82..94
-    PipelineElement@82..85
-      MathExpression@82..85
-        Error@82..85
-          Word@82..85 "not"
-    Whitespace@85..86 " "
-    Pipe@86..87 "|"
-    Whitespace@87..88 " "
-    PipelineElement@88..94
-      Call@88..94
-        Word@88..94 "length"
-  Newline@94..95 "\n"
-  Pipeline@95..104
-    PipelineElement@95..104
-      MathExpression@95..104
-        Word@95..96 "1"
+  Pipeline@82..89
+    PipelineElement@82..89
+      MathExpression@82..89
+        Operator@82..85 "not"
+        Whitespace@85..86 " "
+        Error@86..89
+          Word@86..89 "not"
+  Newline@89..90 "\n"
+  Pipeline@90..100
+    PipelineElement@90..100
+      MathExpression@90..100
+        Word@90..92 "$a"
+        Whitespace@92..93 " "
+        Operator@93..96 "and"
         Whitespace@96..97 " "
-        Operator@97..98 "+"
-        Whitespace@98..99 " "
-        Word@99..101 "if"
-        Whitespace@101..102 " "
-        Error@102..104
-          Word@102..104 "$a"
-  Newline@104..105 "\n"
-  Pipeline@105..126
-    PipelineElement@105..126
-      MathExpression@105..126
-        Word@105..106 "1"
-        Whitespace@106..107 " "
-        Operator@107..108 "+"
-        Whitespace@108..109 " "
-        Word@109..111 "if"
-        Whitespace@111..112 " "
-        Error@112..114
-          Word@112..114 "$a"
-        Whitespace@114..115 " "
-        Error@115..120
-          Word@115..120 "{ 1 }"
+        Error@97..100
+          Word@97..100 "not"
+  Newline@100..101 "\n"
+  Pipeline@101..113
+    PipelineElement@101..104
+      MathExpression@101..104
+        Error@101..104
+          Word@101..104 "not"
+    Whitespace@104..105 " "
+    Pipe@105..106 "|"
+    Whitespace@106..107 " "
+    PipelineElement@107..113
+      Call@107..113
+        Word@107..113 "length"
+  Newline@113..114 "\n"
+  Pipeline@114..123
+    PipelineElement@114..123
+      MathExpression@114..123
+        Word@114..115 "1"
+        Whitespace@115..116 " "
+        Operator@116..117 "+"
+        Whitespace@117..118 " "
+        Word@118..120 "if"
         Whitespace@120..121 " "
-        Error@121..126
-          Word@121..126 "extra"
-  Newline@126..127 "\n"
-  Pipeline@127..153
-    PipelineElement@127..153
-      MathExpression@127..153
-        Operator@127..130 "not"
+        Error@121..123
+          Word@121..123 "$a"
+  Newline@123..124 "\n"
+  Pipeline@124..145
+    PipelineElement@124..145
+      MathExpression@124..145
+        Word@124..125 "1"
+        Whitespace@125..126 " "
+        Operator@126..127 "+"
+        Whitespace@127..128 " "
+        Word@128..130 "if"
         Whitespace@130..131 " "
-        Word@131..133 "if"
+        Error@131..133
+          Word@131..133 "$a"
         Whitespace@133..134 " "
-        Error@134..136
-          Word@134..136 "$a"
-        Whitespace@136..137 " "
-        Error@137..142
-          Word@137..142 "{ 1 }"
-        Whitespace@142..143 " "
-        Error@143..147
-          Word@143..147 "else"
-        Whitespace@147..148 " "
-        Error@148..153
-          Word@148..153 "{ 2 }"
-  Newline@153..154 "\n"
-  Pipeline@154..158
-    PipelineElement@154..158
-      MathExpression@154..158
-        Word@154..155 "1"
+        Error@134..139
+          Word@134..139 "{ 1 }"
+        Whitespace@139..140 " "
+        Error@140..145
+          Word@140..145 "extra"
+  Newline@145..146 "\n"
+  Pipeline@146..172
+    PipelineElement@146..172
+      MathExpression@146..172
+        Operator@146..149 "not"
+        Whitespace@149..150 " "
+        Word@150..152 "if"
+        Whitespace@152..153 " "
+        Error@153..155
+          Word@153..155 "$a"
         Whitespace@155..156 " "
-        Error@156..158 "a)"
-  Newline@158..159 "\n"
-  Pipeline@159..171
-    PipelineElement@159..171
-      MathExpression@159..162
-        Word@159..160 "1"
-        Whitespace@160..161 " "
-        Error@161..162
-          Word@161..162 "+"
-      Whitespace@162..163 " "
-      Redirection@163..171
-        OutGt@163..165 "o>"
-        Whitespace@165..166 " "
-        Word@166..171 "f.txt"
-  Newline@171..172 "\n"
-  Pipeline@172..175
-    PipelineElement@172..175
-      MathExpression@172..175
-        Word@172..173 "1"
-        Whitespace@173..174 " "
-        Error@174..175
-          Word@174..175 "+"
-  Semicolon@175..176 ";"
-  Whitespace@176..177 " "
-  Pipeline@177..179
-    PipelineElement@177..179
-      Call@177..179
-        Word@177..179 "ls"
-  Newline@179..180 "\n"
-  Pipeline@180..188
-    PipelineElement@180..188
-      Assignment@180..188
-        Word@180..182 "$x"
-        Whitespace@182..183 " "
-        Assign@183..184 "="
+        Error@156..161
+          Word@156..161 "{ 1 }"
+        Whitespace@161..162 " "
+        Error@162..166
+          Word@162..166 "else"
+        Whitespace@166..167 " "
+        Error@167..172
+          Word@167..172 "{ 2 }"
+  Newline@172..173 "\n"
+  Pipeline@173..177
+    PipelineElement@173..177
+      MathExpression@173..177
+        Word@173..174 "1"
+        Whitespace@174..175 " "
+        Error@175..177 "a)"
+  Newline@177..178 "\n"
+  Pipeline@178..190
+    PipelineElement@178..190
+      MathExpression@178..181
+        Word@178..179 "1"
+        Whitespace@179..180 " "
+        Error@180..181
+          Word@180..181 "+"
+      Whitespace@181..182 " "
+      Redirection@182..190
+        OutGt@182..184 "o>"
         Whitespace@184..185 " "
-        Pipeline@185..188
-          PipelineElement@185..188
-            MathExpression@185..188
-              Word@185..186 "1"
-              Whitespace@186..187 " "
-              Error@187..188
-                Word@187..188 "+"
-  Newline@188..189 "\n"
-  Pipeline@189..201
-    PipelineElement@189..192
-      MathExpression@189..192
-        Word@189..190 "1"
-        Whitespace@190..191 " "
-        Error@191..192
-          Word@191..192 "+"
-    Whitespace@192..193 " "
-    Pipe@193..194 "|"
-    Whitespace@194..195 " "
-    PipelineElement@195..201
-      Call@195..201
-        Word@195..201 "length"
-  Newline@201..202 "\n"
+        Word@185..190 "f.txt"
+  Newline@190..191 "\n"
+  Pipeline@191..194
+    PipelineElement@191..194
+      MathExpression@191..194
+        Word@191..192 "1"
+        Whitespace@192..193 " "
+        Error@193..194
+          Word@193..194 "+"
+  Semicolon@194..195 ";"
+  Whitespace@195..196 " "
+  Pipeline@196..198
+    PipelineElement@196..198
+      Call@196..198
+        Word@196..198 "ls"
+  Newline@198..199 "\n"
+  Pipeline@199..207
+    PipelineElement@199..207
+      Assignment@199..207
+        Word@199..201 "$x"
+        Whitespace@201..202 " "
+        Assign@202..203 "="
+        Whitespace@203..204 " "
+        Pipeline@204..207
+          PipelineElement@204..207
+            MathExpression@204..207
+              Word@204..205 "1"
+              Whitespace@205..206 " "
+              Error@206..207
+                Word@206..207 "+"
+  Newline@207..208 "\n"
+  Pipeline@208..220
+    PipelineElement@208..211
+      MathExpression@208..211
+        Word@208..209 "1"
+        Whitespace@209..210 " "
+        Error@210..211
+          Word@210..211 "+"
+    Whitespace@211..212 " "
+    Pipe@212..213 "|"
+    Whitespace@213..214 " "
+    PipelineElement@214..220
+      Call@214..220
+        Word@214..220 "length"
+  Newline@220..221 "\n"
 error 2..3 "2": MissingOperator
 error 10..11 "3": MissingOperator
 error 14..16 "-2": MissingOperator
 error 19..20 "1": MissingOperator
-error 23..24 "^": MissingOperator
+error 23..24 "^": UnknownOperator { spelling: "^", instead: "`**` to raise to a power, or `bit-xor` to xor bits" }
 error 25..26 "2": MissingOperator
-error 33..34 "2": MissingOperator
-error 41..42 "3": MissingOperator
-error 49..54 "[3 4]": MissingOperator
-error 57..58 "+": MissingTerm
-error 59..62 "not": MissingTerm
-error 67..70 "not": MissingTerm
+error 29..30 "%": UnknownOperator { spelling: "%", instead: "`mod`" }
+error 31..32 "2": MissingOperator
+error 35..43 "bits-and": UnknownOperator { spelling: "bits-and", instead: "`bit-and`" }
+error 44..45 "2": MissingOperator
+error 52..53 "2": MissingOperator
+error 60..61 "3": MissingOperator
+error 68..73 "[3 4]": MissingOperator
+error 76..77 "+": MissingTerm
 error 78..81 "not": MissingTerm
-error 82..85 "not": MissingTerm
-error 102..104 "$a": MissingOperator
-error 112..114 "$a": MissingOperator
-error 115..120 "{ 1 }": MissingOperator
-error 121..126 "extra": MissingOperator
-error 134..136 "$a": MissingOperator
-error 137..142 "{ 1 }": MissingOperator
-error 143..147 "else": MissingOperator
-error 148..153 "{ 2 }": MissingOperator
-error 157..158 ")": Lex(UnmatchedCloser)
-error 161..162 "+": MissingTerm
-error 174..175 "+": MissingTerm
-error 187..188 "+": MissingTerm
-error 191..192 "+": MissingTerm
+error 86..89 "not": MissingTerm
+error 97..100 "not": MissingTerm
+error 101..104 "not": MissingTerm
+error 121..123 "$a": MissingOperator
+error 131..133 "$a": MissingOperator
+error 134..139 "{ 1 }": MissingOperator
+error 140..145 "extra": MissingOperator
+error 153..155 "$a": MissingOperator
+error 156..161 "{ 1 }": MissingOperator
+error 162..166 "else": MissingOperator
+error 167..172 "{ 2 }": MissingOperator
+error 176..177 ")": Lex(UnmatchedCloser)
+error 180..181 "+": MissingTerm
+error 193..194 "+": MissingTerm
+error 206..207 "+": MissingTerm
+error 210..211 "+": MissingTerm
