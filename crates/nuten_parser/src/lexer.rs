@@ -78,7 +78,7 @@ pub(crate) enum Mode {
     Brace,
     /// The type of a variable, as in `let x: int`.
     VarType,
-    /// The inside of the `[ ]` of a `def` or an `extern`.
+    /// The inside of the `[ ]` or `( )` of a `def` or an `extern`.
     Signature,
     /// The input and output types after the signature, as in `]: nothing -> string`.
     IoTypes,

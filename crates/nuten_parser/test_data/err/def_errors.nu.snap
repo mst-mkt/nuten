@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/def_errors.nu
 ---
-Root@0..363
+Root@0..381
   Pipeline@0..19
     PipelineElement@0..19
       Def@0..19
@@ -450,6 +450,31 @@ Root@0..363
           Whitespace@360..361 " "
           RBrace@361..362 "}"
   Newline@362..363 "\n"
+  Pipeline@363..380
+    PipelineElement@363..380
+      Def@363..380
+        Word@363..366 "def"
+        Whitespace@366..367 " "
+        Word@367..368 "q"
+        Whitespace@368..369 " "
+        Signature@369..373
+          LParen@369..370 "("
+          Param@370..372
+            Word@370..371 "x"
+            Error@371..372
+              Colon@371..372 ":"
+          RParen@372..373 ")"
+        Whitespace@373..374 " "
+        Block@374..380
+          LBrace@374..375 "{"
+          Whitespace@375..376 " "
+          Pipeline@376..378
+            PipelineElement@376..378
+              Call@376..378
+                Word@376..378 "ls"
+          Whitespace@378..379 " "
+          RBrace@379..380 "}"
+  Newline@380..381 "\n"
 error 9..10 ",": SignatureSeparator
 error 29..30 ",": SignatureSeparator
 error 53..54 ",": SignatureSeparator
@@ -466,3 +491,4 @@ error 286..290 "(-f)": SignatureSeparator
 error 312..316 "(-g)": SignatureSeparator
 error 334..335 ":": SignatureSeparator
 error 352..353 ":": SignatureSeparator
+error 371..372 ":": SignatureSeparator

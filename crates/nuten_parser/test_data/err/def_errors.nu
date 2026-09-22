@@ -14,3 +14,4 @@ def m [x, (-f)] { ls }
 def n [x = 1,(-g)] { ls }
 def o [x :] { ls }
 def p [y: ] { ls }
+def q (x:) { ls }

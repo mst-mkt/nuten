@@ -152,14 +152,14 @@ impl Iterator for Inside {
 /// Implements `Bracketed` for the node kinds the parser makes of a bracketed word.
 /// Each takes the methods given in braces, and `Node::brackets` comes from the same table.
 macro_rules! bracketed {
-    ($($name:ident: $open:ident $close:ident $({ $($methods:tt)* })?,)*) => {
+    ($($name:ident: $($open:ident $close:ident)|+ $({ $($methods:tt)* })?,)*) => {
         $(impl Bracketed for $name { $($($methods)*)? })*
 
         impl Node {
-            /// The kinds of the brackets of a `Bracketed` node.
-            fn brackets(&self) -> Option<(SyntaxKind, SyntaxKind)> {
+            /// The kinds of the brackets a `Bracketed` node may have.
+            fn brackets(&self) -> Option<&'static [(SyntaxKind, SyntaxKind)]> {
                 match self {
-                    $(Node::$name(_) => Some((SyntaxKind::$open, SyntaxKind::$close)),)*
+                    $(Node::$name(_) => Some(&[$((SyntaxKind::$open, SyntaxKind::$close)),+]),)*
                     _ => None,
                 }
             }
@@ -170,7 +170,7 @@ macro_rules! bracketed {
 bracketed! {
     List: LBracket RBracket,
     Table: LBracket RBracket,
-    Signature: LBracket RBracket,
+    Signature: LBracket RBracket | LParen RParen,
     Record: LBrace RBrace,
     Block: LBrace RBrace,
     MatchArms: LBrace RBrace,
@@ -193,30 +193,28 @@ impl Node {
     }
 
     fn bracket_flaw(&self) -> Option<&'static str> {
-        let (open, close) = self.brackets()?;
+        let pairs = self.brackets()?;
         let node = self.syntax();
-        let is_token = |element: Option<&SyntaxElement>, kind| {
-            element
-                .and_then(SyntaxElement::as_token)
-                .is_some_and(|token| token.kind() == kind)
-        };
         let first = node.first_child_or_token();
         let opening = match self {
             Node::Type(_) => {
-                if !is_token(first.as_ref(), SyntaxKind::Word) {
+                if first.as_ref().and_then(kind_if_token) != Some(SyntaxKind::Word) {
                     return Some("does not start with its name");
                 }
                 first.and_then(|name| name.next_sibling_or_token())
             },
             _ => first,
         };
-        if !is_token(opening.as_ref(), open) {
-            Some("does not open with its bracket")
-        } else if !is_token(node.last_child_or_token().as_ref(), close) {
-            Some("does not close with its bracket")
-        } else {
-            None
-        }
+        let Some(close) = opening
+            .as_ref()
+            .and_then(kind_if_token)
+            .and_then(|open| closer(pairs, open))
+        else {
+            return Some("does not open with its bracket");
+        };
+        let last = node.last_child_or_token();
+        (last.as_ref().and_then(kind_if_token) != Some(close))
+            .then_some("does not close with its bracket")
     }
 
     fn inside_flaw(&self) -> Option<&'static str> {
@@ -236,6 +234,18 @@ impl Node {
             _ => None,
         }
     }
+}
+
+/// The kind of `element`, when it is a token and not a node.
+fn kind_if_token(element: &SyntaxElement) -> Option<SyntaxKind> {
+    element.as_token().map(SyntaxToken::kind)
+}
+
+/// The closer of the pair `open` starts, among `pairs`.
+fn closer(pairs: &[(SyntaxKind, SyntaxKind)], open: SyntaxKind) -> Option<SyntaxKind> {
+    pairs
+        .iter()
+        .find_map(|&(opener, close)| (opener == open).then_some(close))
 }
 
 /// Trivia that is not a comment.
@@ -673,6 +683,57 @@ mod tests {
                 None,
             ),
             (node(SyntaxKind::List, bracketed(vec![])), None),
+            (
+                node(
+                    SyntaxKind::List,
+                    vec![
+                        token(SyntaxKind::LParen, "("),
+                        token(SyntaxKind::RParen, ")"),
+                    ],
+                ),
+                Some("does not open with its bracket"),
+            ),
+            (node(SyntaxKind::Signature, bracketed(vec![])), None),
+            (
+                node(
+                    SyntaxKind::Signature,
+                    vec![
+                        token(SyntaxKind::LParen, "("),
+                        token(SyntaxKind::RParen, ")"),
+                    ],
+                ),
+                None,
+            ),
+            (
+                node(
+                    SyntaxKind::Signature,
+                    vec![
+                        token(SyntaxKind::LBrace, "{"),
+                        token(SyntaxKind::RBrace, "}"),
+                    ],
+                ),
+                Some("does not open with its bracket"),
+            ),
+            (
+                node(
+                    SyntaxKind::Signature,
+                    vec![
+                        token(SyntaxKind::LParen, "("),
+                        token(SyntaxKind::RBracket, "]"),
+                    ],
+                ),
+                Some("does not close with its bracket"),
+            ),
+            (
+                node(
+                    SyntaxKind::Signature,
+                    vec![
+                        token(SyntaxKind::LBracket, "["),
+                        token(SyntaxKind::RParen, ")"),
+                    ],
+                ),
+                Some("does not close with its bracket"),
+            ),
             (
                 node(SyntaxKind::Type, vec![token(SyntaxKind::LAngle, "<")]),
                 Some("does not start with its name"),

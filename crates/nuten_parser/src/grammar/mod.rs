@@ -156,6 +156,14 @@ pub(crate) const SQUARE: Brackets = Brackets {
     always_nested: true,
 };
 
+const PAREN: Brackets = Brackets {
+    open: b'(',
+    close: b')',
+    open_kind: SyntaxKind::LParen,
+    close_kind: SyntaxKind::RParen,
+    always_nested: true,
+};
+
 const CURLY: Brackets = Brackets {
     open: b'{',
     close: b'}',

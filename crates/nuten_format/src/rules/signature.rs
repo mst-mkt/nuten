@@ -19,7 +19,7 @@ impl<'a> Formatter<'a> {
         self.spaced_children(&items, |index, item| match item.kind() {
             // A `:` after a comment stays on the next line all the same.
             // Joined, it would land inside the comment.
-            // As a line suffix, the comment would land after the `]`.
+            // As a line suffix, the comment would land after the closing bracket.
             // Nu would lose the description either way.
             SyntaxKind::Colon => None,
             // A `(-f)` joins the name it follows, a long flag.

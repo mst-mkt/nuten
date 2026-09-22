@@ -35,10 +35,15 @@ pub(crate) struct Brackets {
 }
 
 impl Brackets {
-    /// Whether `range` of `src` starts with the opening bracket and ends with its closer.
+    /// Whether `text` starts with the opening bracket and ends with its closer.
+    pub(crate) fn wrap(&self, text: &str) -> bool {
+        let bytes = text.as_bytes();
+        bytes.first() == Some(&self.open) && bytes.last() == Some(&self.close)
+    }
+
+    /// Whether the brackets wrap `range` of `src`, the opening one closing at its last byte.
     fn enclose(&self, src: &str, range: TextRange) -> bool {
-        let bytes = src[range].as_bytes();
-        if bytes.first() != Some(&self.open) || bytes.last() != Some(&self.close) {
+        if !self.wrap(&src[range]) {
             return false;
         }
         if !self.always_nested {

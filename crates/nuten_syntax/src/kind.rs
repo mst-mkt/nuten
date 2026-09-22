@@ -163,7 +163,8 @@ macro_rules! syntax_kinds {
                 /// Then the `:` and the items of the input and output types if there.
                 /// Then the body, which only a `def` has.
                 Def,
-                /// The parameters of a `def` or an `extern`: `[`, what it holds, and `]`.
+                /// The parameters of a `def` or an `extern`.
+                /// The `[` or `(`, what it holds, and the matching `]` or `)`.
                 Signature,
                 /// One parameter of a `Signature`, starting with its name.
                 /// Then, in source order, the `ShortFlag`, the `:` and type, the `=` and default.
