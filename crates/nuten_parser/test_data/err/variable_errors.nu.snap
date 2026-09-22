@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/variable_errors.nu
 ---
-Root@0..205
+Root@0..222
   Pipeline@0..1
     PipelineElement@0..1
       Error@0..1
@@ -191,6 +191,26 @@ Root@0..205
       Error@202..204
         Word@202..204 "$-"
   Newline@204..205 "\n"
+  Pipeline@205..211
+    PipelineElement@205..211
+      List@205..211
+        LBracket@205..206 "["
+        Spread@206..210
+          SpreadOperator@206..209 "..."
+          Error@209..210
+            Word@209..210 "$"
+        RBracket@210..211 "]"
+  Newline@211..212 "\n"
+  Pipeline@212..221
+    PipelineElement@212..221
+      Record@212..221
+        LBrace@212..213 "{"
+        Spread@213..220
+          SpreadOperator@213..216 "..."
+          Error@216..220
+            Word@216..220 "$a-b"
+        RBrace@220..221 "}"
+  Newline@221..222 "\n"
 error 0..1 "$": MissingVariableName
 error 8..9 "$": MissingVariableName
 error 16..17 "$": MissingVariableName
@@ -219,3 +239,5 @@ error 177..182 "$x+=1": InvalidVariableName
 error 194..195 "$": MissingVariableName
 error 200..201 "$": MissingVariableName
 error 202..204 "$-": InvalidVariableName
+error 209..210 "$": MissingVariableName
+error 216..220 "$a-b": InvalidVariableName

@@ -1,9 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{
-    SQUARE,
-    list::{is_list, list_items},
-};
+use super::{SQUARE, Shape, list::is_list, value};
 use crate::{lexer::Mode, parser::Parser};
 
 /// Whether the `[ ]` is a table, given its inside in list mode.
@@ -45,7 +42,7 @@ pub(super) fn table_items(p: &mut Parser<'_>) {
         if let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
             && is_list(bracketed.inner())
         {
-            p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
+            p.bump_bracketed(SyntaxKind::List, bracketed, row_items);
         } else {
             debug_assert!(
                 !matches!(kind, SyntaxKind::Error | SyntaxKind::Comment),
@@ -53,5 +50,13 @@ pub(super) fn table_items(p: &mut Parser<'_>) {
             );
             p.bump();
         }
+    }
+}
+
+/// The items of the column names or of a row.
+/// Nu reads no spread there, so one stays a word.
+fn row_items(p: &mut Parser<'_>) {
+    while p.peek().is_some() {
+        value(p, Shape::Any);
     }
 }

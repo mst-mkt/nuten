@@ -16,6 +16,7 @@ mod pipeline;
 mod range;
 mod record;
 mod signature;
+mod spread;
 mod table;
 mod variable;
 
@@ -213,17 +214,23 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
     } else if shape.reads_list()
         && let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
     {
-        if is_list(bracketed.inner()) {
-            p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
-        } else if shape.reads_table() && is_table(bracketed.inner()) {
-            p.bump_bracketed(SyntaxKind::Table, bracketed, table_items);
-        } else {
-            p.bump();
-        }
+        squared(p, bracketed, shape);
     } else if let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace) {
         braced(p, bracketed, shape);
     } else if let Some(error) = variable_error(p, shape) {
         p.bump_error(error);
+    } else {
+        p.bump();
+    }
+}
+
+/// The `[ ]` ahead as nu reads it where it takes `shape`: a `List`, a `Table`, or a word.
+/// `bracketed` is what it holds in list mode.
+fn squared<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
+    if is_list(bracketed.inner()) {
+        p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
+    } else if shape.reads_table() && is_table(bracketed.inner()) {
+        p.bump_bracketed(SyntaxKind::Table, bracketed, table_items);
     } else {
         p.bump();
     }

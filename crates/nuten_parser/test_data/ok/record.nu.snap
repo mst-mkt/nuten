@@ -128,7 +128,9 @@ Root@0..777
         LBracket@99..100 "["
         Record@100..113
           LBrace@100..101 "{"
-          Word@101..106 "...$x"
+          Spread@101..106
+            SpreadOperator@101..104 "..."
+            Word@104..106 "$x"
           Comma@106..107 ","
           Whitespace@107..108 " "
           RecordField@108..112
@@ -146,12 +148,29 @@ Root@0..777
             Whitespace@117..118 " "
             Word@118..119 "1"
           Whitespace@119..120 " "
-          Word@120..126 "...(f)"
+          Spread@120..126
+            SpreadOperator@120..123 "..."
+            Subexpression@123..126
+              LParen@123..124 "("
+              Pipeline@124..125
+                PipelineElement@124..125
+                  Call@124..125
+                    Word@124..125 "f"
+              RParen@125..126 ")"
           RBrace@126..127 "}"
         Whitespace@127..128 " "
         Record@128..139
           LBrace@128..129 "{"
-          Word@129..138 "...{a: 1}"
+          Spread@129..138
+            SpreadOperator@129..132 "..."
+            Record@132..138
+              LBrace@132..133 "{"
+              RecordField@133..137
+                Word@133..134 "a"
+                Colon@134..135 ":"
+                Whitespace@135..136 " "
+                Word@136..137 "1"
+              RBrace@137..138 "}"
           RBrace@138..139 "}"
         RBracket@139..140 "]"
   Newline@140..141 "\n"
@@ -638,7 +657,9 @@ Root@0..777
         Whitespace@699..700 " "
         Record@700..715
           LBrace@700..701 "{"
-          Word@701..706 "...$x"
+          Spread@701..706
+            SpreadOperator@701..704 "..."
+            Word@704..706 "$x"
           Whitespace@706..707 " "
           RecordField@707..714
             Word@707..708 "k"

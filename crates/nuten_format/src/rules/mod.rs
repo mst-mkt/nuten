@@ -156,7 +156,7 @@ impl<'a> Formatter<'a> {
             | Node::MathExpression(_)
             | Node::Redirection(_)
             | Node::Match(_) => self.spaced(node.syntax()),
-            Node::CellPath(_) | Node::Range(_) => self.touching(node.syntax()),
+            Node::CellPath(_) | Node::Range(_) | Node::Spread(_) => self.touching(node.syntax()),
             Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {
                 self.bodies(node.syntax())
             },

@@ -1,6 +1,10 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{Shape, value};
+use super::{
+    Shape,
+    spread::{Target, is_spread, spread},
+    value,
+};
 use crate::parser::Parser;
 
 /// A `;` may make it a table, or else a word.
@@ -13,7 +17,11 @@ pub(super) fn is_list(inner: &Parser<'_>) -> bool {
 
 /// Unlike `item`, reports no shell operator.
 pub(super) fn list_items(p: &mut Parser<'_>) {
-    while p.peek().is_some() {
-        value(p, Shape::Any);
+    while let Some(text) = p.peek_text() {
+        if is_spread(text, Target::List) {
+            spread(p, Target::List);
+        } else {
+            value(p, Shape::Any);
+        }
     }
 }

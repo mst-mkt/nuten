@@ -1,6 +1,10 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{Shape, value};
+use super::{
+    Shape,
+    spread::{Target, is_spread, spread},
+    value,
+};
 use crate::{
     lexer::{Mode, Token},
     parser::{Bracketed, Parser},
@@ -51,7 +55,7 @@ pub(super) fn record_sign<'a>(
     match (tokens.next(), tokens.next()) {
         (Some((first, text)), _) if nu_lexes_as_pipe(first.kind, text) => None,
         (_, Some((second, _))) if second.kind == SyntaxKind::Colon => Some(RecordSign::ColonSecond),
-        (Some((_, text)), _) => is_spread(text).then_some(RecordSign::SpreadFirst),
+        (Some((_, text)), _) => is_spread(text, Target::Record).then_some(RecordSign::SpreadFirst),
         (None, _) => None,
     }
 }
@@ -60,12 +64,6 @@ pub(super) fn record_sign<'a>(
 fn nu_lexes_as_pipe(kind: SyntaxKind, text: &str) -> bool {
     matches!(kind, SyntaxKind::Pipe | SyntaxKind::PipePipe)
         || matches!(text, "o>|" | "out>|" | "&&" | "2>&1")
-}
-
-/// Whether `text` spreads a record into one, as `...$x`, `...(f)` or `...{a: 1}`.
-fn is_spread(text: &str) -> bool {
-    text.strip_prefix("...")
-        .is_some_and(|rest| rest.starts_with(['$', '(', '{']))
 }
 
 /// An item of a record as nu splits it.
@@ -105,7 +103,7 @@ fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
     let mut items = Vec::new();
     let mut next = 0;
     while let Some(key) = slot(next) {
-        if is_spread(tokens[key].1) {
+        if is_spread(tokens[key].1, Target::Record) {
             items.push(RecordItem::Spread);
             next = key + 1;
             continue;
@@ -148,7 +146,7 @@ fn record_items(p: &mut Parser<'_>, items: &[RecordItem]) {
     for item in items {
         bump_separators(p);
         if let RecordItem::Spread = item {
-            p.bump();
+            spread(p, Target::Record);
             continue;
         }
         p.start(SyntaxKind::RecordField);

@@ -72,6 +72,9 @@ macro_rules! syntax_kinds {
                 /// `..`, `..=`, or `..<` of a `Range`, or the `..` before its second value.
                 /// The parser emits this, not the lexer.
                 RangeOperator,
+                /// The `...` of a `Spread`.
+                /// The parser emits this, not the lexer.
+                SpreadOperator,
 
                 // Items.
                 /// Exactly one `'...'`, `"..."`, or `` `...` ``.
@@ -163,6 +166,11 @@ macro_rules! syntax_kinds {
                 /// Then a `RangeOperator`, and any last value.
                 /// Each value is what it would be alone, and all of them touch.
                 Range,
+                /// A `Word` nu reads as a spread, as the `...$x` of `[...$x]`.
+                /// The `SpreadOperator`, then the value touching it.
+                /// The value is a node where nu reads one, or else a token.
+                /// Nu reads one among the items of a list and the fields of a record.
+                Spread,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
                 /// Nu reads one where it takes a value or a block.
                 /// It reads one as an argument of an external command too.
