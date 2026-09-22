@@ -30,6 +30,7 @@ use self::{
     pipeline::pipeline,
     record::{RecordSign, record, record_sign},
     table::{is_table, table_items},
+    variable::variable_error,
 };
 use crate::{
     ParseErrorKind,
@@ -194,7 +195,7 @@ const CURLY: Brackets = Brackets {
 
 /// The next token as the value nu reads where it takes `shape`.
 /// A `CellPath`, `Subexpression`, `List`, `Table`, `Record`, or `Block` where nu reads one.
-/// Otherwise the token as it is.
+/// Otherwise the token as it is, in an `Error` where nu reports one at a variable.
 ///
 /// The `Def` rule reads the one a signature stands in before `value` sees it.
 fn value(p: &mut Parser<'_>, shape: Shape) {
@@ -216,6 +217,8 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
         }
     } else if let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace) {
         braced(p, bracketed, shape);
+    } else if let Some(error) = variable_error(p, shape) {
+        p.bump_error(error);
     } else {
         p.bump();
     }

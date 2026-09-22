@@ -1,0 +1,221 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/variable_errors.nu
+---
+Root@0..205
+  Pipeline@0..1
+    PipelineElement@0..1
+      Error@0..1
+        Word@0..1 "$"
+  Newline@1..2 "\n"
+  Pipeline@2..9
+    PipelineElement@2..9
+      Call@2..9
+        Word@2..7 "print"
+        Whitespace@7..8 " "
+        Error@8..9
+          Word@8..9 "$"
+  Newline@9..10 "\n"
+  Pipeline@10..17
+    PipelineElement@10..17
+      ExternalCall@10..17
+        Word@10..15 "^echo"
+        Whitespace@15..16 " "
+        Error@16..17
+          Word@16..17 "$"
+  Newline@17..18 "\n"
+  Pipeline@18..25
+    PipelineElement@18..25
+      Call@18..20
+        Word@18..20 "ls"
+      Whitespace@20..21 " "
+      Redirection@21..25
+        OutGt@21..23 "o>"
+        Whitespace@23..24 " "
+        Error@24..25
+          Word@24..25 "$"
+  Newline@25..26 "\n"
+  Pipeline@26..29
+    PipelineElement@26..29
+      List@26..29
+        LBracket@26..27 "["
+        Error@27..28
+          Word@27..28 "$"
+        RBracket@28..29 "]"
+  Newline@29..30 "\n"
+  Pipeline@30..36
+    PipelineElement@30..36
+      Record@30..36
+        LBrace@30..31 "{"
+        RecordField@31..35
+          Word@31..32 "a"
+          Colon@32..33 ":"
+          Whitespace@33..34 " "
+          Error@34..35
+            Word@34..35 "$"
+        RBrace@35..36 "}"
+  Newline@36..37 "\n"
+  Pipeline@37..41
+    PipelineElement@37..41
+      Error@37..41
+        Word@37..41 "$a-b"
+  Newline@41..42 "\n"
+  Pipeline@42..105
+    PipelineElement@42..105
+      Call@42..105
+        Word@42..47 "print"
+        Whitespace@47..48 " "
+        Error@48..52
+          Word@48..52 "$a+b"
+        Whitespace@52..53 " "
+        Error@53..58
+          Word@53..58 "$a(b)"
+        Whitespace@58..59 " "
+        Error@59..64
+          Word@59..64 "$a[0]"
+        Whitespace@64..65 " "
+        Error@65..70
+          Word@65..70 "$a{b}"
+        Whitespace@70..71 " "
+        Error@71..75
+          Word@71..75 "$a=b"
+        Whitespace@75..76 " "
+        Error@76..80
+          Word@76..80 "$a<b"
+        Whitespace@80..81 " "
+        Error@81..85
+          Word@81..85 "$a&b"
+        Whitespace@85..86 " "
+        Error@86..90
+          Word@86..90 "$a*b"
+        Whitespace@90..91 " "
+        Error@91..95
+          Word@91..95 "$a/b"
+        Whitespace@95..96 " "
+        Error@96..100
+          Word@96..100 "$a%b"
+        Whitespace@100..101 " "
+        Error@101..105
+          Word@101..105 "$a^b"
+  Newline@105..106 "\n"
+  Pipeline@106..111
+    PipelineElement@106..111
+      Error@106..111
+        Word@106..111 "$(ls)"
+  Newline@111..112 "\n"
+  Pipeline@112..119
+    PipelineElement@112..119
+      Error@112..119
+        Word@112..119 "$a(b.c)"
+  Newline@119..120 "\n"
+  Pipeline@120..126
+    PipelineElement@120..126
+      CellPath@120..126
+        Error@120..124
+          Word@120..124 "$a-b"
+        Dot@124..125 "."
+        Word@125..126 "c"
+  Newline@126..127 "\n"
+  Pipeline@127..135
+    PipelineElement@127..135
+      CellPath@127..135
+        Error@127..132
+          Word@127..132 "$(ls)"
+        Dot@132..133 "."
+        Word@133..134 "a"
+        Question@134..135 "?"
+  Newline@135..136 "\n"
+  Pipeline@136..154
+    PipelineElement@136..154
+      If@136..154
+        Word@136..138 "if"
+        Whitespace@138..139 " "
+        Word@139..143 "true"
+        Whitespace@143..144 " "
+        Word@144..147 "{ }"
+        Whitespace@147..148 " "
+        Word@148..152 "else"
+        Whitespace@152..153 " "
+        Error@153..154
+          Word@153..154 "$"
+  Newline@154..155 "\n"
+  Pipeline@155..176
+    PipelineElement@155..176
+      Match@155..176
+        Word@155..160 "match"
+        Whitespace@160..161 " "
+        Word@161..162 "1"
+        Whitespace@162..163 " "
+        MatchArms@163..176
+          LBrace@163..164 "{"
+          Whitespace@164..165 " "
+          MatchArm@165..174
+            Word@165..166 "_"
+            Whitespace@166..167 " "
+            FatArrow@167..169 "=>"
+            Whitespace@169..170 " "
+            Error@170..174
+              Word@170..174 "$a-b"
+          Whitespace@174..175 " "
+          RBrace@175..176 "}"
+  Newline@176..177 "\n"
+  Pipeline@177..182
+    PipelineElement@177..182
+      Error@177..182
+        Word@177..182 "$x+=1"
+  Newline@182..183 "\n"
+  Pipeline@183..195
+    PipelineElement@183..185
+      Call@183..185
+        Word@183..185 "ls"
+    Whitespace@185..186 " "
+    Pipe@186..187 "|"
+    Whitespace@187..188 " "
+    PipelineElement@188..195
+      Call@188..195
+        Word@188..193 "where"
+        Whitespace@193..194 " "
+        Error@194..195
+          Word@194..195 "$"
+  Newline@195..196 "\n"
+  Pipeline@196..201
+    PipelineElement@196..201
+      Call@196..201
+        Word@196..199 "foo"
+        Whitespace@199..200 " "
+        Error@200..201
+          Word@200..201 "$"
+  Newline@201..202 "\n"
+  Pipeline@202..204
+    PipelineElement@202..204
+      Error@202..204
+        Word@202..204 "$-"
+  Newline@204..205 "\n"
+error 0..1 "$": MissingVariableName
+error 8..9 "$": MissingVariableName
+error 16..17 "$": MissingVariableName
+error 24..25 "$": MissingVariableName
+error 27..28 "$": MissingVariableName
+error 34..35 "$": MissingVariableName
+error 37..41 "$a-b": InvalidVariableName
+error 48..52 "$a+b": InvalidVariableName
+error 53..58 "$a(b)": InvalidVariableName
+error 59..64 "$a[0]": InvalidVariableName
+error 65..70 "$a{b}": InvalidVariableName
+error 71..75 "$a=b": InvalidVariableName
+error 76..80 "$a<b": InvalidVariableName
+error 81..85 "$a&b": InvalidVariableName
+error 86..90 "$a*b": InvalidVariableName
+error 91..95 "$a/b": InvalidVariableName
+error 96..100 "$a%b": InvalidVariableName
+error 101..105 "$a^b": InvalidVariableName
+error 106..111 "$(ls)": InvalidVariableName
+error 112..119 "$a(b.c)": InvalidVariableName
+error 120..124 "$a-b": InvalidVariableName
+error 127..132 "$(ls)": InvalidVariableName
+error 153..154 "$": MissingVariableName
+error 170..174 "$a-b": InvalidVariableName
+error 177..182 "$x+=1": InvalidVariableName
+error 194..195 "$": MissingVariableName
+error 200..201 "$": MissingVariableName
+error 202..204 "$-": InvalidVariableName

@@ -245,6 +245,7 @@ fn is_math_expression_like(text: &str) -> bool {
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
 /// Nu reads a `@` as an attribute only where a pipeline starts.
+/// It reads the name after `export const` as `const` does, never as a value.
 fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
     let Some(head) = p.peek_text() else {
         return Shape::UnknownArgument;
@@ -259,6 +260,8 @@ fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
         Shape::ExternalArgument
     } else if heads_pipeline && head.starts_with('@') {
         Shape::KnownArgument
+    } else if head == "export" && p.nth_text(1) == Some("const") {
+        Shape::VariableName
     } else {
         command_shape(head)
     }

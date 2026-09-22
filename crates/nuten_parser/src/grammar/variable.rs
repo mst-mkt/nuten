@@ -1,4 +1,5 @@
 use super::Shape;
+use crate::{ParseErrorKind, lexer::Mode, parser::Parser};
 
 /// Whether nu reads `text`, which starts a word, as a `$` and what follows it for `shape`.
 /// A `$` before a quote starts an interpolated string instead.
@@ -9,8 +10,26 @@ pub(super) fn reads_dollar(text: &str, shape: Shape) -> bool {
             .is_some_and(|rest| !rest.starts_with(['"', '\'']))
 }
 
+/// The error nu reports at the variable ahead where it takes `shape`, if any.
+/// The variable is a word of `$` and a name, with no path after it.
+pub(super) fn variable_error(p: &Parser<'_>, shape: Shape) -> Option<ParseErrorKind> {
+    let text = p.peek_text()?;
+    if !reads_dollar(text, shape) || is_variable_name(&text[1..]) {
+        return None;
+    }
+    let relexed = p.relexed(Mode::CellPath)?;
+    if relexed.inner().remaining_kinds().count() != 1 {
+        return None;
+    }
+    Some(if text == "$" {
+        ParseErrorKind::MissingVariableName
+    } else {
+        ParseErrorKind::InvalidVariableName
+    })
+}
+
 /// Whether nu's `is_variable` takes `name`, the text after `$`.
-pub(super) fn is_variable_name(name: &str) -> bool {
+fn is_variable_name(name: &str) -> bool {
     !name.is_empty()
         && !name.contains([
             '.', '[', '(', '{', '+', '-', '*', '^', '%', '/', '=', '!', '<', '>', '&', '|',

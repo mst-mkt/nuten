@@ -25,7 +25,6 @@ $x
 }
 let x=1
 let x =1
-$x+=1
 let x: record<a:  int> = {a: 1}
 mut x: int = 1
 let x = 1;let y = 2

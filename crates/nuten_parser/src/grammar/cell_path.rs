@@ -1,10 +1,8 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Braced, CURLY, PAREN, RecordSign, SQUARE, Shape,
-    number::int,
-    record_sign, value,
-    variable::{is_variable_name, reads_dollar},
+    Braced, CURLY, PAREN, RecordSign, SQUARE, Shape, number::int, record_sign, value,
+    variable::reads_dollar,
 };
 use crate::{
     lexer::{Mode, Token},
@@ -62,13 +60,10 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
 /// Whether nu reads `head`, which `inner` starts with, as the value of a cell path for `shape`.
 /// Nu reads a `[ ]` there only where it takes any value.
 /// It reads a `{ }` there only as a record with a `:` second.
-/// A variable name must be one nu takes, or none for a literal.
 /// Each bracket must close at the last byte of `head`.
 fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
     match head.as_bytes() {
-        [b'$', name @ ..] => {
-            reads_dollar(head, shape) && (name.is_empty() || is_variable_name(&head[1..]))
-        },
+        [b'$', ..] => reads_dollar(head, shape),
         [b'(', ..] => shape.takes_value() && inner.bracketed(&PAREN, Mode::Paren).is_some(),
         [b'[', ..] => shape.takes_any_value() && inner.bracketed(&SQUARE, Mode::List).is_some(),
         [b'{', ..] => inner.bracketed(&CURLY, Mode::Brace).is_some_and(|braced| {
@@ -258,7 +253,7 @@ mod tests {
             "$'a'.b",
             "$x?",
             "$x.-1",
-            "$a-b.c",
+            "$'a'-b",
         ] {
             assert_eq!(cell_paths(src), 0, "{src:?}");
             assert!(parse(src).errors().is_empty(), "{src:?}");

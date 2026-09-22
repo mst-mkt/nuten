@@ -85,6 +85,10 @@ pub enum ParseErrorKind {
     /// Also a `(-f)` after a `,`, and a `:` or an `=` with nothing at all after it.
     /// Nu rejects each of these, and dropping a `,` would take the error away.
     SignatureSeparator,
+    /// A `$` with no name after it, where nu takes a value.
+    MissingVariableName,
+    /// A `$` and a name with a character no variable name takes, as `$a-b`, where nu takes a value.
+    InvalidVariableName,
 }
 
 impl fmt::Display for ParseErrorKind {
@@ -117,6 +121,10 @@ impl fmt::Display for ParseErrorKind {
             },
             ParseErrorKind::MultipleRedirections => {
                 "redirection of a stream that is already redirected"
+            },
+            ParseErrorKind::MissingVariableName => "`$` with no variable name after it",
+            ParseErrorKind::InvalidVariableName => {
+                "variable name with a character no variable name takes"
             },
         };
         f.write_str(message)

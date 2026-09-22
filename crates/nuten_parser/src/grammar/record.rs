@@ -142,7 +142,7 @@ fn split_record(inner: &Parser<'_>) -> Option<Vec<RecordItem>> {
 }
 
 /// The `items` that `split_record` gave for the tokens ahead.
-/// Unlike `item`, reports no error.
+/// Unlike `item`, reports no shell operator.
 /// Keys are strings to nu, so a key and its `:` stay tokens.
 fn record_items(p: &mut Parser<'_>, items: &[RecordItem]) {
     for item in items {
