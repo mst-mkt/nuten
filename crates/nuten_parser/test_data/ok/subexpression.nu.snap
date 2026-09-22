@@ -46,11 +46,12 @@ Root@0..347
           LParen@29..30 "("
           Pipeline@30..35
             PipelineElement@30..35
-              Word@30..31 "1"
-              Whitespace@31..32 " "
-              Word@32..33 "+"
-              Whitespace@33..34 " "
-              Word@34..35 "2"
+              MathExpression@30..35
+                Word@30..31 "1"
+                Whitespace@31..32 " "
+                Operator@32..33 "+"
+                Whitespace@33..34 " "
+                Word@34..35 "2"
           RParen@35..36 ")"
   Newline@36..37 "\n"
   Pipeline@37..46

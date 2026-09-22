@@ -125,7 +125,7 @@ impl Part {
 
     /// Whether it is an element of the pipeline, or what starts one of a flattened assignment.
     /// A `let`, the head, and the operator each start one.
-    /// The head is a bare item where nu reads an expression instead of a call.
+    /// The head is a bare item where nu reads a value with no operator after it.
     /// So they are what the pipeline may end with.
     fn is_element(&self) -> bool {
         match &self.child.element {

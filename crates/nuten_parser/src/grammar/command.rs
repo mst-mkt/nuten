@@ -1,13 +1,13 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, builtin, ends_call, ends_element, is_file_redirection, item, keyword::keyword,
-    shell_operator, value,
+    Shape, at_call_item, builtin, call_items, ends_call, ends_element, is_file_redirection, item,
+    keyword::keyword, shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
 
 /// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
-/// A value where the head would be is an expression, which no node holds.
+/// A value where the head would be is an expression: a `MathExpression`, or the value alone.
 /// Returns the streams it redirects; `None` when there is no command.
 pub(super) fn command(
     p: &mut Parser<'_>,
@@ -17,7 +17,7 @@ pub(super) fn command(
     let head = Head::of(p, heads_pipeline);
     match head {
         Head::Missing => {},
-        Head::Expression => item(p, Shape::Any),
+        Head::Expression => expression(p),
         Head::Call(shape) => {
             if !keyword(p) {
                 call(p, shape);
@@ -32,7 +32,7 @@ pub(super) fn command(
 enum Head {
     /// A file redirection or an assignment operator, which leaves the element with no command.
     Missing,
-    /// A value, which nu reads as the start of an expression.
+    /// A value, which nu reads as an expression of its own.
     Expression,
     /// A head, with the shape nu reads the items after it as.
     Call(Shape),
@@ -62,6 +62,93 @@ impl Head {
             Head::Expression | Head::Call(_) => Some(Streams::default()),
         }
     }
+}
+
+/// The items nu reads as an expression, as a `MathExpression` when an operator joins them.
+/// Nu reads the first item as a value and only then takes an operator, so that one is skipped.
+fn expression(p: &mut Parser<'_>) {
+    if call_items(p).into_iter().skip(1).any(is_operator) {
+        math_expression(p);
+    } else {
+        item(p, Shape::Any);
+    }
+}
+
+/// The terms an operator joins, as nu's `parse_math_expression` reads them.
+fn math_expression(p: &mut Parser<'_>) {
+    p.start(SyntaxKind::MathExpression);
+    term(p);
+    while at_call_item(p) {
+        joined_term(p);
+    }
+    p.finish();
+}
+
+/// The operator ahead and the term it joins to what came before.
+/// An item where nu takes an operator stays as it is written, since nu reads no value there.
+fn joined_term(p: &mut Parser<'_>) {
+    if !p.peek_text().is_some_and(is_operator) {
+        return match p.peek_text().and_then(shell_operator) {
+            Some(error) => p.bump_error(error),
+            None => p.bump(),
+        };
+    }
+    p.bump_as(SyntaxKind::Operator);
+    if at_call_item(p) {
+        term(p);
+    }
+}
+
+/// The value a term holds, past the `not`s nu reads as a prefix of it.
+/// A `not` with nothing after it is the value itself, which nu rejects.
+fn term(p: &mut Parser<'_>) {
+    while p.peek_text() == Some("not") && p.nth(1).is_some_and(|kind| !ends_call(kind)) {
+        p.bump();
+    }
+    item(p, Shape::Any);
+}
+
+/// Whether nu's `parse_operator` reads `text` as an operator.
+/// Its arms are in nu's order, so that the port can be checked against them.
+/// The spellings it takes only to reject, such as `^` and `%`, are left out.
+/// So is an assignment operator, which the lexer gives a kind of its own.
+fn is_operator(text: &str) -> bool {
+    matches!(
+        text,
+        "==" | "!="
+            | "<"
+            | "<="
+            | ">"
+            | ">="
+            | "=~"
+            | "like"
+            | "!~"
+            | "not-like"
+            | "in"
+            | "not-in"
+            | "has"
+            | "not-has"
+            | "starts-with"
+            | "not-starts-with"
+            | "ends-with"
+            | "not-ends-with"
+            | "+"
+            | "-"
+            | "*"
+            | "/"
+            | "//"
+            | "mod"
+            | "**"
+            | "++"
+            | "bit-or"
+            | "bit-xor"
+            | "bit-and"
+            | "bit-shl"
+            | "bit-shr"
+            | "or"
+            | "xor"
+            | "and"
+    )
 }
 
 /// Whether nu reads `text` as the start of an expression, not as the head of a call.
@@ -146,7 +233,7 @@ fn call(p: &mut Parser<'_>, shape: Shape) {
         SyntaxKind::Call
     });
     item(p, Shape::Any);
-    while p.peek().is_some_and(|kind| !ends_call(kind)) {
+    while at_call_item(p) {
         item(p, shape);
     }
     p.finish();
@@ -246,7 +333,7 @@ impl Streams {
 
 #[cfg(test)]
 mod tests {
-    use super::is_math_expression_like;
+    use super::{is_math_expression_like, is_operator};
     use crate::{ParseErrorKind, parse};
 
     fn errors(src: &str) -> Vec<ParseErrorKind> {
@@ -267,6 +354,72 @@ mod tests {
     fn items_that_head_a_call_are_not_math_expression_like() {
         for text in ["ls", "rm", "nu-highlight", "1abc", "0x", "0xZZ", "_", ""] {
             assert!(!is_math_expression_like(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn operators_are_the_spellings_nu_joins_terms_with() {
+        for text in [
+            "==",
+            "!=",
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "=~",
+            "like",
+            "!~",
+            "not-like",
+            "in",
+            "not-in",
+            "has",
+            "not-has",
+            "starts-with",
+            "not-starts-with",
+            "ends-with",
+            "not-ends-with",
+            "+",
+            "-",
+            "*",
+            "/",
+            "//",
+            "mod",
+            "**",
+            "++",
+            "bit-or",
+            "bit-xor",
+            "bit-and",
+            "bit-shl",
+            "bit-shr",
+            "or",
+            "xor",
+            "and",
+        ] {
+            assert!(is_operator(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn spellings_nu_takes_only_to_reject_are_no_operator() {
+        for text in [
+            "^", "pow", "is", "===", "contains", "%", "&", "<<", ">>", "bits-and", "bits-or",
+            "bits-xor", "bits-shl", "bits-shr",
+        ] {
+            assert!(!is_operator(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn assignment_operators_are_no_operator() {
+        for text in ["=", "+=", "++=", "-=", "*=", "/="] {
+            assert!(!is_operator(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn items_and_shell_operators_are_no_operator() {
+        for text in ["1", "$a", "ls", "not", "-2", "bit", "", "||", "&&", "2>&1"] {
+            assert!(!is_operator(text), "{text:?}");
         }
     }
 

@@ -10,3 +10,4 @@ ls o+e> a.txt e> b.txt
 ls e> a.txt e>| lines
 ls o> 2> err.log
 ls o> a.txt o+e>| lines
+1 + 2 o>

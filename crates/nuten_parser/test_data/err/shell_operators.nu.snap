@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/shell_operators.nu
 ---
-Root@0..107
+Root@0..159
   Pipeline@0..16
     PipelineElement@0..16
       Call@0..16
@@ -86,9 +86,78 @@ Root@0..107
         Whitespace@102..103 " "
         Word@103..106 "x2>"
   Newline@106..107 "\n"
+  Pipeline@107..117
+    PipelineElement@107..117
+      MathExpression@107..117
+        Word@107..108 "1"
+        Whitespace@108..109 " "
+        Operator@109..110 "+"
+        Whitespace@110..111 " "
+        Word@111..112 "2"
+        Whitespace@112..113 " "
+        Error@113..115
+          PipePipe@113..115 "||"
+        Whitespace@115..116 " "
+        Word@116..117 "3"
+  Newline@117..118 "\n"
+  Pipeline@118..128
+    PipelineElement@118..128
+      MathExpression@118..128
+        Word@118..119 "1"
+        Whitespace@119..120 " "
+        Operator@120..121 "+"
+        Whitespace@121..122 " "
+        Word@122..123 "2"
+        Whitespace@123..124 " "
+        Error@124..126
+          Word@124..126 "&&"
+        Whitespace@126..127 " "
+        Word@127..128 "3"
+  Newline@128..129 "\n"
+  Pipeline@129..139
+    PipelineElement@129..139
+      MathExpression@129..139
+        Word@129..130 "1"
+        Whitespace@130..131 " "
+        Operator@131..132 "+"
+        Whitespace@132..133 " "
+        Word@133..134 "2"
+        Whitespace@134..135 " "
+        Error@135..139
+          Word@135..139 "2>&1"
+  Newline@139..140 "\n"
+  Pipeline@140..151
+    PipelineElement@140..151
+      MathExpression@140..151
+        Word@140..141 "1"
+        Whitespace@141..142 " "
+        Operator@142..143 "+"
+        Whitespace@143..144 " "
+        Word@144..145 "2"
+        Whitespace@145..146 " "
+        Error@146..149
+          Word@146..149 "o>|"
+        Whitespace@149..150 " "
+        Word@150..151 "x"
+  Newline@151..152 "\n"
+  Pipeline@152..158
+    PipelineElement@152..158
+      MathExpression@152..158
+        Word@152..153 "1"
+        Whitespace@153..154 " "
+        Operator@154..155 "+"
+        Whitespace@155..156 " "
+        Error@156..158
+          PipePipe@156..158 "||"
+  Newline@158..159 "\n"
 error 7..9 "||": ShellOrOr
 error 24..26 "&&": ShellAndAnd
 error 41..43 "2>": ShellErrRedirect
 error 59..63 "2>&1": ShellOutErrRedirect
 error 71..74 "o>|": OutPipe
 error 79..81 "||": ShellOrOr
+error 113..115 "||": ShellOrOr
+error 124..126 "&&": ShellAndAnd
+error 135..139 "2>&1": ShellOutErrRedirect
+error 146..149 "o>|": OutPipe
+error 156..158 "||": ShellOrOr

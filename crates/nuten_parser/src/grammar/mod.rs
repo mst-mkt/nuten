@@ -232,6 +232,11 @@ fn ends_call(kind: SyntaxKind) -> bool {
     is_file_redirection(kind) || kind == SyntaxKind::Assign || ends_element(kind)
 }
 
+/// Whether an item the call still takes stands ahead.
+fn at_call_item(p: &Parser<'_>) -> bool {
+    p.peek().is_some_and(|kind| !ends_call(kind))
+}
+
 /// The texts of the items ahead that a call takes.
 fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
     p.remaining_tokens()

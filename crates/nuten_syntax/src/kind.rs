@@ -65,6 +65,11 @@ macro_rules! syntax_kinds {
                 /// `o+e>|`, `e+o>|`, `out+err>|`, or `err+out>|`
                 OutErrGtPipe,
 
+                // Operators.
+                /// An operator of a `MathExpression`, such as `+` or `not-in`.
+                /// The parser emits this, not the lexer.
+                Operator,
+
                 // Items.
                 /// Exactly one `'...'`, `"..."`, or `` `...` ``.
                 String,
@@ -86,8 +91,9 @@ macro_rules! syntax_kinds {
                 Root,
                 /// A statement.
                 Pipeline,
-                /// An element of a `Pipeline`: a `Call` or `ExternalCall`, then any `Redirection`s.
-                /// Where nu reads an expression, its items stand bare in place of the call.
+                /// An element of a `Pipeline`: a `Call`, `ExternalCall`, or `MathExpression`.
+                /// Then any `Redirection`s.
+                /// Where nu reads a lone value, it stands bare in place of the call.
                 /// It holds an `Assignment` or a `Let` instead, which runs to the statement's end.
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,
@@ -96,6 +102,9 @@ macro_rules! syntax_kinds {
                 /// A `Call` whose name starts with `^`, or is `else` or `catch`.
                 /// Nu runs those two as external commands outside an `if` or a `try`.
                 ExternalCall,
+                /// A value, then an `Operator` and a value while the element lasts.
+                /// An item where nu takes an operator but reads none stays as it is written.
+                MathExpression,
 
                 // Keyword syntax, read where nu reads the call as the syntax over a `Call`.
                 // Each is what a `Call` would be for a command of that name.

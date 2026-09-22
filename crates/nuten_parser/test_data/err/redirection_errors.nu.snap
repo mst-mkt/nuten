@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/redirection_errors.nu
 ---
-Root@0..202
+Root@0..211
   Pipeline@0..10
     PipelineElement@0..10
       Redirection@0..10
@@ -168,6 +168,19 @@ Root@0..202
       Call@196..201
         Word@196..201 "lines"
   Newline@201..202 "\n"
+  Pipeline@202..210
+    PipelineElement@202..210
+      MathExpression@202..207
+        Word@202..203 "1"
+        Whitespace@203..204 " "
+        Operator@204..205 "+"
+        Whitespace@205..206 " "
+        Word@206..207 "2"
+      Whitespace@207..208 " "
+      Redirection@208..210
+        Error@208..210
+          OutGt@208..210 "o>"
+  Newline@210..211 "\n"
 error 0..2 "o>": RedirectionAtHead
 error 16..18 "e>": RedirectionAtHead
 error 32..35 "e>|": RedirectionAtHead
@@ -181,3 +194,4 @@ error 151..154 "e>|": MultipleRedirections
 error 164..166 "o>": MissingRedirectionTarget
 error 167..169 "2>": ShellErrRedirect
 error 190..195 "o+e>|": MultipleRedirections
+error 208..210 "o>": MissingRedirectionTarget

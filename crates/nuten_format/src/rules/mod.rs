@@ -153,6 +153,7 @@ impl<'a> Formatter<'a> {
             Node::PipelineElement(_)
             | Node::Call(_)
             | Node::ExternalCall(_)
+            | Node::MathExpression(_)
             | Node::Redirection(_)
             | Node::Match(_) => self.spaced(node.syntax()),
             Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {

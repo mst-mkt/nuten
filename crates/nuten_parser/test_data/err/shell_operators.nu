@@ -5,3 +5,8 @@ echo a && echo b
 echo a o>| cat
 || echo a
 echo "&&" 2>> x2>
+1 + 2 || 3
+1 + 2 && 3
+1 + 2 2>&1
+1 + 2 o>| x
+1 + ||

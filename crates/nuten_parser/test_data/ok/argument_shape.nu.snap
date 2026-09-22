@@ -262,11 +262,12 @@ Root@0..525
           Whitespace@406..408 "  "
           Pipeline@408..413
             PipelineElement@408..413
-              Word@408..409 "1"
-              Whitespace@409..410 " "
-              Word@410..411 "+"
-              Whitespace@411..412 " "
-              Word@412..413 "1"
+              MathExpression@408..413
+                Word@408..409 "1"
+                Whitespace@409..410 " "
+                Operator@410..411 "+"
+                Whitespace@411..412 " "
+                Word@412..413 "1"
           Whitespace@413..415 "  "
           RBrace@415..416 "}"
   Newline@416..417 "\n"

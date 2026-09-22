@@ -101,11 +101,12 @@ Root@0..149
   Newline@96..97 "\n"
   Pipeline@97..102
     PipelineElement@97..102
-      Word@97..98 "1"
-      Whitespace@98..99 " "
-      Word@99..100 "+"
-      Whitespace@100..101 " "
-      Word@101..102 "2"
+      MathExpression@97..102
+        Word@97..98 "1"
+        Whitespace@98..99 " "
+        Operator@99..100 "+"
+        Whitespace@100..101 " "
+        Word@101..102 "2"
   Newline@102..103 "\n"
   Pipeline@103..110
     PipelineElement@103..110
