@@ -98,6 +98,8 @@ pub enum ParseErrorKind {
     NegativeCellPathIndex,
     /// A member of a cell path nu reads as no string.
     CellPathMember,
+    /// A binary whose items nu cannot decode into bytes, as `0x[zz]` or `0o[400]`.
+    BinaryDigits,
 }
 
 impl fmt::Display for ParseErrorKind {
@@ -140,6 +142,7 @@ impl fmt::Display for ParseErrorKind {
             } => return write!(f, "token where a cell path takes {expected}"),
             ParseErrorKind::NegativeCellPathIndex => "negative index in a cell path",
             ParseErrorKind::CellPathMember => "member of a cell path that is no string",
+            ParseErrorKind::BinaryDigits => "binary whose items do not decode to bytes",
         };
         f.write_str(message)
     }

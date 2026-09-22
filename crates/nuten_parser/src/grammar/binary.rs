@@ -3,6 +3,7 @@ use rowan::{TextRange, TextSize};
 
 use super::{SQUARE, Shape, is_file_redirection};
 use crate::{
+    ParseErrorKind,
     lexer::{self, Mode, Token},
     parser::{Affix, Bracketed, Parser},
 };
@@ -11,10 +12,17 @@ use crate::{
 /// Ported from nu's `parse_binary`, which takes only these, in lower case.
 const PREFIXES: [(&str, u32, usize); 3] = [("0x", 16, 2), ("0o", 8, 3), ("0b", 2, 8)];
 
-/// What the word ahead holds, when nu reads it as a binary where it takes `shape`.
+/// What nu reads the word ahead as, where it reads a binary.
+pub(super) enum BinaryAhead<'a> {
+    /// A binary, with what it holds.
+    Decoded(Bracketed<'a>),
+    /// A binary whose items nu cannot decode into bytes, which it reports.
+    Undecodable,
+}
+
+/// The binary nu reads the word ahead as where it takes `shape`, if any.
 /// Nu reads a binary only where it takes any value.
-/// A binary nu cannot decode stays a word.
-pub(super) fn binary_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<Bracketed<'a>> {
+pub(super) fn binary_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<BinaryAhead<'a>> {
     if !shape.takes_any_value() {
         return None;
     }
@@ -31,21 +39,26 @@ pub(super) fn binary_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<Bracketed
     {
         return None;
     }
+    if decode(&items(&tokens), base, digits).is_none() {
+        return Some(BinaryAhead::Undecodable);
+    }
     // Nu skips a `;` among the items, but the formatter would print it as an item.
     let holds_semicolon = tokens
         .iter()
         .any(|(token, _)| token.kind == SyntaxKind::Semicolon);
-    let decodes = decode(&items(&tokens), base, digits).is_some();
-    (decodes && !holds_semicolon).then_some(bracketed)
+    (!holds_semicolon).then_some(BinaryAhead::Decoded(bracketed))
 }
 
-/// The binary `binary_ahead` found, as a `Binary`.
-pub(super) fn binary<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
-    p.bump_bracketed(SyntaxKind::Binary, bracketed, |p| {
-        while p.peek().is_some() {
-            p.bump();
-        }
-    });
+/// The binary `binary_ahead` found, as a `Binary`, or a word in an `Error`.
+pub(super) fn binary<'a>(p: &mut Parser<'a>, ahead: BinaryAhead<'a>) {
+    match ahead {
+        BinaryAhead::Decoded(bracketed) => p.bump_bracketed(SyntaxKind::Binary, bracketed, |p| {
+            while p.peek().is_some() {
+                p.bump();
+            }
+        }),
+        BinaryAhead::Undecodable => p.bump_error(ParseErrorKind::BinaryDigits),
+    }
 }
 
 /// Whether nu reads `text` as a binary, or as one it reports it cannot decode.
@@ -107,7 +120,7 @@ mod tests {
     use nuten_syntax::SyntaxKind;
 
     use super::{decode, is_binary_like};
-    use crate::parse;
+    use crate::{ParseErrorKind, parse};
 
     #[test]
     fn digits_decode_as_nu_decodes_them() {
@@ -169,24 +182,15 @@ mod tests {
     }
 
     #[test]
-    fn binary_nu_cannot_decode_stays_word_without_error() {
-        for src in [
-            "0x[zz]",
-            "0o[400]",
-            "0b[2]",
-            "0x[+ff]",
-            "0x[\"ff\"]",
-            "0x[zz;]",
-        ] {
+    fn binary_nu_cannot_decode_is_reported_over_whole_word() {
+        for src in ["0x[+ff]", "0x[\"ff\"]", "0x[zz;]"] {
             let parsed = parse(src);
-            assert!(
-                !parsed
-                    .syntax()
-                    .descendants()
-                    .any(|node| node.kind() == SyntaxKind::Binary),
-                "{src:?}"
-            );
-            assert!(parsed.errors().is_empty(), "{src:?}");
+            let errors: Vec<_> = parsed
+                .errors()
+                .iter()
+                .map(|error| (error.kind, &src[error.range]))
+                .collect();
+            assert_eq!(errors, [(ParseErrorKind::BinaryDigits, src)], "{src:?}");
         }
     }
 
