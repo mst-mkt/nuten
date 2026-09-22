@@ -73,6 +73,7 @@ fn split_in(src: &str, mode: Mode) -> Vec<&str> {
 fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
     match mode {
         Mode::Block => &[Whitespace],
+        Mode::Paren => &[Whitespace, Newline, Comment],
         Mode::List => &[Whitespace, Newline, Comment, Comma],
         Mode::Record => &[Whitespace, Newline, Comment, Comma],
         Mode::RecordValue => &[Whitespace, Newline, Comment, Comma],
@@ -438,6 +439,25 @@ fn splits_match_nu() {
     }
 }
 
+/// How nu 0.115.1 splits the inside of a subexpression.
+const NU_PAREN_SPLITS: &[(&str, &[&str])] = &[
+    ("a\nb", &["a", "b"]),
+    ("a\r\nb", &["a", "b"]),
+    ("a # c\nb", &["a", "b"]),
+    ("a#b", &["a#b"]),
+    ("a,b", &["a,b"]),
+    ("a:b", &["a:b"]),
+    ("a;b", &["a", ";", "b"]),
+    ("a|b", &["a", "|", "b"]),
+];
+
+#[test]
+fn paren_splits_match_nu() {
+    for &(src, expected) in NU_PAREN_SPLITS {
+        assert_eq!(split_in(src, Mode::Paren), expected, "{src:?}");
+    }
+}
+
 /// How nu 0.115.1 splits the inside of a list.
 const NU_LIST_SPLITS: &[(&str, &[&str])] = &[
     ("a,b", &["a", "b"]),
@@ -568,6 +588,7 @@ fn angle_brackets_nest_in_a_var_type() {
     }
     for mode in [
         Mode::Block,
+        Mode::Paren,
         Mode::List,
         Mode::Record,
         Mode::RecordValue,

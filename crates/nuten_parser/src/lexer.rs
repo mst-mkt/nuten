@@ -65,6 +65,9 @@ pub(crate) enum Mode {
     /// Statements in the top level, `{ }` blocks, closures, and modules.
     /// Also the right-hand side of `let` and assignments.
     Block,
+    /// The inside of the `( )` of a subexpression.
+    /// Nu lexes a line break as whitespace there, so no statement ends at one.
+    Paren,
     /// Lists, tables, and list patterns.
     List,
     /// The keys, spreads, and `:` of a record, in the inside of `{ }`.
@@ -88,6 +91,7 @@ pub(crate) enum Mode {
 impl Mode {
     pub(crate) const ALL: &[Mode] = &[
         Mode::Block,
+        Mode::Paren,
         Mode::List,
         Mode::Record,
         Mode::RecordValue,
@@ -110,6 +114,7 @@ impl Mode {
     fn special(self) -> &'static [(u8, SyntaxKind)] {
         match self {
             Mode::Block => &[],
+            Mode::Paren => &[],
             Mode::List => &[(b',', SyntaxKind::Comma)],
             Mode::Record => &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
             Mode::RecordValue => &[(b',', SyntaxKind::Comma)],
