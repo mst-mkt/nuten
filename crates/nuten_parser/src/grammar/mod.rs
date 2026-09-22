@@ -20,6 +20,7 @@ use std::rc::Rc;
 use nuten_syntax::SyntaxKind;
 
 use self::{
+    assignment::Assigned,
     block::block,
     list::{is_list, list_items},
     pipeline::pipeline,
@@ -39,7 +40,7 @@ pub(crate) fn file(p: &mut Parser<'_>) {
                 p.bump_error(ParseErrorKind::SemicolonAfterPipe);
             },
             kind if ends_statement(kind) => p.bump(),
-            _ => pipeline(p, false),
+            _ => pipeline(p, Assigned::No),
         }
     }
 }

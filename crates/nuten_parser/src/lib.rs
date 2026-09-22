@@ -58,8 +58,8 @@ pub enum ParseErrorKind {
     /// A plain `|` as the last token of the file, past any comment lines right below it.
     /// A blank line or a line break at the very end makes nu accept it.
     PipeAtEof,
-    /// A plain `|` in what an assignment operator takes, where a line break ends the statement.
-    /// Other pipelines end there without an error.
+    /// A plain `|` as the last token of what an assignment operator takes.
+    /// A line break ends any other pipeline without an error.
     PipeEndsAssignment,
     /// A redirection with no command before it to apply to.
     RedirectionAtHead,

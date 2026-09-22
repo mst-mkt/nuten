@@ -2,13 +2,13 @@ use nuten_syntax::SyntaxKind;
 
 use super::{
     Shape,
-    assignment::{assigned_pipeline, assignment_ahead, var_type_error},
+    assignment::{Assigned, assigned_statements, assignment_ahead, var_type_error},
     command::{Streams, arguments, command},
     ends_statement, is_pipe,
 };
 use crate::{ParseErrorKind, parser::Parser};
 
-pub(super) fn pipeline(p: &mut Parser<'_>, in_assignment: bool) {
+pub(super) fn pipeline(p: &mut Parser<'_>, assigned: Assigned) {
     p.start(SyntaxKind::Pipeline);
     let mut element = None;
     let mut first = true;
@@ -16,7 +16,7 @@ pub(super) fn pipeline(p: &mut Parser<'_>, in_assignment: bool) {
     while let Some(kind) = p.peek() {
         match kind {
             kind if is_pipe(kind) => {
-                pipe(p, kind, element.take(), in_assignment);
+                pipe(p, kind, element.take(), assigned);
                 piped = true;
             },
             SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
@@ -30,10 +30,10 @@ pub(super) fn pipeline(p: &mut Parser<'_>, in_assignment: bool) {
     p.finish();
 }
 
-fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, in_assignment: bool) {
+fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, assigned: Assigned) {
     match kind {
         SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
-        SyntaxKind::Pipe if in_assignment && pipe_ends_statement(p) => {
+        SyntaxKind::Pipe if pipe_ends_assigned(p, assigned) => {
             p.bump_error(ParseErrorKind::PipeEndsAssignment);
         },
         SyntaxKind::Pipe => {
@@ -57,11 +57,7 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, in_as
 /// Where the parser skips a line break, nu drops every comment too.
 fn pipe_ends_file(p: &Parser<'_>) -> bool {
     if p.is_skipped(SyntaxKind::Newline) {
-        return p
-            .remaining_kinds()
-            .filter(|&kind| !p.is_skipped(kind))
-            .nth(1)
-            .is_none();
+        return nothing_follows_pipe(p);
     }
     let mut kinds = p
         .remaining_kinds()
@@ -77,13 +73,27 @@ fn pipe_ends_file(p: &Parser<'_>) -> bool {
     kinds.next().is_none()
 }
 
-/// Whether the statement ends at the line break right after the `|` ahead, past a trailing comment.
-fn pipe_ends_statement(p: &Parser<'_>) -> bool {
+/// Whether the `|` ahead is the last token of what an assignment operator takes.
+/// A `;` right after it is left to `SemicolonAfterPipe`.
+fn pipe_ends_assigned(p: &Parser<'_>, assigned: Assigned) -> bool {
+    match assigned {
+        Assigned::No => false,
+        Assigned::AtLineBreak => {
+            after_pipe(p).next() == Some(SyntaxKind::Newline) && !next_line_continues(p)
+        },
+        Assigned::AtSemicolon => nothing_follows_pipe(p),
+    }
+}
+
+fn nothing_follows_pipe(p: &Parser<'_>) -> bool {
+    after_pipe(p).all(|kind| kind == SyntaxKind::Newline)
+}
+
+/// The kinds after the `|` ahead, the skipped ones left out.
+fn after_pipe(p: &Parser<'_>) -> impl Iterator<Item = SyntaxKind> {
     p.remaining_kinds()
-        .filter(|&kind| !matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
-        .nth(1)
-        == Some(SyntaxKind::Newline)
-        && !next_line_continues(p)
+        .filter(|&kind| !p.is_skipped(kind))
+        .skip(1)
 }
 
 /// Whether a `|` starts the next line, past any comment lines.
@@ -155,7 +165,7 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool, heads_pipeline: bool) -> Op
             command(p, heads_pipeline, true);
         }
         p.bump();
-        assigned_pipeline(p);
+        assigned_statements(p);
         p.finish();
         // No pipe follows what the assignment operator takes.
         None

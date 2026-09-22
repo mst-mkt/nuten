@@ -129,7 +129,7 @@ macro_rules! syntax_kinds {
                 /// The target of a file redirection is no such operator.
                 /// What comes before the operator is held by a `PipelineElement` of its own.
                 /// Then the operator, with any comments and line breaks before a line-start `|`.
-                /// A `Pipeline` of the rest of the statement follows if anything does.
+                /// Then any `Pipeline`s of the rest, with the comments and line breaks among them.
                 Assignment,
                 /// As an `Assignment`, for an element starting with `let`, `mut`, or `const`.
                 /// That word, not a `Call`, comes before the arguments.

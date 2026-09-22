@@ -173,6 +173,13 @@ impl<'a> Parser<'a> {
             || (kind == SyntaxKind::Newline && self.skips_newline)
     }
 
+    /// `read` is told whether a line break was skipped before.
+    pub(crate) fn with_newlines_read(&mut self, read: impl FnOnce(&mut Parser<'a>, bool)) {
+        let skipped = mem::replace(&mut self.skips_newline, false);
+        read(self, skipped);
+        self.skips_newline = skipped;
+    }
+
     pub(crate) fn peek(&self) -> Option<SyntaxKind> {
         self.nth(0)
     }
