@@ -69,6 +69,9 @@ macro_rules! syntax_kinds {
                 /// An operator of a `MathExpression`: `+`, `not-in`, or the `not` before a term.
                 /// The parser emits this, not the lexer.
                 Operator,
+                /// `..`, `..=`, or `..<` of a `Range`, or the `..` before its second value.
+                /// The parser emits this, not the lexer.
+                RangeOperator,
 
                 // Items.
                 /// Exactly one `'...'`, `"..."`, or `` `...` ``.
@@ -155,6 +158,11 @@ macro_rules! syntax_kinds {
                 /// A member nu reads is a `Word` or a `String`.
                 /// A token nu rejects is in an `Error`, and those past it stay as they are lexed.
                 CellPath,
+                /// A `Word` nu reads as a range, as in `1..10`, `$a..<$b`, or `..5`.
+                /// Any first value, then any `RangeOperator` and second value.
+                /// Then a `RangeOperator`, and any last value.
+                /// Each value is what it would be alone, and all of them touch.
+                Range,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
                 /// Nu reads one where it takes a value or a block.
                 /// It reads one as an argument of an external command too.

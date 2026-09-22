@@ -343,7 +343,20 @@ Root@0..347
   Newline@277..278 "\n"
   Pipeline@278..286
     PipelineElement@278..286
-      Word@278..286 "(1)..(2)"
+      Range@278..286
+        Subexpression@278..281
+          LParen@278..279 "("
+          Pipeline@279..280
+            PipelineElement@279..280
+              Word@279..280 "1"
+          RParen@280..281 ")"
+        RangeOperator@281..283 ".."
+        Subexpression@283..286
+          LParen@283..284 "("
+          Pipeline@284..285
+            PipelineElement@284..285
+              Word@284..285 "2"
+          RParen@285..286 ")"
   Newline@286..287 "\n"
   Pipeline@287..291
     PipelineElement@287..291

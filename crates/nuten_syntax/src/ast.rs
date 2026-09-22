@@ -232,7 +232,7 @@ impl Node {
                 .try_header()
                 .is_none()
                 .then_some("does not hold its column names and their `;` first"),
-            Node::CellPath(path) => path
+            Node::CellPath(_) | Node::Range(_) => self
                 .syntax()
                 .children_with_tokens()
                 .any(|child| child.kind().is_trivia())
@@ -817,6 +817,28 @@ mod tests {
                         token(SyntaxKind::Word, "$x"),
                         token(SyntaxKind::Dot, "."),
                         token(SyntaxKind::Word, "a"),
+                    ],
+                ),
+                None,
+            ),
+            (
+                node(
+                    SyntaxKind::Range,
+                    vec![
+                        token(SyntaxKind::Word, "1"),
+                        token(SyntaxKind::Newline, "\n"),
+                        token(SyntaxKind::RangeOperator, ".."),
+                    ],
+                ),
+                Some("holds trivia among its pieces"),
+            ),
+            (
+                node(
+                    SyntaxKind::Range,
+                    vec![
+                        token(SyntaxKind::Word, "1"),
+                        token(SyntaxKind::RangeOperator, ".."),
+                        token(SyntaxKind::Word, "2"),
                     ],
                 ),
                 None,

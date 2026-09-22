@@ -124,7 +124,12 @@ Root@0..754
   Newline@135..136 "\n"
   Pipeline@136..142
     PipelineElement@136..142
-      Word@136..142 "$x.a.."
+      Range@136..142
+        CellPath@136..140
+          Word@136..138 "$x"
+          Dot@138..139 "."
+          Word@139..140 "a"
+        RangeOperator@140..142 ".."
   Newline@142..143 "\n"
   Pipeline@143..151
     PipelineElement@143..151
@@ -627,7 +632,18 @@ Root@0..754
   Newline@596..597 "\n"
   Pipeline@597..605
     PipelineElement@597..605
-      Word@597..605 "(ls).a.."
+      Range@597..605
+        CellPath@597..603
+          Subexpression@597..601
+            LParen@597..598 "("
+            Pipeline@598..600
+              PipelineElement@598..600
+                Call@598..600
+                  Word@598..600 "ls"
+            RParen@600..601 ")"
+          Dot@601..602 "."
+          Word@602..603 "a"
+        RangeOperator@603..605 ".."
   Newline@605..606 "\n"
   Pipeline@606..612
     PipelineElement@606..612

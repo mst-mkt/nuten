@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/cell_path_errors.nu
 ---
-Root@0..261
+Root@0..287
   Pipeline@0..3
     PipelineElement@0..3
       CellPath@0..3
@@ -326,6 +326,40 @@ Root@0..261
           Error@259..260
             Question@259..260 "?"
   Newline@260..261 "\n"
+  Pipeline@261..266
+    PipelineElement@261..266
+      CellPath@261..266
+        Word@261..263 "$x"
+        Dot@263..264 "."
+        Word@264..265 "."
+        Error@265..266
+          Word@265..266 "a"
+  Newline@266..267 "\n"
+  Pipeline@267..276
+    PipelineElement@267..276
+      CellPath@267..276
+        Subexpression@267..271
+          LParen@267..268 "("
+          Pipeline@268..270
+            PipelineElement@268..270
+              Call@268..270
+                Word@268..270 "ls"
+          RParen@270..271 ")"
+        Dot@271..272 "."
+        Word@272..273 "a"
+        Dot@273..274 "."
+        Word@274..275 "."
+        Error@275..276
+          Word@275..276 "b"
+  Newline@276..277 "\n"
+  Pipeline@277..286
+    PipelineElement@277..286
+      CellPath@277..286
+        Word@277..279 "$x"
+        Dot@279..280 "."
+        Error@280..286
+          Word@280..286 "(\"..\")"
+  Newline@286..287 "\n"
 error 2..3 "?": CellPathSeparator { expected: "`.`" }
 error 6..7 "!": CellPathSeparator { expected: "`.`" }
 error 12..13 "?": CellPathSeparator { expected: "`.`" }
@@ -361,3 +395,6 @@ error 225..227 "-1": NegativeCellPathIndex
 error 233..235 "-1": NegativeCellPathIndex
 error 244..245 "b": CellPathSeparator { expected: "`.`" }
 error 259..260 "?": CellPathSeparator { expected: "`.`" }
+error 265..266 "a": CellPathSeparator { expected: "`.`, `?`, or `!`" }
+error 275..276 "b": CellPathSeparator { expected: "`.`, `?`, or `!`" }
+error 280..286 "(\"..\")": CellPathMember

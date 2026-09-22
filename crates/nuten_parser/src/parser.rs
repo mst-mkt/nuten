@@ -1,6 +1,6 @@
 //! Parser that turns tokens into events for the tree builder.
 
-use std::{mem, rc::Rc, vec};
+use std::{iter, mem, rc::Rc, vec};
 
 use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
@@ -111,7 +111,16 @@ impl<'a> Bracketed<'a> {
     }
 }
 
-/// What `Parser::relexed` found in the next token.
+/// A piece of a token, as `Parser::split` cuts it.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Piece {
+    /// Text `split` lexes in block mode, taking it only where it makes one item with no error.
+    Lexed(TextRange),
+    /// Text emitted as a token of this kind.
+    Token(SyntaxKind, TextRange),
+}
+
+/// What `Parser::relexed` or `Parser::split` found in the next token.
 pub(crate) struct Relexed<'a> {
     inner: Parser<'a>,
     token: Token,
@@ -197,6 +206,10 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn peek_text(&self) -> Option<&'a str> {
         self.nth_text(0)
+    }
+
+    pub(crate) fn peek_range(&self) -> Option<TextRange> {
+        self.nth_token(0).map(|token| token.range)
     }
 
     /// The kind of the `n`th token ahead, `0` being the next, or `None` past the end.
@@ -381,6 +394,52 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// The next token cut into `pieces`, when it is a word and each lexed piece is one item.
+    /// The pieces cover the token in order.
+    pub(crate) fn split(&self, pieces: &[Piece]) -> Option<Relexed<'a>> {
+        let token = self
+            .nth_token(0)
+            .filter(|token| token.kind == SyntaxKind::Word)?;
+        let tokens = pieces
+            .iter()
+            .map(|&piece| match piece {
+                Piece::Lexed(range) => self.lexed_item(range),
+                Piece::Token(kind, range) => Some(Token {
+                    kind,
+                    range,
+                }),
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let starts =
+            iter::once(token.range.start()).chain(tokens.iter().map(|piece| piece.range.end()));
+        assert!(
+            tokens
+                .iter()
+                .zip(starts)
+                .all(|(piece, start)| piece.range.start() == start)
+                && tokens.last().map(|piece| piece.range.end()) == Some(token.range.end()),
+            "pieces that do not cover the token"
+        );
+        Some(Relexed {
+            inner: self.over(tokens),
+            token,
+        })
+    }
+
+    /// A parser of `range` of the source, when block mode lexes it as one item with no error.
+    /// Its one token is the next, to look into as a piece of the token ahead.
+    pub(crate) fn item_at(&self, range: TextRange) -> Option<Parser<'a>> {
+        let item = self.lexed_item(range)?;
+        Some(self.over(vec![item]))
+    }
+
+    fn lexed_item(&self, range: TextRange) -> Option<Token> {
+        match lexer::lex(self.src, range, Mode::Block).tokens[..] {
+            [item] if item.kind.is_item() && item.kind != SyntaxKind::Error => Some(item),
+            _ => None,
+        }
+    }
+
     /// Emits the next token as a `node` of the events `items` makes of its pieces.
     /// Unlike what brackets hold, the pieces stand among these tokens, so their errors count here.
     pub(crate) fn bump_relexed(
@@ -409,6 +468,21 @@ impl<'a> Parser<'a> {
     fn nested(&self, range: TextRange, mode: Mode, depth: usize) -> Parser<'a> {
         let lexed = lexer::lex(self.src, range, mode);
         Parser::new(self.src, lexed, mode, Rc::clone(&self.alias_names), depth)
+    }
+
+    /// A parser of `tokens`, pieces of the tokens here with no lexing error.
+    fn over(&self, tokens: Vec<Token>) -> Parser<'a> {
+        let lexed = Lexed {
+            tokens,
+            errors: Vec::new(),
+        };
+        Parser::new(
+            self.src,
+            lexed,
+            Mode::Block,
+            Rc::clone(&self.alias_names),
+            self.depth,
+        )
     }
 
     /// Runs `items` to the end of `inner`, a parser of what the token emitted as a node holds.
@@ -555,7 +629,7 @@ mod tests {
     use nuten_syntax::SyntaxKind;
     use rowan::{TextRange, TextSize};
 
-    use super::{Event, Parser};
+    use super::{Event, Parser, Piece};
     use crate::{
         ParseErrorKind, grammar,
         grammar::SQUARE,
@@ -616,6 +690,69 @@ mod tests {
     fn relexed_takes_only_word() {
         for src in ["\"a.b\"", "e>", ""] {
             assert!(parser(src).relexed(Mode::CellPath).is_none(), "{src:?}");
+        }
+    }
+
+    fn range(start: u32, end: u32) -> TextRange {
+        TextRange::new(start.into(), end.into())
+    }
+
+    #[test]
+    fn split_cuts_word_into_pieces() {
+        let p = parser("$a..(b c)");
+        let split = p
+            .split(&[
+                Piece::Lexed(range(0, 2)),
+                Piece::Token(SyntaxKind::RangeOperator, range(2, 4)),
+                Piece::Lexed(range(4, 9)),
+            ])
+            .unwrap();
+        let pieces: Vec<_> = split
+            .inner()
+            .remaining_tokens()
+            .map(|(token, text)| (token.kind, text))
+            .collect();
+        assert_eq!(
+            pieces,
+            [
+                (SyntaxKind::Word, "$a"),
+                (SyntaxKind::RangeOperator, ".."),
+                (SyntaxKind::Word, "(b c)"),
+            ]
+        );
+    }
+
+    #[test]
+    fn split_takes_only_lexed_piece_of_one_item() {
+        let word = |start, end| Piece::Token(SyntaxKind::Word, range(start, end));
+        for (src, pieces) in [
+            ("a#b", [word(0, 1), Piece::Lexed(range(1, 3))]),
+            ("a\"b", [word(0, 1), Piece::Lexed(range(1, 3))]),
+            ("[a b]", [Piece::Lexed(range(0, 4)), word(4, 5)]),
+            ("(a b)", [word(0, 1), Piece::Lexed(range(1, 5))]),
+        ] {
+            assert!(parser(src).split(&pieces).is_none(), "{src:?}");
+        }
+    }
+
+    #[test]
+    fn split_takes_only_word() {
+        let p = parser("\"a\"");
+        assert!(p.split(&[Piece::Lexed(range(0, 3))]).is_none());
+    }
+
+    #[test]
+    #[should_panic(expected = "pieces that do not cover the token")]
+    fn split_panics_on_pieces_that_do_not_cover_token() {
+        parser("ab").split(&[Piece::Lexed(range(0, 1))]);
+    }
+
+    #[test]
+    fn item_at_takes_only_one_item_with_no_error() {
+        let p = parser("a b \"c");
+        assert_eq!(p.item_at(range(0, 1)).unwrap().peek_text(), Some("a"));
+        for piece in [range(0, 3), range(1, 2), range(4, 6)] {
+            assert!(p.item_at(piece).is_none(), "{piece:?}");
         }
     }
 

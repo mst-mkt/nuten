@@ -29,7 +29,7 @@ pub(super) fn variable_error(p: &Parser<'_>, shape: Shape) -> Option<ParseErrorK
 }
 
 /// Whether nu's `is_variable` takes `name`, the text after `$`.
-fn is_variable_name(name: &str) -> bool {
+pub(super) fn is_variable_name(name: &str) -> bool {
     !name.is_empty()
         && !name.contains([
             '.', '[', '(', '{', '+', '-', '*', '^', '%', '/', '=', '!', '<', '>', '&', '|',

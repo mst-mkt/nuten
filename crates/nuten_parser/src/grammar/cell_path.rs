@@ -30,6 +30,16 @@ enum Link {
     Rejected(ParseErrorKind),
 }
 
+impl CellPathAhead<'_> {
+    /// Whether nu reads the path to its end, rejecting none of it.
+    pub(super) fn rejects_nothing(&self) -> bool {
+        !self
+            .links
+            .iter()
+            .any(|link| matches!(link, Link::Rejected(_)))
+    }
+}
+
 /// The cell path ahead, when nu reads the word as a value and a path where it takes `shape`.
 /// The word stays whole where nuten does not read it as nu does yet.
 pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPathAhead<'a>> {
@@ -39,20 +49,11 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
     }
     let relexed = p.relexed(Mode::CellPath)?;
     let tokens: Vec<_> = relexed.inner().remaining_tokens().collect();
-    let (&(head, head_text), path) = tokens.split_first()?;
+    let (&(_, head_text), path) = tokens.split_first()?;
     if path.is_empty() || !reads_head(relexed.inner(), head_text, shape) {
         return None;
     }
     let literal = text.starts_with("$.");
-    // Nu reads a `$` or a `( )` with `..` in its path as a range where it can.
-    // Ranges are not read yet, so such a word stays whole.
-    // Nu reads a literal as a cell path before it tries a range.
-    if !literal
-        && text.starts_with(['$', '('])
-        && text[usize::from(head.range.len())..].contains("..")
-    {
-        return None;
-    }
     let links = links(path)?;
     Some(CellPathAhead {
         relexed,

@@ -13,6 +13,7 @@ mod list;
 mod match_;
 mod number;
 mod pipeline;
+mod range;
 mod record;
 mod signature;
 mod table;
@@ -28,6 +29,7 @@ use self::{
     cell_path::{cell_path, cell_path_ahead},
     list::{is_list, list_items},
     pipeline::pipeline,
+    range::{range, range_ahead},
     record::{RecordSign, record, record_sign},
     table::{is_table, table_items},
     variable::variable_error,
@@ -194,12 +196,15 @@ const CURLY: Brackets = Brackets {
 };
 
 /// The next token as the value nu reads where it takes `shape`.
-/// A `CellPath`, `Subexpression`, `List`, `Table`, `Record`, or `Block` where nu reads one.
+/// A `Range`, `CellPath`, or `Subexpression` where nu reads one.
+/// A `List`, `Table`, `Record`, or `Block` too.
 /// Otherwise the token as it is, in an `Error` where nu reports one at a variable.
 ///
 /// The `Def` rule reads the one a signature stands in before `value` sees it.
 fn value(p: &mut Parser<'_>, shape: Shape) {
-    if let Some(ahead) = cell_path_ahead(p, shape) {
+    if let Some(ahead) = range_ahead(p, shape) {
+        range(p, ahead);
+    } else if let Some(ahead) = cell_path_ahead(p, shape) {
         cell_path(p, ahead, shape);
     } else if shape.takes_value()
         && let Some(bracketed) = p.bracketed(&PAREN, Mode::Paren)
