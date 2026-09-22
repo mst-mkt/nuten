@@ -100,6 +100,9 @@ pub enum ParseErrorKind {
     CellPathMember,
     /// A binary whose items nu cannot decode into bytes, as `0x[zz]` or `0o[400]`.
     BinaryDigits,
+    /// A spread among the column names or in a row of a table.
+    /// Reported at the whole spread, where nu points at the value after `...`.
+    SpreadInTable,
 }
 
 impl fmt::Display for ParseErrorKind {
@@ -143,6 +146,7 @@ impl fmt::Display for ParseErrorKind {
             ParseErrorKind::NegativeCellPathIndex => "negative index in a cell path",
             ParseErrorKind::CellPathMember => "member of a cell path that is no string",
             ParseErrorKind::BinaryDigits => "binary whose items do not decode to bytes",
+            ParseErrorKind::SpreadInTable => "spread in a table",
         };
         f.write_str(message)
     }

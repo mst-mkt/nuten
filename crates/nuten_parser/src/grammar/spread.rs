@@ -83,10 +83,7 @@ fn spread_value(p: &mut Parser<'_>, target: Target) {
 
 #[cfg(test)]
 mod tests {
-    use nuten_syntax::SyntaxKind;
-
     use super::{Target, is_spread};
-    use crate::parse;
 
     #[test]
     fn spread_is_three_dots_then_value_that_target_takes() {
@@ -110,20 +107,6 @@ mod tests {
             ("$x", Target::List),
         ] {
             assert!(!is_spread(text, target), "{text:?} {target:?}");
-        }
-    }
-
-    #[test]
-    fn spread_among_column_names_or_row_of_table_stays_word() {
-        for src in ["[[a]; [...$x]]", "[[...$x]; [1]]"] {
-            let tree = parse(src).syntax();
-            assert!(
-                !tree
-                    .descendants()
-                    .any(|node| node.kind() == SyntaxKind::Spread),
-                "{src:?}"
-            );
-            assert!(parse(src).errors().is_empty(), "{src:?}");
         }
     }
 }

@@ -1,7 +1,12 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{SQUARE, Shape, list::is_list, value};
-use crate::{lexer::Mode, parser::Parser};
+use super::{
+    SQUARE, Shape,
+    list::is_list,
+    spread::{Target, is_spread},
+    value,
+};
+use crate::{ParseErrorKind, lexer::Mode, parser::Parser};
 
 /// Whether the `[ ]` is a table, given its inside in list mode.
 /// The column names in `[ ]` first, `;` right after them, then rows in `[ ]`.
@@ -54,9 +59,13 @@ pub(super) fn table_items(p: &mut Parser<'_>) {
 }
 
 /// The items of the column names or of a row.
-/// Nu reads no spread there, so one stays a word.
+/// Nu reports a spread there, as it takes none in a table.
 fn row_items(p: &mut Parser<'_>) {
-    while p.peek().is_some() {
-        value(p, Shape::Any);
+    while let Some(text) = p.peek_text() {
+        if is_spread(text, Target::List) {
+            p.bump_error(ParseErrorKind::SpreadInTable);
+        } else {
+            value(p, Shape::Any);
+        }
     }
 }
