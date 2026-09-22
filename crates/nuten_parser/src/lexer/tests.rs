@@ -88,6 +88,7 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         // Nu adds nothing to whitespace here, so a line break is a token, as in `Block`.
         // Unlike there, it sets `skip_comment`.
         Mode::RangeFrom => &[Whitespace, Comment],
+        Mode::Binary => &[Whitespace, Newline, Comment, Comma],
         Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
             unimplemented!("how nu splits in {mode:?} is not recorded")
         },
@@ -654,6 +655,28 @@ fn range_from_errors_match_nu() {
     }
 }
 
+/// How nu 0.115.1 splits the inside of the `[ ]` of a binary.
+const NU_BINARY_SPLITS: &[(&str, &[&str])] = &[
+    ("ff 00", &["ff", "00"]),
+    ("ff,00", &["ff", "00"]),
+    ("ff\n00", &["ff", "00"]),
+    ("ff # c\n00", &["ff", "00"]),
+    ("ff,#c\n00", &["ff", "00"]),
+    ("ff;00", &["ff", ";", "00"]),
+    ("ff|00", &["ff", "|", "00"]),
+    ("ff = 00", &["ff", "=", "00"]),
+    (r#"f"f""#, &[r#"f"f""#]),
+    ("a:b", &["a:b"]),
+    ("a=b", &["a=b"]),
+];
+
+#[test]
+fn binary_splits_match_nu() {
+    for &(src, expected) in NU_BINARY_SPLITS {
+        assert_eq!(split_in(src, Mode::Binary), expected, "{src:?}");
+    }
+}
+
 #[test]
 fn angle_brackets_nest_in_a_var_type() {
     for (src, error) in [
@@ -683,6 +706,7 @@ fn angle_brackets_nest_in_a_var_type() {
         Mode::MatchArms,
         Mode::CellPath,
         Mode::RangeFrom,
+        Mode::Binary,
     ] {
         assert_eq!(lexed_in("a<b", mode), [(Word, "a<b")], "{mode:?}");
     }

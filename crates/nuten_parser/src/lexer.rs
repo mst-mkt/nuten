@@ -91,6 +91,8 @@ pub(crate) enum Mode {
     /// What comes before the first `..` of a range, as the `$x.a` of `$x.a..3`.
     /// Nu lexes it only to see that it holds no error before it reads the range.
     RangeFrom,
+    /// The inside of the `[ ]` of a binary, as in `0x[ff 00]`.
+    Binary,
 }
 
 impl Mode {
@@ -108,6 +110,7 @@ impl Mode {
         Mode::MatchArms,
         Mode::CellPath,
         Mode::RangeFrom,
+        Mode::Binary,
     ];
 
     /// Bytes that end an item, on top of whitespace, `|`, and `;`.
@@ -145,6 +148,7 @@ impl Mode {
                 (b'?', SyntaxKind::Question),
                 (b'!', SyntaxKind::Bang),
             ],
+            Mode::Binary => &[(b',', SyntaxKind::Comma)],
         }
     }
 
