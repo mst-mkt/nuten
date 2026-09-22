@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/spread.nu
 ---
-Root@0..255
+Root@0..378
   Pipeline@0..83
     PipelineElement@0..83
       List@0..83
@@ -232,3 +232,88 @@ Root@0..255
             Word@251..253 "$x"
           RBracket@253..254 "]"
   Newline@254..255 "\n"
+  Pipeline@255..307
+    PipelineElement@255..307
+      ExternalCall@255..307
+        Word@255..260 "^echo"
+        Whitespace@260..261 " "
+        Spread@261..266
+          SpreadOperator@261..264 "..."
+          Word@264..266 "$x"
+        Whitespace@266..267 " "
+        Spread@267..274
+          SpreadOperator@267..270 "..."
+          Subexpression@270..274
+            LParen@270..271 "("
+            Pipeline@271..273
+              PipelineElement@271..273
+                Call@271..273
+                  Word@271..273 "ls"
+            RParen@273..274 ")"
+        Whitespace@274..275 " "
+        Spread@275..283
+          SpreadOperator@275..278 "..."
+          List@278..283
+            LBracket@278..279 "["
+            Word@279..280 "1"
+            Whitespace@280..281 " "
+            Word@281..282 "2"
+            RBracket@282..283 "]"
+        Whitespace@283..284 " "
+        Word@284..293 "...{a: 1}"
+        Whitespace@293..294 " "
+        Spread@294..302
+          SpreadOperator@294..297 "..."
+          Word@297..302 "[1].0"
+        Whitespace@302..303 " "
+        Word@303..307 "...a"
+  Newline@307..308 "\n"
+  Pipeline@308..324
+    PipelineElement@308..324
+      ExternalCall@308..313
+        Word@308..313 "^echo"
+      Whitespace@313..314 " "
+      Redirection@314..318
+        OutGt@314..316 "o>"
+        Whitespace@316..317 " "
+        Word@317..318 "f"
+      Whitespace@318..319 " "
+      Spread@319..324
+        SpreadOperator@319..322 "..."
+        Word@322..324 "$x"
+  Newline@324..325 "\n"
+  Pipeline@325..335
+    PipelineElement@325..335
+      ExternalCall@325..335
+        Word@325..329 "else"
+        Whitespace@329..330 " "
+        Spread@330..335
+          SpreadOperator@330..333 "..."
+          Word@333..335 "$x"
+  Newline@335..336 "\n"
+  Pipeline@336..355
+    PipelineElement@336..355
+      Call@336..355
+        Word@336..341 "print"
+        Whitespace@341..342 " "
+        Word@342..347 "...$x"
+        Whitespace@347..348 " "
+        Word@348..355 "...(ls)"
+  Newline@355..356 "\n"
+  Pipeline@356..365
+    PipelineElement@356..365
+      Call@356..365
+        Word@356..359 "foo"
+        Whitespace@359..360 " "
+        Word@360..365 "...$x"
+  Newline@365..366 "\n"
+  Pipeline@366..377
+    PipelineElement@366..377
+      Call@366..368
+        Word@366..368 "ls"
+      Whitespace@368..369 " "
+      Redirection@369..377
+        OutGt@369..371 "o>"
+        Whitespace@371..372 " "
+        Word@372..377 "...$x"
+  Newline@377..378 "\n"

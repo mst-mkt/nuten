@@ -170,6 +170,8 @@ macro_rules! syntax_kinds {
                 /// The `SpreadOperator`, then the value touching it.
                 /// The value is a node where nu reads one, or else a token.
                 /// Nu reads one among the items of a list and the fields of a record.
+                /// It reads one as an argument of an external command too.
+                /// One as an argument of another command stays a `Word`.
                 Spread,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
                 /// Nu reads one where it takes a value or a block.

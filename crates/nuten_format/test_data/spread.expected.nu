@@ -15,3 +15,4 @@ print ...$args
         | str trim
     )
 ]
+^echo ...$x ...(ls) ...[1 2]

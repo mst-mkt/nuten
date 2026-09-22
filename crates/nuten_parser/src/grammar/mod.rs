@@ -32,6 +32,7 @@ use self::{
     pipeline::pipeline,
     range::{range, range_ahead},
     record::{RecordSign, record, record_sign},
+    spread::{Target, is_spread, spread},
     table::{is_table, table_items},
     variable::variable_error,
 };
@@ -94,6 +95,8 @@ enum Shape {
     /// A `[ ]` stays a word, since the signature may take it as a string.
     /// A `{ }` is never a string, unlike for an external command.
     /// A spread first stays a word: only the signature tells a record from a closure there.
+    /// An argument like `...$x` stays a word as well.
+    /// Nu reads no spread where a flag takes it as its value, which only the signature tells.
     KnownArgument,
     /// An argument of a command that takes a row condition.
     /// Nu reads a `{ }` that shows a `RecordSign` as a block alone, and as a value among others.
@@ -101,11 +104,13 @@ enum Shape {
     RowCondition,
     /// An argument of a head nuten cannot look up: an alias, one the file defines, or none.
     /// Every bracketed word but `( )` stays one, since what nu reads it as is unknowable here.
+    /// So does an argument like `...$x`, as after a command nu resolves to one of its own.
     UnknownArgument,
     /// What a `let`, a `mut`, or a `const` takes before its operator: the name and any type.
     /// Nu reads those as written, never as a value, so not even `( )` is one.
     VariableName,
     /// An argument of an external command: a `[ ]` is a list, and a `{ }` a string.
+    /// A `...` before a `$`, a `( )`, or a `[ ]` makes a spread, as in a list.
     ExternalArgument,
     /// A block or a closure: the body of a keyword syntax, what `else` takes, what an arm does.
     /// Nu reads a `{ }` there as a record only for a `:` second.
@@ -165,10 +170,17 @@ impl Shape {
 }
 
 /// An item that is no shell operator, which nu rejects, as `value` reads it.
+/// A spread where nu reads one as an argument.
 fn item(p: &mut Parser<'_>, shape: Shape) {
-    match p.peek_text().and_then(shell_operator) {
-        Some(kind) => p.bump_error(kind),
-        None => value(p, shape),
+    let text = p.peek_text();
+    if let Some(kind) = text.and_then(shell_operator) {
+        p.bump_error(kind);
+    } else if shape == Shape::ExternalArgument
+        && text.is_some_and(|text| is_spread(text, Target::List))
+    {
+        spread(p, Target::List);
+    } else {
+        value(p, shape);
     }
 }
 
