@@ -92,8 +92,11 @@ enum Shape {
     /// So it stays a word, which reads the same either way.
     RowCondition,
     /// An argument of a head nuten cannot look up: an alias, one the file defines, or none.
-    /// Every bracketed word stays one, since what nu reads it as is unknowable here.
+    /// Every bracketed word but `( )` stays one, since what nu reads it as is unknowable here.
     UnknownArgument,
+    /// What a `let`, a `mut`, or a `const` takes before its operator: the name and any type.
+    /// Nu reads those as written, never as a value, so not even `( )` is one.
+    VariableName,
     /// An argument of an external command: a `[ ]` is a list, and a `{ }` a string.
     ExternalArgument,
     /// A block or a closure: the body of a keyword syntax, what `else` takes, what an arm does.
@@ -113,6 +116,11 @@ enum Braced {
 }
 
 impl Shape {
+    /// Whether nu reads a `( )` as a subexpression where it takes this shape.
+    fn reads_subexpression(self) -> bool {
+        self != Shape::VariableName
+    }
+
     /// Whether nu reads a `[ ]` as a list where it takes this shape.
     fn reads_list(self) -> bool {
         matches!(self, Shape::Any | Shape::Block | Shape::ExternalArgument)
@@ -132,7 +140,9 @@ impl Shape {
             },
             (Shape::KnownArgument, Some(RecordSign::SpreadFirst))
             | (Shape::RowCondition, Some(_))
-            | (Shape::UnknownArgument | Shape::ExternalArgument, _) => Braced::Word,
+            | (Shape::UnknownArgument | Shape::VariableName | Shape::ExternalArgument, _) => {
+                Braced::Word
+            },
             (Shape::Any | Shape::KnownArgument | Shape::RowCondition, None)
             | (Shape::Block, None | Some(RecordSign::SpreadFirst))
             | (Shape::DefBody, _) => Braced::Block,
@@ -173,10 +183,17 @@ const CURLY: Brackets = Brackets {
 };
 
 /// The next token as the value nu reads where it takes `shape`.
-/// A `List`, a `Table`, a `Record`, or a `Block` where the shape has nu read one.
+/// A `Subexpression`, a `List`, a `Table`, a `Record`, or a `Block` where nu reads one.
 /// Otherwise the token as it is.
+///
+/// Nu reads a `(` before it looks at the shape, so every shape that takes a value reads one.
+/// The `Def` rule reads the one a signature stands in before `value` sees it.
 fn value(p: &mut Parser<'_>, shape: Shape) {
-    if shape.reads_list()
+    if shape.reads_subexpression()
+        && let Some(bracketed) = p.bracketed(&PAREN, Mode::Paren)
+    {
+        p.bump_bracketed(SyntaxKind::Subexpression, bracketed, file);
+    } else if shape.reads_list()
         && let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
     {
         if is_list(bracketed.inner()) {

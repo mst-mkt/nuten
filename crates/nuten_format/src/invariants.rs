@@ -27,7 +27,8 @@ pub enum Invariant {
     /// Each stands on its own line or at the end of a line, as it was.
     /// Between statements or the arms of a `match`, a blank line follows it or not, as it was.
     /// Spaces and tabs at the end of a comment do not count, since the printer trims them.
-    /// Nor do blank lines at the end of the file, a block, or the arms, which the formatter drops.
+    /// Nor do blank lines at the end of the file, a block, the arms, or a subexpression.
+    /// The formatter drops them.
     /// Nor do `Comma` tokens, which it may drop too.
     Comments,
     /// Formatting the output succeeds and changes nothing.
@@ -172,7 +173,7 @@ struct Comment {
     /// Without the spaces and tabs at its end.
     text: String,
     own_line: bool,
-    /// False inside a statement and at the end of the file or a block.
+    /// False inside a statement and at the end of the file, a block, or a subexpression.
     blank_line_after: bool,
 }
 
@@ -191,6 +192,27 @@ impl fmt::Display for Comment {
     }
 }
 
+/// Whether the comment stands between statements, where a blank line after it is kept.
+/// Inside a statement the formatter drops one, and nu reads no documentation there either.
+/// What an assignment operator takes starts at its first `Pipeline`.
+/// A comment before that one is at the operator, which is inside the statement.
+fn between_statements(comment: &SyntaxToken) -> bool {
+    let Some(parent) = comment.parent() else {
+        return false;
+    };
+    match parent.kind() {
+        SyntaxKind::Root
+        | SyntaxKind::Block
+        | SyntaxKind::MatchArms
+        | SyntaxKind::Subexpression => true,
+        SyntaxKind::Assignment | SyntaxKind::Let => parent
+            .children_with_tokens()
+            .take_while(|child| child.as_token() != Some(comment))
+            .any(|child| child.kind() == SyntaxKind::Pipeline),
+        _ => false,
+    }
+}
+
 fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
     let tokens: Vec<_> = tree
         .descendants_with_tokens()
@@ -203,21 +225,13 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
         .filter(|(_, token)| token.kind() == SyntaxKind::Comment)
         .map(|(index, token)| {
             let own_line = index == 0 || tokens[index - 1].kind() == SyntaxKind::Newline;
-            // Inside a statement the formatter drops blank lines.
-            // Nu reads no documentation there either.
-            let between_statements = token.parent().is_some_and(|parent| {
-                matches!(
-                    parent.kind(),
-                    SyntaxKind::Root | SyntaxKind::Block | SyntaxKind::MatchArms
-                )
-            });
             let mut after = tokens[index + 1..].iter().map(SyntaxToken::kind);
-            let blank_line_after = between_statements
+            let blank_line_after = between_statements(token)
                 && after.next() == Some(SyntaxKind::Newline)
                 && after.next() == Some(SyntaxKind::Newline)
                 && after
                     .find(|&kind| kind != SyntaxKind::Newline)
-                    .is_some_and(|kind| kind != SyntaxKind::RBrace);
+                    .is_some_and(|kind| !matches!(kind, SyntaxKind::RBrace | SyntaxKind::RParen));
             Comment {
                 text: token.text().trim_end_matches([' ', '\t']).to_string(),
                 own_line,
@@ -419,6 +433,10 @@ mod tests {
             ),
             []
         );
+        assert_eq!(
+            formatter_violations("(ls\n# c\n\n)\n", "(\n    ls\n    # c\n)\n"),
+            []
+        );
     }
 
     #[test]
@@ -426,6 +444,44 @@ mod tests {
         let violations =
             formatter_violations("echo {\n# c\n\nls\n}\n", "echo {\n    # c\n    ls\n}\n");
         assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+    }
+
+    #[test]
+    fn blank_lines_between_statements_of_a_subexpression_count() {
+        let violations = formatter_violations(
+            "(ls;\n# c\n\nprint hi)\n",
+            "(\n    ls;\n    # c\n    print hi\n)\n",
+        );
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+    }
+
+    #[test]
+    fn blank_lines_between_statements_a_let_takes_count() {
+        let violations = formatter_violations(
+            "(mut x = 1\n# c\n\nprint hi)\n",
+            "(\n    mut x = 1\n    # c\n    print hi\n)\n",
+        );
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+    }
+
+    #[test]
+    fn blank_lines_between_statements_an_assignment_takes_count() {
+        let violations = formatter_violations(
+            "($x = 1\n# c\n\nprint hi)\n",
+            "(\n    $x = 1\n    # c\n    print hi\n)\n",
+        );
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+    }
+
+    #[test]
+    fn blank_lines_at_an_assignment_operator_do_not_count() {
+        assert_eq!(
+            formatter_violations(
+                "(mut x = # c\n\nprint hi)\n",
+                "(\n    mut x = # c\n    print hi\n)\n"
+            ),
+            []
+        );
     }
 
     #[test]

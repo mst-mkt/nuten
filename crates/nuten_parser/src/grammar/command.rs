@@ -128,7 +128,7 @@ fn percent_shape(name: &str) -> Shape {
 
 fn command_shape(name: &str) -> Shape {
     if builtin::takes_variable_name(name) {
-        Shape::UnknownArgument
+        Shape::VariableName
     } else if builtin::takes_row_condition(name) {
         Shape::RowCondition
     } else if builtin::is_command(name) {

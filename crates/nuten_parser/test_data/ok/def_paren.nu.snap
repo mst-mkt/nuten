@@ -258,7 +258,9 @@ Root@0..413
         Whitespace@287..288 " "
         String@288..294 "\"p(q)\""
         Whitespace@294..295 " "
-        Word@295..297 "()"
+        Subexpression@295..297
+          LParen@295..296 "("
+          RParen@296..297 ")"
         Whitespace@297..298 " "
         Block@298..304
           LBrace@298..299 "{"

@@ -176,7 +176,12 @@ Root@0..568
       If@165..178
         Word@165..167 "if"
         Whitespace@167..168 " "
-        Word@168..174 "(true)"
+        Subexpression@168..174
+          LParen@168..169 "("
+          Pipeline@169..173
+            PipelineElement@169..173
+              Word@169..173 "true"
+          RParen@173..174 ")"
         Whitespace@174..175 " "
         Block@175..178
           LBrace@175..176 "{"

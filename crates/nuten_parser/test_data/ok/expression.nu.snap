@@ -67,7 +67,13 @@ Root@0..149
   Newline@63..64 "\n"
   Pipeline@64..77
     PipelineElement@64..68
-      Word@64..68 "(ls)"
+      Subexpression@64..68
+        LParen@64..65 "("
+        Pipeline@65..67
+          PipelineElement@65..67
+            Call@65..67
+              Word@65..67 "ls"
+        RParen@67..68 ")"
     Whitespace@68..69 " "
     Pipe@69..70 "|"
     Whitespace@70..71 " "

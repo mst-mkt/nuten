@@ -135,6 +135,9 @@ macro_rules! syntax_kinds {
                 /// As an `Assignment`, for an element starting with `let`, `mut`, or `const`.
                 /// That word, not a `Call`, comes before the arguments.
                 Let,
+                /// A `Word` in `( )` read as a subexpression: `(`, the statements, and `)`.
+                /// Nu reads one wherever it takes a value, a `def` signature aside.
+                Subexpression,
                 /// A `Word` in `[ ]` read as a list: `[`, what it holds, and `]`.
                 /// Nu reads one where it takes a value or a block.
                 /// It reads one as an argument of an external command too.

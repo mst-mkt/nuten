@@ -60,7 +60,13 @@ Root@0..706
         Whitespace@55..56 " "
         Word@56..58 "in"
         Whitespace@58..59 " "
-        Word@59..63 "(ls)"
+        Subexpression@59..63
+          LParen@59..60 "("
+          Pipeline@60..62
+            PipelineElement@60..62
+              Call@60..62
+                Word@60..62 "ls"
+          RParen@62..63 ")"
         Whitespace@63..64 " "
         Block@64..72
           LBrace@64..65 "{"

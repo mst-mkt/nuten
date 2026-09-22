@@ -7,6 +7,7 @@ mod def;
 mod match_;
 mod pipeline;
 mod signature;
+mod subexpression;
 
 use std::mem;
 
@@ -169,6 +170,7 @@ impl<'a> Formatter<'a> {
             Node::Type(type_) => self.type_(type_),
             Node::TypeField(field) => self.type_field(field),
             Node::Block(block) => self.block(block),
+            Node::Subexpression(subexpression) => self.subexpression(subexpression),
             Node::Root(_) => unreachable!("Root is laid out by file"),
             Node::Assignment(_) | Node::Let(_) | Node::ClosureParams(_) => {
                 unreachable!("{:?} is laid out by its parent", node.syntax().kind())
@@ -254,6 +256,23 @@ fn ends_with_pipe(statement: &SyntaxNode) -> bool {
     statement
         .last_child_or_token()
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
+}
+
+/// Whether the brackets of `node` stay as they are, with everything between them.
+/// A comment inside ending in a lone `\r` keeps them so.
+/// The line break printed after the comment would make that `\r` part of the break.
+fn stays_as_is(node: &SyntaxNode) -> bool {
+    node.children_with_tokens()
+        .flat_map(|child| {
+            let field = child
+                .as_node()
+                .filter(|node| node.kind() == SyntaxKind::RecordField)
+                .map(SyntaxNode::children_with_tokens);
+            let own = field.is_none().then_some(child);
+            own.into_iter().chain(field.into_iter().flatten())
+        })
+        .filter_map(SyntaxElement::into_token)
+        .any(|token| token.kind() == SyntaxKind::Comment && token.text().ends_with('\r'))
 }
 
 fn line_break_or_space(item: &Child) -> Element<'static> {

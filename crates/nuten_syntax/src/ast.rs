@@ -168,6 +168,7 @@ macro_rules! bracketed {
 }
 
 bracketed! {
+    Subexpression: LParen RParen,
     List: LBracket RBracket,
     Table: LBracket RBracket,
     Signature: LBracket RBracket | LParen RParen,

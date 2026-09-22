@@ -71,7 +71,18 @@ Root@0..956
       Match@63..116
         Word@63..68 "match"
         Whitespace@68..69 " "
-        Word@69..82 "($x | length)"
+        Subexpression@69..82
+          LParen@69..70 "("
+          Pipeline@70..81
+            PipelineElement@70..72
+              Word@70..72 "$x"
+            Whitespace@72..73 " "
+            Pipe@73..74 "|"
+            Whitespace@74..75 " "
+            PipelineElement@75..81
+              Call@75..81
+                Word@75..81 "length"
+          RParen@81..82 ")"
         Whitespace@82..83 " "
         MatchArms@83..116
           LBrace@83..84 "{"

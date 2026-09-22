@@ -1,7 +1,7 @@
 use nuten_doc::{Element, empty_line, expand_parent, group, indent, soft_line_break_or_space};
 use nuten_syntax::{
     NodeOrToken, SyntaxKind,
-    ast::{self, AstNode, Block, Bracketed},
+    ast::{AstNode, Block, Bracketed},
 };
 
 use super::{Child, Formatter, children};
@@ -59,7 +59,7 @@ impl<'a> Formatter<'a> {
         let line_break = block
             .statements()
             .any(|element| element.kind() == SyntaxKind::Newline);
-        let lead = if ast::kind_of(&first.element) == SyntaxKind::Comment && first.newlines == 0 {
+        let lead = if first.is_comment() && first.newlines == 0 {
             None
         } else if params.is_none()
             && first

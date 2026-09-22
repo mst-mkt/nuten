@@ -5,11 +5,11 @@ use nuten_doc::{
     space,
 };
 use nuten_syntax::{
-    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken,
+    NodeOrToken, SyntaxKind, SyntaxToken,
     ast::{AstNode, Bracketed, RecordField, Table},
 };
 
-use super::{Child, Formatter, children, without_commas};
+use super::{Child, Formatter, children, stays_as_is, without_commas};
 
 /// Makes a line break that prints as nothing or as a space when the group is flat.
 type SoftLine = fn() -> Element<'static>;
@@ -127,22 +127,4 @@ impl<'a> Formatter<'a> {
             .map(|(index, _)| index);
         self.spaced_children(&items, |index, _| (Some(index) != colon).then(space))
     }
-}
-
-/// Whether `container` stays as it is.
-/// A comment inside ending in a lone `\r` keeps it so.
-/// The line break printed after the comment would make that `\r` part of the break.
-fn stays_as_is(container: &SyntaxNode) -> bool {
-    container
-        .children_with_tokens()
-        .flat_map(|child| {
-            let field = child
-                .as_node()
-                .filter(|node| node.kind() == SyntaxKind::RecordField)
-                .map(SyntaxNode::children_with_tokens);
-            let own = field.is_none().then_some(child);
-            own.into_iter().chain(field.into_iter().flatten())
-        })
-        .filter_map(SyntaxElement::into_token)
-        .any(|token| token.kind() == SyntaxKind::Comment && token.text().ends_with('\r'))
 }
