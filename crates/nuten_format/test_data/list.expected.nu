@@ -33,7 +33,6 @@ let long = [
 ]
 echo [ 1 2 ]
 [a]
-[a] [b  c]
 [
     a # c
     b

@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/block.nu
 ---
-Root@0..448
+Root@0..461
   Pipeline@0..24
     PipelineElement@0..2
       Call@0..2
@@ -337,3 +337,10 @@ Root@0..448
                 Word@445..446 "x"
           RBrace@446..447 "}"
   Newline@447..448 "\n"
+  Pipeline@448..460
+    PipelineElement@448..460
+      Call@448..460
+        Word@448..450 "do"
+        Whitespace@450..451 " "
+        Word@451..460 "{\n  1 2\n}"
+  Newline@460..461 "\n"

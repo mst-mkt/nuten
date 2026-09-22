@@ -69,6 +69,13 @@ pub enum ParseErrorKind {
     MissingRedirectionTarget,
     /// A redirection of a stream the element already redirects.
     MultipleRedirections,
+    /// An item where nu takes an operator of a math expression.
+    /// A spelling nu takes only to reject, such as `^` or `%`, is one of these for now.
+    /// So is one of another shell, which is reported as itself only where a call takes it.
+    MissingOperator,
+    /// An operator of a math expression with no term after it.
+    /// Reported at the operator, where nu points at what follows it.
+    MissingTerm,
     /// A `:`, `=`, or `,` where the parameters of a `def` or an `extern` take a name or a flag.
     /// Also a `(-f)` after a `,`, and a `:` or an `=` with nothing at all after it.
     /// Nu rejects each of these, and dropping a `,` would take the error away.
@@ -94,6 +101,8 @@ impl fmt::Display for ParseErrorKind {
             },
             ParseErrorKind::RedirectionAtHead => "redirection with no command before it",
             ParseErrorKind::MissingRedirectionTarget => "redirection with no target after it",
+            ParseErrorKind::MissingOperator => "term with no operator before it",
+            ParseErrorKind::MissingTerm => "operator with no term after it",
             ParseErrorKind::SignatureSeparator => {
                 "`:`, `=`, or `,` with no parameter, type, or default value for it"
             },

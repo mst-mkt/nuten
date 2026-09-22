@@ -9,7 +9,6 @@ true
 -x
 not true
 1 + 2
-[1 2] 3
 1 o> out.txt
 ls | $in
 1abc 2

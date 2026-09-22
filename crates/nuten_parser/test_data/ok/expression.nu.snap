@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/expression.nu
 ---
-Root@0..149
+Root@0..141
   Pipeline@0..14
     PipelineElement@0..5
       List@0..5
@@ -109,47 +109,36 @@ Root@0..149
         Whitespace@100..101 " "
         Word@101..102 "2"
   Newline@102..103 "\n"
-  Pipeline@103..110
-    PipelineElement@103..110
-      List@103..108
-        LBracket@103..104 "["
-        Word@104..105 "1"
-        Whitespace@105..106 " "
-        Word@106..107 "2"
-        RBracket@107..108 "]"
-      Whitespace@108..109 " "
-      Word@109..110 "3"
-  Newline@110..111 "\n"
-  Pipeline@111..123
-    PipelineElement@111..123
-      Word@111..112 "1"
-      Whitespace@112..113 " "
-      Redirection@113..123
-        OutGt@113..115 "o>"
-        Whitespace@115..116 " "
-        Word@116..123 "out.txt"
-  Newline@123..124 "\n"
-  Pipeline@124..132
-    PipelineElement@124..126
-      Call@124..126
-        Word@124..126 "ls"
-    Whitespace@126..127 " "
-    Pipe@127..128 "|"
-    Whitespace@128..129 " "
-    PipelineElement@129..132
-      Word@129..132 "$in"
-  Newline@132..133 "\n"
-  Pipeline@133..139
-    PipelineElement@133..139
-      Call@133..139
-        Word@133..137 "1abc"
-        Whitespace@137..138 " "
-        Word@138..139 "2"
-  Newline@139..140 "\n"
-  Pipeline@140..148
-    PipelineElement@140..148
-      Call@140..148
-        Word@140..142 "ls"
-        Whitespace@142..143 " "
-        Word@143..148 "[1 2]"
-  Newline@148..149 "\n"
+  Pipeline@103..115
+    PipelineElement@103..115
+      Word@103..104 "1"
+      Whitespace@104..105 " "
+      Redirection@105..115
+        OutGt@105..107 "o>"
+        Whitespace@107..108 " "
+        Word@108..115 "out.txt"
+  Newline@115..116 "\n"
+  Pipeline@116..124
+    PipelineElement@116..118
+      Call@116..118
+        Word@116..118 "ls"
+    Whitespace@118..119 " "
+    Pipe@119..120 "|"
+    Whitespace@120..121 " "
+    PipelineElement@121..124
+      Word@121..124 "$in"
+  Newline@124..125 "\n"
+  Pipeline@125..131
+    PipelineElement@125..131
+      Call@125..131
+        Word@125..129 "1abc"
+        Whitespace@129..130 " "
+        Word@130..131 "2"
+  Newline@131..132 "\n"
+  Pipeline@132..140
+    PipelineElement@132..140
+      Call@132..140
+        Word@132..134 "ls"
+        Whitespace@134..135 " "
+        Word@135..140 "[1 2]"
+  Newline@140..141 "\n"

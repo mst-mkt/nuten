@@ -361,18 +361,7 @@ Root@0..956
         Whitespace@485..486 " "
         Word@486..488 "$x"
         Whitespace@488..489 " "
-        Block@489..499
-          LBrace@489..490 "{"
-          Whitespace@490..491 " "
-          Pipeline@491..497
-            PipelineElement@491..497
-              Word@491..492 "1"
-              Whitespace@492..493 " "
-              Word@493..495 "=>"
-              Whitespace@495..496 " "
-              Word@496..497 "a"
-          Whitespace@497..498 " "
-          RBrace@498..499 "}"
+        Word@489..499 "{ 1 => a }"
         Whitespace@499..500 " "
         Word@500..505 "extra"
   Newline@505..506 "\n"

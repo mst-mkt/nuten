@@ -1,6 +1,12 @@
 use super::{control::control, def::def, if_::if_, match_::match_};
 use crate::parser::Parser;
 
+/// The keyword syntax nu reads after an operator, as a call over the rest of the element.
+/// Only `if` and `match` stand there; nu reads any other word as the term itself.
+pub(super) fn keyword_after_operator(p: &mut Parser<'_>) -> bool {
+    matches!(p.peek_text(), Some("if" | "match")) && keyword(p)
+}
+
 /// The keyword syntax nu reads the call ahead as, if any.
 /// Each syntax reads its node and returns whether it did.
 /// Only a syntax that a call holds whole belongs here.

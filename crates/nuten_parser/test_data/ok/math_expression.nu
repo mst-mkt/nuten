@@ -9,15 +9,7 @@ $a == {a: 1}
 $a // $b
 true and false
 -1 - 2
-- 1
 -
-1 -2
-+ 1
-1 +
-1 + + 2
-1 + 2 3
-1 + 2 [3 4]
-1 ^ 2
 echo 1 + 2
 let x = 1 + 2
 $x = 1 + 2
@@ -26,18 +18,16 @@ $x = 1 + 2
 ls | $in + 1
 (1 # c
 + 2)
-not ($x > 1) and $y
-$a and not ($b > 1)
-not not $a and $b
-1 + not [2]
-not and $a
 not [1 2]
 not (ls)
 not {a: 1}
 not not not $a
-not not
-$a and not
-not | length
+1 + not [2]
 $x = not [1 2]
 (not # c
 true)
+1 + if $a { 1 } else { 2 }
+1 + match $x { 1 => a }
+not $a and $b
+1 + o> out.txt 2
+not o> out.txt true

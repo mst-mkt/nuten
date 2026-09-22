@@ -26,7 +26,6 @@ let z = [1 # one
 let long = [aaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbb cccccccccccccccccccccccccccc dddddddddddddddddddd]
 echo [ 1 2 ]
 [, a]
-[a] [b  c]
 [a # c
 , b]
 [

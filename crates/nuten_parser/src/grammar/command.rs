@@ -1,8 +1,9 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, at_call_item, builtin, call_items, ends_call, ends_element, is_file_redirection, item,
-    keyword::keyword, shell_operator, value,
+    Shape, at_call_item, builtin, call_items, ends_element, is_file_redirection, item,
+    keyword::{keyword, keyword_after_operator},
+    shell_operator, value,
 };
 use crate::{ParseErrorKind, parser::Parser};
 
@@ -64,23 +65,20 @@ impl Head {
     }
 }
 
-/// The items nu reads as an expression, as a `MathExpression` when an operator joins them.
+/// The items nu reads as an expression, as a `MathExpression` where it takes an operator.
 fn expression(p: &mut Parser<'_>) {
-    if joined_by_operator(&call_items(p)) {
+    if takes_operator(&call_items(p)) {
         math_expression(p);
     } else {
         item(p, Shape::Any);
     }
 }
 
-/// Whether an operator joins the items of an expression.
-/// Nu reads the first item as a value unless it is a `not`, which takes the term after it.
-fn joined_by_operator(items: &[&str]) -> bool {
-    match items {
-        ["not", _, ..] => true,
-        [_, rest @ ..] => rest.iter().copied().any(is_operator),
-        [] => false,
-    }
+/// Whether `expression` reads the items as a `MathExpression`, where nu takes an operator.
+/// Nu reads the first item as a value and takes an operator after it.
+/// A `not` is an operator itself, and takes a term even as the only item.
+fn takes_operator(items: &[&str]) -> bool {
+    matches!(items, ["not"] | [_, _, ..])
 }
 
 /// The terms an operator joins, as nu's `parse_math_expression` reads them.
@@ -96,25 +94,66 @@ fn math_expression(p: &mut Parser<'_>) {
 /// The operator ahead and the term it joins to what came before.
 /// An item where nu takes an operator stays as it is written, since nu reads no value there.
 fn joined_term(p: &mut Parser<'_>) {
-    if !p.peek_text().is_some_and(is_operator) {
-        return match p.peek_text().and_then(shell_operator) {
-            Some(error) => p.bump_error(error),
-            None => p.bump(),
-        };
+    // An `Error` token carries the error of its own text, so none is reported over it.
+    if p.peek() == Some(SyntaxKind::Error) {
+        return p.bump();
     }
-    p.bump_as(SyntaxKind::Operator);
-    if at_call_item(p) {
+    if !p.peek_text().is_some_and(is_operator) {
+        let error = p
+            .peek_text()
+            .and_then(shell_operator)
+            .unwrap_or(ParseErrorKind::MissingOperator);
+        return p.bump_error(error);
+    }
+    if !operator(p) {
+        return;
+    }
+    // A keyword syntax holds the rest of the element, so it leaves the loop no item to join.
+    // A `not` before it takes that word as a value instead, as `term` does.
+    if !keyword_after_operator(p) {
         term(p);
     }
 }
 
 /// The `not`s nu reads as prefix operators, then the value they take.
-/// A `not` with nothing after it is the value itself, which nu rejects.
 fn term(p: &mut Parser<'_>) {
-    while p.peek_text() == Some("not") && p.nth(1).is_some_and(|kind| !ends_call(kind)) {
-        p.bump_as(SyntaxKind::Operator);
+    while p.peek_text() == Some("not") {
+        if !operator(p) {
+            return;
+        }
     }
     item(p, Shape::Any);
+}
+
+/// The operator ahead, or the error where the element holds no term for it.
+/// Returns whether the term it takes is the next item to read.
+fn operator(p: &mut Parser<'_>) -> bool {
+    if !takes_term(p) {
+        p.bump_error(ParseErrorKind::MissingTerm);
+        return false;
+    }
+    p.bump_as(SyntaxKind::Operator);
+    at_call_item(p)
+}
+
+/// Whether the element holds a term for the operator ahead.
+/// Nu lifts a redirection and the item it takes out of the element, so a term may stand past them.
+/// It stays where it is written, as any item after a redirection does.
+fn takes_term(p: &Parser<'_>) -> bool {
+    let mut at = 1;
+    while let Some(kind) = p.nth(at) {
+        if ends_element(kind) || kind == SyntaxKind::Assign {
+            return false;
+        }
+        if !is_file_redirection(kind) {
+            return true;
+        }
+        match p.nth(at + 1) {
+            Some(target) if target.is_item() => at += 2,
+            _ => return false,
+        }
+    }
+    false
 }
 
 /// Whether nu's `parse_operator` reads `text` as an operator.
@@ -343,7 +382,7 @@ impl Streams {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_math_expression_like, is_operator, joined_by_operator};
+    use super::{is_math_expression_like, is_operator, takes_operator};
     use crate::{ParseErrorKind, parse};
 
     fn errors(src: &str) -> Vec<ParseErrorKind> {
@@ -439,20 +478,22 @@ mod tests {
     }
 
     #[test]
-    fn operator_past_the_first_item_joins_terms() {
-        assert!(joined_by_operator(&["1", "+", "2"]));
+    fn items_past_the_first_take_an_operator() {
+        assert!(takes_operator(&["1", "2"]));
+        assert!(takes_operator(&["1", "+", "2"]));
     }
 
     #[test]
-    fn not_with_an_item_after_it_joins_terms() {
-        assert!(joined_by_operator(&["not", "$a"]));
-        assert!(joined_by_operator(&["not", "not", "$a"]));
+    fn not_is_an_operator_even_as_the_only_item() {
+        assert!(takes_operator(&["not"]));
+        assert!(takes_operator(&["not", "$a"]));
+        assert!(takes_operator(&["not", "not", "$a"]));
     }
 
     #[test]
-    fn items_with_no_operator_to_join_them_are_one_value() {
-        for items in [["1"].as_slice(), &[], &["not"], &["-", "1"]] {
-            assert!(!joined_by_operator(items), "{items:?}");
+    fn fewer_than_two_items_without_a_not_take_no_operator() {
+        for items in [["1"].as_slice(), &[]] {
+            assert!(!takes_operator(items), "{items:?}");
         }
     }
 

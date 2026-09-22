@@ -26,3 +26,6 @@ echo {
 |x| x}
 echo { # c
 |x| x}
+do {
+  1 2
+}

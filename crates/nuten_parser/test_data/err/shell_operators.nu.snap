@@ -98,7 +98,8 @@ Root@0..159
         Error@113..115
           PipePipe@113..115 "||"
         Whitespace@115..116 " "
-        Word@116..117 "3"
+        Error@116..117
+          Word@116..117 "3"
   Newline@117..118 "\n"
   Pipeline@118..128
     PipelineElement@118..128
@@ -112,7 +113,8 @@ Root@0..159
         Error@124..126
           Word@124..126 "&&"
         Whitespace@126..127 " "
-        Word@127..128 "3"
+        Error@127..128
+          Word@127..128 "3"
   Newline@128..129 "\n"
   Pipeline@129..139
     PipelineElement@129..139
@@ -138,7 +140,8 @@ Root@0..159
         Error@146..149
           Word@146..149 "o>|"
         Whitespace@149..150 " "
-        Word@150..151 "x"
+        Error@150..151
+          Word@150..151 "x"
   Newline@151..152 "\n"
   Pipeline@152..158
     PipelineElement@152..158
@@ -157,7 +160,10 @@ error 59..63 "2>&1": ShellOutErrRedirect
 error 71..74 "o>|": OutPipe
 error 79..81 "||": ShellOrOr
 error 113..115 "||": ShellOrOr
+error 116..117 "3": MissingOperator
 error 124..126 "&&": ShellAndAnd
+error 127..128 "3": MissingOperator
 error 135..139 "2>&1": ShellOutErrRedirect
 error 146..149 "o>|": OutPipe
+error 150..151 "x": MissingOperator
 error 156..158 "||": ShellOrOr
