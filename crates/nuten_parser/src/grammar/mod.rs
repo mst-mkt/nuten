@@ -268,6 +268,21 @@ fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     }
 }
 
+/// How many words the keyword ahead takes up: one, or two with an `export` before it.
+fn keyword_words(p: &Parser<'_>) -> usize {
+    1 + usize::from(p.peek_text() == Some("export"))
+}
+
+/// The keyword ahead that declares a variable, and how many words it takes up.
+/// Of the keywords that declare one, only `const` takes an `export` before it.
+fn declaration<'a>(p: &Parser<'a>) -> Option<(&'a str, usize)> {
+    let words = keyword_words(p);
+    let keyword = p
+        .nth_text(words - 1)
+        .filter(|keyword| builtin::takes_variable_name(keyword))?;
+    (words == 1 || keyword == "const").then_some((keyword, words))
+}
+
 /// How many of `items` nu reads as flags: those before the first item that is not a flag.
 /// Nu reads no flag past a `--`.
 fn leading_flags(items: &[&str]) -> usize {

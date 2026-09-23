@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/let_type_errors.nu
 ---
-Root@0..132
+Root@0..163
   Pipeline@0..14
     PipelineElement@0..14
       Let@0..14
@@ -119,9 +119,29 @@ Root@0..132
           PipelineElement@130..131
             Word@130..131 "1"
   Newline@131..132 "\n"
+  Pipeline@132..162
+    PipelineElement@132..162
+      Let@132..162
+        Word@132..138 "export"
+        Whitespace@138..139 " "
+        Word@139..144 "const"
+        Whitespace@144..145 " "
+        Word@145..147 "x:"
+        Whitespace@147..148 " "
+        Error@148..157 "list<int)"
+        Whitespace@157..158 " "
+        Assign@158..159 "="
+        Whitespace@159..160 " "
+        Pipeline@160..162
+          PipelineElement@160..162
+            List@160..162
+              LBracket@160..161 "["
+              RBracket@161..162 "]"
+  Newline@162..163 "\n"
 error 8..9 "<": Lex(Unclosed)
 error 35..36 "]": Lex(UnmatchedCloser)
 error 60..61 ")": Lex(UnmatchedCloser)
 error 79..80 "]": Lex(UnmatchedCloser)
 error 105..106 "<": Lex(Unclosed)
 error 121..122 "<": Lex(Unclosed)
+error 156..157 ")": Lex(UnmatchedCloser)

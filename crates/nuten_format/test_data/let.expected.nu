@@ -45,3 +45,7 @@ let u: record<a:int>@x = { a: 1 }
 (
     let v: list<int> = [1]
 )
+export const e: record<a: int, b: string> = { a: 1 b: x }
+(
+    export const x = 1
+)

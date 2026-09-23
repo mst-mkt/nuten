@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/var_type.nu
 ---
-Root@0..456
+Root@0..535
   Pipeline@0..43
     PipelineElement@0..43
       Let@0..43
@@ -388,3 +388,60 @@ Root@0..456
                 RBrace@453..454 "}"
         RParen@454..455 ")"
   Newline@455..456 "\n"
+  Pipeline@456..489
+    PipelineElement@456..489
+      Let@456..489
+        Word@456..462 "export"
+        Whitespace@462..463 " "
+        Word@463..468 "const"
+        Whitespace@468..469 " "
+        Word@469..471 "x:"
+        Whitespace@471..472 " "
+        Type@472..484
+          Word@472..477 "table"
+          LAngle@477..478 "<"
+          TypeField@478..483
+            Word@478..479 "a"
+            Colon@479..480 ":"
+            Word@480..483 "int"
+          RAngle@483..484 ">"
+        Whitespace@484..485 " "
+        Assign@485..486 "="
+        Whitespace@486..487 " "
+        Pipeline@487..489
+          PipelineElement@487..489
+            List@487..489
+              LBracket@487..488 "["
+              RBracket@488..489 "]"
+  Newline@489..490 "\n"
+  Pipeline@490..534
+    PipelineElement@490..534
+      Let@490..534
+        Word@490..496 "export"
+        Whitespace@496..497 " "
+        Word@497..502 "const"
+        Whitespace@502..503 " "
+        Word@503..505 "x:"
+        Whitespace@505..506 " "
+        Word@506..515 "record<a:"
+        Whitespace@515..516 " "
+        Word@516..520 "int>"
+        Whitespace@520..521 " "
+        Redirection@521..525
+          OutGt@521..523 "o>"
+          Whitespace@523..524 " "
+          Word@524..525 "f"
+        Whitespace@525..526 " "
+        Assign@526..527 "="
+        Whitespace@527..528 " "
+        Pipeline@528..534
+          PipelineElement@528..534
+            Record@528..534
+              LBrace@528..529 "{"
+              RecordField@529..533
+                Word@529..530 "a"
+                Colon@530..531 ":"
+                Whitespace@531..532 " "
+                Word@532..533 "1"
+              RBrace@533..534 "}"
+  Newline@534..535 "\n"

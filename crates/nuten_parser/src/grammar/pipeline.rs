@@ -5,7 +5,7 @@ use super::{
     alias::{alias, alias_ahead},
     assignment::{Assigned, assigned_statements, assignment_ahead},
     command::{Streams, arguments, command},
-    ends_statement, is_pipe,
+    declaration, ends_statement, is_pipe,
     var_type::var_type,
 };
 use crate::{ParseErrorKind, parser::Parser};
@@ -169,9 +169,11 @@ fn pipeline_element(
         alias(p, assigned);
         None
     } else if assignment_ahead(p) {
-        if first && let Some(keyword @ ("let" | "mut" | "const")) = p.peek_text() {
+        if first && let Some((keyword, words)) = declaration(p) {
             p.start(SyntaxKind::Let);
-            p.bump();
+            for _ in 0..words {
+                p.bump();
+            }
             var_type(p, keyword);
             arguments(p, Some(Streams::default()), Shape::VariableName, true);
         } else {

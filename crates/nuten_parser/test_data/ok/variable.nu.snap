@@ -107,13 +107,12 @@ Root@0..150
   Newline@93..94 "\n"
   Pipeline@94..112
     PipelineElement@94..112
-      Assignment@94..112
-        Call@94..108
-          Word@94..100 "export"
-          Whitespace@100..101 " "
-          Word@101..106 "const"
-          Whitespace@106..107 " "
-          Word@107..108 "$"
+      Let@94..112
+        Word@94..100 "export"
+        Whitespace@100..101 " "
+        Word@101..106 "const"
+        Whitespace@106..107 " "
+        Word@107..108 "$"
         Whitespace@108..109 " "
         Assign@109..110 "="
         Whitespace@110..111 " "
@@ -123,13 +122,12 @@ Root@0..150
   Newline@112..113 "\n"
   Pipeline@113..133
     PipelineElement@113..133
-      Assignment@113..133
-        Call@113..129
-          Word@113..119 "export"
-          Whitespace@119..120 " "
-          Word@120..125 "const"
-          Whitespace@125..126 " "
-          Word@126..129 "$x?"
+      Let@113..133
+        Word@113..119 "export"
+        Whitespace@119..120 " "
+        Word@120..125 "const"
+        Whitespace@125..126 " "
+        Word@126..129 "$x?"
         Whitespace@129..130 " "
         Assign@130..131 "="
         Whitespace@131..132 " "

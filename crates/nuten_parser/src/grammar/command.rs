@@ -3,7 +3,7 @@ use nuten_syntax::SyntaxKind;
 use super::{
     Shape, at_call_item,
     binary::is_binary_like,
-    builtin, call_items, ends_element, is_file_redirection, item,
+    builtin, call_items, declaration, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_as_term},
     number::is_number,
     range::is_number_range,
@@ -253,7 +253,7 @@ pub(super) fn is_math_expression_like(text: &str) -> bool {
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
 /// Nu reads a `@` as an attribute only where a pipeline starts.
-/// It reads the name after `export const` as `const` does, never as a value.
+/// It reads the name after `let`, `mut`, `const`, or `export const` as written, never as a value.
 pub(super) fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
     let Some(head) = p.peek_text() else {
         return Shape::UnknownArgument;
@@ -268,7 +268,7 @@ pub(super) fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
         Shape::ExternalArgument
     } else if heads_pipeline && head.starts_with('@') {
         Shape::KnownArgument
-    } else if head == "export" && p.nth_text(1) == Some("const") {
+    } else if declaration(p).is_some() {
         Shape::VariableName
     } else {
         command_shape(head)
@@ -288,9 +288,7 @@ fn percent_shape(name: &str) -> Shape {
 }
 
 fn command_shape(name: &str) -> Shape {
-    if builtin::takes_variable_name(name) {
-        Shape::VariableName
-    } else if builtin::takes_any_argument(name) {
+    if builtin::takes_any_argument(name) {
         Shape::Any
     } else if builtin::takes_row_condition(name) {
         Shape::RowCondition

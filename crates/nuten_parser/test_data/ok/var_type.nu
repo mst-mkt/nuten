@@ -17,3 +17,5 @@ let x: record<a: int> , = 1
 list<int> = [1])
 (for x: # c
 list<int> in [[1]] { ls })
+export const x: table<a:int> = []
+export const x: record<a: int> o> f = {a: 1}

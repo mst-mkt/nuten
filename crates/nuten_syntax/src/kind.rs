@@ -164,8 +164,9 @@ macro_rules! syntax_kinds {
                 /// Then the operator, with any comments and line breaks before a line-start `|`.
                 /// Then any `Pipeline`s of the rest, with the comments and line breaks among them.
                 Assignment,
-                /// As an `Assignment`, for an element starting with `let`, `mut`, or `const`.
-                /// That word, not a `Call`, comes before the arguments.
+                /// As an `Assignment`, for an element that starts by declaring a variable.
+                /// It starts with `let`, `mut`, `const`, or `export const`.
+                /// Those words, not a `Call`, come before the arguments.
                 /// A variable ending in `:` takes its type after it, up to the assignment operator.
                 Let,
                 /// An alias nu declares: `alias`, the name, `=`, then what the alias stands for.

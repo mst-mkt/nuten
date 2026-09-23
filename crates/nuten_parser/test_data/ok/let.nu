@@ -21,3 +21,8 @@ let x:a<b = 1
 const x: int o> a< = 1
 const x: o> a< int = 1
 let {ls  x} = 1
+(export
+const x = 1)
+export const x: int o> a< = 1
+export const (ls) | a
+export let x = 1
