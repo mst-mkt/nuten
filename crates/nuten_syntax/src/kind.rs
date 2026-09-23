@@ -137,8 +137,7 @@ macro_rules! syntax_kinds {
                 /// `{`, the `MatchArm`s with the `,` between them, and `}`.
                 MatchArms,
                 /// One arm: its patterns with `|` between them, then `if` and the guard if there.
-                /// A pattern is a `ListPattern` or a value where nu reads one.
-                /// Any other stays as it is lexed.
+                /// A pattern is a variable, `_`, a `ListPattern`, a `RecordPattern`, or a value.
                 /// The guard is an expression, as what heads a statement is.
                 /// A guard that starts with `if` or `match`, or holds a `|`, stays as it is lexed.
                 /// So does what comes before `=>` where nu rejects it.
@@ -149,6 +148,10 @@ macro_rules! syntax_kinds {
                 /// A `..` last, alone or before a `$` and a name, is a `Word`.
                 /// One nu reads less of than it holds stays a `Word`.
                 ListPattern,
+                /// A `Word` in `{ }` read as a record pattern.
+                /// `{`, the fields and any `,` and comments among them, and `}`.
+                /// A field is a `RecordField`, or a `$` and a name alone as a `Word`.
+                RecordPattern,
                 /// A redirection to a file: the operator, such as `o>`, and its target.
                 /// Has no target only when the operator is an `Error`.
                 Redirection,
@@ -203,6 +206,7 @@ macro_rules! syntax_kinds {
                 /// A key, the token nu takes as its `:`, then its value.
                 /// Each of those while the record lasts.
                 /// A value of several touching tokens is one `Word`.
+                /// In a `RecordPattern`, a key, its `:`, then its pattern.
                 RecordField,
                 /// A `Word` in `{ }` that is no record: `{`, any parameters, the statements, `}`.
                 /// Nu reads one where it takes a value or a block, or an argument of a nu command.

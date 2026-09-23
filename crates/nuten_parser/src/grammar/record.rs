@@ -171,7 +171,7 @@ fn record_items(p: &mut Parser<'_>, items: &[RecordItem]) {
     bump_separators(p);
 }
 
-fn bump_separators(p: &mut Parser<'_>) {
+pub(super) fn bump_separators(p: &mut Parser<'_>) {
     while matches!(p.peek(), Some(SyntaxKind::Newline | SyntaxKind::Comma)) {
         p.bump();
     }

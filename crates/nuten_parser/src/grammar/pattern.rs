@@ -1,17 +1,20 @@
+use std::iter;
+
 use nuten_syntax::SyntaxKind;
 
-use super::{SQUARE, Shape, value};
+use super::{CURLY, SQUARE, Shape, record::bump_separators, value};
 use crate::{
     lexer::{Mode, Token},
     parser::Parser,
 };
 
 /// The pattern ahead as nu reads it, which nu tells by its first byte.
-/// A variable or a record pattern stays as it is.
-/// Anything else but a list pattern is a value, `_` among them.
+/// A variable stays as it is.
+/// Anything else but a record or a list pattern is a value, `_` among them.
 pub(super) fn pattern(p: &mut Parser<'_>) {
     match p.peek_text().map(str::as_bytes) {
-        Some([b'$' | b'{', ..]) => p.bump(),
+        Some([b'$', ..]) => p.bump(),
+        Some([b'{', ..]) => record_pattern(p),
         Some([b'[', ..]) => list_pattern(p),
         _ => value(p, Shape::Any),
     }
@@ -29,6 +32,79 @@ fn pattern_tokens<'a>(inner: &Parser<'a>) -> Vec<(Token, &'a str)> {
 /// Unlike for `is_item`, an `Error` is none, since nuten reads no pattern of its text.
 fn is_pattern_item(kind: SyntaxKind) -> bool {
     kind.is_item() && kind != SyntaxKind::Error
+}
+
+/// The `{ }` ahead as a `RecordPattern`.
+/// It stays a word where nu cannot split it into fields of pattern items.
+fn record_pattern(p: &mut Parser<'_>) {
+    match p.bracketed(&CURLY, Mode::RecordPattern) {
+        Some(bracketed) if splits_fields(bracketed.inner()) => {
+            p.bump_bracketed(SyntaxKind::RecordPattern, bracketed, record_pattern_fields);
+        },
+        _ => p.bump(),
+    }
+}
+
+/// Whether nu splits the inside of `{ }` into fields of pattern items.
+fn splits_fields(inner: &Parser<'_>) -> bool {
+    let tokens = pattern_tokens(inner);
+    let fields: Vec<_> =
+        iter::successors(Field::first(&tokens), |field| Field::first(field.rest)).collect();
+    let rest = fields.last().map_or(tokens.as_slice(), |field| field.rest);
+    rest.is_empty()
+        && fields
+            .iter()
+            .flat_map(|field| field.parts)
+            .all(|(token, _)| is_pattern_item(token.kind))
+}
+
+/// A field of a record pattern among the tokens of its inside.
+struct Field<'t, 'a> {
+    /// The key and the pattern, or the variable twice, since it is both.
+    parts: [&'t (Token, &'a str); 2],
+    /// The tokens after the field.
+    rest: &'t [(Token, &'a str)],
+}
+
+impl<'t, 'a> Field<'t, 'a> {
+    /// The field `tokens` start with, if any.
+    fn first(tokens: &'t [(Token, &'a str)]) -> Option<Field<'t, 'a>> {
+        let (parts, rest) = match tokens {
+            [variable @ (_, text), rest @ ..] if text.starts_with('$') => {
+                ([variable, variable], rest)
+            },
+            [key, (colon, _), pattern, rest @ ..] if colon.kind == SyntaxKind::Colon => {
+                ([key, pattern], rest)
+            },
+            _ => return None,
+        };
+        Some(Field {
+            parts,
+            rest,
+        })
+    }
+}
+
+/// The fields of a record pattern, a `RecordField` for each key.
+fn record_pattern_fields(p: &mut Parser<'_>) {
+    while let Some((kind, text)) = p.peek().zip(p.peek_text()) {
+        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) || text.starts_with('$') {
+            p.bump();
+        } else {
+            record_field(p);
+        }
+    }
+}
+
+/// A key, its `:`, and its pattern.
+fn record_field(p: &mut Parser<'_>) {
+    p.start(SyntaxKind::RecordField);
+    p.bump();
+    bump_separators(p);
+    p.bump();
+    bump_separators(p);
+    pattern(p);
+    p.finish();
 }
 
 /// The `[ ]` ahead as a `ListPattern`, or as a word where nu reads less than it holds.

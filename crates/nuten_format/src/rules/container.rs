@@ -20,7 +20,7 @@ impl<'a> Formatter<'a> {
             return vec![self.source(container.syntax().text_range())];
         }
         let kind = container.syntax().kind();
-        let line = if kind == SyntaxKind::Record {
+        let line = if matches!(kind, SyntaxKind::Record | SyntaxKind::RecordPattern) {
             soft_line_break_or_space
         } else {
             soft_line_break

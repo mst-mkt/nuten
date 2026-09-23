@@ -14,7 +14,7 @@ match ($x | length) {
 }
 match $x {
     [a b] => 1
-    {c: $d} => 2
+    { c: $d } => 2
     1..3 => 3
     a | b => 4
     $y if $y > 1 => 5

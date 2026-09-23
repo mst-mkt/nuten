@@ -159,7 +159,14 @@ Root@0..352
               LBracket@156..157 "["
               Word@157..159 "$y"
               Whitespace@159..160 " "
-              Word@160..166 "{a: 1}"
+              RecordPattern@160..166
+                LBrace@160..161 "{"
+                RecordField@161..165
+                  Word@161..162 "a"
+                  Colon@162..163 ":"
+                  Whitespace@163..164 " "
+                  Word@164..165 "1"
+                RBrace@165..166 "}"
               RBracket@166..167 "]"
             Whitespace@167..168 " "
             FatArrow@168..170 "=>"

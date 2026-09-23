@@ -164,6 +164,7 @@ impl<'a> Formatter<'a> {
             Node::MatchArms(arms) => self.container(arms),
             Node::MatchArm(arm) => self.arm(arm),
             Node::ListPattern(pattern) => self.container(pattern),
+            Node::RecordPattern(pattern) => self.container(pattern),
             Node::Def(def) => self.def(def),
             Node::List(list) => self.container(list),
             Node::Record(record) => self.container(record),

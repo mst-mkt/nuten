@@ -210,7 +210,14 @@ Root@0..342
           Comma@220..221 ","
           Whitespace@221..222 " "
           MatchArm@222..234
-            Word@222..229 "{a: $y}"
+            RecordPattern@222..229
+              LBrace@222..223 "{"
+              RecordField@223..228
+                Word@223..224 "a"
+                Colon@224..225 ":"
+                Whitespace@225..226 " "
+                Word@226..228 "$y"
+              RBrace@228..229 "}"
             Whitespace@229..230 " "
             FatArrow@230..232 "=>"
             Whitespace@232..233 " "
