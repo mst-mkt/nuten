@@ -199,7 +199,10 @@ Root@0..342
           Comma@209..210 ","
           Whitespace@210..211 " "
           MatchArm@211..220
-            Word@211..215 "[$y]"
+            ListPattern@211..215
+              LBracket@211..212 "["
+              Word@212..214 "$y"
+              RBracket@214..215 "]"
             Whitespace@215..216 " "
             FatArrow@216..218 "=>"
             Whitespace@218..219 " "

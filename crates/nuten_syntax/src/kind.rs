@@ -137,12 +137,18 @@ macro_rules! syntax_kinds {
                 /// `{`, the `MatchArm`s with the `,` between them, and `}`.
                 MatchArms,
                 /// One arm: its patterns with `|` between them, then `if` and the guard if there.
-                /// A pattern nu reads as a value is one, and any other stays as it is lexed.
+                /// A pattern is a `ListPattern` or a value where nu reads one.
+                /// Any other stays as it is lexed.
                 /// The guard is an expression, as what heads a statement is.
                 /// A guard that starts with `if` or `match`, or holds a `|`, stays as it is lexed.
                 /// So does what comes before `=>` where nu rejects it.
                 /// Then `=>` and the one item nu takes as what the arm does.
                 MatchArm,
+                /// A `Word` in `[ ]` read as a list pattern.
+                /// `[`, the patterns and any `,` and comments among them, and `]`.
+                /// A `..` last, alone or before a `$` and a name, is a `Word`.
+                /// One nu reads less of than it holds stays a `Word`.
+                ListPattern,
                 /// A redirection to a file: the operator, such as `o>`, and its target.
                 /// Has no target only when the operator is an `Error`.
                 Redirection,

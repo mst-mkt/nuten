@@ -176,6 +176,7 @@ bracketed! {
     Record: LBrace RBrace,
     Block: LBrace RBrace,
     MatchArms: LBrace RBrace,
+    ListPattern: LBracket RBracket,
     Type: LAngle RAngle {
         /// The `<`, right after the name.
         fn open(&self) -> SyntaxToken {

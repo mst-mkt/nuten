@@ -125,7 +125,12 @@ Root@0..956
           LBrace@126..127 "{"
           Whitespace@127..128 " "
           MatchArm@128..138
-            Word@128..133 "[a b]"
+            ListPattern@128..133
+              LBracket@128..129 "["
+              Word@129..130 "a"
+              Whitespace@130..131 " "
+              Word@131..132 "b"
+              RBracket@132..133 "]"
             Whitespace@133..134 " "
             FatArrow@134..136 "=>"
             Whitespace@136..137 " "
