@@ -1,4 +1,5 @@
 use nuten_syntax::SyntaxKind;
+use rowan::{TextRange, TextSize};
 
 use super::{
     PAREN, SQUARE, Shape, call_items,
@@ -6,7 +7,7 @@ use super::{
     value,
 };
 use crate::{
-    lexer::Mode,
+    lexer::{Mode, Token},
     parser::{Affix, Brackets, Parser},
 };
 
@@ -30,22 +31,64 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
         }),
         None => p.bump(),
     }
-    // The input and output types stay as they are; only the body is a block.
-    let types = shape.rest - usize::from(shape.has_body);
-    for at in 0..types {
-        // The `:` nu takes for the one the types follow.
-        // The formatter moves it to the parameters.
-        if at == 0 && !shape.attached_colon && p.peek_text() == Some(":") {
-            p.bump_as(SyntaxKind::Colon);
-        } else {
-            p.bump();
-        }
+    io_types(p, shape.types, shape.attached_colon);
+    if shape.ignored_braces {
+        p.bump();
     }
     if shape.has_body {
         value(p, Shape::DefBody);
     }
     p.finish();
     true
+}
+
+/// The input and output types ahead: `count` items, with their `:` first unless it is attached.
+/// They are an `Error` where nu fails to lex them.
+fn io_types(p: &mut Parser<'_>, count: usize, attached_colon: bool) {
+    if count == 0 {
+        return;
+    }
+    let count = if attached_colon {
+        count
+    } else {
+        // A `Colon` of its own, which the formatter may join to the parameters.
+        p.bump_as(SyntaxKind::Colon);
+        count - 1
+    };
+    let items: Vec<_> = p
+        .remaining_tokens()
+        .filter(|(token, _)| !p.is_skipped(token.kind))
+        .take(count)
+        .collect();
+    let Some((range, lexed)) = io_types_ranges(&items) else {
+        return;
+    };
+    // Items with an error of their own keep it.
+    let own_error = items
+        .iter()
+        .any(|(token, _)| token.kind == SyntaxKind::Error);
+    let error = (!own_error)
+        .then(|| p.lex_error(lexed, Mode::IoTypes))
+        .flatten();
+    if let Some(error) = error {
+        p.bump_error_to(range.end(), error.into());
+    } else {
+        for _ in 0..count {
+            p.bump();
+        }
+    }
+}
+
+/// Where `items` are, and where the part of them that nu lexes is.
+/// Nu leaves out a `[` first and a `]` last, each on its own, before it lexes them.
+fn io_types_ranges(items: &[(Token, &str)]) -> Option<(TextRange, TextRange)> {
+    let (&(first, first_text), &(last, last_text)) = (items.first()?, items.last()?);
+    let range = TextRange::new(first.range.start(), last.range.end());
+    let lexed = TextRange::new(
+        range.start() + TextSize::from(u32::from(first_text.starts_with('['))),
+        range.end() - TextSize::from(u32::from(last_text.ends_with(']'))),
+    );
+    Some((range, lexed))
 }
 
 /// Where the parts of a `def` or an `extern` are among `items`, when nu reads them as one.
@@ -58,8 +101,10 @@ struct DefShape {
     brackets: &'static Brackets,
     /// Whether the `:` of the input and output types ends that item.
     attached_colon: bool,
-    /// How many items follow the parameters, the last being the body when the definition has one.
-    rest: usize,
+    /// How many items of the input and output types follow the parameters, a lone `:` included.
+    types: usize,
+    /// Whether an `extern` ends with the one item in braces nu ignores.
+    ignored_braces: bool,
     has_body: bool,
 }
 
@@ -89,8 +134,8 @@ fn def_shape(items: &[&str]) -> Option<DefShape> {
     }
     // Nu ignores the one item in braces an `extern` may end with, and never parses it.
     // So it stays a word.
-    let ignored = external && rest == 1 && items[items.len() - 1].starts_with('{');
-    let types = rest - usize::from(has_body || ignored);
+    let ignored_braces = external && rest == 1 && items[items.len() - 1].starts_with('{');
+    let types = rest - usize::from(has_body || ignored_braces);
     if !attached_colon && types > 0 && items[signature + 1] != ":" {
         return None;
     }
@@ -98,7 +143,8 @@ fn def_shape(items: &[&str]) -> Option<DefShape> {
         signature,
         brackets,
         attached_colon,
-        rest,
+        types,
+        ignored_braces,
         has_body,
     })
 }

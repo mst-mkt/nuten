@@ -219,7 +219,9 @@ macro_rules! syntax_kinds {
                 ClosureParams,
                 /// A `def` or an `extern` that nu reads as one.
                 /// `export` if there, the keyword, any flags, the name, and a `Signature`.
-                /// Then the `:` and the items of the input and output types if there.
+                /// Then the `:` and the input and output types if there.
+                /// They are an `Error` where nu fails to lex them.
+                /// Otherwise the items stay as they are.
                 /// Then the body, which only a `def` has.
                 Def,
                 /// The parameters of a `def` or an `extern`.

@@ -1,0 +1,187 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/io_types_errors.nu
+---
+Root@0..221
+  Pipeline@0..32
+    PipelineElement@0..32
+      Def@0..32
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "f"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        Error@10..25
+          Word@10..13 "int"
+          Whitespace@13..14 " "
+          Word@14..16 "->"
+          Whitespace@16..17 " "
+          Word@17..25 "list<int"
+        Whitespace@25..26 " "
+        Block@26..32
+          LBrace@26..27 "{"
+          Whitespace@27..28 " "
+          Pipeline@28..30
+            PipelineElement@28..30
+              Call@28..30
+                Word@28..30 "ls"
+          Whitespace@30..31 " "
+          RBrace@31..32 "}"
+  Newline@32..33 "\n"
+  Pipeline@33..69
+    PipelineElement@33..69
+      Def@33..69
+        Word@33..36 "def"
+        Whitespace@36..37 " "
+        Word@37..38 "f"
+        Whitespace@38..39 " "
+        Signature@39..41
+          LBracket@39..40 "["
+          RBracket@40..41 "]"
+        Colon@41..42 ":"
+        Whitespace@42..43 " "
+        Error@43..62
+          Word@43..58 "[int -> string]"
+          Whitespace@58..59 " "
+          Word@59..62 "[x]"
+        Whitespace@62..63 " "
+        Block@63..69
+          LBrace@63..64 "{"
+          Whitespace@64..65 " "
+          Pipeline@65..67
+            PipelineElement@65..67
+              Call@65..67
+                Word@65..67 "ls"
+          Whitespace@67..68 " "
+          RBrace@68..69 "}"
+  Newline@69..70 "\n"
+  Pipeline@70..110
+    PipelineElement@70..110
+      Def@70..110
+        Word@70..73 "def"
+        Whitespace@73..74 " "
+        Word@74..75 "f"
+        Whitespace@75..76 " "
+        Signature@76..78
+          LBracket@76..77 "["
+          RBracket@77..78 "]"
+        Colon@78..79 ":"
+        Whitespace@79..80 " "
+        Error@80..103
+          Word@80..103 "[int -> record<a: int]>"
+        Whitespace@103..104 " "
+        Block@104..110
+          LBrace@104..105 "{"
+          Whitespace@105..106 " "
+          Pipeline@106..108
+            PipelineElement@106..108
+              Call@106..108
+                Word@106..108 "ls"
+          Whitespace@108..109 " "
+          RBrace@109..110 "}"
+  Newline@110..111 "\n"
+  Pipeline@111..139
+    PipelineElement@111..139
+      Def@111..139
+        Word@111..117 "extern"
+        Whitespace@117..118 " "
+        Word@118..119 "e"
+        Whitespace@119..120 " "
+        Signature@120..122
+          LBracket@120..121 "["
+          RBracket@121..122 "]"
+        Colon@122..123 ":"
+        Whitespace@123..124 " "
+        Error@124..139
+          Word@124..127 "int"
+          Whitespace@127..128 " "
+          Word@128..130 "->"
+          Whitespace@130..131 " "
+          Word@131..139 "list<int"
+  Newline@139..140 "\n"
+  Pipeline@140..168
+    PipelineElement@140..168
+      Def@140..168
+        Word@140..143 "def"
+        Whitespace@143..144 " "
+        Word@144..145 "f"
+        Whitespace@145..146 " "
+        Signature@146..148
+          LBracket@146..147 "["
+          RBracket@147..148 "]"
+        Whitespace@148..149 " "
+        Colon@149..150 ":"
+        Whitespace@150..151 " "
+        Error@151..161
+          Word@151..154 "int"
+          Whitespace@154..155 " "
+          Word@155..157 "->"
+          Whitespace@157..158 " "
+          Word@158..161 "a<b"
+        Whitespace@161..162 " "
+        Block@162..168
+          LBrace@162..163 "{"
+          Whitespace@163..164 " "
+          Pipeline@164..166
+            PipelineElement@164..166
+              Call@164..166
+                Word@164..166 "ls"
+          Whitespace@166..167 " "
+          RBrace@167..168 "}"
+  Newline@168..169 "\n"
+  Pipeline@169..197
+    PipelineElement@169..197
+      Def@169..197
+        Word@169..172 "def"
+        Whitespace@172..173 " "
+        Word@173..174 "f"
+        Whitespace@174..175 " "
+        Signature@175..177
+          LBracket@175..176 "["
+          RBracket@176..177 "]"
+        Colon@177..178 ":"
+        Whitespace@178..179 " "
+        Word@179..182 "int"
+        Whitespace@182..183 " "
+        Word@183..185 "->"
+        Whitespace@185..186 " "
+        Error@186..190 "int)"
+        Whitespace@190..191 " "
+        Block@191..197
+          LBrace@191..192 "{"
+          Whitespace@192..193 " "
+          Pipeline@193..195
+            PipelineElement@193..195
+              Call@193..195
+                Word@193..195 "ls"
+          Whitespace@195..196 " "
+          RBrace@196..197 "}"
+  Newline@197..198 "\n"
+  Pipeline@198..221
+    PipelineElement@198..221
+      Def@198..221
+        Word@198..204 "extern"
+        Whitespace@204..205 " "
+        Word@205..206 "e"
+        Whitespace@206..207 " "
+        Signature@207..209
+          LBracket@207..208 "["
+          RBracket@208..209 "]"
+        Colon@209..210 ":"
+        Whitespace@210..211 " "
+        Word@211..214 "int"
+        Whitespace@214..215 " "
+        Word@215..217 "->"
+        Whitespace@217..218 " "
+        Error@218..221 "\"a\n"
+error 21..22 "<": Lex(Unclosed)
+error 59..60 "[": Lex(Unclosed)
+error 101..102 "]": Lex(UnmatchedCloser)
+error 135..136 "<": Lex(Unclosed)
+error 159..160 "<": Lex(Unclosed)
+error 189..190 ")": Lex(UnmatchedCloser)
+error 218..219 "\"": Lex(Unclosed)
