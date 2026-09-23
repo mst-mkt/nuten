@@ -1,7 +1,7 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, at_call_item, call_items, item, leading_flags,
+    Shape, at_call_item, call_items, item, keyword_words, leading_flags,
     spread::{Target, is_spread, spread},
 };
 use crate::parser::Parser;
@@ -9,11 +9,12 @@ use crate::parser::Parser;
 /// The `Use` ahead, when the call takes an item past `use`.
 pub(super) fn use_(p: &mut Parser<'_>) -> bool {
     let items = call_items(p);
-    if items.len() < 2 {
+    let words = keyword_words(p);
+    if items.len() <= words {
         return false;
     }
     p.start(SyntaxKind::Use);
-    for _ in 0..=leading_flags(&items[1..]) {
+    for _ in 0..words + leading_flags(&items[words..]) {
         p.bump();
     }
     if at_call_item(p) {

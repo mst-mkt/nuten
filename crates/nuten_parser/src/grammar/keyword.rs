@@ -30,17 +30,28 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
 /// Only a syntax that a call holds whole belongs here.
 /// `let` and the rest reach past an assignment operator, so they are read with the element.
 ///
-/// The keyword alone decides which syntax to try.
+/// The keyword alone decides which syntax to try, or the one after an `export`.
 /// The shape of the items is then that syntax's own to check.
 pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
     match p.peek_text() {
         Some("if") => if_(p),
         Some("for" | "while" | "loop" | "try") => control(p),
         Some("match") => match_(p),
-        Some("def" | "extern" | "export") => def(p),
+        Some("def" | "extern") => def(p),
         Some("module") => module(p),
         Some("use") => use_(p),
         Some("where") => where_(p),
+        Some("export") => exported(p),
+        _ => false,
+    }
+}
+
+/// An `export` and the keyword after it, which nu reads as that keyword alone.
+/// The syntax of that keyword takes the `export` in.
+fn exported(p: &mut Parser<'_>) -> bool {
+    match p.nth_text(1) {
+        Some("def" | "extern") => def(p),
+        Some("use") => use_(p),
         _ => false,
     }
 }

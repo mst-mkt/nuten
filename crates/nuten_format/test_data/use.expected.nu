@@ -21,3 +21,10 @@ use -- -- [a b]
 use m.nu [ # c
     a
 ]
+export use std [assert log]
+export use -h [a,b] [c d]
+export use
+(
+    export
+    use m.nu [a b]
+)
