@@ -86,6 +86,9 @@ do {
 for x: int in [1] {
     print $x
 }
+for x: record<a: int> in [{ a: 1 }] {
+    print $x
+}
 for {a} in [1] {
     ls
 }

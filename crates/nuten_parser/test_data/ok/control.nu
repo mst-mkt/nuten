@@ -24,6 +24,12 @@ for x in [1] { ls } o> f.txt
 for x in [1] { ls } # c
 for x in [1] { ls } { ls }
 for x: int in [1] { print $x }
+for x: record<a: int> in [{a: 1}] { print $x }
+for x: [int] in [1] { ls }
+for x: int in in [1] { ls }
+for in in [1] { ls }
+for x in { ls }
+for x y in [1] { ls }
 for {a} in [1] { ls }
 while {|| true} { break }
 try { ls } catch { ls } catch { ls }

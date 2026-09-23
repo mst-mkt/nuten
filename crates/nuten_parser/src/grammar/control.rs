@@ -10,18 +10,27 @@ pub(super) fn control(p: &mut Parser<'_>) -> bool {
     };
     p.start(shape.kind);
     p.bump();
-    for at in 1..shape.len {
+    if shape.kind == SyntaxKind::For {
+        for_variable(p);
+    }
+    for at in shape.values_at..shape.len {
         if at + 1 == shape.len || (shape.has_catch && at == 1) {
             value(p, Shape::Block);
-        } else if shape.kind == SyntaxKind::For && at == 1 {
-            // The variable, which nu never reads as a value, braces or not.
-            p.bump();
         } else {
             item(p, Shape::Any);
         }
     }
     p.finish();
     true
+}
+
+/// The variable of a `for` and any type after it, up to the `in`.
+/// Nu never reads them as a value, braces or not.
+fn for_variable(p: &mut Parser<'_>) {
+    p.bump();
+    while p.peek_text() != Some("in") {
+        p.bump();
+    }
 }
 
 /// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of a call.
@@ -31,6 +40,8 @@ struct ControlShape {
     kind: SyntaxKind,
     len: usize,
     has_catch: bool,
+    /// Where the items nu reads as values start: at the `in` of a `for`, else after the keyword.
+    values_at: usize,
 }
 
 fn control_shape(items: &[&str]) -> Option<ControlShape> {
@@ -39,20 +50,28 @@ fn control_shape(items: &[&str]) -> Option<ControlShape> {
     if last == 0 || !braced(last) {
         return None;
     }
-    // `in` at `at`, then at least one item of the value before the body.
-    let in_at = |at: usize| items.get(at) == Some(&"in") && last > at + 1;
-    let (kind, has_catch) = match items[0] {
-        // The variable may take a type after a `:` it ends with.
-        "for" if in_at(2) || (items[1].ends_with(':') && in_at(3)) => (SyntaxKind::For, false),
-        "while" if last >= 2 => (SyntaxKind::While, false),
-        "loop" if last == 1 => (SyntaxKind::Loop, false),
-        "try" if last == 1 => (SyntaxKind::Try, false),
-        "try" if last == 3 && braced(1) && items[2] == "catch" => (SyntaxKind::Try, true),
+    let (kind, has_catch, values_at) = match items[0] {
+        "for" => (SyntaxKind::For, false, for_in(items)?),
+        "while" if last >= 2 => (SyntaxKind::While, false, 1),
+        "loop" if last == 1 => (SyntaxKind::Loop, false, 1),
+        "try" if last == 1 => (SyntaxKind::Try, false, 1),
+        "try" if last == 3 && braced(1) && items[2] == "catch" => (SyntaxKind::Try, true, 1),
         _ => return None,
     };
     Some(ControlShape {
         kind,
         len: items.len(),
         has_catch,
+        values_at,
     })
+}
+
+/// Where the `in` of a `for` is among `items`.
+/// Nu ends the variable at the first `in` from the variable on.
+/// Only a name ending in `:` takes the items of its type before the `in`.
+/// At least one item of the value comes between the `in` and the body.
+fn for_in(items: &[&str]) -> Option<usize> {
+    let at = items.iter().skip(1).position(|&item| item == "in")? + 1;
+    let variable = at == 2 || (at > 2 && items[1].ends_with(':'));
+    (variable && items.len() > at + 2).then_some(at)
 }

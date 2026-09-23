@@ -121,7 +121,7 @@ macro_rules! syntax_kinds {
                 /// The `if`s after the `else`s are in this one flat node.
                 If,
                 /// `for`, the variable, `in`, the value, and the body.
-                /// A variable ending in `:` takes its type after it.
+                /// A variable ending in `:` takes its type after it, up to the first `in`.
                 /// The value is at least one argument.
                 For,
                 /// `while`, at least one argument of the condition, and the body.

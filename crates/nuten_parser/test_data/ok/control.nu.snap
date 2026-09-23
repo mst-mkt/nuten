@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/control.nu
 ---
-Root@0..706
+Root@0..867
   Pipeline@0..27
     PipelineElement@0..27
       For@0..27
@@ -560,167 +560,321 @@ Root@0..706
           Whitespace@539..540 " "
           RBrace@540..541 "}"
   Newline@541..542 "\n"
-  Pipeline@542..563
-    PipelineElement@542..563
-      For@542..563
+  Pipeline@542..588
+    PipelineElement@542..588
+      For@542..588
         Word@542..545 "for"
         Whitespace@545..546 " "
-        Word@546..549 "{a}"
-        Whitespace@549..550 " "
-        Word@550..552 "in"
-        Whitespace@552..553 " "
-        List@553..556
-          LBracket@553..554 "["
-          Word@554..555 "1"
-          RBracket@555..556 "]"
-        Whitespace@556..557 " "
-        Block@557..563
-          LBrace@557..558 "{"
-          Whitespace@558..559 " "
-          Pipeline@559..561
-            PipelineElement@559..561
-              Call@559..561
-                Word@559..561 "ls"
-          Whitespace@561..562 " "
-          RBrace@562..563 "}"
-  Newline@563..564 "\n"
-  Pipeline@564..589
-    PipelineElement@564..589
-      While@564..589
-        Word@564..569 "while"
-        Whitespace@569..570 " "
-        Block@570..579
-          LBrace@570..571 "{"
-          ClosureParams@571..573
-            PipePipe@571..573 "||"
-          Whitespace@573..574 " "
-          Pipeline@574..578
-            PipelineElement@574..578
-              Word@574..578 "true"
-          RBrace@578..579 "}"
-        Whitespace@579..580 " "
-        Block@580..589
-          LBrace@580..581 "{"
-          Whitespace@581..582 " "
-          Pipeline@582..587
-            PipelineElement@582..587
-              Call@582..587
-                Word@582..587 "break"
-          Whitespace@587..588 " "
-          RBrace@588..589 "}"
-  Newline@589..590 "\n"
-  Pipeline@590..626
-    PipelineElement@590..626
-      Call@590..626
-        Word@590..593 "try"
-        Whitespace@593..594 " "
-        Block@594..600
-          LBrace@594..595 "{"
-          Whitespace@595..596 " "
-          Pipeline@596..598
-            PipelineElement@596..598
-              Call@596..598
-                Word@596..598 "ls"
-          Whitespace@598..599 " "
-          RBrace@599..600 "}"
-        Whitespace@600..601 " "
-        Word@601..606 "catch"
-        Whitespace@606..607 " "
-        Block@607..613
-          LBrace@607..608 "{"
-          Whitespace@608..609 " "
-          Pipeline@609..611
-            PipelineElement@609..611
-              Call@609..611
-                Word@609..611 "ls"
-          Whitespace@611..612 " "
-          RBrace@612..613 "}"
-        Whitespace@613..614 " "
-        Word@614..619 "catch"
+        Word@546..548 "x:"
+        Whitespace@548..549 " "
+        Word@549..558 "record<a:"
+        Whitespace@558..559 " "
+        Word@559..563 "int>"
+        Whitespace@563..564 " "
+        Word@564..566 "in"
+        Whitespace@566..567 " "
+        List@567..575
+          LBracket@567..568 "["
+          Record@568..574
+            LBrace@568..569 "{"
+            RecordField@569..573
+              Word@569..570 "a"
+              Colon@570..571 ":"
+              Whitespace@571..572 " "
+              Word@572..573 "1"
+            RBrace@573..574 "}"
+          RBracket@574..575 "]"
+        Whitespace@575..576 " "
+        Block@576..588
+          LBrace@576..577 "{"
+          Whitespace@577..578 " "
+          Pipeline@578..586
+            PipelineElement@578..586
+              Call@578..586
+                Word@578..583 "print"
+                Whitespace@583..584 " "
+                Word@584..586 "$x"
+          Whitespace@586..587 " "
+          RBrace@587..588 "}"
+  Newline@588..589 "\n"
+  Pipeline@589..615
+    PipelineElement@589..615
+      For@589..615
+        Word@589..592 "for"
+        Whitespace@592..593 " "
+        Word@593..595 "x:"
+        Whitespace@595..596 " "
+        Word@596..601 "[int]"
+        Whitespace@601..602 " "
+        Word@602..604 "in"
+        Whitespace@604..605 " "
+        List@605..608
+          LBracket@605..606 "["
+          Word@606..607 "1"
+          RBracket@607..608 "]"
+        Whitespace@608..609 " "
+        Block@609..615
+          LBrace@609..610 "{"
+          Whitespace@610..611 " "
+          Pipeline@611..613
+            PipelineElement@611..613
+              Call@611..613
+                Word@611..613 "ls"
+          Whitespace@613..614 " "
+          RBrace@614..615 "}"
+  Newline@615..616 "\n"
+  Pipeline@616..643
+    PipelineElement@616..643
+      For@616..643
+        Word@616..619 "for"
         Whitespace@619..620 " "
-        Block@620..626
-          LBrace@620..621 "{"
-          Whitespace@621..622 " "
-          Pipeline@622..624
-            PipelineElement@622..624
-              Call@622..624
-                Word@622..624 "ls"
-          Whitespace@624..625 " "
-          RBrace@625..626 "}"
-  Newline@626..627 "\n"
-  Pipeline@627..659
-    PipelineElement@627..659
-      Try@627..650
-        Word@627..630 "try"
-        Whitespace@630..631 " "
-        Block@631..637
-          LBrace@631..632 "{"
-          Whitespace@632..633 " "
-          Pipeline@633..635
-            PipelineElement@633..635
-              Call@633..635
-                Word@633..635 "ls"
-          Whitespace@635..636 " "
-          RBrace@636..637 "}"
-        Whitespace@637..638 " "
-        Word@638..643 "catch"
-        Whitespace@643..644 " "
-        Block@644..650
-          LBrace@644..645 "{"
-          Whitespace@645..646 " "
-          Pipeline@646..648
-            PipelineElement@646..648
-              Call@646..648
-                Word@646..648 "ls"
-          Whitespace@648..649 " "
-          RBrace@649..650 "}"
-      Whitespace@650..651 " "
-      Redirection@651..659
-        OutGt@651..653 "o>"
+        Word@620..622 "x:"
+        Whitespace@622..623 " "
+        Word@623..626 "int"
+        Whitespace@626..627 " "
+        Word@627..629 "in"
+        Whitespace@629..630 " "
+        Word@630..632 "in"
+        Whitespace@632..633 " "
+        List@633..636
+          LBracket@633..634 "["
+          Word@634..635 "1"
+          RBracket@635..636 "]"
+        Whitespace@636..637 " "
+        Block@637..643
+          LBrace@637..638 "{"
+          Whitespace@638..639 " "
+          Pipeline@639..641
+            PipelineElement@639..641
+              Call@639..641
+                Word@639..641 "ls"
+          Whitespace@641..642 " "
+          RBrace@642..643 "}"
+  Newline@643..644 "\n"
+  Pipeline@644..664
+    PipelineElement@644..664
+      Call@644..664
+        Word@644..647 "for"
+        Whitespace@647..648 " "
+        Word@648..650 "in"
+        Whitespace@650..651 " "
+        Word@651..653 "in"
         Whitespace@653..654 " "
-        Word@654..659 "f.txt"
-  Newline@659..660 "\n"
-  Pipeline@660..667
-    PipelineElement@660..667
-      Loop@660..667
-        Word@660..664 "loop"
-        Whitespace@664..665 " "
-        Word@665..667 "{}"
-  Newline@667..668 "\n"
-  Pipeline@668..671
-    PipelineElement@668..671
-      Call@668..671
-        Word@668..671 "for"
-  Newline@671..672 "\n"
-  Pipeline@672..675
-    PipelineElement@672..675
-      Call@672..675
-        Word@672..675 "try"
-  Newline@675..676 "\n"
-  Pipeline@676..681
-    PipelineElement@676..681
-      Call@676..681
-        Word@676..681 "while"
-  Newline@681..682 "\n"
-  Pipeline@682..686
-    PipelineElement@682..686
-      Call@682..686
-        Word@682..686 "loop"
-  Newline@686..687 "\n"
-  Pipeline@687..705
-    PipelineElement@687..705
-      Loop@687..705
-        Word@687..691 "loop"
+        Word@654..657 "[1]"
+        Whitespace@657..658 " "
+        Block@658..664
+          LBrace@658..659 "{"
+          Whitespace@659..660 " "
+          Pipeline@660..662
+            PipelineElement@660..662
+              Call@660..662
+                Word@660..662 "ls"
+          Whitespace@662..663 " "
+          RBrace@663..664 "}"
+  Newline@664..665 "\n"
+  Pipeline@665..680
+    PipelineElement@665..680
+      Call@665..680
+        Word@665..668 "for"
+        Whitespace@668..669 " "
+        Word@669..670 "x"
+        Whitespace@670..671 " "
+        Word@671..673 "in"
+        Whitespace@673..674 " "
+        Block@674..680
+          LBrace@674..675 "{"
+          Whitespace@675..676 " "
+          Pipeline@676..678
+            PipelineElement@676..678
+              Call@676..678
+                Word@676..678 "ls"
+          Whitespace@678..679 " "
+          RBrace@679..680 "}"
+  Newline@680..681 "\n"
+  Pipeline@681..702
+    PipelineElement@681..702
+      Call@681..702
+        Word@681..684 "for"
+        Whitespace@684..685 " "
+        Word@685..686 "x"
+        Whitespace@686..687 " "
+        Word@687..688 "y"
+        Whitespace@688..689 " "
+        Word@689..691 "in"
         Whitespace@691..692 " "
-        Block@692..705
-          LBrace@692..693 "{"
-          Pipeline@693..704
-            PipelineElement@693..704
-              Call@693..704
-                Word@693..699 "...$x,"
-                Whitespace@699..700 " "
-                Word@700..702 "a:"
-                Whitespace@702..703 " "
-                Word@703..704 "1"
-          RBrace@704..705 "}"
-  Newline@705..706 "\n"
+        Word@692..695 "[1]"
+        Whitespace@695..696 " "
+        Block@696..702
+          LBrace@696..697 "{"
+          Whitespace@697..698 " "
+          Pipeline@698..700
+            PipelineElement@698..700
+              Call@698..700
+                Word@698..700 "ls"
+          Whitespace@700..701 " "
+          RBrace@701..702 "}"
+  Newline@702..703 "\n"
+  Pipeline@703..724
+    PipelineElement@703..724
+      For@703..724
+        Word@703..706 "for"
+        Whitespace@706..707 " "
+        Word@707..710 "{a}"
+        Whitespace@710..711 " "
+        Word@711..713 "in"
+        Whitespace@713..714 " "
+        List@714..717
+          LBracket@714..715 "["
+          Word@715..716 "1"
+          RBracket@716..717 "]"
+        Whitespace@717..718 " "
+        Block@718..724
+          LBrace@718..719 "{"
+          Whitespace@719..720 " "
+          Pipeline@720..722
+            PipelineElement@720..722
+              Call@720..722
+                Word@720..722 "ls"
+          Whitespace@722..723 " "
+          RBrace@723..724 "}"
+  Newline@724..725 "\n"
+  Pipeline@725..750
+    PipelineElement@725..750
+      While@725..750
+        Word@725..730 "while"
+        Whitespace@730..731 " "
+        Block@731..740
+          LBrace@731..732 "{"
+          ClosureParams@732..734
+            PipePipe@732..734 "||"
+          Whitespace@734..735 " "
+          Pipeline@735..739
+            PipelineElement@735..739
+              Word@735..739 "true"
+          RBrace@739..740 "}"
+        Whitespace@740..741 " "
+        Block@741..750
+          LBrace@741..742 "{"
+          Whitespace@742..743 " "
+          Pipeline@743..748
+            PipelineElement@743..748
+              Call@743..748
+                Word@743..748 "break"
+          Whitespace@748..749 " "
+          RBrace@749..750 "}"
+  Newline@750..751 "\n"
+  Pipeline@751..787
+    PipelineElement@751..787
+      Call@751..787
+        Word@751..754 "try"
+        Whitespace@754..755 " "
+        Block@755..761
+          LBrace@755..756 "{"
+          Whitespace@756..757 " "
+          Pipeline@757..759
+            PipelineElement@757..759
+              Call@757..759
+                Word@757..759 "ls"
+          Whitespace@759..760 " "
+          RBrace@760..761 "}"
+        Whitespace@761..762 " "
+        Word@762..767 "catch"
+        Whitespace@767..768 " "
+        Block@768..774
+          LBrace@768..769 "{"
+          Whitespace@769..770 " "
+          Pipeline@770..772
+            PipelineElement@770..772
+              Call@770..772
+                Word@770..772 "ls"
+          Whitespace@772..773 " "
+          RBrace@773..774 "}"
+        Whitespace@774..775 " "
+        Word@775..780 "catch"
+        Whitespace@780..781 " "
+        Block@781..787
+          LBrace@781..782 "{"
+          Whitespace@782..783 " "
+          Pipeline@783..785
+            PipelineElement@783..785
+              Call@783..785
+                Word@783..785 "ls"
+          Whitespace@785..786 " "
+          RBrace@786..787 "}"
+  Newline@787..788 "\n"
+  Pipeline@788..820
+    PipelineElement@788..820
+      Try@788..811
+        Word@788..791 "try"
+        Whitespace@791..792 " "
+        Block@792..798
+          LBrace@792..793 "{"
+          Whitespace@793..794 " "
+          Pipeline@794..796
+            PipelineElement@794..796
+              Call@794..796
+                Word@794..796 "ls"
+          Whitespace@796..797 " "
+          RBrace@797..798 "}"
+        Whitespace@798..799 " "
+        Word@799..804 "catch"
+        Whitespace@804..805 " "
+        Block@805..811
+          LBrace@805..806 "{"
+          Whitespace@806..807 " "
+          Pipeline@807..809
+            PipelineElement@807..809
+              Call@807..809
+                Word@807..809 "ls"
+          Whitespace@809..810 " "
+          RBrace@810..811 "}"
+      Whitespace@811..812 " "
+      Redirection@812..820
+        OutGt@812..814 "o>"
+        Whitespace@814..815 " "
+        Word@815..820 "f.txt"
+  Newline@820..821 "\n"
+  Pipeline@821..828
+    PipelineElement@821..828
+      Loop@821..828
+        Word@821..825 "loop"
+        Whitespace@825..826 " "
+        Word@826..828 "{}"
+  Newline@828..829 "\n"
+  Pipeline@829..832
+    PipelineElement@829..832
+      Call@829..832
+        Word@829..832 "for"
+  Newline@832..833 "\n"
+  Pipeline@833..836
+    PipelineElement@833..836
+      Call@833..836
+        Word@833..836 "try"
+  Newline@836..837 "\n"
+  Pipeline@837..842
+    PipelineElement@837..842
+      Call@837..842
+        Word@837..842 "while"
+  Newline@842..843 "\n"
+  Pipeline@843..847
+    PipelineElement@843..847
+      Call@843..847
+        Word@843..847 "loop"
+  Newline@847..848 "\n"
+  Pipeline@848..866
+    PipelineElement@848..866
+      Loop@848..866
+        Word@848..852 "loop"
+        Whitespace@852..853 " "
+        Block@853..866
+          LBrace@853..854 "{"
+          Pipeline@854..865
+            PipelineElement@854..865
+              Call@854..865
+                Word@854..860 "...$x,"
+                Whitespace@860..861 " "
+                Word@861..863 "a:"
+                Whitespace@863..864 " "
+                Word@864..865 "1"
+          RBrace@865..866 "}"
+  Newline@866..867 "\n"
