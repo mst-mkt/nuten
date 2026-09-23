@@ -52,3 +52,8 @@ ls
 alias ad =
 # c
 | {x:1}
+export  alias  ll  =  ls  -l  |  sort
+export alias aaaaaaaaaaaaaaa = ls --long --all --du --directory --mime-type --threads | sort-by size | reverse
+export alias x = if true {1} else {2}
+export alias y = ls
+| sort

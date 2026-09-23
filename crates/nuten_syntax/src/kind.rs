@@ -170,6 +170,7 @@ macro_rules! syntax_kinds {
                 /// A variable ending in `:` takes its type after it, up to the assignment operator.
                 Let,
                 /// An alias nu declares: `alias`, the name, `=`, then what the alias stands for.
+                /// `export` comes before `alias` if there.
                 /// Nu reads what follows `=` as one call to the statement's end.
                 /// It is a `Call` or an `ExternalCall`, with any `|` and redirection as arguments.
                 /// It holds the line breaks nu goes on past too.

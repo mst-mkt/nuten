@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/alias.nu
 ---
-Root@0..827
+Root@0..930
   Pipeline@0..16
     PipelineElement@0..16
       Alias@0..16
@@ -675,3 +675,80 @@ Root@0..827
             Call@824..826
               Word@824..826 "ls"
   Newline@826..827 "\n"
+  Pipeline@827..857
+    PipelineElement@827..857
+      Alias@827..857
+        Word@827..833 "export"
+        Whitespace@833..834 " "
+        Word@834..839 "alias"
+        Whitespace@839..840 " "
+        Word@840..842 "ll"
+        Whitespace@842..843 " "
+        Assign@843..844 "="
+        Whitespace@844..845 " "
+        Call@845..857
+          Word@845..847 "ls"
+          Whitespace@847..848 " "
+          Word@848..850 "-l"
+          Whitespace@850..851 " "
+          Pipe@851..852 "|"
+          Whitespace@852..853 " "
+          Word@853..857 "sort"
+  Newline@857..858 "\n"
+  Pipeline@858..895
+    PipelineElement@858..895
+      Alias@858..895
+        Word@858..864 "export"
+        Whitespace@864..865 " "
+        Word@865..870 "alias"
+        Whitespace@870..871 " "
+        Word@871..872 "x"
+        Whitespace@872..873 " "
+        Assign@873..874 "="
+        Whitespace@874..875 " "
+        If@875..895
+          Word@875..877 "if"
+          Whitespace@877..878 " "
+          Word@878..882 "true"
+          Whitespace@882..883 " "
+          Block@883..886
+            LBrace@883..884 "{"
+            Pipeline@884..885
+              PipelineElement@884..885
+                Word@884..885 "1"
+            RBrace@885..886 "}"
+          Whitespace@886..887 " "
+          Word@887..891 "else"
+          Whitespace@891..892 " "
+          Block@892..895
+            LBrace@892..893 "{"
+            Pipeline@893..894
+              PipelineElement@893..894
+                Word@893..894 "2"
+            RBrace@894..895 "}"
+  Newline@895..896 "\n"
+  Pipeline@896..914
+    PipelineElement@896..914
+      Assignment@896..914
+        Call@896..910
+          Word@896..902 "export"
+          Whitespace@902..903 " "
+          Word@903..908 "alias"
+          Whitespace@908..909 " "
+          Word@909..910 "y"
+        Whitespace@910..911 " "
+        Assign@911..912 "="
+        Whitespace@912..913 " "
+        Pipeline@913..914
+          PipelineElement@913..914
+            Word@913..914 "1"
+  Newline@914..915 "\n"
+  Pipeline@915..929
+    PipelineElement@915..929
+      Call@915..929
+        Word@915..921 "export"
+        Whitespace@921..922 " "
+        Word@922..927 "alias"
+        Whitespace@927..928 " "
+        Word@928..929 "z"
+  Newline@929..930 "\n"

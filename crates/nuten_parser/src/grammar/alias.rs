@@ -5,6 +5,7 @@ use super::{
     command::{argument_shape, is_math_expression_like, start_call},
     ends_call, ends_statement, item,
     keyword::keyword,
+    keyword_words,
     pipeline::{bump_newlines, next_line_starts_with_pipe, plain_pipe},
 };
 use crate::parser::Parser;
@@ -12,23 +13,24 @@ use crate::parser::Parser;
 /// Whether the element ahead is an alias nu declares: `alias`, a name, `=`, and what follows.
 /// Nu declares none where a value heads what follows `=`, and rejects the statement instead.
 pub(super) fn alias_ahead(p: &Parser<'_>) -> bool {
-    p.peek_text() == Some("alias")
-        && p.nth(1).is_some_and(SyntaxKind::is_item)
-        && p.nth(2) == Some(SyntaxKind::Assign)
-        && p.nth_text(2) == Some("=")
-        && match p.nth(3) {
+    let name = keyword_words(p);
+    p.nth_text(name - 1) == Some("alias")
+        && p.nth(name).is_some_and(SyntaxKind::is_item)
+        && p.nth(name + 1) == Some(SyntaxKind::Assign)
+        && p.nth_text(name + 1) == Some("=")
+        && match p.nth(name + 2) {
             Some(SyntaxKind::Newline) => next_line_starts_with_pipe(p),
             kind => kind.is_some_and(|kind| !ends_statement(kind)),
         }
-        && p.nth_text(3)
+        && p.nth_text(name + 2)
             .is_some_and(|head| !is_math_expression_like(head))
 }
 
-/// The `Alias` ahead: `alias`, the name, and `=`, which `alias_ahead` takes, then what follows.
+/// The `Alias` ahead: what `alias_ahead` takes up to `=`, then what follows.
 /// `assigned` tells where the statement ends, as for a pipeline.
 pub(super) fn alias(p: &mut Parser<'_>, assigned: Assigned) {
     p.start(SyntaxKind::Alias);
-    for _ in 0..3 {
+    for _ in 0..keyword_words(p) + 2 {
         p.bump();
     }
     replacement(p, assigned);

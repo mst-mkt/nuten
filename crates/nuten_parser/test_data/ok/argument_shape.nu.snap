@@ -63,20 +63,17 @@ Root@0..530
   Newline@105..106 "\n"
   Pipeline@106..131
     PipelineElement@106..131
-      Assignment@106..131
-        Call@106..123
-          Word@106..112 "export"
-          Whitespace@112..113 " "
-          Word@113..118 "alias"
-          Whitespace@118..119 " "
-          Word@119..123 "each"
+      Alias@106..131
+        Word@106..112 "export"
+        Whitespace@112..113 " "
+        Word@113..118 "alias"
+        Whitespace@118..119 " "
+        Word@119..123 "each"
         Whitespace@123..124 " "
         Assign@124..125 "="
         Whitespace@125..126 " "
-        Pipeline@126..131
-          PipelineElement@126..131
-            ExternalCall@126..131
-              Word@126..131 "^each"
+        ExternalCall@126..131
+          Word@126..131 "^each"
   Newline@131..132 "\n"
   Pipeline@132..155
     PipelineElement@132..155
