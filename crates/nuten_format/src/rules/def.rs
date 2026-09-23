@@ -1,6 +1,6 @@
 use nuten_doc::{Element, expand_parent, group};
 use nuten_syntax::{
-    NodeOrToken, SyntaxKind,
+    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxToken,
     ast::{AstNode, Def, Node},
 };
 
@@ -17,10 +17,9 @@ impl<'a> Formatter<'a> {
                 continue;
             }
             let prev = items[..index].last().map(Child::kind);
-            // Another `:` after it would make nu read the types from elsewhere.
             let joined = item.kind() == SyntaxKind::Colon
                 && prev == Some(SyntaxKind::Signature)
-                && !next_is_colon(&items[index + 1..]);
+                && joins_parameters(item, &items[index + 1..], has_body(def));
             let plain = (!joined).then(|| line_break_or_space(item));
             out.extend(separator(prev, plain));
             match &item.element {
@@ -41,10 +40,44 @@ impl<'a> Formatter<'a> {
     }
 }
 
+/// Whether the `:` after the parameters joins them, `rest` being what follows it.
+/// Nu reads `[]:` with no types after it, or only one item in braces, as the whole signature.
+/// In those cases nu reads `[] :` as parameters with no types, so the `:` stays as written.
+/// Nu takes the last item of a `def` for its body, whatever the parser makes of it.
+/// A second `:` starts types nu rejects, so the `:` stays as written before it too.
 /// Only the `:` right after the parameters is a `Colon`, so a second one stays a `Word`.
-fn next_is_colon(rest: &[Child]) -> bool {
-    rest.iter()
-        .find(|child| !child.is_comment())
-        .and_then(|child| child.element.as_token())
-        .is_some_and(|token| token.text() == ":")
+fn joins_parameters(colon: &Child, rest: &[Child], has_body: bool) -> bool {
+    let attached = colon
+        .element
+        .as_token()
+        .and_then(SyntaxToken::prev_sibling_or_token)
+        .is_some_and(|prev| prev.kind() == SyntaxKind::Signature);
+    let following: Vec<_> = rest.iter().filter(|child| !child.is_comment()).collect();
+    let types = match following.split_last() {
+        Some((_, types)) if has_body => types,
+        _ => &following,
+    };
+    let same_either_way = match types {
+        [] => false,
+        [first, ..] if first_token(first).is_some_and(|token| token.text() == ":") => false,
+        [only] => !first_token(only).is_some_and(|token| token.text().starts_with('{')),
+        _ => true,
+    };
+    attached || same_either_way
+}
+
+fn first_token(child: &Child) -> Option<SyntaxToken> {
+    match &child.element {
+        NodeOrToken::Node(node) => node.syntax().first_token(),
+        NodeOrToken::Token(token) => Some(token.clone()),
+    }
+}
+
+/// Whether the keyword, after any `export`, is `def` rather than `extern`, which has no body.
+fn has_body(def: &Def) -> bool {
+    def.syntax()
+        .children_with_tokens()
+        .filter_map(SyntaxElement::into_token)
+        .find(|token| !token.kind().is_trivia() && token.text() != "export")
+        .is_some_and(|token| token.text() == "def")
 }

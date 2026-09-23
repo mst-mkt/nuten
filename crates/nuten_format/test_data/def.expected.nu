@@ -166,3 +166,34 @@ def tz4 [] {
 def tz5 [] {
     ...$x, a: 1
 }
+def ua [] : {
+    ls
+}
+extern ub [] :
+extern uc [] : {}
+def ud []: {
+    ls
+}
+extern uz []:
+def uf [] : {a} {
+    ls
+}
+def ug []: {a} -> int {
+    ls
+}
+def uh []: int string {
+    ls
+}
+(
+    def ui [] : {a} # c
+    {
+        ls
+    }
+)
+extern uj [] : { ls }
+def uk [] : {a} {}
+def ul [] : {a} {a}->{b}
+export def um [] : {a} {
+    ls
+}
+export extern un [] : { ls }
