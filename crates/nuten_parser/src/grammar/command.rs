@@ -267,8 +267,8 @@ pub(super) fn is_math_expression_like(text: &str) -> bool {
 }
 
 /// Nu runs a head it finds no declaration for as an external command.
-/// What a file imports declares is unknowable here, so an unlisted head stays unknown.
-/// So does one a block around it defines.
+/// What a file imports declares is unknowable here.
+/// So a head that neither the lists here nor a block around it names stays unknown.
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
 /// It reads the name after `let`, `mut`, `const`, or `export const` as written, never as a value.
@@ -287,15 +287,11 @@ pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
     } else if declaration(p).is_some() {
         Shape::VariableName
     } else {
-        let shape = if matches!(head, "else" | "catch") {
-            Shape::ExternalArgument
-        } else {
-            command_shape(head)
-        };
         match p.callee() {
-            Callee::Defined if shape != Shape::UnknownArgument => Shape::KnownArgument,
+            Callee::Defined => Shape::KnownArgument,
             Callee::Unknowable => Shape::UnknownArgument,
-            Callee::Defined | Callee::Undefined => shape,
+            Callee::Undefined if matches!(head, "else" | "catch") => Shape::ExternalArgument,
+            Callee::Undefined => command_shape(head),
         }
     }
 }

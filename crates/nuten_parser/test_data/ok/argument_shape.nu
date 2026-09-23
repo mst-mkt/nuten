@@ -19,7 +19,7 @@ catch [a,  b]
 %all {a: 1, b: 2}
 @example {a:  1} {  1 + 1  }
 def demo [] { 2 }
-demo {a:  1}
+nosuch {a:  1}
 all {a:  1}
 all {...$x}
 any {|x| $x}
