@@ -20,7 +20,7 @@ catch [a,  b]
 @example {a:  1} {  1 + 1  }
 def demo [] { 2 }
 demo {a:  1}
-where {a:  1} [a,  b]
+all {a:  1}
 all {...$x}
 any {|x| $x}
 ^ls {a:  1}

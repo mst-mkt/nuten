@@ -13,7 +13,7 @@ open -a {Google Chrome}
 alias catch = save
 catch [a,  b]
 do { nosuch {a:  1} }
-where {a:  1} [a,  b]
+all {a:  1}
 all {...$x}
 any {|x| $x }
 ls; | @foo {a:  1}

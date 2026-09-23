@@ -1,13 +1,13 @@
 use super::{
     at_call_item, call_items, control::control, def::def, if_::if_, is_flag, match_::match_,
-    module::module, use_::use_,
+    module::module, use_::use_, where_::where_,
 };
 use crate::parser::Parser;
 
-/// The keyword syntax nu reads after an operator, as a call over the rest of the element.
+/// The keyword syntax nu reads where it takes a term, as a call over the rest of the element.
 /// Only `if` and `match` stand there; nu reads any other word as the term itself.
 /// Returns whether it read the rest of the element.
-pub(super) fn keyword_after_operator(p: &mut Parser<'_>) -> bool {
+pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
     if !matches!(p.peek_text(), Some("if" | "match")) {
         return false;
     }
@@ -40,6 +40,7 @@ pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
         Some("def" | "extern" | "export") => def(p),
         Some("module") => module(p),
         Some("use") => use_(p),
+        Some("where") => where_(p),
         _ => false,
     }
 }

@@ -4,7 +4,7 @@ use super::{
     Shape, at_call_item,
     binary::is_binary_like,
     builtin, call_items, ends_element, is_file_redirection, item,
-    keyword::{keyword, keyword_after_operator},
+    keyword::{keyword, keyword_as_term},
     number::is_number,
     range::is_number_range,
     shell_operator, value,
@@ -114,7 +114,7 @@ fn joined_term(p: &mut Parser<'_>) {
     }
     // A keyword syntax holds the rest of the element, so it leaves the loop no item to join.
     // A `not` before it takes that word as a value instead, as `term` does.
-    if !keyword_after_operator(p) {
+    if !keyword_as_term(p) {
         term(p);
     }
 }

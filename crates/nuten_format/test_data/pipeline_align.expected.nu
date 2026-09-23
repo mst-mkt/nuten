@@ -9,9 +9,9 @@ ls | each {|x|
 }
 ls
 | where name in [
-  a
-  b
-]
+      a
+      b
+  ]
 | length
 ls
 | where {|x|

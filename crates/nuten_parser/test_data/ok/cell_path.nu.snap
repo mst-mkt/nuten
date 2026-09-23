@@ -348,17 +348,18 @@ Root@0..754
     Pipe@325..326 "|"
     Whitespace@326..327 " "
     PipelineElement@327..342
-      Call@327..342
+      Where@327..342
         Word@327..332 "where"
         Whitespace@332..333 " "
-        CellPath@333..338
-          Word@333..336 "$it"
-          Dot@336..337 "."
-          Word@337..338 "a"
-        Whitespace@338..339 " "
-        Word@339..340 ">"
-        Whitespace@340..341 " "
-        Word@341..342 "1"
+        MathExpression@333..342
+          CellPath@333..338
+            Word@333..336 "$it"
+            Dot@336..337 "."
+            Word@337..338 "a"
+          Whitespace@338..339 " "
+          Operator@339..340 ">"
+          Whitespace@340..341 " "
+          Word@341..342 "1"
   Newline@342..343 "\n"
   Pipeline@343..358
     PipelineElement@343..358
@@ -572,10 +573,20 @@ Root@0..754
     Pipe@541..542 "|"
     Whitespace@542..543 " "
     PipelineElement@543..557
-      Call@543..557
+      Where@543..557
         Word@543..548 "where"
         Whitespace@548..549 " "
-        Word@549..557 "{a: 1}.a"
+        CellPath@549..557
+          Record@549..555
+            LBrace@549..550 "{"
+            RecordField@550..554
+              Word@550..551 "a"
+              Colon@551..552 ":"
+              Whitespace@552..553 " "
+              Word@553..554 "1"
+            RBrace@554..555 "}"
+          Dot@555..556 "."
+          Word@556..557 "a"
   Newline@557..558 "\n"
   Pipeline@558..562
     PipelineElement@558..562
@@ -699,7 +710,7 @@ Root@0..754
     Pipe@648..649 "|"
     Whitespace@649..650 " "
     PipelineElement@650..662
-      Call@650..662
+      Where@650..662
         Word@650..655 "where"
         Whitespace@655..656 " "
         CellPath@656..662

@@ -268,6 +268,12 @@ macro_rules! syntax_kinds {
                 /// It reads each member as any value, or a `Spread` of one.
                 /// A `use` with nothing after it stays a `Call`.
                 Use,
+                /// `where`, the flags, then the row condition: every item after them.
+                /// A lone `{ }` there is a `Block`, which nu reads as a closure, or else a `Word`.
+                /// Anything else is an expression, as what heads a statement is.
+                /// An `if` or a `match` first takes the rest, as a term of a `MathExpression` does.
+                /// A `where` with no row condition stays a `Call`.
+                Where,
             }
         }
     };

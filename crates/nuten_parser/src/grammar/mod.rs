@@ -25,6 +25,7 @@ mod table;
 mod use_;
 mod var_type;
 mod variable;
+mod where_;
 
 use std::rc::Rc;
 

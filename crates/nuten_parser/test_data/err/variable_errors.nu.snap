@@ -172,7 +172,7 @@ Root@0..222
     Pipe@186..187 "|"
     Whitespace@187..188 " "
     PipelineElement@188..195
-      Call@188..195
+      Where@188..195
         Word@188..193 "where"
         Whitespace@193..194 " "
         Error@194..195
