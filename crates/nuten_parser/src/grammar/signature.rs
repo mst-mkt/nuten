@@ -3,7 +3,7 @@ use nuten_syntax::SyntaxKind;
 use crate::{
     ParseErrorKind,
     lexer::Mode,
-    parser::{Affix, Brackets, Parser},
+    parser::{Affix, Bracketed, Brackets, Parser},
 };
 
 /// What a signature takes next, as nu's `parse_signature_helper` calls it.
@@ -149,18 +149,27 @@ const ANGLE: Brackets = Brackets {
 };
 
 /// The type ahead: a `Type` where nu reads parameters in `< >`, or else the item as it is.
+pub(super) fn type_(p: &mut Parser<'_>) {
+    let Some((bracketed, named)) = type_ahead(p) else {
+        p.bump();
+        return;
+    };
+    let items = if named { type_fields } else { type_params };
+    p.bump_bracketed(SyntaxKind::Type, bracketed, items);
+}
+
+/// Whether `type_` reads the type ahead as a `Type`.
+pub(super) fn is_type(p: &Parser<'_>) -> bool {
+    type_ahead(p).is_some()
+}
+
+/// What the `< >` of the `Type` ahead hold, and whether they hold fields.
 /// The name must be one of the four that take parameters.
 /// The `< >` must hold nothing but items, `:`, `,`, and whitespace.
 /// That leaves out a comment: printing the type on one line would put the `>` inside it.
-fn type_(p: &mut Parser<'_>) {
-    let Some((name, named)) = generic_type(p.peek_text()) else {
-        p.bump();
-        return;
-    };
-    let Some(bracketed) = p.bracketed_affixed(&ANGLE, Mode::TypeParams, Affix::Name(name)) else {
-        p.bump();
-        return;
-    };
+fn type_ahead<'a>(p: &Parser<'a>) -> Option<(Bracketed<'a>, bool)> {
+    let (name, named) = generic_type(p.peek_text())?;
+    let bracketed = p.bracketed_affixed(&ANGLE, Mode::TypeParams, Affix::Name(name))?;
     let takes = bracketed.inner().remaining_kinds().all(|kind| {
         (kind.is_item() && kind != SyntaxKind::Error)
             || matches!(
@@ -171,12 +180,7 @@ fn type_(p: &mut Parser<'_>) {
                     | SyntaxKind::Newline
             )
     });
-    if !takes {
-        p.bump();
-        return;
-    }
-    let items = if named { type_fields } else { type_params };
-    p.bump_bracketed(SyntaxKind::Type, bracketed, items);
+    takes.then_some((bracketed, named))
 }
 
 /// The name of the type ahead, and whether its parameters are fields.

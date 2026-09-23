@@ -89,6 +89,9 @@ for x: int in [1] {
 for x: record<a: int> in [{ a: 1 }] {
     print $x
 }
+for x: list<record<a: int, b: string>> in [] {
+    print $x
+}
 for {a} in [1] {
     ls
 }

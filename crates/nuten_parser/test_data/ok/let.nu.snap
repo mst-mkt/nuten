@@ -80,9 +80,15 @@ Root@0..375
         Whitespace@67..68 " "
         Word@68..70 "x:"
         Whitespace@70..71 " "
-        Word@71..80 "record<a:"
-        Whitespace@80..81 " "
-        Word@81..85 "int>"
+        Type@71..85
+          Word@71..77 "record"
+          LAngle@77..78 "<"
+          TypeField@78..84
+            Word@78..79 "a"
+            Colon@79..80 ":"
+            Whitespace@80..81 " "
+            Word@81..84 "int"
+          RAngle@84..85 ">"
         Whitespace@85..86 " "
         Assign@86..87 "="
         Whitespace@87..88 " "

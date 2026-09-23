@@ -567,9 +567,15 @@ Root@0..867
         Whitespace@545..546 " "
         Word@546..548 "x:"
         Whitespace@548..549 " "
-        Word@549..558 "record<a:"
-        Whitespace@558..559 " "
-        Word@559..563 "int>"
+        Type@549..563
+          Word@549..555 "record"
+          LAngle@555..556 "<"
+          TypeField@556..562
+            Word@556..557 "a"
+            Colon@557..558 ":"
+            Whitespace@558..559 " "
+            Word@559..562 "int"
+          RAngle@562..563 ">"
         Whitespace@563..564 " "
         Word@564..566 "in"
         Whitespace@566..567 " "

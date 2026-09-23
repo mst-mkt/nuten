@@ -31,4 +31,17 @@ let x = 1; let y = 2
 let x: int # c
 = 1
 let long = echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-let y: record<a:int> = { a: 1 }
+let y: record<a: int> = { a: 1 }
+mut z: list<record<a: int, b: string>> = []
+const t: table<a: int> = []
+let o: oneof<int, string> = 1
+(let r: record<a: int> = { a: 1 })
+(
+    let r: record<a: # c
+    int> = { a: 1 }
+)
+const s: record<a:int> o> f = { a: 1 }
+let u: record<a:int>@x = { a: 1 }
+(
+    let v: list<int> = [1]
+)

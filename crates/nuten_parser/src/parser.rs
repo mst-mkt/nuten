@@ -472,12 +472,14 @@ impl<'a> Parser<'a> {
 
     /// Lexes the tokens ahead up to `end` again in `mode`, and emits the events `items` makes.
     /// Their lexing errors give way to those of lexing them again.
+    /// The tokens skipped before them are emitted as they are, since `mode` may read a line break.
     pub(crate) fn bump_relexed_to(
         &mut self,
         end: TextSize,
         mode: Mode,
         items: impl FnOnce(&mut Parser<'a>),
     ) {
+        self.bump_skipped();
         let taken = self.take_to(end);
         let start = taken
             .tokens
@@ -486,6 +488,12 @@ impl<'a> Parser<'a> {
         let mut inner = self.nested(TextRange::new(start, end), mode, self.depth);
         self.read_inner(&mut inner, items);
         self.errors += inner.errors;
+    }
+
+    /// A parser of `range` of the source lexed again in `mode`.
+    /// It shows what `bump_relexed_to` would emit, before it does.
+    pub(crate) fn lexed_range(&self, range: TextRange, mode: Mode) -> Parser<'a> {
+        self.nested(range, mode, self.depth)
     }
 
     /// Emits the tokens ahead up to `end` as the events `items` makes of them.
@@ -844,6 +852,33 @@ mod tests {
         assert_eq!(p.peek_text(), Some("c"));
         assert_eq!(p.errors, 1);
         assert!(matches!(p.events[1], Event::Error(_)));
+    }
+
+    #[test]
+    fn bump_relexed_to_emits_skipped_tokens_before_relexed_ones_as_they_are() {
+        let src = "\na";
+        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Paren);
+        let mut p = Parser::new(
+            src,
+            lexed,
+            Mode::Paren.skips_newline(),
+            grammar::alias_names(src),
+            0,
+        );
+        p.bump_relexed_to(TextSize::of(src), Mode::VarType, bump_all);
+        assert_eq!(
+            p.events,
+            [
+                Event::Token(Token {
+                    kind: SyntaxKind::Newline,
+                    range: range(0, 1),
+                }),
+                Event::Token(Token {
+                    kind: SyntaxKind::Word,
+                    range: range(1, 2),
+                }),
+            ]
+        );
     }
 
     #[test]

@@ -163,6 +163,7 @@ macro_rules! syntax_kinds {
                 Assignment,
                 /// As an `Assignment`, for an element starting with `let`, `mut`, or `const`.
                 /// That word, not a `Call`, comes before the arguments.
+                /// A variable ending in `:` takes its type after it, up to the assignment operator.
                 Let,
                 /// A `Word` in `( )` read as a subexpression: `(`, the statements, and `)`.
                 /// Nu reads one wherever it takes a value, a `def` signature aside.
@@ -229,7 +230,8 @@ macro_rules! syntax_kinds {
                 /// Each of those while nu still takes it for that parameter.
                 /// It holds the `,` that ends it, and the `|`, `;`, and redirections nu ignores.
                 Param,
-                /// A `Signature` type that takes parameters: its name, `<`, what it holds, `>`.
+                /// A type that takes parameters: its name, `<`, what it holds, `>`.
+                /// Nu reads one in a `Signature` and in the type of a variable.
                 Type,
                 /// One field of a `record` or a `table` type, starting with its key.
                 /// Then the `:` that follows the key while nu gives it to that key.

@@ -35,6 +35,7 @@ try { ls } catch { # c
 do { try { 1 } catch { 2 }; }
 for x: int in [1] { print $x }
 for x: record<a: int>  in [{a: 1}] { print $x }
+for x: list<record<a:int,b:string>> in [] { print $x }
 for {a} in [1] { ls }
 for x in [1,  2] { print $x }
 if [1,  2] == $x { 1 }
