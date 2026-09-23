@@ -15,12 +15,8 @@ use crate::{ParseErrorKind, parser::Parser};
 /// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
 /// A value or a `not` where the head would be is an expression: a `MathExpression`, or the value.
 /// Returns the streams it redirects; `None` when there is no command.
-pub(super) fn command(
-    p: &mut Parser<'_>,
-    heads_pipeline: bool,
-    assigning: bool,
-) -> Option<Streams> {
-    let head = Head::of(p, heads_pipeline);
+pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
+    let head = Head::of(p);
     match head {
         Head::Missing => {},
         Head::Expression => expression(p),
@@ -45,11 +41,11 @@ enum Head {
 }
 
 impl Head {
-    fn of(p: &Parser<'_>, heads_pipeline: bool) -> Head {
+    fn of(p: &Parser<'_>) -> Head {
         match p.peek() {
             Some(kind) if is_file_redirection(kind) || kind == SyntaxKind::Assign => Head::Missing,
             _ if p.peek_text().is_some_and(is_math_expression_like) => Head::Expression,
-            _ => Head::Call(argument_shape(p, heads_pipeline)),
+            _ => Head::Call(argument_shape(p)),
         }
     }
 
@@ -274,9 +270,8 @@ pub(super) fn is_math_expression_like(text: &str) -> bool {
 /// Whether the file declares one is unknowable here, so an unlisted head stays unknown instead.
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
-/// Nu reads a `@` as an attribute only where a pipeline starts.
 /// It reads the name after `let`, `mut`, `const`, or `export const` as written, never as a value.
-pub(super) fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
+pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
     let Some(head) = p.peek_text() else {
         return Shape::UnknownArgument;
     };
@@ -288,8 +283,6 @@ pub(super) fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
         Shape::UnknownArgument
     } else if matches!(head, "else" | "catch") {
         Shape::ExternalArgument
-    } else if heads_pipeline && head.starts_with('@') {
-        Shape::KnownArgument
     } else if declaration(p).is_some() {
         Shape::VariableName
     } else {

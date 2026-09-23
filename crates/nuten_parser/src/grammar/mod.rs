@@ -2,6 +2,7 @@
 
 mod alias;
 mod assignment;
+mod attribute;
 mod binary;
 mod block;
 mod builtin;

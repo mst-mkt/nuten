@@ -233,7 +233,7 @@ Root@0..530
   Newline@387..388 "\n"
   Pipeline@388..416
     PipelineElement@388..416
-      Call@388..416
+      Attribute@388..416
         Word@388..396 "@example"
         Whitespace@396..397 " "
         Record@397..404

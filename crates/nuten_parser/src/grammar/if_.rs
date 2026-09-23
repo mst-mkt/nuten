@@ -46,7 +46,7 @@ fn else_argument(p: &mut Parser<'_>, len: usize) {
         .end();
     // Nu reads no attribute there, and the items hold no assignment operator.
     p.bump_bounded(end, |p| {
-        command(p, false, false);
+        command(p, false);
     });
 }
 

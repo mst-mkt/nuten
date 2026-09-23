@@ -4,6 +4,7 @@ use super::{
     Shape,
     alias::{alias, alias_ahead},
     assignment::{Assigned, assigned_statements, assignment_ahead},
+    attribute::{attribute, attribute_ahead},
     builtin,
     command::{Streams, arguments, command},
     declaration, ends_statement, is_pipe,
@@ -63,7 +64,7 @@ pub(super) fn plain_pipe(p: &mut Parser<'_>, assigned: Assigned) {
 /// A trailing comment and comment lines right below it may follow: `Comment? (Newline Comment)*`.
 /// A blank line or a final line break saves it; nu counts the `|` as the last token only then.
 /// Where the parser skips a line break, nu drops every comment too.
-fn pipe_ends_file(p: &Parser<'_>) -> bool {
+pub(super) fn pipe_ends_file(p: &Parser<'_>) -> bool {
     if p.is_skipped(SyntaxKind::Newline) {
         return nothing_follows_pipe(p);
     }
@@ -187,11 +188,14 @@ fn pipeline_element(
     assigned: Assigned,
 ) -> Option<Streams> {
     p.start(SyntaxKind::PipelineElement);
-    let redirected = if first && alias_ahead(p) {
+    let redirected = if heads_pipeline && attribute_ahead(p) {
+        attribute(p);
+        None
+    } else if first && alias_ahead(p) {
         alias(p, assigned);
         None
     } else if !assignment_ahead(p) {
-        command(p, heads_pipeline, false)
+        command(p, false)
     } else if first && let Some((keyword, words)) = declaration(p) {
         p.start(SyntaxKind::Let);
         for _ in 0..words {
@@ -215,7 +219,7 @@ fn pipeline_element(
         None
     } else {
         p.start(SyntaxKind::Assignment);
-        command(p, heads_pipeline, true);
+        command(p, true);
         assignment_operator(p);
         p.finish();
         None

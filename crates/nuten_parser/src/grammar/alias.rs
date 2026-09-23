@@ -43,8 +43,7 @@ fn replacement(p: &mut Parser<'_>, assigned: Assigned) {
     if p.peek() == Some(SyntaxKind::Newline) {
         bump_newlines(p);
     }
-    // Nu reads no attribute in what an alias stands for.
-    let shape = argument_shape(p, false);
+    let shape = argument_shape(p);
     // Nu rejects a keyword syntax with an item past its own, such as a `|` or a redirection.
     if call_ends_statement(p) && keyword(p) {
         return;
