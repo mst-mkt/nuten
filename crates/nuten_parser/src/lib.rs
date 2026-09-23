@@ -90,6 +90,9 @@ pub enum ParseErrorKind {
     /// A `$` and a name with a character no variable name takes, as `$a-b`, where nu takes a value.
     /// Also a variable pattern with one, as `$x.a`, alone or after the `..` of a rest, as `..$a-b`.
     InvalidVariableName,
+    /// A record pattern with a key that has no `:` and pattern after it, as `{a}`.
+    /// Reported at the whole pattern, as nu does.
+    RecordPatternKey,
     /// A token of a cell path where nu takes only the separators `expected` names.
     /// Nu reads no more of the path after it.
     CellPathSeparator {
@@ -140,6 +143,9 @@ impl fmt::Display for ParseErrorKind {
             ParseErrorKind::MissingVariableName => "`$` with no variable name after it",
             ParseErrorKind::InvalidVariableName => {
                 "variable name with a character no variable name takes"
+            },
+            ParseErrorKind::RecordPatternKey => {
+                "key of a record pattern with no `:` and pattern after it"
             },
             ParseErrorKind::CellPathSeparator {
                 expected,

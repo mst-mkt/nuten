@@ -49,28 +49,50 @@ fn is_pattern_item(kind: SyntaxKind) -> bool {
     kind.is_item() && kind != SyntaxKind::Error
 }
 
+/// How nu splits the inside of the `{ }` of a record pattern.
+enum Split {
+    /// Into fields of pattern items.
+    Items,
+    /// Into fields, one of them holding a token nuten lexes as no item, such as `|`.
+    /// Nu reads that as a string.
+    Tokens,
+    /// Into no fields, as a key has no `:` and pattern after it.
+    Rejected,
+}
+
 /// The `{ }` ahead as a `RecordPattern`.
-/// It stays a word where nu cannot split it into fields of pattern items.
+/// It stays a word where a field holds a token that is no pattern item.
+/// It is an `Error` where nu cannot split it into fields.
 fn record_pattern(p: &mut Parser<'_>) {
-    match p.bracketed(&CURLY, Mode::RecordPattern) {
-        Some(bracketed) if splits_fields(bracketed.inner()) => {
+    let Some(bracketed) = p.bracketed(&CURLY, Mode::RecordPattern) else {
+        return p.bump();
+    };
+    match split(bracketed.inner()) {
+        Split::Items => {
             p.bump_bracketed(SyntaxKind::RecordPattern, bracketed, record_pattern_fields);
         },
-        _ => p.bump(),
+        Split::Tokens => p.bump(),
+        Split::Rejected => p.bump_error(ParseErrorKind::RecordPatternKey),
     }
 }
 
-/// Whether nu splits the inside of `{ }` into fields of pattern items.
-fn splits_fields(inner: &Parser<'_>) -> bool {
+/// How nu splits the inside of `{ }` into fields.
+fn split(inner: &Parser<'_>) -> Split {
     let tokens = pattern_tokens(inner);
     let fields: Vec<_> =
         iter::successors(Field::first(&tokens), |field| Field::first(field.rest)).collect();
     let rest = fields.last().map_or(tokens.as_slice(), |field| field.rest);
-    rest.is_empty()
-        && fields
-            .iter()
-            .flat_map(|field| field.parts)
-            .all(|(token, _)| is_pattern_item(token.kind))
+    if !rest.is_empty() {
+        Split::Rejected
+    } else if fields
+        .iter()
+        .flat_map(|field| field.parts)
+        .all(|(token, _)| is_pattern_item(token.kind))
+    {
+        Split::Items
+    } else {
+        Split::Tokens
+    }
 }
 
 /// A field of a record pattern among the tokens of its inside.

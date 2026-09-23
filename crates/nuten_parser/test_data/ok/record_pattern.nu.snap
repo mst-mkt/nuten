@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/record_pattern.nu
 ---
-Root@0..220
+Root@0..187
   Pipeline@0..91
     PipelineElement@0..91
       Match@0..91
@@ -98,14 +98,14 @@ Root@0..220
           Whitespace@89..90 " "
           RBrace@90..91 "}"
   Newline@91..92 "\n"
-  Pipeline@92..219
-    PipelineElement@92..219
-      Match@92..219
+  Pipeline@92..134
+    PipelineElement@92..134
+      Match@92..134
         Word@92..97 "match"
         Whitespace@97..98 " "
         Word@98..100 "$x"
         Whitespace@100..101 " "
-        MatchArms@101..219
+        MatchArms@101..134
           LBrace@101..102 "{"
           Whitespace@102..103 " "
           MatchArm@103..132
@@ -135,54 +135,41 @@ Root@0..220
             FatArrow@128..130 "=>"
             Whitespace@130..131 " "
             Word@131..132 "a"
-          Comma@132..133 ","
-          Whitespace@133..134 " "
-          MatchArm@134..147
-            Word@134..142 "{a: b:c}"
-            Whitespace@142..143 " "
-            FatArrow@143..145 "=>"
-            Whitespace@145..146 " "
-            Word@146..147 "b"
-          Comma@147..148 ","
-          Whitespace@148..149 " "
-          MatchArm@149..157
-            Word@149..152 "{a}"
+          Whitespace@132..133 " "
+          RBrace@133..134 "}"
+  Newline@134..135 "\n"
+  Pipeline@135..186
+    PipelineElement@135..186
+      Match@135..186
+        Word@135..140 "match"
+        Whitespace@140..141 " "
+        Word@141..143 "$x"
+        Whitespace@143..144 " "
+        MatchArms@144..186
+          LBrace@144..145 "{"
+          Whitespace@145..146 " "
+          MatchArm@146..157
+            Word@146..152 "{a: =}"
             Whitespace@152..153 " "
             FatArrow@153..155 "=>"
             Whitespace@155..156 " "
-            Word@156..157 "c"
+            Word@156..157 "1"
           Comma@157..158 ","
           Whitespace@158..159 " "
           MatchArm@159..171
-            Word@159..166 "{$a: 1}"
+            Word@159..166 "{: : 1}"
             Whitespace@166..167 " "
             FatArrow@167..169 "=>"
             Whitespace@169..170 " "
-            Word@170..171 "d"
+            Word@170..171 "2"
           Comma@171..172 ","
           Whitespace@172..173 " "
-          MatchArm@173..185
-            Word@173..180 "{...$x}"
-            Whitespace@180..181 " "
-            FatArrow@181..183 "=>"
-            Whitespace@183..184 " "
-            Word@184..185 "e"
-          Comma@185..186 ","
-          Whitespace@186..187 " "
-          MatchArm@187..202
-            Word@187..197 "{a: 1 | 2}"
-            Whitespace@197..198 " "
-            FatArrow@198..200 "=>"
-            Whitespace@200..201 " "
-            Word@201..202 "f"
-          Comma@202..203 ","
-          Whitespace@203..204 " "
-          MatchArm@204..217
-            Word@204..212 "{a:,#c\n}"
-            Whitespace@212..213 " "
-            FatArrow@213..215 "=>"
-            Whitespace@215..216 " "
-            Word@216..217 "g"
-          Whitespace@217..218 " "
-          RBrace@218..219 "}"
-  Newline@219..220 "\n"
+          MatchArm@173..184
+            Word@173..179 "{a: |}"
+            Whitespace@179..180 " "
+            FatArrow@180..182 "=>"
+            Whitespace@182..183 " "
+            Word@183..184 "3"
+          Whitespace@184..185 " "
+          RBrace@185..186 "}"
+  Newline@186..187 "\n"
