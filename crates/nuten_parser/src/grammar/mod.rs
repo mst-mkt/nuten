@@ -15,6 +15,7 @@ mod keyword;
 mod list;
 mod match_;
 mod module;
+mod names;
 mod number;
 mod pattern;
 mod pipeline;
@@ -28,10 +29,9 @@ mod var_type;
 mod variable;
 mod where_;
 
-use std::rc::Rc;
-
 use nuten_syntax::SyntaxKind;
 
+pub(crate) use self::names::Names;
 use self::{
     assignment::Assigned,
     binary::{binary, binary_ahead},
@@ -61,37 +61,6 @@ pub(crate) fn file(p: &mut Parser<'_>) {
             _ => pipeline(p, Assigned::No),
         }
     }
-}
-
-/// The names `src` aliases, sorted so that the parser can bisect them.
-/// Reads the text, not the tree, which the parser has yet to build.
-/// Taking in a name out of scope only leaves a call read as it was written.
-pub(crate) fn alias_names(src: &str) -> Rc<[&str]> {
-    let mut names: Vec<_> = src.split(breaks_statement).filter_map(alias_name).collect();
-    names.sort_unstable();
-    names.dedup();
-    names.into()
-}
-
-/// What nu may start a statement after, so that an `alias` first in one is a head.
-fn breaks_statement(char: char) -> bool {
-    matches!(char, '\n' | '\r' | ';' | '|' | '{' | '}' | '(' | ')')
-}
-
-const NAME_QUOTES: [char; 3] = ['"', '\'', '`'];
-
-fn alias_name(statement: &str) -> Option<&str> {
-    let mut words = statement.split_ascii_whitespace();
-    let first = words.next()?;
-    let head = if first == "export" {
-        words.next()?
-    } else {
-        first
-    };
-    if head != "alias" {
-        return None;
-    }
-    Some(words.next()?.trim_matches(NAME_QUOTES))
 }
 
 /// What nu takes at a position, as far as it tells how nuten reads a word there.
@@ -364,7 +333,6 @@ fn shell_operator(text: &str) -> Option<ParseErrorKind> {
 mod tests {
     use nuten_syntax::SyntaxKind;
 
-    use super::alias_names;
     use crate::parse;
 
     #[test]
@@ -414,44 +382,5 @@ mod tests {
                 |element| element.kind() == SyntaxKind::Word && element.to_string() == "{{ls}}"
             )
         );
-    }
-
-    #[test]
-    fn alias_names_come_from_every_statement() {
-        assert_eq!(*alias_names("alias a = ^a"), ["a"]);
-        assert_eq!(*alias_names("export alias b = ^b"), ["b"]);
-        assert_eq!(*alias_names("print hi;alias c = ^c"), ["c"]);
-        assert_eq!(*alias_names("print hi\ralias d = ^d"), ["d"]);
-        assert_eq!(*alias_names("ls | alias e = ^e"), ["e"]);
-        assert_eq!(*alias_names("do { alias f = ^f }"), ["f"]);
-        assert_eq!(*alias_names("(alias g = ^g)"), ["g"]);
-    }
-
-    #[test]
-    fn alias_names_drop_quotes_around_name() {
-        assert_eq!(*alias_names("alias \"a\" = ^a"), ["a"]);
-        assert_eq!(*alias_names("alias 'b' = ^b"), ["b"]);
-        assert_eq!(*alias_names("alias `c` = ^c"), ["c"]);
-    }
-
-    #[test]
-    fn alias_names_come_sorted_without_repeats() {
-        assert_eq!(
-            *alias_names("alias b = ^b\nalias a = ^a\nalias b = ^c"),
-            ["a", "b"]
-        );
-    }
-
-    #[test]
-    fn alias_names_leave_out_what_heads_no_statement() {
-        assert!(alias_names("# alias a = ^a").is_empty());
-        assert!(alias_names("print \"alias b = ^b\"").is_empty());
-    }
-
-    #[test]
-    fn alias_names_leave_out_statement_that_names_nothing() {
-        assert!(alias_names("alias").is_empty());
-        assert!(alias_names("export").is_empty());
-        assert!(alias_names("export alias").is_empty());
     }
 }

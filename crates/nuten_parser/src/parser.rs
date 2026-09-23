@@ -1,12 +1,13 @@
 //! Parser that turns tokens into events for the tree builder.
 
-use std::{iter, mem, rc::Rc, vec};
+use std::{iter, mem, vec};
 
 use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
 
 use crate::{
-    ParseError, ParseErrorKind, grammar,
+    ParseError, ParseErrorKind,
+    grammar::{self, Names},
     lexer::{self, LexError, Lexed, Mode, Token},
 };
 
@@ -134,13 +135,7 @@ impl<'a> Relexed<'a> {
 }
 
 pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
-    let mut parser = Parser::new(
-        src,
-        lexed,
-        Mode::Block.skips_newline(),
-        grammar::alias_names(src),
-        0,
-    );
+    let mut parser = Parser::new(src, lexed, Mode::Block.skips_newline(), Names::of(src), 0);
     // Not `start`: that would put leading trivia outside Root.
     parser.events.push(Event::Start(SyntaxKind::Root));
     grammar::file(&mut parser);
@@ -159,8 +154,8 @@ pub(crate) struct Parser<'a> {
     pos: usize,
     events: Vec<Event>,
     skips_newline: bool,
-    /// The names the file aliases, shared with the `Parser` of every level of brackets.
-    alias_names: Rc<[&'a str]>,
+    /// Shared with the `Parser` of every level of brackets.
+    names: Names<'a>,
     /// Brackets around the tokens.
     depth: usize,
     /// How many errors were reported among these tokens.
@@ -174,7 +169,7 @@ impl<'a> Parser<'a> {
         src: &'a str,
         lexed: Lexed,
         skips_newline: bool,
-        alias_names: Rc<[&'a str]>,
+        names: Names<'a>,
         depth: usize,
     ) -> Parser<'a> {
         Parser {
@@ -184,14 +179,14 @@ impl<'a> Parser<'a> {
             pos: 0,
             events: Vec::new(),
             skips_newline,
-            alias_names,
+            names,
             depth,
             errors: 0,
         }
     }
 
     pub(crate) fn is_aliased(&self, name: &str) -> bool {
-        self.alias_names.binary_search(&name).is_ok()
+        self.names.is_aliased(name)
     }
 
     pub(crate) fn is_skipped(&self, kind: SyntaxKind) -> bool {
@@ -519,7 +514,7 @@ impl<'a> Parser<'a> {
             self.src,
             taken,
             self.skips_newline,
-            Rc::clone(&self.alias_names),
+            self.names.clone(),
             self.depth,
         );
         self.read_inner(&mut inner, items);
@@ -557,7 +552,7 @@ impl<'a> Parser<'a> {
             self.src,
             lexed,
             mode.skips_newline(),
-            Rc::clone(&self.alias_names),
+            self.names.clone(),
             depth,
         )
     }
@@ -572,7 +567,7 @@ impl<'a> Parser<'a> {
             self.src,
             lexed,
             Mode::Block.skips_newline(),
-            Rc::clone(&self.alias_names),
+            self.names.clone(),
             self.depth,
         )
     }
@@ -723,20 +718,14 @@ mod tests {
 
     use super::{Event, Parser, Piece};
     use crate::{
-        ParseErrorKind, grammar,
-        grammar::SQUARE,
+        ParseErrorKind,
+        grammar::{Names, SQUARE},
         lexer::{self, Mode, Token},
     };
 
     fn parser(src: &str) -> Parser<'_> {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-        Parser::new(
-            src,
-            lexed,
-            Mode::Block.skips_newline(),
-            grammar::alias_names(src),
-            0,
-        )
+        Parser::new(src, lexed, Mode::Block.skips_newline(), Names::of(src), 0)
     }
 
     #[test]
@@ -882,13 +871,7 @@ mod tests {
     fn bump_relexed_to_emits_skipped_tokens_before_relexed_ones_as_they_are() {
         let src = "\na";
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Paren);
-        let mut p = Parser::new(
-            src,
-            lexed,
-            Mode::Paren.skips_newline(),
-            grammar::alias_names(src),
-            0,
-        );
+        let mut p = Parser::new(src, lexed, Mode::Paren.skips_newline(), Names::of(src), 0);
         p.bump_relexed_to(TextSize::of(src), Mode::VarType, bump_all);
         assert_eq!(
             p.events,
