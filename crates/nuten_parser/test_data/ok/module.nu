@@ -8,3 +8,32 @@ module e f
 module -a {x}
 module (ls|x)
 module
+module f { const x = 1 }
+module g { export def h [] { 1 }; export def i [] { 2 } }
+module   "j k"   {
+export def l [] {}
+}
+module m { }
+module n {}
+module o {
+    # c
+    const x = 1
+
+
+    const y = 2 # d
+}
+do { module p { const x = 1 } }
+(module q
+  { const x = 1 })
+(module r # c
+  { const x = 1 })
+module s { ls && y }
+module (ls|x) { const x = 1 }
+module {a:1} { const x = 1 }
+module t {|x| def u [] {}}
+module v {
+| def w [] {}
+}
+module z {|| def u [] {}}
+module x {a: 1}
+module y {...$x}

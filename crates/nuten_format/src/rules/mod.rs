@@ -7,6 +7,7 @@ mod container;
 mod control;
 mod def;
 mod match_;
+mod module;
 mod pipeline;
 mod signature;
 mod subexpression;
@@ -168,6 +169,7 @@ impl<'a> Formatter<'a> {
             Node::RecordPattern(pattern) => self.container(pattern),
             Node::Def(def) => self.def(def),
             Node::Alias(alias) => self.alias(alias),
+            Node::Module(module) => self.module(module),
             Node::List(list) => self.container(list),
             Node::Record(record) => self.container(record),
             Node::RecordField(field) => self.field(field),
@@ -210,6 +212,16 @@ impl<'a> Formatter<'a> {
         items: &[Child],
         plain: impl Fn(usize, &Child) -> Option<Element<'static>>,
     ) -> Vec<Element<'a>> {
+        self.spaced_children_by(items, plain, Self::element)
+    }
+
+    /// As `spaced_children`, with each child but a comment laid out by `element`.
+    fn spaced_children_by(
+        &mut self,
+        items: &[Child],
+        plain: impl Fn(usize, &Child) -> Option<Element<'static>>,
+        mut element: impl FnMut(&mut Self, &ast::Element) -> Vec<Element<'a>>,
+    ) -> Vec<Element<'a>> {
         items
             .iter()
             .enumerate()
@@ -219,7 +231,7 @@ impl<'a> Formatter<'a> {
                     Some(comment) => self.comment(comment, item.newlines, false),
                     None => separator(prev, plain(index, item))
                         .into_iter()
-                        .chain(self.element(&item.element))
+                        .chain(element(self, &item.element))
                         .collect(),
                 }
             })

@@ -330,6 +330,13 @@ impl Def {
     }
 }
 
+impl Module {
+    /// The body, its last child when that is a block; one that stays a `Word` gives none.
+    pub fn body(&self) -> Option<Block> {
+        self.syntax().last_child().and_then(Block::cast)
+    }
+}
+
 impl Type {
     /// The name before the `<`; the parameters or fields are what the brackets hold.
     pub fn name(&self) -> SyntaxToken {

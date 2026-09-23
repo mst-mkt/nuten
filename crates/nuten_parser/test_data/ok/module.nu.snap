@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/module.nu
 ---
-Root@0..147
+Root@0..641
   Pipeline@0..8
     PipelineElement@0..8
       Call@0..8
@@ -91,3 +91,394 @@ Root@0..147
       Call@140..146
         Word@140..146 "module"
   Newline@146..147 "\n"
+  Pipeline@147..171
+    PipelineElement@147..171
+      Module@147..171
+        Word@147..153 "module"
+        Whitespace@153..154 " "
+        Word@154..155 "f"
+        Whitespace@155..156 " "
+        Block@156..171
+          LBrace@156..157 "{"
+          Whitespace@157..158 " "
+          Pipeline@158..169
+            PipelineElement@158..169
+              Let@158..169
+                Word@158..163 "const"
+                Whitespace@163..164 " "
+                Word@164..165 "x"
+                Whitespace@165..166 " "
+                Assign@166..167 "="
+                Whitespace@167..168 " "
+                Pipeline@168..169
+                  PipelineElement@168..169
+                    Word@168..169 "1"
+          Whitespace@169..170 " "
+          RBrace@170..171 "}"
+  Newline@171..172 "\n"
+  Pipeline@172..229
+    PipelineElement@172..229
+      Module@172..229
+        Word@172..178 "module"
+        Whitespace@178..179 " "
+        Word@179..180 "g"
+        Whitespace@180..181 " "
+        Block@181..229
+          LBrace@181..182 "{"
+          Whitespace@182..183 " "
+          Pipeline@183..204
+            PipelineElement@183..204
+              Def@183..204
+                Word@183..189 "export"
+                Whitespace@189..190 " "
+                Word@190..193 "def"
+                Whitespace@193..194 " "
+                Word@194..195 "h"
+                Whitespace@195..196 " "
+                Signature@196..198
+                  LBracket@196..197 "["
+                  RBracket@197..198 "]"
+                Whitespace@198..199 " "
+                Block@199..204
+                  LBrace@199..200 "{"
+                  Whitespace@200..201 " "
+                  Pipeline@201..202
+                    PipelineElement@201..202
+                      Word@201..202 "1"
+                  Whitespace@202..203 " "
+                  RBrace@203..204 "}"
+          Semicolon@204..205 ";"
+          Whitespace@205..206 " "
+          Pipeline@206..227
+            PipelineElement@206..227
+              Def@206..227
+                Word@206..212 "export"
+                Whitespace@212..213 " "
+                Word@213..216 "def"
+                Whitespace@216..217 " "
+                Word@217..218 "i"
+                Whitespace@218..219 " "
+                Signature@219..221
+                  LBracket@219..220 "["
+                  RBracket@220..221 "]"
+                Whitespace@221..222 " "
+                Block@222..227
+                  LBrace@222..223 "{"
+                  Whitespace@223..224 " "
+                  Pipeline@224..225
+                    PipelineElement@224..225
+                      Word@224..225 "2"
+                  Whitespace@225..226 " "
+                  RBrace@226..227 "}"
+          Whitespace@227..228 " "
+          RBrace@228..229 "}"
+  Newline@229..230 "\n"
+  Pipeline@230..269
+    PipelineElement@230..269
+      Module@230..269
+        Word@230..236 "module"
+        Whitespace@236..239 "   "
+        String@239..244 "\"j k\""
+        Whitespace@244..247 "   "
+        Block@247..269
+          LBrace@247..248 "{"
+          Newline@248..249 "\n"
+          Pipeline@249..267
+            PipelineElement@249..267
+              Def@249..267
+                Word@249..255 "export"
+                Whitespace@255..256 " "
+                Word@256..259 "def"
+                Whitespace@259..260 " "
+                Word@260..261 "l"
+                Whitespace@261..262 " "
+                Signature@262..264
+                  LBracket@262..263 "["
+                  RBracket@263..264 "]"
+                Whitespace@264..265 " "
+                Word@265..267 "{}"
+          Newline@267..268 "\n"
+          RBrace@268..269 "}"
+  Newline@269..270 "\n"
+  Pipeline@270..282
+    PipelineElement@270..282
+      Module@270..282
+        Word@270..276 "module"
+        Whitespace@276..277 " "
+        Word@277..278 "m"
+        Whitespace@278..279 " "
+        Word@279..282 "{ }"
+  Newline@282..283 "\n"
+  Pipeline@283..294
+    PipelineElement@283..294
+      Module@283..294
+        Word@283..289 "module"
+        Whitespace@289..290 " "
+        Word@290..291 "n"
+        Whitespace@291..292 " "
+        Word@292..294 "{}"
+  Newline@294..295 "\n"
+  Pipeline@295..353
+    PipelineElement@295..353
+      Module@295..353
+        Word@295..301 "module"
+        Whitespace@301..302 " "
+        Word@302..303 "o"
+        Whitespace@303..304 " "
+        Block@304..353
+          LBrace@304..305 "{"
+          Newline@305..306 "\n"
+          Whitespace@306..310 "    "
+          Comment@310..313 "# c"
+          Newline@313..314 "\n"
+          Whitespace@314..318 "    "
+          Pipeline@318..329
+            PipelineElement@318..329
+              Let@318..329
+                Word@318..323 "const"
+                Whitespace@323..324 " "
+                Word@324..325 "x"
+                Whitespace@325..326 " "
+                Assign@326..327 "="
+                Whitespace@327..328 " "
+                Pipeline@328..329
+                  PipelineElement@328..329
+                    Word@328..329 "1"
+          Newline@329..330 "\n"
+          Newline@330..331 "\n"
+          Newline@331..332 "\n"
+          Whitespace@332..336 "    "
+          Pipeline@336..347
+            PipelineElement@336..347
+              Let@336..347
+                Word@336..341 "const"
+                Whitespace@341..342 " "
+                Word@342..343 "y"
+                Whitespace@343..344 " "
+                Assign@344..345 "="
+                Whitespace@345..346 " "
+                Pipeline@346..347
+                  PipelineElement@346..347
+                    Word@346..347 "2"
+          Whitespace@347..348 " "
+          Comment@348..351 "# d"
+          Newline@351..352 "\n"
+          RBrace@352..353 "}"
+  Newline@353..354 "\n"
+  Pipeline@354..385
+    PipelineElement@354..385
+      Call@354..385
+        Word@354..356 "do"
+        Whitespace@356..357 " "
+        Block@357..385
+          LBrace@357..358 "{"
+          Whitespace@358..359 " "
+          Pipeline@359..383
+            PipelineElement@359..383
+              Module@359..383
+                Word@359..365 "module"
+                Whitespace@365..366 " "
+                Word@366..367 "p"
+                Whitespace@367..368 " "
+                Block@368..383
+                  LBrace@368..369 "{"
+                  Whitespace@369..370 " "
+                  Pipeline@370..381
+                    PipelineElement@370..381
+                      Let@370..381
+                        Word@370..375 "const"
+                        Whitespace@375..376 " "
+                        Word@376..377 "x"
+                        Whitespace@377..378 " "
+                        Assign@378..379 "="
+                        Whitespace@379..380 " "
+                        Pipeline@380..381
+                          PipelineElement@380..381
+                            Word@380..381 "1"
+                  Whitespace@381..382 " "
+                  RBrace@382..383 "}"
+          Whitespace@383..384 " "
+          RBrace@384..385 "}"
+  Newline@385..386 "\n"
+  Pipeline@386..414
+    PipelineElement@386..414
+      Subexpression@386..414
+        LParen@386..387 "("
+        Pipeline@387..413
+          PipelineElement@387..413
+            Module@387..413
+              Word@387..393 "module"
+              Whitespace@393..394 " "
+              Word@394..395 "q"
+              Newline@395..396 "\n"
+              Whitespace@396..398 "  "
+              Block@398..413
+                LBrace@398..399 "{"
+                Whitespace@399..400 " "
+                Pipeline@400..411
+                  PipelineElement@400..411
+                    Let@400..411
+                      Word@400..405 "const"
+                      Whitespace@405..406 " "
+                      Word@406..407 "x"
+                      Whitespace@407..408 " "
+                      Assign@408..409 "="
+                      Whitespace@409..410 " "
+                      Pipeline@410..411
+                        PipelineElement@410..411
+                          Word@410..411 "1"
+                Whitespace@411..412 " "
+                RBrace@412..413 "}"
+        RParen@413..414 ")"
+  Newline@414..415 "\n"
+  Pipeline@415..447
+    PipelineElement@415..447
+      Subexpression@415..447
+        LParen@415..416 "("
+        Pipeline@416..446
+          PipelineElement@416..446
+            Module@416..446
+              Word@416..422 "module"
+              Whitespace@422..423 " "
+              Word@423..424 "r"
+              Whitespace@424..425 " "
+              Comment@425..428 "# c"
+              Newline@428..429 "\n"
+              Whitespace@429..431 "  "
+              Block@431..446
+                LBrace@431..432 "{"
+                Whitespace@432..433 " "
+                Pipeline@433..444
+                  PipelineElement@433..444
+                    Let@433..444
+                      Word@433..438 "const"
+                      Whitespace@438..439 " "
+                      Word@439..440 "x"
+                      Whitespace@440..441 " "
+                      Assign@441..442 "="
+                      Whitespace@442..443 " "
+                      Pipeline@443..444
+                        PipelineElement@443..444
+                          Word@443..444 "1"
+                Whitespace@444..445 " "
+                RBrace@445..446 "}"
+        RParen@446..447 ")"
+  Newline@447..448 "\n"
+  Pipeline@448..468
+    PipelineElement@448..468
+      Module@448..468
+        Word@448..454 "module"
+        Whitespace@454..455 " "
+        Word@455..456 "s"
+        Whitespace@456..457 " "
+        Word@457..468 "{ ls && y }"
+  Newline@468..469 "\n"
+  Pipeline@469..498
+    PipelineElement@469..498
+      Module@469..498
+        Word@469..475 "module"
+        Whitespace@475..476 " "
+        Word@476..482 "(ls|x)"
+        Whitespace@482..483 " "
+        Block@483..498
+          LBrace@483..484 "{"
+          Whitespace@484..485 " "
+          Pipeline@485..496
+            PipelineElement@485..496
+              Let@485..496
+                Word@485..490 "const"
+                Whitespace@490..491 " "
+                Word@491..492 "x"
+                Whitespace@492..493 " "
+                Assign@493..494 "="
+                Whitespace@494..495 " "
+                Pipeline@495..496
+                  PipelineElement@495..496
+                    Word@495..496 "1"
+          Whitespace@496..497 " "
+          RBrace@497..498 "}"
+  Newline@498..499 "\n"
+  Pipeline@499..527
+    PipelineElement@499..527
+      Module@499..527
+        Word@499..505 "module"
+        Whitespace@505..506 " "
+        Word@506..511 "{a:1}"
+        Whitespace@511..512 " "
+        Block@512..527
+          LBrace@512..513 "{"
+          Whitespace@513..514 " "
+          Pipeline@514..525
+            PipelineElement@514..525
+              Let@514..525
+                Word@514..519 "const"
+                Whitespace@519..520 " "
+                Word@520..521 "x"
+                Whitespace@521..522 " "
+                Assign@522..523 "="
+                Whitespace@523..524 " "
+                Pipeline@524..525
+                  PipelineElement@524..525
+                    Word@524..525 "1"
+          Whitespace@525..526 " "
+          RBrace@526..527 "}"
+  Newline@527..528 "\n"
+  Pipeline@528..554
+    PipelineElement@528..554
+      Module@528..554
+        Word@528..534 "module"
+        Whitespace@534..535 " "
+        Word@535..536 "t"
+        Whitespace@536..537 " "
+        Word@537..554 "{|x| def u [] {}}"
+  Newline@554..555 "\n"
+  Pipeline@555..581
+    PipelineElement@555..581
+      Module@555..581
+        Word@555..561 "module"
+        Whitespace@561..562 " "
+        Word@562..563 "v"
+        Whitespace@563..564 " "
+        Word@564..581 "{\n| def w [] {}\n}"
+  Newline@581..582 "\n"
+  Pipeline@582..607
+    PipelineElement@582..607
+      Module@582..607
+        Word@582..588 "module"
+        Whitespace@588..589 " "
+        Word@589..590 "z"
+        Whitespace@590..591 " "
+        Word@591..607 "{|| def u [] {}}"
+  Newline@607..608 "\n"
+  Pipeline@608..623
+    PipelineElement@608..623
+      Module@608..623
+        Word@608..614 "module"
+        Whitespace@614..615 " "
+        Word@615..616 "x"
+        Whitespace@616..617 " "
+        Block@617..623
+          LBrace@617..618 "{"
+          Pipeline@618..622
+            PipelineElement@618..622
+              Call@618..622
+                Word@618..620 "a:"
+                Whitespace@620..621 " "
+                Word@621..622 "1"
+          RBrace@622..623 "}"
+  Newline@623..624 "\n"
+  Pipeline@624..640
+    PipelineElement@624..640
+      Module@624..640
+        Word@624..630 "module"
+        Whitespace@630..631 " "
+        Word@631..632 "y"
+        Whitespace@632..633 " "
+        Block@633..640
+          LBrace@633..634 "{"
+          Pipeline@634..639
+            PipelineElement@634..639
+              Call@634..639
+                Word@634..639 "...$x"
+          RBrace@639..640 "}"
+  Newline@640..641 "\n"

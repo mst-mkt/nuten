@@ -1,44 +1,26 @@
-use nuten_doc::{Element, expand_parent, group, soft_line_break, space};
+use nuten_doc::{Element, soft_line_break, space};
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxToken,
-    ast::{AstNode, Def, IoType, IoTypes, Node},
+    ast::{AstNode, Def, IoType, IoTypes},
 };
 
-use super::{
-    Child, Formatter, block::BlockLayout, children, line_break_or_space, separator, stays_as_is,
-};
+use super::{Child, Formatter, children, line_break_or_space, stays_as_is};
 
 impl<'a> Formatter<'a> {
     pub(super) fn def(&mut self, def: &Def) -> Vec<Element<'a>> {
         let items: Vec<_> = children(def.syntax().children_with_tokens()).collect();
         let body = def.body();
-        let mut out = Vec::new();
-        for (index, item) in items.iter().enumerate() {
-            if let Some(comment) = item.as_comment() {
-                out.extend(self.comment(comment, item.newlines, false));
-                continue;
-            }
-            let prev = items[..index].last().map(Child::kind);
-            let joined = item.kind() == SyntaxKind::Colon
-                && prev == Some(SyntaxKind::Signature)
-                && joins_parameters(item, &items[index + 1..], has_body(def));
-            let plain = (!joined).then(|| line_break_or_space(item));
-            out.extend(separator(prev, plain));
-            match &item.element {
-                NodeOrToken::Node(Node::Block(block)) if Some(block) == body.as_ref() => {
-                    let BlockLayout {
-                        mut head,
-                        mut rest,
-                        ..
-                    } = self.block_layout(block);
-                    rest.push(expand_parent());
-                    head.push(group(rest));
-                    out.extend(head);
-                },
-                element => out.extend(self.element(element)),
-            }
-        }
-        out
+        let has_body = has_body(def);
+        self.spaced_children_by(
+            &items,
+            |index, item| {
+                let joined = item.kind() == SyntaxKind::Colon
+                    && items[..index].last().map(Child::kind) == Some(SyntaxKind::Signature)
+                    && joins_parameters(item, &items[index + 1..], has_body);
+                (!joined).then(|| line_break_or_space(item))
+            },
+            |this, element| this.element_or_body(element, body.as_ref()),
+        )
     }
 
     pub(super) fn io_types(&mut self, types: &IoTypes) -> Vec<Element<'a>> {

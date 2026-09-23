@@ -26,10 +26,14 @@ pub(super) fn block<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
 /// Its statements must report no error either, since nothing inside may be reported.
 /// Only reading the statements tells that.
 fn may_be_block(inner: &Parser<'_>) -> bool {
-    if !inner.remaining_kinds().any(|kind| !kind.is_trivia()) {
+    if !holds_more_than_trivia(inner) {
         return false;
     }
     params_start(inner) != Some(SyntaxKind::Pipe) || params_close(inner)
+}
+
+pub(super) fn holds_more_than_trivia(inner: &Parser<'_>) -> bool {
+    inner.remaining_kinds().any(|kind| !kind.is_trivia())
 }
 
 /// Whether the `|` that starts parameters has another `|` after it.
@@ -48,7 +52,7 @@ fn params_close(inner: &Parser<'_>) -> bool {
 
 /// The `|` or `||` that starts parameters where nu finds it.
 /// First past whitespace, or a `|` past one line break, which nu's lexer makes that `|`.
-fn params_start(p: &Parser<'_>) -> Option<SyntaxKind> {
+pub(super) fn params_start(p: &Parser<'_>) -> Option<SyntaxKind> {
     let mut kinds = p
         .remaining_kinds()
         .filter(|&kind| kind != SyntaxKind::Whitespace);

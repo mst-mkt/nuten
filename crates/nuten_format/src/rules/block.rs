@@ -3,7 +3,7 @@ use nuten_doc::{
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind,
-    ast::{AstNode, Block, Bracketed, ClosureParams},
+    ast::{self, AstNode, Block, Bracketed, ClosureParams, Node},
 };
 
 use super::{Child, Formatter, children, without_commas};
@@ -33,6 +33,27 @@ impl<'a> Formatter<'a> {
         }
         head.push(group(rest));
         head
+    }
+
+    /// `element`, or, where it is `body`, the body broken over lines whatever it holds.
+    pub(super) fn element_or_body(
+        &mut self,
+        element: &ast::Element,
+        body: Option<&Block>,
+    ) -> Vec<Element<'a>> {
+        match element {
+            NodeOrToken::Node(Node::Block(block)) if Some(block) == body => {
+                let BlockLayout {
+                    mut head,
+                    mut rest,
+                    ..
+                } = self.block_layout(block);
+                rest.push(expand_parent());
+                head.push(group(rest));
+                head
+            },
+            element => self.element(element),
+        }
     }
 
     pub(super) fn block_layout(&mut self, block: &Block) -> BlockLayout<'a> {

@@ -256,6 +256,11 @@ macro_rules! syntax_kinds {
                 /// An input type, `->`, and an output type.
                 /// Each type is a `Type` where nu reads one, or else the item as it is.
                 IoType,
+                /// A `module` nu reads a body in: `module`, the name as written, and the body.
+                /// The body is a `Block` of statements, since nu reads no parameters there.
+                /// It stays a `Word` where it holds nothing but trivia, or starts with a `|`.
+                /// So it does where its statements report an error.
+                Module,
             }
         }
     };
