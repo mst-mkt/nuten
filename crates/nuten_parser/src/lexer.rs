@@ -85,6 +85,7 @@ pub(crate) enum Mode {
     /// The inside of the `< >` of a type, as in `record<a: int>`.
     TypeParams,
     /// The inside of the `{ }` of a `match`.
+    /// Nu lexes a line break as whitespace there, as it does a `,`.
     MatchArms,
     /// A word nu reads as a value and a path into it, as in `$x.a?` or `(ls).name`.
     CellPath,
@@ -172,7 +173,7 @@ impl Mode {
 
     /// Whether the parser skips a line break instead of reading it.
     pub(crate) fn skips_newline(self) -> bool {
-        matches!(self, Mode::Paren)
+        matches!(self, Mode::Paren | Mode::MatchArms)
     }
 
     pub(crate) fn special_kind(self, byte: u8) -> Option<SyntaxKind> {

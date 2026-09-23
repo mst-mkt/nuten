@@ -90,7 +90,8 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         Mode::RangeFrom => &[Whitespace, Comment],
         Mode::Binary => &[Whitespace, Newline, Comment, Comma],
         Mode::RecordPattern => &[Whitespace, Newline, Comment, Comma],
-        Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
+        Mode::MatchArms => &[Whitespace, Newline, Comment, Comma],
+        Mode::Signature | Mode::IoTypes | Mode::TypeParams => {
             unimplemented!("how nu splits in {mode:?} is not recorded")
         },
     }
@@ -571,6 +572,27 @@ const NU_VAR_TYPE_SPLITS: &[(&str, &[&str])] = &[
 fn var_type_splits_match_nu() {
     for &(src, expected) in NU_VAR_TYPE_SPLITS {
         assert_eq!(split_in(src, Mode::VarType), expected, "{src:?}");
+    }
+}
+
+/// How nu 0.115.1 splits the inside of the `{ }` of a `match`.
+const NU_MATCH_ARMS_SPLITS: &[(&str, &[&str])] = &[
+    ("1 => a, 2 => b", &["1", "=>", "a", "2", "=>", "b"]),
+    ("1\n=> a", &["1", "=>", "a"]),
+    ("a\r\nb", &["a", "b"]),
+    ("1 # c\n=> a", &["1", "=>", "a"]),
+    ("1|2 => a", &["1", "|", "2", "=>", "a"]),
+    ("1=>a", &["1=>a"]),
+    ("[a, b] => c", &["[a, b]", "=>", "c"]),
+    ("a;b", &["a", ";", "b"]),
+    ("{|x| $x} => c", &["{|x| $x}", "=>", "c"]),
+    ("a ||b", &["a", "||", "b"]),
+];
+
+#[test]
+fn match_arms_splits_match_nu() {
+    for &(src, expected) in NU_MATCH_ARMS_SPLITS {
+        assert_eq!(split_in(src, Mode::MatchArms), expected, "{src:?}");
     }
 }
 

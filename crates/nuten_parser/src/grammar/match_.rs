@@ -84,7 +84,7 @@ fn is_arms(inner: &Parser<'_>) -> bool {
 /// The arms, with the `,` between them.
 fn arms(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
-        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) {
+        if kind == SyntaxKind::Comma {
             p.bump();
             continue;
         }
@@ -93,9 +93,6 @@ fn arms(p: &mut Parser<'_>) {
             p.bump();
         }
         p.bump_as(SyntaxKind::FatArrow);
-        while p.peek() == Some(SyntaxKind::Newline) {
-            p.bump();
-        }
         value(p, Shape::Block);
         p.finish();
     }
