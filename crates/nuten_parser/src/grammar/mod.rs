@@ -31,7 +31,7 @@ mod where_;
 
 use nuten_syntax::SyntaxKind;
 
-pub(crate) use self::names::Names;
+pub(crate) use self::names::{Callee, Names};
 use self::{
     assignment::Assigned,
     binary::{binary, binary_ahead},
@@ -52,6 +52,7 @@ use crate::{
 };
 
 pub(crate) fn file(p: &mut Parser<'_>) {
+    p.enter_block();
     while let Some(kind) = p.peek() {
         match kind {
             SyntaxKind::Semicolon if p.last_kind() == Some(SyntaxKind::Pipe) => {

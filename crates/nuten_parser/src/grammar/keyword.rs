@@ -1,5 +1,5 @@
 use super::{
-    at_call_item,
+    Callee, at_call_item,
     control::control,
     def::def,
     if_::if_,
@@ -35,7 +35,11 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
 ///
 /// The keyword alone decides which syntax to try, or the one after an `export`.
 /// The shape of the items is then that syntax's own to check.
+/// Where a block around the call defines a command of its name, nu may run that instead.
 pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
+    if p.callee() != Callee::Undefined {
+        return false;
+    }
     match p.peek_text() {
         Some("if") => if_(p),
         Some("for" | "while" | "loop" | "try") => control(p),

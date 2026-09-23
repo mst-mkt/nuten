@@ -46,6 +46,48 @@ pub(super) fn reads_before_assignment(head: &str, next: Option<&str>) -> bool {
     ) || (head == "plugin" && next == Some("use"))
 }
 
+/// Whether nu rejects `name` as the name of a command a `def` or an `extern` defines.
+/// Ported from nu's `is_parser_keyword`.
+pub(super) fn is_parser_keyword(name: &str) -> bool {
+    matches!(
+        name,
+        "if" | "match"
+            | "try"
+            | "overlay"
+            | "overlay hide"
+            | "overlay new"
+            | "overlay use"
+            | "alias"
+            | "const"
+            | "def"
+            | "extern"
+            | "module"
+            | "use"
+            | "export"
+            | "export alias"
+            | "export const"
+            | "export def"
+            | "export extern"
+            | "export module"
+            | "export use"
+            | "for"
+            | "loop"
+            | "while"
+            | "return"
+            | "break"
+            | "continue"
+            | "let"
+            | "mut"
+            | "hide"
+            | "export-env"
+            | "source-env"
+            | "source"
+            | "run"
+            | "where"
+            | "plugin use"
+    )
+}
+
 /// A name of a variable stands where these take their first argument, never a value.
 pub(super) fn takes_variable_name(head: &str) -> bool {
     matches!(head, "let" | "mut" | "const")
@@ -300,8 +342,8 @@ mod tests {
     use std::process::Command;
 
     use super::{
-        ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, reads_before_assignment,
-        resolves_after_percent, takes_any_argument, takes_row_condition,
+        ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, is_parser_keyword,
+        reads_before_assignment, resolves_after_percent, takes_any_argument, takes_row_condition,
     };
 
     const ATTRIBUTES_OF_NU: &str = r#"help commands | get name
@@ -331,6 +373,11 @@ mod tests {
     const BEFORE_ASSIGNMENT_OF_NU: &str = r#"help commands | get name
         | where { |n| (ast $"($n) -h = 1" --json | get error | from json | default {}
             | columns | get -o 0) != "AssignmentRequiresVar" }
+        | sort | str join "\n""#;
+
+    const KEYWORD_NAMES_OF_NU: &str = r#"help commands | get name
+        | where { |n| (ast $"def \"($n)\" [] {}" --json | get error | from json | default {}
+            | columns | get -o 0) == "NameIsKeyword" }
         | sort | str join "\n""#;
 
     /// `None` when nu cannot be run, so that a machine without it still runs every other test.
@@ -435,5 +482,18 @@ mod tests {
             })
             .collect();
         assert_eq!(read_before, before);
+    }
+
+    #[test]
+    fn parser_keywords_are_names_nu_rejects_for_def() {
+        let (Some(names), Some(keywords)) = (asked(NAMES_OF_NU), asked(KEYWORD_NAMES_OF_NU)) else {
+            return;
+        };
+        let rejected: Vec<&str> = names
+            .iter()
+            .map(String::as_str)
+            .filter(|name| is_parser_keyword(name))
+            .collect();
+        assert_eq!(rejected, keywords);
     }
 }

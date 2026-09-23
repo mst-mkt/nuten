@@ -7,7 +7,7 @@ use rowan::{TextRange, TextSize};
 
 use crate::{
     ParseError, ParseErrorKind,
-    grammar::{self, Names},
+    grammar::{self, Callee, Names},
     lexer::{self, LexError, Lexed, Mode, Token},
 };
 
@@ -154,7 +154,7 @@ pub(crate) struct Parser<'a> {
     pos: usize,
     events: Vec<Event>,
     skips_newline: bool,
-    /// Shared with the `Parser` of every level of brackets.
+    /// What the file names, and what the blocks around the tokens declare.
     names: Names<'a>,
     /// Brackets around the tokens.
     depth: usize,
@@ -187,6 +187,25 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn is_aliased(&self, name: &str) -> bool {
         self.names.is_aliased(name)
+    }
+
+    /// Takes in what the block of the tokens ahead declares and imports, as nu does first.
+    pub(crate) fn enter_block(&mut self) {
+        self.names = self
+            .names
+            .within(self.src, &self.tokens[self.pos..], self.skips_newline);
+    }
+
+    /// What the call ahead runs, as far as the blocks around it tell.
+    pub(crate) fn callee(&self) -> Callee {
+        let Some(head) = self.peek_range() else {
+            return Callee::Undefined;
+        };
+        self.names.callee(head.start(), |nth| {
+            self.nth_token(nth)
+                .filter(|token| token.kind.is_item())
+                .map(|token| &self.src[token.range])
+        })
     }
 
     pub(crate) fn is_skipped(&self, kind: SyntaxKind) -> bool {

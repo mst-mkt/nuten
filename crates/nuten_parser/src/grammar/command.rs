@@ -1,7 +1,7 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, at_call_item,
+    Callee, Shape, at_call_item,
     binary::is_binary_like,
     builtin, call_items, declaration, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_as_term},
@@ -267,10 +267,13 @@ pub(super) fn is_math_expression_like(text: &str) -> bool {
 }
 
 /// Nu runs a head it finds no declaration for as an external command.
-/// Whether the file declares one is unknowable here, so an unlisted head stays unknown instead.
+/// What a file imports declares is unknowable here, so an unlisted head stays unknown.
+/// So does one a block around it defines.
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
 /// It reads the name after `let`, `mut`, `const`, or `export const` as written, never as a value.
+/// A command a block around the call defines takes the place of any other of its name.
+/// Nu reads an argument of one as it does one of its own commands, never as an external one's.
 pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
     let Some(head) = p.peek_text() else {
         return Shape::UnknownArgument;
@@ -281,12 +284,19 @@ pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
         percent_shape(name)
     } else if p.is_aliased(head) {
         Shape::UnknownArgument
-    } else if matches!(head, "else" | "catch") {
-        Shape::ExternalArgument
     } else if declaration(p).is_some() {
         Shape::VariableName
     } else {
-        command_shape(head)
+        let shape = if matches!(head, "else" | "catch") {
+            Shape::ExternalArgument
+        } else {
+            command_shape(head)
+        };
+        match p.callee() {
+            Callee::Defined if shape != Shape::UnknownArgument => Shape::KnownArgument,
+            Callee::Unknowable => Shape::UnknownArgument,
+            Callee::Defined | Callee::Undefined => shape,
+        }
     }
 }
 
