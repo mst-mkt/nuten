@@ -242,6 +242,16 @@ impl<'a> Parser<'a> {
             .find(|kind| !kind.is_trivia())
     }
 
+    /// The kind of the last token emitted, the skipped ones aside.
+    /// Unlike `last_kind`, it counts a line break the parser does not skip.
+    pub(crate) fn last_unskipped_kind(&self) -> Option<SyntaxKind> {
+        self.tokens[..self.pos]
+            .iter()
+            .rev()
+            .map(|token| token.kind)
+            .find(|&kind| !self.is_skipped(kind))
+    }
+
     /// The kinds of every token ahead, trivia included.
     /// Only for looking past what `peek` sees.
     pub(crate) fn remaining_kinds(&self) -> impl Iterator<Item = SyntaxKind> {
@@ -249,7 +259,7 @@ impl<'a> Parser<'a> {
     }
 
     /// As `remaining_kinds`, with each token and its text.
-    pub(crate) fn remaining_tokens(&self) -> impl Iterator<Item = (Token, &'a str)> {
+    pub(crate) fn remaining_tokens(&self) -> impl Iterator<Item = (Token, &'a str)> + Clone {
         self.tokens[self.pos..]
             .iter()
             .map(|&token| (token, &self.src[token.range]))

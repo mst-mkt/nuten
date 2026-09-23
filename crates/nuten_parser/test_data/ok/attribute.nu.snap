@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/attribute.nu
 ---
-Root@0..210
+Root@0..257
   Pipeline@0..52
     PipelineElement@0..52
       Attribute@0..52
@@ -129,32 +129,64 @@ Root@0..210
               Word@162..164 "{}"
         RParen@164..165 ")"
   Newline@165..166 "\n"
-  Pipeline@166..183
-    PipelineElement@166..183
-      Use@166..183
-        Word@166..169 "use"
-        Whitespace@169..170 " "
-        Word@170..181 "std/testing"
+  Pipeline@166..188
+    PipelineElement@166..188
+      Alias@166..188
+        Word@166..171 "alias"
+        Whitespace@171..172 " "
+        Word@172..181 "@category"
         Whitespace@181..182 " "
-        Word@182..183 "*"
-  Newline@183..184 "\n"
-  Pipeline@184..197
-    PipelineElement@184..197
-      Attribute@184..197
-        Word@184..189 "@test"
-        Whitespace@189..190 " "
-        Word@190..197 "{a:  1}"
-  Newline@197..198 "\n"
-  Pipeline@198..209
-    PipelineElement@198..209
-      Def@198..209
-        Word@198..201 "def"
-        Whitespace@201..202 " "
-        Word@202..203 "t"
-        Whitespace@203..204 " "
-        Signature@204..206
-          LBracket@204..205 "["
-          RBracket@205..206 "]"
+        Assign@182..183 "="
+        Whitespace@183..184 " "
+        Call@184..188
+          Word@184..188 "echo"
+  Newline@188..189 "\n"
+  Pipeline@189..200
+    PipelineElement@189..200
+      Attribute@189..200
+        Word@189..198 "@category"
+        Whitespace@198..199 " "
+        Word@199..200 "x"
+  Newline@200..201 "\n"
+  Pipeline@201..212
+    PipelineElement@201..212
+      Def@201..212
+        Word@201..204 "def"
+        Whitespace@204..205 " "
+        Word@205..206 "j"
         Whitespace@206..207 " "
-        Word@207..209 "{}"
-  Newline@209..210 "\n"
+        Signature@207..209
+          LBracket@207..208 "["
+          RBracket@208..209 "]"
+        Whitespace@209..210 " "
+        Word@210..212 "{}"
+  Newline@212..213 "\n"
+  Pipeline@213..230
+    PipelineElement@213..230
+      Use@213..230
+        Word@213..216 "use"
+        Whitespace@216..217 " "
+        Word@217..228 "std/testing"
+        Whitespace@228..229 " "
+        Word@229..230 "*"
+  Newline@230..231 "\n"
+  Pipeline@231..244
+    PipelineElement@231..244
+      Attribute@231..244
+        Word@231..236 "@test"
+        Whitespace@236..237 " "
+        Word@237..244 "{a:  1}"
+  Newline@244..245 "\n"
+  Pipeline@245..256
+    PipelineElement@245..256
+      Def@245..256
+        Word@245..248 "def"
+        Whitespace@248..249 " "
+        Word@249..250 "t"
+        Whitespace@250..251 " "
+        Signature@251..253
+          LBracket@251..252 "["
+          RBracket@252..253 "]"
+        Whitespace@253..254 " "
+        Word@254..256 "{}"
+  Newline@256..257 "\n"

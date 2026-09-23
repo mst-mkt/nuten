@@ -106,6 +106,8 @@ macro_rules! syntax_kinds {
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,
                 /// A command name followed by its arguments.
+                /// Headed by an attribute, it may go on past what ends each attribute.
+                /// It holds that line break or `;` then.
                 Call,
                 /// A `Call` whose name starts with `^`, or is `else` or `catch`.
                 /// Nu runs those two as external commands outside an `if` or a `try`.

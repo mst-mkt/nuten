@@ -15,20 +15,36 @@ pub(super) enum Assigned {
     AtSemicolon,
 }
 
+impl Assigned {
+    /// Whether a token of `kind` ends what the assignment operator takes.
+    pub(super) fn ends_at(self, kind: SyntaxKind) -> bool {
+        match self {
+            Assigned::No => false,
+            Assigned::AtLineBreak => ends_statement(kind),
+            Assigned::AtSemicolon => kind == SyntaxKind::Semicolon,
+        }
+    }
+}
+
 /// Whether an assignment operator comes before the element ends.
-/// As in nu, the target of a file redirection is none.
 pub(super) fn assignment_ahead(p: &Parser<'_>) -> bool {
     let mut prev = None;
     for kind in p.remaining_kinds().filter(|&kind| !p.is_skipped(kind)) {
         if ends_element(kind) {
             return false;
         }
-        if kind == SyntaxKind::Assign && !prev.is_some_and(is_file_redirection) {
+        if is_assignment_operator(kind, prev) {
             return true;
         }
         prev = Some(kind);
     }
     false
+}
+
+/// Whether a token of `kind` after one of `prev` is an assignment operator.
+/// As in nu, the target of a file redirection is none.
+pub(super) fn is_assignment_operator(kind: SyntaxKind, prev: Option<SyntaxKind>) -> bool {
+    kind == SyntaxKind::Assign && !prev.is_some_and(is_file_redirection)
 }
 
 /// What an assignment operator takes: the statements of the rest of the element.

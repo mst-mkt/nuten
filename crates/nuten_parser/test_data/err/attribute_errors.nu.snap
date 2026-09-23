@@ -2,38 +2,60 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/attribute_errors.nu
 ---
-Root@0..48
-  Pipeline@0..18
-    PipelineElement@0..18
-      Attribute@0..18
-        Word@0..13 "@search-terms"
-        Whitespace@13..14 " "
-        Word@14..15 "a"
-        Whitespace@15..16 " "
-        Error@16..18
-          Word@16..18 "&&"
-  Newline@18..19 "\n"
-  Pipeline@19..30
-    PipelineElement@19..30
-      Def@19..30
-        Word@19..22 "def"
-        Whitespace@22..23 " "
-        Word@23..24 "f"
-        Whitespace@24..25 " "
-        Signature@25..27
-          LBracket@25..26 "["
-          RBracket@26..27 "]"
-        Whitespace@27..28 " "
-        Word@28..30 "{}"
-  Newline@30..31 "\n"
-  Pipeline@31..48
-    PipelineElement@31..48
-      Attribute@31..48
-        Word@31..44 "@search-terms"
+Root@0..65
+  Pipeline@0..16
+    PipelineElement@0..12
+      Call@0..7
+        Word@0..2 "@a"
+        Whitespace@2..3 " "
+        Word@3..4 "x"
+        Newline@4..5 "\n"
+        Word@5..7 "ls"
+      Whitespace@7..8 " "
+      Redirection@8..10
+        Error@8..10
+          OutGt@8..10 "o>"
+      Whitespace@10..11 " "
+      Assign@11..12 "="
+    Whitespace@12..13 " "
+    Pipe@13..14 "|"
+    Whitespace@14..15 " "
+    PipelineElement@15..16
+      Call@15..16
+        Word@15..16 "y"
+  Newline@16..17 "\n"
+  Pipeline@17..35
+    PipelineElement@17..35
+      Attribute@17..35
+        Word@17..30 "@search-terms"
+        Whitespace@30..31 " "
+        Word@31..32 "a"
+        Whitespace@32..33 " "
+        Error@33..35
+          Word@33..35 "&&"
+  Newline@35..36 "\n"
+  Pipeline@36..47
+    PipelineElement@36..47
+      Def@36..47
+        Word@36..39 "def"
+        Whitespace@39..40 " "
+        Word@40..41 "f"
+        Whitespace@41..42 " "
+        Signature@42..44
+          LBracket@42..43 "["
+          RBracket@43..44 "]"
         Whitespace@44..45 " "
-        Word@45..46 "a"
-        Whitespace@46..47 " "
-        Error@47..48
-          Pipe@47..48 "|"
-error 16..18 "&&": ShellAndAnd
-error 47..48 "|": PipeAtEof
+        Word@45..47 "{}"
+  Newline@47..48 "\n"
+  Pipeline@48..65
+    PipelineElement@48..65
+      Attribute@48..65
+        Word@48..61 "@search-terms"
+        Whitespace@61..62 " "
+        Word@62..63 "a"
+        Whitespace@63..64 " "
+        Error@64..65
+          Pipe@64..65 "|"
+error 8..10 "o>": MissingRedirectionTarget
+error 33..35 "&&": ShellAndAnd
+error 64..65 "|": PipeAtEof

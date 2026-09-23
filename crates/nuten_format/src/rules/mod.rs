@@ -130,7 +130,7 @@ impl<'a> Formatter<'a> {
             (_, 1) => Some(hard_line_break()),
             // With one blank line, a `|` starting the next line would join the statement above.
             // So two stay.
-            (_, 3..) if pipe_open(before) => Some(empty_lines(2)),
+            (_, 3..) if reaches_past_blank_line(before) => Some(empty_lines(2)),
             _ => Some(empty_line()),
         };
         let item = match element {
@@ -197,9 +197,13 @@ impl<'a> Formatter<'a> {
     }
 
     /// Nu lexes a line break inside `( )` as whitespace, so one can fall among these children.
+    /// A `;` touches what comes before it, as it does between statements.
+    /// Only a call that an attribute heads holds one.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(parent.children_with_tokens()).collect();
-        self.spaced_children(&items, |_, item| Some(line_break_or_space(item)))
+        self.spaced_children(&items, |_, item| {
+            (item.kind() != SyntaxKind::Semicolon).then(|| line_break_or_space(item))
+        })
     }
 
     /// Children that touch one another, as the pieces of one word do.
@@ -285,14 +289,18 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether a `|` ending the last statement among `before` still reaches what comes next.
-/// It does while no blank line has come since, which closes the pipe as it did in the source.
-fn pipe_open(before: &[Child]) -> bool {
+/// Whether the last statement among `before` still reaches a line-start `|` after one blank line.
+/// A `|` it ends with does while no blank line has come since, as in the source.
+/// So does a call that an attribute heads, since nu goes on past one blank line after it.
+fn reaches_past_blank_line(before: &[Child]) -> bool {
     before
         .iter()
         .rev()
         .find_map(|child| match &child.element {
-            NodeOrToken::Node(statement) => Some(ends_with_pipe(statement.syntax())),
+            NodeOrToken::Node(statement) => {
+                let statement = statement.syntax();
+                Some(ends_with_pipe(statement) || ends_with_attributed_call(statement))
+            },
             NodeOrToken::Token(_) if child.newlines > 1 => Some(false),
             NodeOrToken::Token(_) => None,
         })
@@ -305,6 +313,23 @@ fn ends_with_pipe(statement: &SyntaxNode) -> bool {
     statement
         .last_token()
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
+}
+
+/// Whether the last element of the statement is a call that an attribute heads.
+/// The call may end with a command instead, which a blank line closes.
+/// Two blank lines then keep a wider gap than needed, but close it as well.
+fn ends_with_attributed_call(statement: &SyntaxNode) -> bool {
+    statement
+        .children()
+        .last()
+        .and_then(|element| element.first_child())
+        .is_some_and(|call| call.kind() == SyntaxKind::Call && headed_by_attribute(&call))
+}
+
+/// The head tells, since nu reads the attribute and what follows it as one call.
+fn headed_by_attribute(node: &SyntaxNode) -> bool {
+    node.first_token()
+        .is_some_and(|head| head.text().starts_with('@'))
 }
 
 /// Whether the brackets of `node` stay as they are, with everything between them.

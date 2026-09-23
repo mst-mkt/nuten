@@ -1,13 +1,15 @@
+use std::iter;
+
 use nuten_doc::{
-    Element, GroupId, align, align_if_group_breaks, expand_parent, group_with_id,
-    soft_line_break_or_space, space,
+    Element, GroupId, align, align_if_group_breaks, empty_line, expand_parent, group_with_id,
+    hard_line_break, soft_line_break_or_space, space,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
     ast::{AstNode, Node, Pipeline},
 };
 
-use super::{Child, Formatter, children, separator};
+use super::{Child, Formatter, children, headed_by_attribute, separator};
 
 impl<'a> Formatter<'a> {
     pub(super) fn pipeline(&mut self, pipeline: &Pipeline) -> Vec<Element<'a>> {
@@ -48,7 +50,10 @@ impl<'a> Formatter<'a> {
     fn segment(&mut self, segment: &Segment<'_>, id: GroupId) -> Vec<Element<'a>> {
         let pipe = segment.pipe.map(|pipe| {
             // A pipe with a comment after it stays at the end of its line.
-            let plain = if segment.starts_with_comment() {
+            // So does one before an attribute, which nu reads as one only after a line break.
+            let plain = if pipe.keeps_blank_line_after_attribute() {
+                empty_line()
+            } else if segment.keeps_pipe_at_line_end() {
                 space()
             } else {
                 soft_line_break_or_space()
@@ -85,15 +90,29 @@ impl<'a> Formatter<'a> {
             newlines,
         } = &part.child;
         match element {
-            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => {
-                self.comment(comment, *newlines, prev.is_none())
-            },
-            // Nu rejects `e>|` and `o+e>|` starting a line, so they stay after their element.
-            // The parser puts that element right before them.
-            _ if part.is_element() || part.is_redirection_pipe() => separator(prev, Some(space()))
+            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => part
+                .keeps_blank_line_after_attribute()
+                .then(empty_line)
                 .into_iter()
-                .chain(self.element(element))
+                .chain(self.comment(comment, *newlines, prev.is_none()))
                 .collect(),
+            // Nu rejects `e>|` and `o+e>|` starting a line, except right after an attribute.
+            // So they stay after their element, which the parser puts right before them.
+            // After an attribute, one on the same line would be in the attribute instead.
+            // An element that an attribute heads keeps its line, since nu reads one only there.
+            _ if part.is_element() || part.is_redirection_pipe() => {
+                let plain = if part.starts_line_with_attribute()
+                    || (part.is_redirection_pipe() && *newlines > 0)
+                {
+                    hard_line_break()
+                } else {
+                    space()
+                };
+                separator(prev, Some(plain))
+                    .into_iter()
+                    .chain(self.element(element))
+                    .collect()
+            },
             _ => unreachable!("{:?} is not a child of Pipeline", part.kind()),
         }
     }
@@ -133,6 +152,33 @@ impl Part {
                 kind.is_item() || kind == SyntaxKind::Assign
             },
         }
+    }
+
+    /// Whether it is an element that an attribute heads, on a line after a `|`.
+    fn starts_line_with_attribute(&self) -> bool {
+        self.child.newlines > 0
+            && self
+                .child
+                .element
+                .as_node()
+                .is_some_and(|node| headed_by_attribute(node.syntax()))
+    }
+
+    /// Whether it keeps the blank line before it, which comes right after an attribute.
+    /// Nu goes on past a blank line to a line-start `|` only there.
+    /// Without the blank line, nu would take that `|` into the attribute.
+    fn keeps_blank_line_after_attribute(&self) -> bool {
+        let NodeOrToken::Token(token) = &self.child.element else {
+            return false;
+        };
+        let before = iter::successors(token.prev_sibling_or_token(), |element| {
+            element.prev_sibling_or_token()
+        })
+        .find(|element| !element.kind().is_trivia());
+        self.child.newlines > 1
+            && before
+                .and_then(NodeOrToken::into_node)
+                .is_some_and(|node| headed_by_attribute(&node))
     }
 
     fn is_redirection_pipe(&self) -> bool {
@@ -245,8 +291,11 @@ struct Segment<'p> {
     align: Option<Alignment>,
 }
 
-fn starts_with_comment(items: &[Part]) -> bool {
-    items.first().is_some_and(|part| part.child.is_comment())
+/// Whether the `|` before `items` stays at the end of its line.
+fn keeps_pipe_at_line_end(items: &[Part]) -> bool {
+    items
+        .first()
+        .is_some_and(|part| part.child.is_comment() || part.starts_line_with_attribute())
 }
 
 fn segments(parts: &[Part], after_semicolon: bool) -> (Vec<Segment<'_>>, Option<Segment<'_>>) {
@@ -281,7 +330,7 @@ impl<'p> Segment<'p> {
         // A statement starts a line in the output, but not right after a `;` on the same line.
         // Its `|` never starts a line there.
         // In a block on one line, nothing breaks anyway.
-        let align = if starts_with_comment(items) || (prev.is_none() && after_semicolon) {
+        let align = if keeps_pipe_at_line_end(items) || (prev.is_none() && after_semicolon) {
             None
         } else if matches!(prev, None | Some(SyntaxKind::Comment)) {
             Some(Alignment::Always)
@@ -296,8 +345,8 @@ impl<'p> Segment<'p> {
         }
     }
 
-    fn starts_with_comment(&self) -> bool {
-        starts_with_comment(self.items)
+    fn keeps_pipe_at_line_end(&self) -> bool {
+        keeps_pipe_at_line_end(self.items)
     }
 
     fn prev_of(&self, index: usize) -> Option<SyntaxKind> {
@@ -321,7 +370,11 @@ impl<'p> Segment<'p> {
 
     fn split_tail(&self) -> (Self, Option<Self>) {
         let last = self.items.iter().rposition(|part| !part.joined);
-        let Some(tail) = last.filter(|&last| self.items[last].is_element()) else {
+        // An element that an attribute heads keeps the `|` before it at the end of the line.
+        // Only the segment that holds that `|` can, so the element is no tail.
+        let Some(tail) = last.filter(|&last| {
+            self.items[last].is_element() && !self.items[last].starts_line_with_attribute()
+        }) else {
             return (*self, None);
         };
         let (items, tail_items) = self.items.split_at(tail);
