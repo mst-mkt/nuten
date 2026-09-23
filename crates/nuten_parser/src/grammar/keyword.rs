@@ -51,6 +51,7 @@ pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
 fn exported(p: &mut Parser<'_>) -> bool {
     match p.nth_text(1) {
         Some("def" | "extern") => def(p),
+        Some("module") => module(p),
         Some("use") => use_(p),
         _ => false,
     }

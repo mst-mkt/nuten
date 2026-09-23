@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/module.nu
 ---
-Root@0..641
+Root@0..771
   Pipeline@0..8
     PipelineElement@0..8
       Call@0..8
@@ -482,3 +482,81 @@ Root@0..641
                 Word@634..639 "...$x"
           RBrace@639..640 "}"
   Newline@640..641 "\n"
+  Pipeline@641..684
+    PipelineElement@641..684
+      Module@641..684
+        Word@641..647 "export"
+        Whitespace@647..649 "  "
+        Word@649..655 "module"
+        Whitespace@655..657 "  "
+        Word@657..658 "n"
+        Whitespace@658..660 "  "
+        Block@660..684
+          LBrace@660..661 "{"
+          Whitespace@661..663 "  "
+          Pipeline@663..681
+            PipelineElement@663..681
+              Let@663..681
+                Word@663..669 "export"
+                Whitespace@669..670 " "
+                Word@670..675 "const"
+                Whitespace@675..676 " "
+                Word@676..677 "x"
+                Whitespace@677..678 " "
+                Assign@678..679 "="
+                Whitespace@679..680 " "
+                Pipeline@680..681
+                  PipelineElement@680..681
+                    Word@680..681 "1"
+          Whitespace@681..683 "  "
+          RBrace@683..684 "}"
+  Newline@684..685 "\n"
+  Pipeline@685..703
+    PipelineElement@685..703
+      Call@685..703
+        Word@685..691 "export"
+        Whitespace@691..692 " "
+        Word@692..698 "module"
+        Whitespace@698..699 " "
+        Word@699..703 "o.nu"
+  Newline@703..704 "\n"
+  Pipeline@704..722
+    PipelineElement@704..722
+      Module@704..722
+        Word@704..710 "export"
+        Whitespace@710..711 " "
+        Word@711..717 "module"
+        Whitespace@717..718 " "
+        Word@718..719 "p"
+        Whitespace@719..720 " "
+        Word@720..722 "{}"
+  Newline@722..723 "\n"
+  Pipeline@723..745
+    PipelineElement@723..745
+      Call@723..745
+        Word@723..729 "export"
+        Whitespace@729..730 " "
+        Word@730..736 "module"
+        Whitespace@736..737 " "
+        Word@737..743 "--help"
+        Whitespace@743..744 " "
+        Word@744..745 "q"
+  Newline@745..746 "\n"
+  Pipeline@746..770
+    PipelineElement@746..770
+      Subexpression@746..770
+        LParen@746..747 "("
+        Pipeline@747..769
+          PipelineElement@747..769
+            Module@747..769
+              Word@747..753 "export"
+              Whitespace@753..754 " "
+              Comment@754..757 "# c"
+              Newline@757..758 "\n"
+              Word@758..764 "module"
+              Whitespace@764..765 " "
+              Word@765..766 "m"
+              Whitespace@766..767 " "
+              Word@767..769 "{}"
+        RParen@769..770 ")"
+  Newline@770..771 "\n"

@@ -3,26 +3,28 @@ use nuten_syntax::SyntaxKind;
 use super::{
     CURLY, at_call_item,
     block::{holds_more_than_trivia, params_start},
-    call_items, file, is_flag,
+    call_items, file, is_flag, keyword_words,
 };
 use crate::{lexer::Mode, parser::Parser};
 
 /// The `Module` ahead, or else the `module` call ahead with its items as written.
 /// Nu takes nothing but a string for the name, so it stays as written either way.
 pub(super) fn module(p: &mut Parser<'_>) -> bool {
-    if takes_body(&call_items(p)) {
-        module_with_body(p);
+    let words = keyword_words(p);
+    if call_items(p).get(words..).is_some_and(takes_body) {
+        module_with_body(p, words);
     } else {
         module_without_body(p);
     }
     true
 }
 
-/// The `Module` ahead: `module`, the name, and the body.
-fn module_with_body(p: &mut Parser<'_>) {
+/// The `Module` ahead: the `words` of its keyword, the name, and the body.
+fn module_with_body(p: &mut Parser<'_>, words: usize) {
     p.start(SyntaxKind::Module);
-    p.bump();
-    p.bump();
+    for _ in 0..=words {
+        p.bump();
+    }
     body(p);
     p.finish();
 }
@@ -37,9 +39,9 @@ fn module_without_body(p: &mut Parser<'_>) {
     p.finish();
 }
 
-/// Whether nu reads a body in a `module` call of `items`: `module`, the name, and `{ }`.
+/// Whether nu reads a body where `items` follow the keyword: the name and `{ }`.
 fn takes_body(items: &[&str]) -> bool {
-    matches!(items, [_, name, body] if !is_flag(name) && body.starts_with('{'))
+    matches!(items, [name, body] if !is_flag(name) && body.starts_with('{'))
 }
 
 /// Nu reads what the braces hold as statements, whatever they are.

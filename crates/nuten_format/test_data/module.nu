@@ -35,3 +35,9 @@ module v {
 | def w [] {}
 }
 module z {|| def u [] {}}
+export  module  n  {  export const x = 1  }
+export module o.nu
+export module p {}
+export module --help q
+(export # c
+module m {})

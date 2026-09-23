@@ -261,6 +261,7 @@ macro_rules! syntax_kinds {
                 /// Each type is a `Type` where nu reads one, or else the item as it is.
                 IoType,
                 /// A `module` nu reads a body in: `module`, the name as written, and the body.
+                /// `export` comes before `module` if there.
                 /// The body is a `Block` of statements, since nu reads no parameters there.
                 /// It stays a `Word` where it holds nothing but trivia, or starts with a `|`.
                 /// So it does where its statements report an error.
