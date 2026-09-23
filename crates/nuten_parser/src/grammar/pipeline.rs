@@ -2,9 +2,10 @@ use nuten_syntax::SyntaxKind;
 
 use super::{
     Shape,
-    assignment::{Assigned, assigned_statements, assignment_ahead, var_type_error},
+    assignment::{Assigned, assigned_statements, assignment_ahead},
     command::{Streams, arguments, command},
     ends_statement, is_pipe,
+    var_type::var_type,
 };
 use crate::{ParseErrorKind, parser::Parser};
 
@@ -155,10 +156,7 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool, heads_pipeline: bool) -> Op
         if first && let Some(keyword @ ("let" | "mut" | "const")) = p.peek_text() {
             p.start(SyntaxKind::Let);
             p.bump();
-            if let Some((end, error)) = var_type_error(p, keyword) {
-                p.bump();
-                p.bump_error_to(end, error);
-            }
+            var_type(p, keyword);
             arguments(p, Some(Streams::default()), Shape::VariableName, true);
         } else {
             p.start(SyntaxKind::Assignment);

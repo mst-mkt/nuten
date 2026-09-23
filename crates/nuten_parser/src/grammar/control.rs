@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{Shape, call_items, item, value};
+use super::{Shape, call_items, item, value, var_type::var_type};
 use crate::parser::Parser;
 
 /// The `For`, `While`, `Loop`, or `Try` ahead, when nu reads the call as one.
@@ -27,7 +27,9 @@ pub(super) fn control(p: &mut Parser<'_>) -> bool {
 /// The variable of a `for` and any type after it, up to the `in`.
 /// Nu never reads them as a value, braces or not.
 fn for_variable(p: &mut Parser<'_>) {
-    p.bump();
+    if !var_type(p, "for") {
+        p.bump();
+    }
     while p.peek_text() != Some("in") {
         p.bump();
     }

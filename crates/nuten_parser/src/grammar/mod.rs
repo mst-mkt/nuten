@@ -20,6 +20,7 @@ mod record;
 mod signature;
 mod spread;
 mod table;
+mod var_type;
 mod variable;
 
 use std::rc::Rc;
