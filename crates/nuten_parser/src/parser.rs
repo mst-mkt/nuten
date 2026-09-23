@@ -464,6 +464,48 @@ impl<'a> Parser<'a> {
         self.finish();
     }
 
+    /// Lexes the tokens ahead up to `end` again in `mode`, and emits the events `items` makes.
+    /// Their lexing errors give way to those of lexing them again.
+    pub(crate) fn bump_relexed_to(
+        &mut self,
+        end: TextSize,
+        mode: Mode,
+        items: impl FnOnce(&mut Parser<'a>),
+    ) {
+        let taken = self.take_to(end);
+        let start = taken
+            .tokens
+            .first()
+            .map_or(end, |token| token.range.start());
+        let mut inner = self.nested(TextRange::new(start, end), mode, self.depth);
+        self.read_inner(&mut inner, items);
+        self.errors += inner.errors;
+    }
+
+    /// Moves past the tokens ahead up to `end`, and returns them with their lexing errors.
+    fn take_to(&mut self, end: TextSize) -> Lexed {
+        let count = self.tokens[self.pos..]
+            .iter()
+            .take_while(|token| token.range.end() <= end)
+            .count();
+        assert!(
+            self.tokens
+                .get(self.pos + count)
+                .is_none_or(|token| token.range.start() >= end),
+            "end inside a token"
+        );
+        let tokens = self.tokens[self.pos..self.pos + count].to_vec();
+        self.pos += count;
+        let errors = tokens
+            .iter()
+            .filter(|token| token.kind == SyntaxKind::Error)
+            .count();
+        Lexed {
+            errors: self.lex_errors.by_ref().take(errors).collect(),
+            tokens,
+        }
+    }
+
     /// A parser of `range` of the source lexed in `mode`, inside `depth` brackets.
     fn nested(&self, range: TextRange, mode: Mode, depth: usize) -> Parser<'a> {
         let lexed = lexer::lex(self.src, range, mode);
@@ -485,7 +527,7 @@ impl<'a> Parser<'a> {
         )
     }
 
-    /// Runs `items` to the end of `inner`, a parser of what the token emitted as a node holds.
+    /// Runs `items` to the end of `inner`, a parser of what this one moves past.
     /// The events are lent to it, so that nested nodes do not copy the events inside.
     fn read_inner(&mut self, inner: &mut Parser<'a>, items: impl FnOnce(&mut Parser<'a>)) {
         inner.events = mem::take(&mut self.events);
@@ -493,7 +535,7 @@ impl<'a> Parser<'a> {
         inner.bump_skipped();
         assert!(
             inner.pos == inner.tokens.len(),
-            "items left some of what the token holds"
+            "items left some of what inner holds"
         );
         self.events = mem::take(&mut inner.events);
     }
@@ -651,7 +693,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "items left some of what the token holds")]
+    #[should_panic(expected = "items left some of what inner holds")]
     fn bump_bracketed_needs_items_to_take_everything() {
         let mut p = parser("[a]");
         let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
@@ -668,7 +710,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "items left some of what the token holds")]
+    #[should_panic(expected = "items left some of what inner holds")]
     fn bump_relexed_needs_items_to_take_everything() {
         let mut p = parser("$a.b");
         let relexed = p.relexed(Mode::CellPath).unwrap();
@@ -754,6 +796,43 @@ mod tests {
         for piece in [range(0, 3), range(1, 2), range(4, 6)] {
             assert!(p.item_at(piece).is_none(), "{piece:?}");
         }
+    }
+
+    fn bump_all(p: &mut Parser<'_>) {
+        while p.peek().is_some() {
+            p.bump();
+        }
+    }
+
+    #[test]
+    fn bump_relexed_to_emits_tokens_of_lexing_again() {
+        let mut p = parser("a<b c");
+        p.bump_relexed_to(TextSize::new(3), Mode::Signature, bump_all);
+        assert_eq!(p.peek_text(), Some("c"));
+        assert_eq!(p.errors, 1);
+        assert!(matches!(p.events[1], Event::Error(_)));
+    }
+
+    #[test]
+    fn bump_relexed_to_drops_lexing_errors_of_tokens_it_replaces() {
+        let mut p = parser("a) b)");
+        p.bump_relexed_to(TextSize::new(2), Mode::Signature, bump_all);
+        p.bump();
+        let errors: Vec<_> = p
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                Event::Error(error) => Some(error.range),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(errors, [range(1, 2), range(4, 5)]);
+    }
+
+    #[test]
+    #[should_panic(expected = "end inside a token")]
+    fn bump_relexed_to_panics_at_end_inside_token() {
+        parser("ab").bump_relexed_to(TextSize::new(1), Mode::Signature, bump_all);
     }
 
     #[test]

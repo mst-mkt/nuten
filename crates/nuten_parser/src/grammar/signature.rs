@@ -37,14 +37,23 @@ enum Action {
     StartParam,
 }
 
+/// What encloses the parameters.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum Enclosing {
+    /// The `[ ]` or `( )` of a `def` or an `extern`, which nu leaves out when it lexes them.
+    Brackets,
+    /// The `|`s of a closure, which nu lexes with them.
+    Pipes,
+}
+
 /// The parameters of a signature as nu splits them: a `Param` at each item where nu takes one.
 /// A `Param` holds the `(-f)` as a `ShortFlag`, the `:` and the type, and the `=` and the default.
 /// It holds each of those that nu gives it.
 /// A `:`, an `=`, or a `,` where nu takes none is an `Error`, as is one with nothing after it.
-pub(super) fn params(p: &mut Parser<'_>) {
+pub(super) fn params(p: &mut Parser<'_>, enclosing: Enclosing) {
     let mut expect = Expect::Param;
     let mut in_param = false;
-    while let Some((action, next)) = step(p, expect, in_param) {
+    while let Some((action, next)) = step(p, expect, in_param, enclosing) {
         match action {
             Action::Bump => p.bump(),
             Action::Reject => p.bump_error(ParseErrorKind::SignatureSeparator),
@@ -74,11 +83,18 @@ pub(super) fn params(p: &mut Parser<'_>) {
 /// What `params` does with the token ahead, and what it takes after that.
 /// It decides from what it takes now and whether it is inside a `Param`.
 /// `None` at the end.
-fn step(p: &Parser<'_>, expect: Expect, in_param: bool) -> Option<(Action, Expect)> {
+fn step(
+    p: &Parser<'_>,
+    expect: Expect,
+    in_param: bool,
+    enclosing: Enclosing,
+) -> Option<(Action, Expect)> {
     let (kind, text) = p.peek().zip(p.peek_text())?;
+    // The closing `|` of a closure is nu's last token, so a `:` or an `=` is never last there.
+    let not_last = || enclosing == Enclosing::Pipes || token_ahead(p);
     Some(match (kind, expect) {
-        (SyntaxKind::Colon, Expect::Param) if token_ahead(p) => (Action::Bump, Expect::Type),
-        (SyntaxKind::Eq, Expect::Param | Expect::AfterType) if token_ahead(p) => {
+        (SyntaxKind::Colon, Expect::Param) if not_last() => (Action::Bump, Expect::Type),
+        (SyntaxKind::Eq, Expect::Param | Expect::AfterType) if not_last() => {
             (Action::Bump, Expect::Default)
         },
         (SyntaxKind::Comma, Expect::Param | Expect::AfterType) => {

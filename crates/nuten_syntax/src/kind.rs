@@ -199,7 +199,8 @@ macro_rules! syntax_kinds {
                 /// An external command takes it as a string instead.
                 /// The body of a `def` is one whatever it holds.
                 Block,
-                /// The parameters of a closure as unchecked tokens: `|` to the next `|`, or `||`.
+                /// The parameters of a closure: `|`, what a `Signature` holds, and the next `|`.
+                /// Or `||` alone.
                 ClosureParams,
                 /// A `def` or an `extern` that nu reads as one.
                 /// `export` if there, the keyword, any flags, the name, and a `Signature`.
@@ -209,7 +210,7 @@ macro_rules! syntax_kinds {
                 /// The parameters of a `def` or an `extern`.
                 /// The `[` or `(`, what it holds, and the matching `]` or `)`.
                 Signature,
-                /// One parameter of a `Signature`, starting with its name.
+                /// One parameter of a `Signature` or `ClosureParams`, starting with its name.
                 /// Then, in source order, the `ShortFlag`, the `:` and type, the `=` and default.
                 /// Each of those while nu still takes it for that parameter.
                 /// It holds the `,` that ends it, and the `|`, `;`, and redirections nu ignores.

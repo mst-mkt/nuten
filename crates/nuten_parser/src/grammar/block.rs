@@ -1,7 +1,13 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{file, shell_operator};
-use crate::parser::{Bracketed, Parser};
+use super::{
+    file, shell_operator,
+    signature::{Enclosing, params},
+};
+use crate::{
+    lexer::Mode,
+    parser::{Bracketed, Parser},
+};
 
 /// The `{ }` ahead that is no record, as a `Block`.
 /// As a word when nu reads no block or closure in it.
@@ -53,6 +59,7 @@ fn params_start(p: &Parser<'_>) -> Option<SyntaxKind> {
 }
 
 /// Parameters, if any, closing at the next `|`, then statements.
+/// Nu lexes the parameters again and reads them as those of a `def`.
 fn block_items(p: &mut Parser<'_>) {
     match params_start(p) {
         Some(SyntaxKind::PipePipe) => {
@@ -66,9 +73,12 @@ fn block_items(p: &mut Parser<'_>) {
             }
             p.start(SyntaxKind::ClosureParams);
             p.bump();
-            while p.peek() != Some(SyntaxKind::Pipe) {
-                p.bump();
-            }
+            let close = p
+                .remaining_tokens()
+                .find(|(token, _)| token.kind == SyntaxKind::Pipe)
+                .map(|(token, _)| token.range.start())
+                .expect("parameters close at a `|`");
+            p.bump_relexed_to(close, Mode::Signature, |p| params(p, Enclosing::Pipes));
             p.bump();
             p.finish();
         },

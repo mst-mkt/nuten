@@ -422,7 +422,8 @@ Root@0..956
               LBrace@562..563 "{"
               ClosureParams@563..566
                 Pipe@563..564 "|"
-                Word@564..565 "y"
+                Param@564..565
+                  Word@564..565 "y"
                 Pipe@565..566 "|"
               Whitespace@566..567 " "
               Pipeline@567..568

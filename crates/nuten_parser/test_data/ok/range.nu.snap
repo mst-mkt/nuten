@@ -285,7 +285,8 @@ Root@0..749
           Whitespace@275..276 " "
           ClosureParams@276..279
             Pipe@276..277 "|"
-            Word@277..278 "i"
+            Param@277..278
+              Word@277..278 "i"
             Pipe@278..279 "|"
           Whitespace@279..280 " "
           Pipeline@280..282
@@ -428,7 +429,8 @@ Root@0..749
           Whitespace@411..412 " "
           ClosureParams@412..415
             Pipe@412..413 "|"
-            Word@413..414 "i"
+            Param@413..414
+              Word@413..414 "i"
             Pipe@414..415 "|"
           Whitespace@415..416 " "
           Pipeline@416..418
@@ -453,7 +455,8 @@ Root@0..749
           Whitespace@435..436 " "
           ClosureParams@436..439
             Pipe@436..437 "|"
-            Word@437..438 "i"
+            Param@437..438
+              Word@437..438 "i"
             Pipe@438..439 "|"
           Whitespace@439..440 " "
           Pipeline@440..442

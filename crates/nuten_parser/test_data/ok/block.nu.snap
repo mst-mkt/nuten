@@ -18,7 +18,8 @@ Root@0..461
           LBrace@10..11 "{"
           ClosureParams@11..14
             Pipe@11..12 "|"
-            Word@12..13 "x"
+            Param@12..13
+              Word@12..13 "x"
             Pipe@13..14 "|"
           Whitespace@14..15 " "
           Pipeline@15..22
@@ -46,9 +47,12 @@ Root@0..461
           Whitespace@36..37 " "
           ClosureParams@37..43
             Pipe@37..38 "|"
-            Word@38..40 "x,"
+            Param@38..40
+              Word@38..39 "x"
+              Comma@39..40 ","
             Whitespace@40..41 " "
-            Word@41..42 "y"
+            Param@41..42
+              Word@41..42 "y"
             Pipe@42..43 "|"
           Newline@43..44 "\n"
           Whitespace@44..48 "    "
@@ -98,7 +102,8 @@ Root@0..461
           LBrace@87..88 "{"
           ClosureParams@88..91
             Pipe@88..89 "|"
-            Word@89..90 "x"
+            Param@89..90
+              Word@89..90 "x"
             Pipe@90..91 "|"
           RBrace@91..92 "}"
         Whitespace@92..93 " "
@@ -112,9 +117,12 @@ Root@0..461
           LBrace@98..99 "{"
           ClosureParams@99..105
             Pipe@99..100 "|"
-            Word@100..102 "x,"
+            Param@100..102
+              Word@100..101 "x"
+              Comma@101..102 ","
             Newline@102..103 "\n"
-            Word@103..104 "y"
+            Param@103..104
+              Word@103..104 "y"
             Pipe@104..105 "|"
           Whitespace@105..106 " "
           Pipeline@106..108
@@ -212,7 +220,8 @@ Root@0..461
           Newline@249..250 "\n"
           ClosureParams@250..253
             Pipe@250..251 "|"
-            Word@251..252 "x"
+            Param@251..252
+              Word@251..252 "x"
             Pipe@252..253 "|"
           Whitespace@253..254 " "
           Pipeline@254..255

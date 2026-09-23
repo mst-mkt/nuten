@@ -1,6 +1,10 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{PAREN, SQUARE, Shape, call_items, signature::params, value};
+use super::{
+    PAREN, SQUARE, Shape, call_items,
+    signature::{Enclosing, params},
+    value,
+};
 use crate::{
     lexer::Mode,
     parser::{Affix, Brackets, Parser},
@@ -21,7 +25,9 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
         Affix::None
     };
     match p.bracketed_affixed(shape.brackets, Mode::Signature, affix) {
-        Some(bracketed) => p.bump_bracketed(SyntaxKind::Signature, bracketed, params),
+        Some(bracketed) => p.bump_bracketed(SyntaxKind::Signature, bracketed, |p| {
+            params(p, Enclosing::Brackets);
+        }),
         None => p.bump(),
     }
     // The input and output types stay as they are; only the body is a block.
