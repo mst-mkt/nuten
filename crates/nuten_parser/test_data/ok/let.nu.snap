@@ -451,17 +451,14 @@ Root@0..465
   Newline@447..448 "\n"
   Pipeline@448..464
     PipelineElement@448..464
-      Assignment@448..464
-        Call@448..460
-          Word@448..454 "export"
-          Whitespace@454..455 " "
-          Word@455..458 "let"
-          Whitespace@458..459 " "
-          Word@459..460 "x"
+      Call@448..464
+        Word@448..454 "export"
+        Whitespace@454..455 " "
+        Word@455..458 "let"
+        Whitespace@458..459 " "
+        Word@459..460 "x"
         Whitespace@460..461 " "
         Assign@461..462 "="
         Whitespace@462..463 " "
-        Pipeline@463..464
-          PipelineElement@463..464
-            Word@463..464 "1"
+        Word@463..464 "1"
   Newline@464..465 "\n"

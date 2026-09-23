@@ -21,6 +21,31 @@ pub(super) fn takes_any_argument(head: &str) -> bool {
     head == "return"
 }
 
+/// Whether nu reads a statement headed by `head`, then `next`, as the syntax of that keyword.
+/// Nu reads such a keyword before an assignment operator in the statement.
+pub(super) fn reads_before_assignment(head: &str, next: Option<&str>) -> bool {
+    matches!(
+        head,
+        "alias"
+            | "const"
+            | "def"
+            | "export"
+            | "export-env"
+            | "extern"
+            | "for"
+            | "hide"
+            | "let"
+            | "module"
+            | "mut"
+            | "overlay"
+            | "run"
+            | "source"
+            | "source-env"
+            | "use"
+            | "where"
+    ) || (head == "plugin" && next == Some("use"))
+}
+
 /// A name of a variable stands where these take their first argument, never a value.
 pub(super) fn takes_variable_name(head: &str) -> bool {
     matches!(head, "let" | "mut" | "const")
@@ -260,8 +285,8 @@ mod tests {
     use std::process::Command;
 
     use super::{
-        COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, resolves_after_percent, takes_any_argument,
-        takes_row_condition,
+        COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, reads_before_assignment,
+        resolves_after_percent, takes_any_argument, takes_row_condition,
     };
 
     const COMMANDS_OF_NU: &str = r#"help commands | get name
@@ -281,6 +306,13 @@ mod tests {
         | where { |c| ($c.signatures | values | flatten
             | where parameter_type in [positional rest] | get syntax_shape) == [any] }
         | get name | sort | str join "\n""#;
+
+    const NAMES_OF_NU: &str = r#"help commands | get name | sort | str join "\n""#;
+
+    const BEFORE_ASSIGNMENT_OF_NU: &str = r#"help commands | get name
+        | where { |n| (ast $"($n) -h = 1" --json | get error | from json | default {}
+            | columns | get -o 0) != "AssignmentRequiresVar" }
+        | sort | str join "\n""#;
 
     /// `None` when nu cannot be run, so that a machine without it still runs every other test.
     /// Nu failing means the pipeline no longer asks what it meant to, which must not pass.
@@ -359,5 +391,22 @@ mod tests {
             .filter(|head| takes_any_argument(head))
             .collect();
         assert_eq!(with_any, names);
+    }
+
+    #[test]
+    fn keywords_read_before_assignment_are_what_nu_dispatches_on_first() {
+        let (Some(names), Some(before)) = (asked(NAMES_OF_NU), asked(BEFORE_ASSIGNMENT_OF_NU))
+        else {
+            return;
+        };
+        let read_before: Vec<&str> = names
+            .iter()
+            .map(String::as_str)
+            .filter(|name| match name.split_once(' ') {
+                Some((head, next)) => reads_before_assignment(head, Some(next)),
+                None => reads_before_assignment(name, None),
+            })
+            .collect();
+        assert_eq!(read_before, before);
     }
 }

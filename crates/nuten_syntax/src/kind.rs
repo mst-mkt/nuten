@@ -101,6 +101,7 @@ macro_rules! syntax_kinds {
                 /// Then any `Redirection`s.
                 /// Where nu reads a lone value, it stands bare in place of the call.
                 /// It holds an `Assignment`, a `Let`, or an `Alias` instead.
+                /// A keyword nu reads before an assignment operator heads a `Call` as written.
                 /// Each runs to the statement's end.
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,

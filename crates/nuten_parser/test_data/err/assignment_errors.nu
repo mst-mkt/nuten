@@ -18,4 +18,8 @@ let o> = = 1
 let x o> f o> g = 1
 $x = ls |
 
+let x = use -h = ls |
+
+ls
+let x = use -h = ls |;
 $x = a |

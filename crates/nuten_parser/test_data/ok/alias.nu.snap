@@ -567,11 +567,10 @@ Root@0..930
   Newline@718..719 "\n"
   Pipeline@719..729
     PipelineElement@719..729
-      Assignment@719..729
-        Call@719..727
-          Word@719..724 "alias"
-          Whitespace@724..725 " "
-          Word@725..727 "ac"
+      Call@719..729
+        Word@719..724 "alias"
+        Whitespace@724..725 " "
+        Word@725..727 "ac"
         Whitespace@727..728 " "
         Assign@728..729 "="
   Newline@729..730 "\n"
@@ -598,23 +597,14 @@ Root@0..930
   Newline@755..756 "\n"
   Pipeline@756..771
     PipelineElement@756..771
-      Assignment@756..771
-        Call@756..764
-          Word@756..761 "alias"
-          Whitespace@761..762 " "
-          Word@762..764 "ae"
+      Call@756..771
+        Word@756..761 "alias"
+        Whitespace@761..762 " "
+        Word@762..764 "ae"
         Whitespace@764..765 " "
         Assign@765..766 "="
         Whitespace@766..767 " "
-        Pipeline@767..771
-          PipelineElement@767..771
-            Subexpression@767..771
-              LParen@767..768 "("
-              Pipeline@768..770
-                PipelineElement@768..770
-                  Call@768..770
-                    Word@768..770 "ls"
-              RParen@770..771 ")"
+        Word@767..771 "(ls)"
   Newline@771..772 "\n"
   Pipeline@772..789
     PipelineElement@772..774
@@ -646,18 +636,14 @@ Root@0..930
   Newline@798..799 "\n"
   Pipeline@799..813
     PipelineElement@799..813
-      Assignment@799..813
-        Call@799..807
-          Word@799..804 "alias"
-          Whitespace@804..805 " "
-          Word@805..807 "ah"
+      Call@799..813
+        Word@799..804 "alias"
+        Whitespace@804..805 " "
+        Word@805..807 "ah"
         Whitespace@807..808 " "
         Assign@808..810 "+="
         Whitespace@810..811 " "
-        Pipeline@811..813
-          PipelineElement@811..813
-            Call@811..813
-              Word@811..813 "ls"
+        Word@811..813 "ls"
   Newline@813..814 "\n"
   Pipeline@814..826
     PipelineElement@814..819
@@ -729,19 +715,16 @@ Root@0..930
   Newline@895..896 "\n"
   Pipeline@896..914
     PipelineElement@896..914
-      Assignment@896..914
-        Call@896..910
-          Word@896..902 "export"
-          Whitespace@902..903 " "
-          Word@903..908 "alias"
-          Whitespace@908..909 " "
-          Word@909..910 "y"
+      Call@896..914
+        Word@896..902 "export"
+        Whitespace@902..903 " "
+        Word@903..908 "alias"
+        Whitespace@908..909 " "
+        Word@909..910 "y"
         Whitespace@910..911 " "
         Assign@911..912 "="
         Whitespace@912..913 " "
-        Pipeline@913..914
-          PipelineElement@913..914
-            Word@913..914 "1"
+        Word@913..914 "1"
   Newline@914..915 "\n"
   Pipeline@915..929
     PipelineElement@915..929

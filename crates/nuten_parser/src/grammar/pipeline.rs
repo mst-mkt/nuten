@@ -4,6 +4,7 @@ use super::{
     Shape,
     alias::{alias, alias_ahead},
     assignment::{Assigned, assigned_statements, assignment_ahead},
+    builtin,
     command::{Streams, arguments, command},
     declaration, ends_statement, is_pipe,
     var_type::var_type,
@@ -189,27 +190,44 @@ fn pipeline_element(
     let redirected = if first && alias_ahead(p) {
         alias(p, assigned);
         None
-    } else if assignment_ahead(p) {
-        if first && let Some((keyword, words)) = declaration(p) {
-            p.start(SyntaxKind::Let);
-            for _ in 0..words {
-                p.bump();
-            }
-            var_type(p, keyword);
-            arguments(p, Some(Streams::default()), Shape::VariableName, true);
-        } else {
-            p.start(SyntaxKind::Assignment);
-            command(p, heads_pipeline, true);
+    } else if !assignment_ahead(p) {
+        command(p, heads_pipeline, false)
+    } else if first && let Some((keyword, words)) = declaration(p) {
+        p.start(SyntaxKind::Let);
+        for _ in 0..words {
+            p.bump();
         }
-        p.bump();
-        assigned_statements(p);
+        var_type(p, keyword);
+        arguments(p, Some(Streams::default()), Shape::VariableName, true);
+        assignment_operator(p);
+        p.finish();
+        None
+    } else if first
+        && p.peek_text()
+            .is_some_and(|head| builtin::reads_before_assignment(head, p.nth_text(1)))
+    {
+        // Nu reads the syntax of the keyword, where the operator is only one more item.
+        // Nu accepts that only where the operator is a name, or where the rest is left unread.
+        // So the items stay as written.
+        p.start(SyntaxKind::Call);
+        rest_of_statement(p, assigned, Parser::bump);
         p.finish();
         None
     } else {
-        command(p, heads_pipeline, false)
+        p.start(SyntaxKind::Assignment);
+        command(p, heads_pipeline, true);
+        assignment_operator(p);
+        p.finish();
+        None
     };
     p.finish();
     redirected
+}
+
+/// The assignment operator ahead and the statements it takes.
+fn assignment_operator(p: &mut Parser<'_>) {
+    p.bump();
+    assigned_statements(p);
 }
 
 #[cfg(test)]

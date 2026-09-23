@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/assignment_errors.nu
 ---
-Root@0..219
+Root@0..268
   Pipeline@0..9
     PipelineElement@0..9
       Assignment@0..9
@@ -271,20 +271,73 @@ Root@0..219
             Pipe@206..207 "|"
   Newline@207..209 "\r\n"
   Newline@209..211 "\r\n"
-  Pipeline@211..219
-    PipelineElement@211..219
-      Assignment@211..219
-        Word@211..213 "$x"
-        Whitespace@213..214 " "
-        Assign@214..215 "="
-        Whitespace@215..216 " "
-        Pipeline@216..219
-          PipelineElement@216..217
-            Call@216..217
-              Word@216..217 "a"
-          Whitespace@217..218 " "
-          Error@218..219
-            Pipe@218..219 "|"
+  Pipeline@211..232
+    PipelineElement@211..232
+      Let@211..232
+        Word@211..214 "let"
+        Whitespace@214..215 " "
+        Word@215..216 "x"
+        Whitespace@216..217 " "
+        Assign@217..218 "="
+        Whitespace@218..219 " "
+        Pipeline@219..232
+          PipelineElement@219..232
+            Call@219..232
+              Word@219..222 "use"
+              Whitespace@222..223 " "
+              Word@223..225 "-h"
+              Whitespace@225..226 " "
+              Assign@226..227 "="
+              Whitespace@227..228 " "
+              Word@228..230 "ls"
+              Whitespace@230..231 " "
+              Error@231..232
+                Pipe@231..232 "|"
+  Newline@232..233 "\n"
+  Newline@233..234 "\n"
+  Pipeline@234..236
+    PipelineElement@234..236
+      Call@234..236
+        Word@234..236 "ls"
+  Newline@236..237 "\n"
+  Pipeline@237..258
+    PipelineElement@237..258
+      Let@237..258
+        Word@237..240 "let"
+        Whitespace@240..241 " "
+        Word@241..242 "x"
+        Whitespace@242..243 " "
+        Assign@243..244 "="
+        Whitespace@244..245 " "
+        Pipeline@245..258
+          PipelineElement@245..258
+            Call@245..258
+              Word@245..248 "use"
+              Whitespace@248..249 " "
+              Word@249..251 "-h"
+              Whitespace@251..252 " "
+              Assign@252..253 "="
+              Whitespace@253..254 " "
+              Word@254..256 "ls"
+              Whitespace@256..257 " "
+              Pipe@257..258 "|"
+  Error@258..259
+    Semicolon@258..259 ";"
+  Newline@259..260 "\n"
+  Pipeline@260..268
+    PipelineElement@260..268
+      Assignment@260..268
+        Word@260..262 "$x"
+        Whitespace@262..263 " "
+        Assign@263..264 "="
+        Whitespace@264..265 " "
+        Pipeline@265..268
+          PipelineElement@265..266
+            Call@265..266
+              Word@265..266 "a"
+          Whitespace@266..267 " "
+          Error@267..268
+            Pipe@267..268 "|"
 error 8..9 "|": PipeEndsAssignment
 error 19..20 "|": PipeEndsAssignment
 error 37..38 "|": PipeEndsAssignment
@@ -301,4 +354,6 @@ error 157..160 "o>|": OutPipe
 error 169..171 "o>": MissingRedirectionTarget
 error 189..191 "o>": MultipleRedirections
 error 206..207 "|": PipeEndsAssignment
-error 218..219 "|": PipeAtEof
+error 231..232 "|": PipeEndsAssignment
+error 258..259 ";": SemicolonAfterPipe
+error 267..268 "|": PipeAtEof
