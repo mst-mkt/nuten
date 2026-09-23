@@ -1,5 +1,6 @@
 //! Turns each node of the tree into document elements.
 
+mod alias;
 mod binary;
 mod block;
 mod container;
@@ -166,6 +167,7 @@ impl<'a> Formatter<'a> {
             Node::ListPattern(pattern) => self.container(pattern),
             Node::RecordPattern(pattern) => self.container(pattern),
             Node::Def(def) => self.def(def),
+            Node::Alias(alias) => self.alias(alias),
             Node::List(list) => self.container(list),
             Node::Record(record) => self.container(record),
             Node::RecordField(field) => self.field(field),
@@ -280,11 +282,11 @@ fn pipe_open(before: &[Child]) -> bool {
         .unwrap_or(false)
 }
 
-/// Whether the statement ends with a `|`.
-/// Statements never end with trivia, so the last child tells.
+/// Whether the statement ends with a `|`, even one inside the call an alias stands for.
+/// Statements never end with trivia, so the last token tells.
 fn ends_with_pipe(statement: &SyntaxNode) -> bool {
     statement
-        .last_child_or_token()
+        .last_token()
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
 }
 

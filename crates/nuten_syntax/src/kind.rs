@@ -100,7 +100,8 @@ macro_rules! syntax_kinds {
                 /// An element of a `Pipeline`: a `Call`, `ExternalCall`, or `MathExpression`.
                 /// Then any `Redirection`s.
                 /// Where nu reads a lone value, it stands bare in place of the call.
-                /// It holds an `Assignment` or a `Let` instead, which runs to the statement's end.
+                /// It holds an `Assignment`, a `Let`, or an `Alias` instead.
+                /// Each runs to the statement's end.
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,
                 /// A command name followed by its arguments.
@@ -165,6 +166,14 @@ macro_rules! syntax_kinds {
                 /// That word, not a `Call`, comes before the arguments.
                 /// A variable ending in `:` takes its type after it, up to the assignment operator.
                 Let,
+                /// An alias nu declares: `alias`, the name, `=`, then what the alias stands for.
+                /// Nu reads what follows `=` as one call to the statement's end.
+                /// It is a `Call` or an `ExternalCall`, with any `|` and redirection as arguments.
+                /// It holds the line breaks nu goes on past too.
+                /// A `|` or a redirection first stays a bare token, which nu reads as the head.
+                /// It is a keyword syntax, such as an `If`, where it holds no `|` or redirection.
+                /// Nu declares no alias where a value heads what follows `=`.
+                Alias,
                 /// A `Word` in `( )` read as a subexpression: `(`, the statements, and `)`.
                 /// Nu reads one wherever it takes a value, a `def` signature aside.
                 Subexpression,

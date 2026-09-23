@@ -2,6 +2,7 @@ use nuten_syntax::SyntaxKind;
 
 use super::{
     Shape,
+    alias::{alias, alias_ahead},
     assignment::{Assigned, assigned_statements, assignment_ahead},
     command::{Streams, arguments, command},
     ends_statement, is_pipe,
@@ -23,7 +24,7 @@ pub(super) fn pipeline(p: &mut Parser<'_>, assigned: Assigned) {
             SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
             kind if ends_statement(kind) => break,
             _ => {
-                element = pipeline_element(p, first, first && !piped);
+                element = pipeline_element(p, first, first && !piped, assigned);
                 first = false;
             },
         }
@@ -33,14 +34,7 @@ pub(super) fn pipeline(p: &mut Parser<'_>, assigned: Assigned) {
 
 fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, assigned: Assigned) {
     match kind {
-        SyntaxKind::Pipe if pipe_ends_file(p) => p.bump_error(ParseErrorKind::PipeAtEof),
-        SyntaxKind::Pipe if pipe_ends_assigned(p, assigned) => {
-            p.bump_error(ParseErrorKind::PipeEndsAssignment);
-        },
-        SyntaxKind::Pipe => {
-            p.bump();
-            line_end_continuation(p);
-        },
+        SyntaxKind::Pipe => plain_pipe(p, assigned),
         // Nu goes on to the next line only after a plain `|`.
         _ => match redirected {
             None => p.bump_error(ParseErrorKind::RedirectionAtHead),
@@ -49,6 +43,18 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, assig
             },
             Some(_) => p.bump(),
         },
+    }
+}
+
+/// The `|` ahead, and the line breaks nu goes on past after it.
+pub(super) fn plain_pipe(p: &mut Parser<'_>, assigned: Assigned) {
+    if pipe_ends_file(p) {
+        p.bump_error(ParseErrorKind::PipeAtEof);
+    } else if pipe_ends_assigned(p, assigned) {
+        p.bump_error(ParseErrorKind::PipeEndsAssignment);
+    } else {
+        p.bump();
+        line_end_continuation(p);
     }
 }
 
@@ -147,12 +153,22 @@ pub(super) fn bump_newlines(p: &mut Parser<'_>) {
     }
 }
 
-/// Returns the streams the element redirects; `None` when it has no command.
-/// `first` is whether it is the first element, which is where nu declares a variable.
+/// Returns the streams the element redirects.
+/// `None` when it has no command, or when it runs to the statement's end.
+/// `first` is whether it is the first element, which is where nu declares a variable or an alias.
 /// `heads_pipeline` is whether no `|` came before it either, which is where nu reads an attribute.
-fn pipeline_element(p: &mut Parser<'_>, first: bool, heads_pipeline: bool) -> Option<Streams> {
+/// `assigned` tells where the statement ends, as for the pipeline.
+fn pipeline_element(
+    p: &mut Parser<'_>,
+    first: bool,
+    heads_pipeline: bool,
+    assigned: Assigned,
+) -> Option<Streams> {
     p.start(SyntaxKind::PipelineElement);
-    let redirected = if assignment_ahead(p) {
+    let redirected = if first && alias_ahead(p) {
+        alias(p, assigned);
+        None
+    } else if assignment_ahead(p) {
         if first && let Some(keyword @ ("let" | "mut" | "const")) = p.peek_text() {
             p.start(SyntaxKind::Let);
             p.bump();
@@ -165,7 +181,6 @@ fn pipeline_element(p: &mut Parser<'_>, first: bool, heads_pipeline: bool) -> Op
         p.bump();
         assigned_statements(p);
         p.finish();
-        // No pipe follows what the assignment operator takes.
         None
     } else {
         command(p, heads_pipeline, false)

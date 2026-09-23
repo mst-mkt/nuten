@@ -25,18 +25,15 @@ Root@0..540
   Newline@49..50 "\n"
   Pipeline@50..68
     PipelineElement@50..68
-      Assignment@50..68
-        Call@50..60
-          Word@50..55 "alias"
-          Whitespace@55..56 " "
-          Word@56..60 "open"
+      Alias@50..68
+        Word@50..55 "alias"
+        Whitespace@55..56 " "
+        Word@56..60 "open"
         Whitespace@60..61 " "
         Assign@61..62 "="
         Whitespace@62..63 " "
-        Pipeline@63..68
-          PipelineElement@63..68
-            ExternalCall@63..68
-              Word@63..68 "^open"
+        ExternalCall@63..68
+          Word@63..68 "^open"
   Newline@68..69 "\n"
   Pipeline@69..77
     PipelineElement@69..77
@@ -47,18 +44,15 @@ Root@0..540
   Semicolon@77..78 ";"
   Pipeline@78..94
     PipelineElement@78..94
-      Assignment@78..94
-        Call@78..88
-          Word@78..83 "alias"
-          Whitespace@83..84 " "
-          String@84..88 "\"ls\""
+      Alias@78..94
+        Word@78..83 "alias"
+        Whitespace@83..84 " "
+        String@84..88 "\"ls\""
         Whitespace@88..89 " "
         Assign@89..90 "="
         Whitespace@90..91 " "
-        Pipeline@91..94
-          PipelineElement@91..94
-            ExternalCall@91..94
-              Word@91..94 "^ls"
+        ExternalCall@91..94
+          Word@91..94 "^ls"
   Newline@94..95 "\n"
   Pipeline@95..105
     PipelineElement@95..105
@@ -216,18 +210,15 @@ Root@0..540
   Newline@336..337 "\n"
   Pipeline@337..355
     PipelineElement@337..355
-      Assignment@337..355
-        Call@337..348
-          Word@337..342 "alias"
-          Whitespace@342..343 " "
-          Word@343..348 "catch"
+      Alias@337..355
+        Word@337..342 "alias"
+        Whitespace@342..343 " "
+        Word@343..348 "catch"
         Whitespace@348..349 " "
         Assign@349..350 "="
         Whitespace@350..351 " "
-        Pipeline@351..355
-          PipelineElement@351..355
-            Call@351..355
-              Word@351..355 "save"
+        Call@351..355
+          Word@351..355 "save"
   Newline@355..356 "\n"
   Pipeline@356..369
     PipelineElement@356..369

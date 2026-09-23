@@ -1,5 +1,6 @@
 //! Grammar rules of Nushell.
 
+mod alias;
 mod assignment;
 mod binary;
 mod block;

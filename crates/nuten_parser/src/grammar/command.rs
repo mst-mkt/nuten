@@ -239,7 +239,7 @@ fn unknown_operator(text: &str) -> Option<ParseErrorKind> {
 /// So is a range with a value other than a number.
 /// Nu reads it as an expression only where each value reads without an error.
 /// For a `$` or a `( )`, that depends on what is in scope.
-fn is_math_expression_like(text: &str) -> bool {
+pub(super) fn is_math_expression_like(text: &str) -> bool {
     matches!(text, "true" | "false" | "null" | "not")
         || text.starts_with("r#")
         || text.starts_with(['(', '{', '[', '$', '"', '\'', '-'])
@@ -254,7 +254,7 @@ fn is_math_expression_like(text: &str) -> bool {
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
 /// Nu reads a `@` as an attribute only where a pipeline starts.
 /// It reads the name after `export const` as `const` does, never as a value.
-fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
+pub(super) fn argument_shape(p: &Parser<'_>, heads_pipeline: bool) -> Shape {
     let Some(head) = p.peek_text() else {
         return Shape::UnknownArgument;
     };
@@ -300,8 +300,17 @@ fn command_shape(name: &str) -> Shape {
 }
 
 /// The head, then the arguments as `shape`.
-/// Nu reads the head as the name of a command, never as a value.
 fn call(p: &mut Parser<'_>, shape: Shape) {
+    start_call(p, shape);
+    while at_call_item(p) {
+        item(p, shape);
+    }
+    p.finish();
+}
+
+/// Starts the `Call`, or the `ExternalCall` where `shape` is external, with the head in it.
+/// Nu reads the head as the name of a command, never as a value.
+pub(super) fn start_call(p: &mut Parser<'_>, shape: Shape) {
     p.start(if shape == Shape::ExternalArgument {
         SyntaxKind::ExternalCall
     } else {
@@ -311,10 +320,6 @@ fn call(p: &mut Parser<'_>, shape: Shape) {
         Some(kind) => p.bump_error(kind),
         None => p.bump(),
     }
-    while at_call_item(p) {
-        item(p, shape);
-    }
-    p.finish();
 }
 
 /// Items as `shape` and `Redirection`s up to the end of the element.
