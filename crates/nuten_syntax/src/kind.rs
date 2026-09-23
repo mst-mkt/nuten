@@ -103,6 +103,7 @@ macro_rules! syntax_kinds {
                 /// It holds an `Assignment`, a `Let`, or an `Alias` instead.
                 /// A keyword nu reads before an assignment operator heads a `Call` as written.
                 /// Each runs to the statement's end.
+                /// It holds an `AttributeBlock` in place of the call too.
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,
                 /// A command name followed by its arguments.
@@ -243,6 +244,11 @@ macro_rules! syntax_kinds {
                 /// It holds the line breaks before a line-start `|`, which nu joins to the line.
                 /// The arguments of an attribute nu does not have are those of an unknown command.
                 Attribute,
+                /// `Attribute`s, each with the line break or `;` that ends it after it.
+                /// Then the `Def` they are for.
+                /// Where nu reads no `Def`, a `Call` of `def` or `extern` stands there instead.
+                /// Nu reads one where the attributes head a statement of one element.
+                AttributeBlock,
                 /// A `def` or an `extern` that nu reads as one.
                 /// `export` if there, the keyword, any flags, the name, and a `Signature`.
                 /// Then the `:` and the input and output types if there.

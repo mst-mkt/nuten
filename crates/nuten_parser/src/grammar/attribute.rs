@@ -6,8 +6,9 @@ use super::{
     Shape,
     assignment::{Assigned, is_assignment_operator},
     at_call_item, builtin,
-    command::{Streams, argument_shape, arguments, start_call},
+    command::{Streams, argument_shape, arguments, call, start_call},
     ends_statement, is_file_redirection, is_pipe, item,
+    keyword::keyword,
     pipeline::{Ended, bump_newlines, line_start, next_line_starts_with_pipe, pipe_ends_file},
 };
 use crate::{ParseErrorKind, lexer::Token, parser::Parser};
@@ -28,11 +29,53 @@ fn heads_attribute((kind, text): (SyntaxKind, &str)) -> bool {
 /// Nu reads the attributes as such only where they head a statement of one element.
 /// Elsewhere it reads the whole element as one call, which goes on past what ends each attribute.
 pub(super) fn attributed(p: &mut Parser<'_>, heads_pipeline: bool, assigned: Assigned) -> Ended {
-    if !heads_pipeline || piped(lite_tokens(p), assigned) {
+    if !heads_pipeline {
         return attributed_call(p, assigned);
+    }
+    let past = past_attributes(lite_tokens(p), assigned);
+    if past.piped {
+        return attributed_call(p, assigned);
+    }
+    if past.defines {
+        return attribute_block(p, assigned);
     }
     attribute(p);
     Ended::default()
+}
+
+/// The attributes ahead, with the `;` or line break between each two.
+fn attributes(p: &mut Parser<'_>, assigned: Assigned) {
+    loop {
+        let last = !attribute_follows(p, assigned);
+        attribute(p);
+        if last {
+            break;
+        }
+        p.bump();
+    }
+}
+
+/// Whether another attribute of the element follows the one ahead.
+fn attribute_follows(p: &Parser<'_>, assigned: Assigned) -> bool {
+    let mut tokens = lite_tokens(p).skip_while(|&(kind, _)| !ends_statement(kind));
+    tokens.next().is_some_and(|(end, _)| !assigned.ends_at(end))
+        && tokens.next().is_some_and(heads_attribute)
+}
+
+/// The `AttributeBlock` ahead, where a `def` or an `extern` follows the attributes.
+fn attribute_block(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
+    p.start(SyntaxKind::AttributeBlock);
+    attributes(p, assigned);
+    p.bump();
+    let shape = argument_shape(p);
+    if !keyword(p) {
+        call(p, shape);
+    }
+    p.finish();
+    Ended {
+        redirected: arguments(p, Some(Streams::default()), shape, false),
+        ends_with_attribute: false,
+    }
 }
 
 /// The `Attribute` ahead.
@@ -157,31 +200,51 @@ fn lines_start_with_pipe<'a>(lines: impl Iterator<Item = (Token, &'a str)>) -> b
     line_start(&mut kinds) == Some(SyntaxKind::Pipe)
 }
 
-/// Whether a pipe follows the element that `tokens` start with, in the same pipeline.
+/// What nu's lite parser takes past the attributes of an element.
+#[derive(Default)]
+struct PastAttributes {
+    /// Whether the command is a `def` or an `extern`, `export` or not.
+    defines: bool,
+    /// Whether a pipe follows the element in the same pipeline.
+    piped: bool,
+}
+
+/// What follows the attributes that `tokens` start with.
 /// The attributes run to a `;` or a line break, and more of them may follow.
 /// Past them, an assignment operator takes the rest of the statement, a `|` too.
-fn piped<'a>(
+fn past_attributes<'a>(
     tokens: impl Iterator<Item = (SyntaxKind, &'a str)> + Clone,
     assigned: Assigned,
-) -> bool {
+) -> PastAttributes {
     let mut tokens = tokens.peekable();
     loop {
         if tokens
             .find(|&(kind, _)| ends_statement(kind))
             .is_none_or(|(end, _)| assigned.ends_at(end))
         {
-            return false;
+            return PastAttributes::default();
         }
         if tokens.next_if(|&token| heads_attribute(token)).is_none() {
             break;
         }
     }
+    let mut head = tokens
+        .clone()
+        .map_while(|(kind, text)| kind.is_item().then_some(text));
+    let defines = matches!(
+        (head.next(), head.next()),
+        (Some("def" | "extern"), _) | (Some("export"), Some("def" | "extern"))
+    );
     let kinds = tokens.map(|(kind, _)| kind);
-    iter::once(None)
+    let piped = iter::once(None)
         .chain(kinds.clone().map(Some))
         .zip(kinds)
         .find(|&(prev, kind)| {
             is_pipe(kind) || ends_statement(kind) || is_assignment_operator(kind, prev)
         })
-        .is_some_and(|(_, kind)| is_pipe(kind))
+        .is_some_and(|(_, kind)| is_pipe(kind));
+    PastAttributes {
+        defines,
+        piped,
+    }
 }

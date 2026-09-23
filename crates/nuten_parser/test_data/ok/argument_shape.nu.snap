@@ -231,53 +231,52 @@ Root@0..530
         Whitespace@374..375 " "
         Word@375..387 "{a: 1, b: 2}"
   Newline@387..388 "\n"
-  Pipeline@388..416
-    PipelineElement@388..416
-      Attribute@388..416
-        Word@388..396 "@example"
-        Whitespace@396..397 " "
-        Record@397..404
-          LBrace@397..398 "{"
-          RecordField@398..403
-            Word@398..399 "a"
-            Colon@399..400 ":"
-            Whitespace@400..402 "  "
-            Word@402..403 "1"
-          RBrace@403..404 "}"
-        Whitespace@404..405 " "
-        Block@405..416
-          LBrace@405..406 "{"
-          Whitespace@406..408 "  "
-          Pipeline@408..413
-            PipelineElement@408..413
-              MathExpression@408..413
-                Word@408..409 "1"
-                Whitespace@409..410 " "
-                Operator@410..411 "+"
-                Whitespace@411..412 " "
-                Word@412..413 "1"
-          Whitespace@413..415 "  "
-          RBrace@415..416 "}"
-  Newline@416..417 "\n"
-  Pipeline@417..434
-    PipelineElement@417..434
-      Def@417..434
-        Word@417..420 "def"
-        Whitespace@420..421 " "
-        Word@421..425 "demo"
-        Whitespace@425..426 " "
-        Signature@426..428
-          LBracket@426..427 "["
-          RBracket@427..428 "]"
-        Whitespace@428..429 " "
-        Block@429..434
-          LBrace@429..430 "{"
-          Whitespace@430..431 " "
-          Pipeline@431..432
-            PipelineElement@431..432
-              Word@431..432 "2"
-          Whitespace@432..433 " "
-          RBrace@433..434 "}"
+  Pipeline@388..434
+    PipelineElement@388..434
+      AttributeBlock@388..434
+        Attribute@388..416
+          Word@388..396 "@example"
+          Whitespace@396..397 " "
+          Record@397..404
+            LBrace@397..398 "{"
+            RecordField@398..403
+              Word@398..399 "a"
+              Colon@399..400 ":"
+              Whitespace@400..402 "  "
+              Word@402..403 "1"
+            RBrace@403..404 "}"
+          Whitespace@404..405 " "
+          Block@405..416
+            LBrace@405..406 "{"
+            Whitespace@406..408 "  "
+            Pipeline@408..413
+              PipelineElement@408..413
+                MathExpression@408..413
+                  Word@408..409 "1"
+                  Whitespace@409..410 " "
+                  Operator@410..411 "+"
+                  Whitespace@411..412 " "
+                  Word@412..413 "1"
+            Whitespace@413..415 "  "
+            RBrace@415..416 "}"
+        Newline@416..417 "\n"
+        Def@417..434
+          Word@417..420 "def"
+          Whitespace@420..421 " "
+          Word@421..425 "demo"
+          Whitespace@425..426 " "
+          Signature@426..428
+            LBracket@426..427 "["
+            RBracket@427..428 "]"
+          Whitespace@428..429 " "
+          Block@429..434
+            LBrace@429..430 "{"
+            Whitespace@430..431 " "
+            Pipeline@431..432
+              PipelineElement@431..432
+                Word@431..432 "2"
+            Whitespace@432..433 " "
+            RBrace@433..434 "}"
   Newline@434..435 "\n"
   Pipeline@435..447
     PipelineElement@435..447

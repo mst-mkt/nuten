@@ -1,0 +1,44 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute_crlf.nu
+---
+Root@0..45
+  Pipeline@0..17
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Newline@4..6 "\r\n"
+    PipelineElement@6..10
+      Call@6..10
+        Word@6..8 "@a"
+        Whitespace@8..9 " "
+        Word@9..10 "x"
+    Newline@10..12 "\r\n"
+    Newline@12..14 "\r\n"
+    Pipe@14..15 "|"
+    Whitespace@15..16 " "
+    PipelineElement@16..17
+      Call@16..17
+        Word@16..17 "y"
+  Newline@17..19 "\r\n"
+  Pipeline@19..43
+    PipelineElement@19..43
+      AttributeBlock@19..43
+        Attribute@19..30
+          Word@19..28 "@category"
+          Whitespace@28..29 " "
+          Word@29..30 "x"
+        Newline@30..32 "\r\n"
+        Def@32..43
+          Word@32..35 "def"
+          Whitespace@35..36 " "
+          Word@36..37 "f"
+          Whitespace@37..38 " "
+          Signature@38..40
+            LBracket@38..39 "["
+            RBracket@39..40 "]"
+          Whitespace@40..41 " "
+          Word@41..43 "{}"
+  Newline@43..45 "\r\n"

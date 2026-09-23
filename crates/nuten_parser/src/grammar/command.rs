@@ -315,7 +315,7 @@ fn command_shape(name: &str) -> Shape {
 }
 
 /// The head, then the arguments as `shape`.
-fn call(p: &mut Parser<'_>, shape: Shape) {
+pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
     start_call(p, shape);
     while at_call_item(p) {
         item(p, shape);

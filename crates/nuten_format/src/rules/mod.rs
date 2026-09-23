@@ -161,7 +161,8 @@ impl<'a> Formatter<'a> {
             | Node::Redirection(_)
             | Node::Match(_)
             | Node::Use(_)
-            | Node::Where(_) => self.spaced(node.syntax()),
+            | Node::Where(_)
+            | Node::AttributeBlock(_) => self.spaced(node.syntax()),
             Node::Attribute(attribute) => self.attribute(attribute),
             Node::CellPath(_) | Node::Range(_) | Node::Spread(_) => self.touching(node.syntax()),
             Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {
