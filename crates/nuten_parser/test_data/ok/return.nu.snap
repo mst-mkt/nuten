@@ -1,0 +1,148 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/return.nu
+---
+Root@0..152
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..13
+        Word@0..6 "return"
+        Whitespace@6..7 " "
+        List@7..13
+          LBracket@7..8 "["
+          Word@8..9 "1"
+          Comma@9..10 ","
+          Whitespace@10..11 " "
+          Word@11..12 "2"
+          RBracket@12..13 "]"
+  Newline@13..14 "\n"
+  Pipeline@14..27
+    PipelineElement@14..27
+      Call@14..27
+        Word@14..20 "return"
+        Whitespace@20..21 " "
+        Record@21..27
+          LBrace@21..22 "{"
+          RecordField@22..26
+            Word@22..23 "a"
+            Colon@23..24 ":"
+            Whitespace@24..25 " "
+            Word@25..26 "1"
+          RBrace@26..27 "}"
+  Newline@27..28 "\n"
+  Pipeline@28..42
+    PipelineElement@28..42
+      Call@28..42
+        Word@28..34 "return"
+        Whitespace@34..35 " "
+        Record@35..42
+          LBrace@35..36 "{"
+          Spread@36..41
+            SpreadOperator@36..39 "..."
+            Word@39..41 "$x"
+          RBrace@41..42 "}"
+  Newline@42..43 "\n"
+  Pipeline@43..56
+    PipelineElement@43..56
+      Call@43..56
+        Word@43..49 "return"
+        Whitespace@49..50 " "
+        Block@50..56
+          LBrace@50..51 "{"
+          ClosureParams@51..53
+            PipePipe@51..53 "||"
+          Whitespace@53..54 " "
+          Pipeline@54..55
+            PipelineElement@54..55
+              Word@54..55 "1"
+          RBrace@55..56 "}"
+  Newline@56..57 "\n"
+  Pipeline@57..74
+    PipelineElement@57..74
+      Call@57..74
+        Word@57..63 "return"
+        Whitespace@63..64 " "
+        Table@64..74
+          LBracket@64..65 "["
+          List@65..68
+            LBracket@65..66 "["
+            Word@66..67 "a"
+            RBracket@67..68 "]"
+          Semicolon@68..69 ";"
+          Whitespace@69..70 " "
+          List@70..73
+            LBracket@70..71 "["
+            Word@71..72 "1"
+            RBracket@72..73 "]"
+          RBracket@73..74 "]"
+  Newline@74..75 "\n"
+  Pipeline@75..88
+    PipelineElement@75..88
+      Call@75..88
+        Word@75..81 "return"
+        Whitespace@81..82 " "
+        Binary@82..88
+          Word@82..84 "0x"
+          LBracket@84..85 "["
+          Word@85..87 "ff"
+          RBracket@87..88 "]"
+  Newline@88..89 "\n"
+  Pipeline@89..100
+    PipelineElement@89..100
+      Call@89..100
+        Word@89..95 "return"
+        Whitespace@95..96 " "
+        Range@96..100
+          Word@96..97 "1"
+          RangeOperator@97..99 ".."
+          Word@99..100 "3"
+  Newline@100..101 "\n"
+  Pipeline@101..107
+    PipelineElement@101..107
+      Call@101..107
+        Word@101..107 "return"
+  Newline@107..108 "\n"
+  Pipeline@108..134
+    PipelineElement@108..134
+      Def@108..134
+        Word@108..111 "def"
+        Whitespace@111..112 " "
+        Word@112..113 "f"
+        Whitespace@113..114 " "
+        Signature@114..116
+          LBracket@114..115 "["
+          RBracket@115..116 "]"
+        Whitespace@116..117 " "
+        Block@117..134
+          LBrace@117..118 "{"
+          Whitespace@118..119 " "
+          Pipeline@119..132
+            PipelineElement@119..132
+              Call@119..132
+                Word@119..125 "return"
+                Whitespace@125..126 " "
+                List@126..132
+                  LBracket@126..127 "["
+                  Word@127..128 "1"
+                  Comma@128..129 ","
+                  Whitespace@129..130 " "
+                  Word@130..131 "2"
+                  RBracket@131..132 "]"
+          Whitespace@132..133 " "
+          RBrace@133..134 "}"
+  Newline@134..135 "\n"
+  Pipeline@135..151
+    PipelineElement@135..151
+      Call@135..151
+        Word@135..141 "return"
+        Whitespace@141..142 " "
+        Word@142..144 "-h"
+        Whitespace@144..145 " "
+        List@145..151
+          LBracket@145..146 "["
+          Word@146..147 "1"
+          Comma@147..148 ","
+          Whitespace@148..149 " "
+          Word@149..150 "2"
+          RBracket@150..151 "]"
+  Newline@151..152 "\n"

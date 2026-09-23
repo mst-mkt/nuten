@@ -15,6 +15,12 @@ pub(super) fn takes_row_condition(head: &str) -> bool {
     matches!(head, "all" | "any" | "where")
 }
 
+/// Nu takes any value for the argument of these.
+/// Unlike a command, a keyword cannot be defined again, so its signature is known here.
+pub(super) fn takes_any_argument(head: &str) -> bool {
+    head == "return"
+}
+
 /// A name of a variable stands where these take their first argument, never a value.
 pub(super) fn takes_variable_name(head: &str) -> bool {
     matches!(head, "let" | "mut" | "const")
@@ -254,7 +260,8 @@ mod tests {
     use std::process::Command;
 
     use super::{
-        COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, resolves_after_percent, takes_row_condition,
+        COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, resolves_after_percent, takes_any_argument,
+        takes_row_condition,
     };
 
     const COMMANDS_OF_NU: &str = r#"help commands | get name
@@ -268,6 +275,11 @@ mod tests {
     const ROW_CONDITIONS_OF_NU: &str = r#"scope commands
         | where { |c| $c.signatures | values | flatten
             | any { |p| ($p.syntax_shape | default "" | into string) =~ "condition" } }
+        | get name | sort | str join "\n""#;
+
+    const ANY_ARGUMENT_OF_NU: &str = r#"scope commands | where type == keyword
+        | where { |c| ($c.signatures | values | flatten
+            | where parameter_type in [positional rest] | get syntax_shape) == [any] }
         | get name | sort | str join "\n""#;
 
     /// `None` when nu cannot be run, so that a machine without it still runs every other test.
@@ -334,5 +346,18 @@ mod tests {
             .filter(|head| takes_row_condition(head))
             .collect();
         assert_eq!(with_condition, names);
+    }
+
+    #[test]
+    fn keywords_taking_any_argument_are_what_nu_declares() {
+        let Some(names) = asked(ANY_ARGUMENT_OF_NU) else {
+            return;
+        };
+        let with_any: Vec<&str> = COMMANDS
+            .iter()
+            .copied()
+            .filter(|head| takes_any_argument(head))
+            .collect();
+        assert_eq!(with_any, names);
     }
 }
