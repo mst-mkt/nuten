@@ -93,6 +93,9 @@ pub(crate) enum Mode {
     RangeFrom,
     /// The inside of the `[ ]` of a binary, as in `0x[ff 00]`.
     Binary,
+    /// The inside of the `{ }` of a record pattern, as in `{a: $x}`.
+    /// Unlike in a record, nu lexes what follows a `:` with `:` special too.
+    RecordPattern,
 }
 
 impl Mode {
@@ -111,6 +114,7 @@ impl Mode {
         Mode::CellPath,
         Mode::RangeFrom,
         Mode::Binary,
+        Mode::RecordPattern,
     ];
 
     /// Bytes that end an item, on top of whitespace, `|`, and `;`.
@@ -149,6 +153,7 @@ impl Mode {
                 (b'!', SyntaxKind::Bang),
             ],
             Mode::Binary => &[(b',', SyntaxKind::Comma)],
+            Mode::RecordPattern => &[(b':', SyntaxKind::Colon), (b',', SyntaxKind::Comma)],
         }
     }
 

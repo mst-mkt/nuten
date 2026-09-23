@@ -89,6 +89,7 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         // Unlike there, it sets `skip_comment`.
         Mode::RangeFrom => &[Whitespace, Comment],
         Mode::Binary => &[Whitespace, Newline, Comment, Comma],
+        Mode::RecordPattern => &[Whitespace, Newline, Comment, Comma],
         Mode::Signature | Mode::IoTypes | Mode::TypeParams | Mode::MatchArms => {
             unimplemented!("how nu splits in {mode:?} is not recorded")
         },
@@ -677,6 +678,32 @@ fn binary_splits_match_nu() {
     }
 }
 
+/// How nu 0.115.1 splits the inside of the `{ }` of a record pattern.
+const NU_RECORD_PATTERN_SPLITS: &[(&str, &[&str])] = &[
+    ("a: 1, $b", &["a", ":", "1", "$b"]),
+    ("a:b:c", &["a", ":", "b", ":", "c"]),
+    (r#""a b": 1"#, &[r#""a b""#, ":", "1"]),
+    ("a # c\n: 1", &["a", ":", "1"]),
+    ("a,#c\n:1", &["a", ":", "1"]),
+    ("a:\r\nb", &["a", ":", "b"]),
+    ("a:{b: 1}", &["a", ":", "{b: 1}"]),
+    ("a: [1, 2]", &["a", ":", "[1, 2]"]),
+    ("a:b=c", &["a", ":", "b=c"]),
+    ("a;b", &["a", ";", "b"]),
+    ("a|b", &["a", "|", "b"]),
+    ("a = b", &["a", "=", "b"]),
+    ("a:#b", &["a", ":"]),
+    ("a::b", &["a", ":", ":", "b"]),
+    ("$a:1", &["$a", ":", "1"]),
+];
+
+#[test]
+fn record_pattern_splits_match_nu() {
+    for &(src, expected) in NU_RECORD_PATTERN_SPLITS {
+        assert_eq!(split_in(src, Mode::RecordPattern), expected, "{src:?}");
+    }
+}
+
 #[test]
 fn angle_brackets_nest_in_a_var_type() {
     for (src, error) in [
@@ -707,6 +734,7 @@ fn angle_brackets_nest_in_a_var_type() {
         Mode::CellPath,
         Mode::RangeFrom,
         Mode::Binary,
+        Mode::RecordPattern,
     ] {
         assert_eq!(lexed_in("a<b", mode), [(Word, "a<b")], "{mode:?}");
     }
