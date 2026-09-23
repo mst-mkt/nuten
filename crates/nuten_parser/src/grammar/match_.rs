@@ -137,13 +137,10 @@ fn patterns(p: &mut Parser<'_>) {
 }
 
 /// The guard ahead, up to `=>`, which nu reads as an expression.
-/// It stays as it is where it starts with `if` or `match`, which nu reads as a call there.
-/// So it does where it holds a `|`, which nu rejects as an operator.
+/// It stays as it is where it holds a `|`, which nu rejects as an operator.
 fn guard(p: &mut Parser<'_>) {
     let tokens = arm_tokens(p);
-    if matches!(tokens.first(), Some((_, "if" | "match")))
-        || tokens.iter().any(|&(kind, _)| kind == SyntaxKind::Pipe)
-    {
+    if tokens.iter().any(|&(kind, _)| kind == SyntaxKind::Pipe) {
         return;
     }
     let arrow = p

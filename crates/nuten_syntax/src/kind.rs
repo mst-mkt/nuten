@@ -145,8 +145,8 @@ macro_rules! syntax_kinds {
                 MatchArms,
                 /// One arm: its patterns with `|` between them, then `if` and the guard if there.
                 /// A pattern is a variable, `_`, a `ListPattern`, a `RecordPattern`, or a value.
-                /// The guard is an expression, as what heads a statement is.
-                /// A guard that starts with `if` or `match`, or holds a `|`, stays as it is lexed.
+                /// The guard is an expression, as the condition of an `If` is past its flags.
+                /// A guard that holds a `|` stays as it is lexed.
                 /// So does what comes before `=>` where nu rejects it.
                 /// Then `=>` and the one item nu takes as what the arm does.
                 MatchArm,

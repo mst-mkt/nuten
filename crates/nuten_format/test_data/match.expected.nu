@@ -84,3 +84,14 @@ match 1 {
 match 1 {
     _ => [1 2]
 }
+match 1 {
+    _ if if true { true } else { false } => 1
+}
+match 1 {
+    _ if match 1 {
+        _ => true
+    } => 1
+}
+match 1 {
+    _ if match ls $a => 1
+}

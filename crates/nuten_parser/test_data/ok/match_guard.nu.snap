@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/match_guard.nu
 ---
-Root@0..362
+Root@0..396
   Pipeline@0..81
     PipelineElement@0..81
       Match@0..81
@@ -119,15 +119,26 @@ Root@0..362
             Whitespace@138..139 " "
             Word@139..141 "if"
             Whitespace@141..142 " "
-            Word@142..144 "if"
-            Whitespace@144..145 " "
-            Word@145..149 "true"
-            Whitespace@149..150 " "
-            Word@150..153 "{1}"
-            Whitespace@153..154 " "
-            Word@154..158 "else"
-            Whitespace@158..159 " "
-            Word@159..162 "{2}"
+            If@142..162
+              Word@142..144 "if"
+              Whitespace@144..145 " "
+              Word@145..149 "true"
+              Whitespace@149..150 " "
+              Block@150..153
+                LBrace@150..151 "{"
+                Pipeline@151..152
+                  PipelineElement@151..152
+                    Word@151..152 "1"
+                RBrace@152..153 "}"
+              Whitespace@153..154 " "
+              Word@154..158 "else"
+              Whitespace@158..159 " "
+              Block@159..162
+                LBrace@159..160 "{"
+                Pipeline@160..161
+                  PipelineElement@160..161
+                    Word@160..161 "2"
+                RBrace@161..162 "}"
             Whitespace@162..163 " "
             FatArrow@163..165 "=>"
             Whitespace@165..166 " "
@@ -250,11 +261,22 @@ Root@0..362
             Whitespace@290..291 " "
             Word@291..293 "if"
             Whitespace@293..294 " "
-            Word@294..299 "match"
-            Whitespace@299..300 " "
-            Word@300..302 "$y"
-            Whitespace@302..303 " "
-            Word@303..316 "{ _ => true }"
+            Match@294..316
+              Word@294..299 "match"
+              Whitespace@299..300 " "
+              Word@300..302 "$y"
+              Whitespace@302..303 " "
+              MatchArms@303..316
+                LBrace@303..304 "{"
+                Whitespace@304..305 " "
+                MatchArm@305..314
+                  Word@305..306 "_"
+                  Whitespace@306..307 " "
+                  FatArrow@307..309 "=>"
+                  Whitespace@309..310 " "
+                  Word@310..314 "true"
+                Whitespace@314..315 " "
+                RBrace@315..316 "}"
             Whitespace@316..317 " "
             FatArrow@317..319 "=>"
             Whitespace@319..320 " "
@@ -298,3 +320,30 @@ Root@0..362
           Whitespace@359..360 " "
           RBrace@360..361 "}"
   Newline@361..362 "\n"
+  Pipeline@362..395
+    PipelineElement@362..395
+      Match@362..395
+        Word@362..367 "match"
+        Whitespace@367..368 " "
+        Word@368..369 "1"
+        Whitespace@369..370 " "
+        MatchArms@370..395
+          LBrace@370..371 "{"
+          Whitespace@371..372 " "
+          MatchArm@372..393
+            Word@372..373 "_"
+            Whitespace@373..374 " "
+            Word@374..376 "if"
+            Whitespace@376..377 " "
+            Word@377..382 "match"
+            Whitespace@382..383 " "
+            Word@383..385 "ls"
+            Whitespace@385..386 " "
+            Word@386..388 "$a"
+            Whitespace@388..389 " "
+            FatArrow@389..391 "=>"
+            Whitespace@391..392 " "
+            Word@392..393 "1"
+          Whitespace@393..394 " "
+          RBrace@394..395 "}"
+  Newline@395..396 "\n"
