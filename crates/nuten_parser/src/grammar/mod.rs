@@ -267,6 +267,19 @@ fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     }
 }
 
+/// How many of `items` nu reads as flags: those before the first item that is not a flag.
+/// Nu reads no flag past a `--`.
+fn leading_flags(items: &[&str]) -> usize {
+    let end = items
+        .iter()
+        .position(|item| !is_flag(item))
+        .unwrap_or(items.len());
+    items[..end]
+        .iter()
+        .position(|&item| item == "--")
+        .map_or(end, |at| at + 1)
+}
+
 fn ends_statement(kind: SyntaxKind) -> bool {
     matches!(kind, SyntaxKind::Newline | SyntaxKind::Semicolon)
 }

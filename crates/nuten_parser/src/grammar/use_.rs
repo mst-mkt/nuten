@@ -1,26 +1,20 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, at_call_item, call_items, is_flag, item,
+    Shape, at_call_item, call_items, item, leading_flags,
     spread::{Target, is_spread, spread},
 };
 use crate::parser::Parser;
 
 /// The `Use` ahead, when the call takes an item past `use`.
-/// Nu reads no flag past a `--`.
 pub(super) fn use_(p: &mut Parser<'_>) -> bool {
-    if call_items(p).len() < 2 {
+    let items = call_items(p);
+    if items.len() < 2 {
         return false;
     }
     p.start(SyntaxKind::Use);
-    p.bump();
-    while at_call_item(p)
-        && let Some(flag) = p.peek_text().filter(|text| is_flag(text))
-    {
+    for _ in 0..=leading_flags(&items[1..]) {
         p.bump();
-        if flag == "--" {
-            break;
-        }
     }
     if at_call_item(p) {
         item(p, Shape::KnownArgument);
