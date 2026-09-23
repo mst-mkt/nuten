@@ -6,7 +6,7 @@ use super::{
     ends_call, ends_statement, item,
     keyword::keyword,
     keyword_words,
-    pipeline::{bump_newlines, next_line_starts_with_pipe, plain_pipe},
+    pipeline::{bump_newlines, next_line_starts_with_pipe, rest_of_statement},
 };
 use crate::parser::Parser;
 
@@ -38,8 +38,6 @@ pub(super) fn alias(p: &mut Parser<'_>, assigned: Assigned) {
 }
 
 /// What the alias stands for, as nu's `parse_call` reads the rest of the statement.
-/// Nu has taken every token up to the statement's end, so a `|` or a redirection is an argument.
-/// So is `||`, which nu rejects only where it splits a pipeline.
 fn replacement(p: &mut Parser<'_>, assigned: Assigned) {
     // Nu's lexer joins a line that starts with `|` to the line before it.
     if p.peek() == Some(SyntaxKind::Newline) {
@@ -57,15 +55,7 @@ fn replacement(p: &mut Parser<'_>, assigned: Assigned) {
     } else {
         p.start(SyntaxKind::Call);
     }
-    while let Some(kind) = p.peek() {
-        match kind {
-            SyntaxKind::Pipe => plain_pipe(p, assigned),
-            SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
-            kind if ends_statement(kind) => break,
-            kind if kind.is_item() => item(p, shape),
-            _ => p.bump(),
-        }
-    }
+    rest_of_statement(p, assigned, |p| item(p, shape));
     p.finish();
 }
 

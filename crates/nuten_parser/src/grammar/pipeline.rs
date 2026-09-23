@@ -147,6 +147,27 @@ fn line_start(lines: &mut impl Iterator<Item = SyntaxKind>) -> Option<SyntaxKind
     first
 }
 
+/// The tokens ahead up to the statement's end, each item read by `read_item`.
+/// `assigned` tells where the statement ends, as for a pipeline.
+/// After an assignment operator, nu's lite parser takes them all into one call.
+/// So a `|` or a redirection is an argument.
+/// So is `||`, which nu rejects only where it splits a pipeline.
+pub(super) fn rest_of_statement<'a>(
+    p: &mut Parser<'a>,
+    assigned: Assigned,
+    mut read_item: impl FnMut(&mut Parser<'a>),
+) {
+    while let Some(kind) = p.peek() {
+        match kind {
+            SyntaxKind::Pipe => plain_pipe(p, assigned),
+            SyntaxKind::Newline if next_line_starts_with_pipe(p) => bump_newlines(p),
+            kind if ends_statement(kind) => break,
+            kind if kind.is_item() => read_item(p),
+            _ => p.bump(),
+        }
+    }
+}
+
 pub(super) fn bump_newlines(p: &mut Parser<'_>) {
     while p.peek() == Some(SyntaxKind::Newline) {
         p.bump();
