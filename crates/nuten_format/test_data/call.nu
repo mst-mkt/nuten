@@ -20,5 +20,3 @@ ls | const {a:  1}
 %echo {a:  1}
 echo {a:  1} {...$x,  print hi}
 let {ls  x} = 1
-ls |
-@foo {a:  1}

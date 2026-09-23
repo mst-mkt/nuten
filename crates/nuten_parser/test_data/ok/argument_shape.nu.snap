@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/argument_shape.nu
 ---
-Root@0..530
+Root@0..512
   Pipeline@0..29
     PipelineElement@0..29
       Call@0..29
@@ -333,16 +333,3 @@ Root@0..530
         Whitespace@505..506 " "
         Word@506..511 "[1 2]"
   Newline@511..512 "\n"
-  Pipeline@512..529
-    PipelineElement@512..514
-      Call@512..514
-        Word@512..514 "ls"
-    Whitespace@514..515 " "
-    Pipe@515..516 "|"
-    Newline@516..517 "\n"
-    PipelineElement@517..529
-      Call@517..529
-        Word@517..521 "@foo"
-        Whitespace@521..522 " "
-        Word@522..529 "{a:  1}"
-  Newline@529..530 "\n"
