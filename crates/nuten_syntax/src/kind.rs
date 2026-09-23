@@ -112,6 +112,8 @@ macro_rules! syntax_kinds {
                 /// A term, then an `Operator` and a term while the element lasts.
                 /// A term is a value after the `not`s that take it, which are `Operator`s too.
                 /// An item where nu takes an operator but reads none stays as it is written.
+                /// An `if` or a `match` as a term is the keyword syntax over the rest of the items.
+                /// The rest stays as written where it holds a flag, which the syntax does not read.
                 MathExpression,
 
                 // Keyword syntax, read where nu reads the call as the syntax over a `Call`.

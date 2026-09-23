@@ -1,10 +1,28 @@
-use super::{control::control, def::def, if_::if_, match_::match_, module::module, use_::use_};
+use super::{
+    at_call_item, call_items, control::control, def::def, if_::if_, is_flag, match_::match_,
+    module::module, use_::use_,
+};
 use crate::parser::Parser;
 
 /// The keyword syntax nu reads after an operator, as a call over the rest of the element.
 /// Only `if` and `match` stand there; nu reads any other word as the term itself.
+/// Returns whether it read the rest of the element.
 pub(super) fn keyword_after_operator(p: &mut Parser<'_>) -> bool {
-    matches!(p.peek_text(), Some("if" | "match")) && keyword(p)
+    if !matches!(p.peek_text(), Some("if" | "match")) {
+        return false;
+    }
+    if keyword(p) {
+        return true;
+    }
+    // `if` and `match` read no flag, yet nu accepts a `--` or a help flag in their call.
+    // So a call with one stays as written, not as terms that would each lack an operator.
+    if !call_items(p).iter().any(|item| is_flag(item)) {
+        return false;
+    }
+    while at_call_item(p) {
+        p.bump();
+    }
+    true
 }
 
 /// The keyword syntax nu reads the call ahead as, if any.

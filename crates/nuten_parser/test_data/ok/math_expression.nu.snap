@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/math_expression.nu
 ---
-Root@0..400
+Root@0..428
   Pipeline@0..5
     PipelineElement@0..5
       MathExpression@0..5
@@ -429,3 +429,22 @@ Root@0..400
       Whitespace@394..395 " "
       Word@395..399 "true"
   Newline@399..400 "\n"
+  Pipeline@400..427
+    PipelineElement@400..427
+      MathExpression@400..427
+        Word@400..401 "1"
+        Whitespace@401..402 " "
+        Operator@402..403 "+"
+        Whitespace@403..404 " "
+        Word@404..406 "if"
+        Whitespace@406..407 " "
+        Word@407..411 "true"
+        Whitespace@411..412 " "
+        Word@412..415 "{1}"
+        Whitespace@415..416 " "
+        Word@416..420 "else"
+        Whitespace@420..421 " "
+        Word@421..424 "{2}"
+        Whitespace@424..425 " "
+        Word@425..427 "--"
+  Newline@427..428 "\n"

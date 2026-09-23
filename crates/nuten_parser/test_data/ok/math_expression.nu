@@ -31,3 +31,4 @@ true)
 not $a and $b
 1 + o> out.txt 2
 not o> out.txt true
+1 + if true {1} else {2} --
