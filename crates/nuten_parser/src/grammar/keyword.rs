@@ -1,9 +1,8 @@
 use super::{
-    at_call_item, call_items,
+    at_call_item,
     control::control,
     def::def,
     if_::if_,
-    is_flag,
     match_::match_,
     module::{export_env, module},
     use_::use_,
@@ -13,21 +12,18 @@ use crate::parser::Parser;
 
 /// The keyword syntax nu reads where it takes a term, as a call over the rest of the element.
 /// Only `if` and `match` stand there; nu reads any other word as the term itself.
-/// Returns whether it read the rest of the element.
+/// Returns whether one stands there, and then it has read the rest of the element.
 pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
     if !matches!(p.peek_text(), Some("if" | "match")) {
         return false;
     }
-    if keyword(p) {
-        return true;
-    }
-    // Nu accepts a `--` or a help flag in the call of `if` or `match`, where the syntax reads none.
-    // So a call with one stays as written, not as terms that would each lack an operator.
-    if !call_items(p).iter().any(|item| is_flag(item)) {
-        return false;
-    }
-    while at_call_item(p) {
-        p.bump();
+    // Nu accepts some calls the syntax does not read, as with a `--` or a variable for the body.
+    // Telling them from the calls nu rejects would need the shapes nu reads there.
+    // So any call the syntax does not read stays as written, not as terms lacking an operator.
+    if !keyword(p) {
+        while at_call_item(p) {
+            p.bump();
+        }
     }
     true
 }

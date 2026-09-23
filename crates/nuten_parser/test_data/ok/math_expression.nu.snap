@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/math_expression.nu
 ---
-Root@0..428
+Root@0..476
   Pipeline@0..5
     PipelineElement@0..5
       MathExpression@0..5
@@ -448,3 +448,42 @@ Root@0..428
         Whitespace@424..425 " "
         Word@425..427 "--"
   Newline@427..428 "\n"
+  Pipeline@428..443
+    PipelineElement@428..443
+      MathExpression@428..443
+        Word@428..429 "1"
+        Whitespace@429..430 " "
+        Operator@430..431 "+"
+        Whitespace@431..432 " "
+        Word@432..434 "if"
+        Whitespace@434..435 " "
+        Word@435..439 "true"
+        Whitespace@439..440 " "
+        Word@440..443 "$in"
+  Newline@443..444 "\n"
+  Pipeline@444..453
+    PipelineElement@444..453
+      MathExpression@444..453
+        Word@444..445 "1"
+        Whitespace@445..446 " "
+        Operator@446..447 "+"
+        Whitespace@447..448 " "
+        Word@448..450 "if"
+        Whitespace@450..451 " "
+        Word@451..453 "$a"
+  Newline@453..454 "\n"
+  Pipeline@454..475
+    PipelineElement@454..475
+      MathExpression@454..475
+        Word@454..455 "1"
+        Whitespace@455..456 " "
+        Operator@456..457 "+"
+        Whitespace@457..458 " "
+        Word@458..460 "if"
+        Whitespace@460..461 " "
+        Word@461..463 "$a"
+        Whitespace@463..464 " "
+        Word@464..469 "{ 1 }"
+        Whitespace@469..470 " "
+        Word@470..475 "extra"
+  Newline@475..476 "\n"

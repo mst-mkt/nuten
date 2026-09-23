@@ -13,8 +13,6 @@ not
 not not
 $a and not
 not | length
-1 + if $a
-1 + if $a { 1 } extra
 not if $a { 1 } else { 2 }
 1 a)
 1 + o> f.txt
