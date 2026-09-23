@@ -16,7 +16,6 @@ all {...$x}
 any {|x|  $x}
 ls; | @foo {a:  1}
 ls | const {a:  1}
-@example {a:  1}
 % ls [a,  b]
 %echo {a:  1}
 echo {a:  1} {...$x,  print hi}

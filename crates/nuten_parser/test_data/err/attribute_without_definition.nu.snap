@@ -1,0 +1,300 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/attribute_without_definition.nu
+---
+Root@0..297
+  Pipeline@0..12
+    PipelineElement@0..12
+      Attribute@0..4
+        Word@0..2 "@a"
+        Whitespace@2..3 " "
+        Word@3..4 "x"
+      Newline@4..5 "\n"
+      Attribute@5..9
+        Error@5..7
+          Word@5..7 "@b"
+        Whitespace@7..8 " "
+        Word@8..9 "y"
+      Newline@9..10 "\n"
+      Call@10..12
+        Word@10..12 "ls"
+  Newline@12..13 "\n"
+  Pipeline@13..17
+    PipelineElement@13..17
+      Attribute@13..17
+        Error@13..15
+          Word@13..15 "@c"
+        Whitespace@15..16 " "
+        Word@16..17 "x"
+  Newline@17..18 "\n"
+  Newline@18..19 "\n"
+  Pipeline@19..30
+    PipelineElement@19..30
+      Def@19..30
+        Word@19..22 "def"
+        Whitespace@22..23 " "
+        Word@23..24 "f"
+        Whitespace@24..25 " "
+        Signature@25..27
+          LBracket@25..26 "["
+          RBracket@26..27 "]"
+        Whitespace@27..28 " "
+        Word@28..30 "{}"
+  Newline@30..31 "\n"
+  Pipeline@31..35
+    PipelineElement@31..35
+      Attribute@31..35
+        Error@31..33
+          Word@31..33 "@d"
+        Whitespace@33..34 " "
+        Word@34..35 "x"
+  Newline@35..36 "\n"
+  Comment@36..39 "# c"
+  Newline@39..40 "\n"
+  Pipeline@40..51
+    PipelineElement@40..51
+      Def@40..51
+        Word@40..43 "def"
+        Whitespace@43..44 " "
+        Word@44..45 "g"
+        Whitespace@45..46 " "
+        Signature@46..48
+          LBracket@46..47 "["
+          RBracket@47..48 "]"
+        Whitespace@48..49 " "
+        Word@49..51 "{}"
+  Newline@51..52 "\n"
+  Pipeline@52..64
+    PipelineElement@52..64
+      Let@52..64
+        Word@52..55 "let"
+        Whitespace@55..56 " "
+        Word@56..57 "y"
+        Whitespace@57..58 " "
+        Assign@58..59 "="
+        Whitespace@59..60 " "
+        Pipeline@60..64
+          PipelineElement@60..64
+            Attribute@60..64
+              Error@60..62
+                Word@60..62 "@e"
+              Whitespace@62..63 " "
+              Word@63..64 "z"
+  Newline@64..65 "\n"
+  Pipeline@65..89
+    PipelineElement@65..89
+      Attribute@65..69
+        Error@65..67
+          Word@65..67 "@f"
+        Whitespace@67..68 " "
+        Word@68..69 "x"
+      Semicolon@69..70 ";"
+      Whitespace@70..71 " "
+      Let@71..89
+        Word@71..77 "export"
+        Whitespace@77..78 " "
+        Word@78..83 "const"
+        Whitespace@83..84 " "
+        Word@84..85 "h"
+        Whitespace@85..86 " "
+        Assign@86..87 "="
+        Whitespace@87..88 " "
+        Pipeline@88..89
+          PipelineElement@88..89
+            Word@88..89 "1"
+  Newline@89..90 "\n"
+  Pipeline@90..99
+    PipelineElement@90..99
+      Attribute@90..94
+        Error@90..92
+          Word@90..92 "@g"
+        Whitespace@92..93 " "
+        Word@93..94 "x"
+      Newline@94..95 "\n"
+      Redirection@95..99
+        Error@95..97
+          OutGt@95..97 "o>"
+        Whitespace@97..98 " "
+        Word@98..99 "f"
+  Newline@99..100 "\n"
+  Pipeline@100..111
+    PipelineElement@100..111
+      Attribute@100..111
+        Error@100..109
+          Word@100..109 "@category"
+        Whitespace@109..110 " "
+        Word@110..111 "x"
+  Newline@111..112 "\n"
+  Comment@112..115 "# c"
+  Newline@115..116 "\n"
+  Pipeline@116..143
+    PipelineElement@116..143
+      AttributeBlock@116..143
+        Attribute@116..131
+          Word@116..129 "@search-terms"
+          Whitespace@129..130 " "
+          Word@130..131 "y"
+        Newline@131..132 "\n"
+        Def@132..143
+          Word@132..135 "def"
+          Whitespace@135..136 " "
+          Word@136..137 "i"
+          Whitespace@137..138 " "
+          Signature@138..140
+            LBracket@138..139 "["
+            RBracket@139..140 "]"
+          Whitespace@140..141 " "
+          Word@141..143 "{}"
+  Newline@143..144 "\n"
+  Pipeline@144..155
+    PipelineElement@144..155
+      Attribute@144..155
+        Error@144..153
+          Word@144..153 "@category"
+        Whitespace@153..154 " "
+        Word@154..155 "x"
+  Newline@155..156 "\n"
+  Newline@156..157 "\n"
+  Pipeline@157..184
+    PipelineElement@157..184
+      AttributeBlock@157..184
+        Attribute@157..172
+          Word@157..170 "@search-terms"
+          Whitespace@170..171 " "
+          Word@171..172 "y"
+        Newline@172..173 "\n"
+        Def@173..184
+          Word@173..176 "def"
+          Whitespace@176..177 " "
+          Word@177..178 "j"
+          Whitespace@178..179 " "
+          Signature@179..181
+            LBracket@179..180 "["
+            RBracket@180..181 "]"
+          Whitespace@181..182 " "
+          Word@182..184 "{}"
+  Newline@184..185 "\n"
+  Pipeline@185..196
+    PipelineElement@185..196
+      Attribute@185..196
+        Error@185..194
+          Word@185..194 "@category"
+        Whitespace@194..195 " "
+        Word@195..196 "x"
+  Semicolon@196..197 ";"
+  Semicolon@197..198 ";"
+  Pipeline@198..209
+    PipelineElement@198..209
+      Def@198..209
+        Word@198..201 "def"
+        Whitespace@201..202 " "
+        Word@202..203 "k"
+        Whitespace@203..204 " "
+        Signature@204..206
+          LBracket@204..205 "["
+          RBracket@205..206 "]"
+        Whitespace@206..207 " "
+        Word@207..209 "{}"
+  Newline@209..210 "\n"
+  Pipeline@210..214
+    PipelineElement@210..214
+      Attribute@210..214
+        Error@210..212
+          Word@210..212 "@a"
+        Whitespace@212..213 " "
+        Word@213..214 "x"
+  Newline@214..215 "\n"
+  Newline@215..216 "\n"
+  Newline@216..217 "\n"
+  Pipeline@217..220
+    Pipe@217..218 "|"
+    Whitespace@218..219 " "
+    PipelineElement@219..220
+      Call@219..220
+        Word@219..220 "y"
+  Newline@220..221 "\n"
+  Pipeline@221..257
+    PipelineElement@221..257
+      Subexpression@221..257
+        LParen@221..222 "("
+        Pipeline@222..243
+          PipelineElement@222..243
+            Let@222..243
+              Word@222..225 "let"
+              Whitespace@225..226 " "
+              Word@226..227 "x"
+              Whitespace@227..228 " "
+              Assign@228..229 "="
+              Whitespace@229..230 " "
+              Pipeline@230..243
+                PipelineElement@230..243
+                  Attribute@230..243
+                    Error@230..239
+                      Word@230..239 "@category"
+                    Whitespace@239..240 " "
+                    String@240..243 "\"y\""
+        Semicolon@243..244 ";"
+        Whitespace@244..245 " "
+        Pipeline@245..256
+          PipelineElement@245..256
+            Def@245..256
+              Word@245..248 "def"
+              Whitespace@248..249 " "
+              Word@249..250 "l"
+              Whitespace@250..251 " "
+              Signature@251..253
+                LBracket@251..252 "["
+                RBracket@252..253 "]"
+              Whitespace@253..254 " "
+              Word@254..256 "{}"
+        RParen@256..257 ")"
+  Newline@257..258 "\n"
+  Pipeline@258..277
+    PipelineElement@258..277
+      Let@258..277
+        Word@258..261 "let"
+        Whitespace@261..262 " "
+        Word@262..263 "y"
+        Whitespace@263..264 " "
+        Assign@264..265 "="
+        Whitespace@265..266 " "
+        Pipeline@266..277
+          PipelineElement@266..277
+            Attribute@266..277
+              Error@266..275
+                Word@266..275 "@category"
+              Whitespace@275..276 " "
+              Word@276..277 "z"
+  Newline@277..278 "\n"
+  Pipeline@278..289
+    PipelineElement@278..289
+      Def@278..289
+        Word@278..281 "def"
+        Whitespace@281..282 " "
+        Word@282..283 "m"
+        Whitespace@283..284 " "
+        Signature@284..286
+          LBracket@284..285 "["
+          RBracket@285..286 "]"
+        Whitespace@286..287 " "
+        Word@287..289 "{}"
+  Newline@289..290 "\n"
+  Pipeline@290..296
+    PipelineElement@290..296
+      Attribute@290..296
+        Error@290..296 "@test)"
+  Newline@296..297 "\n"
+error 5..7 "@b": AttributeWithoutDefinition
+error 13..15 "@c": AttributeWithoutDefinition
+error 31..33 "@d": AttributeWithoutDefinition
+error 60..62 "@e": AttributeWithoutDefinition
+error 65..67 "@f": AttributeWithoutDefinition
+error 90..92 "@g": AttributeWithoutDefinition
+error 95..97 "o>": RedirectionAtHead
+error 100..109 "@category": AttributeWithoutDefinition
+error 144..153 "@category": AttributeWithoutDefinition
+error 185..194 "@category": AttributeWithoutDefinition
+error 210..212 "@a": AttributeWithoutDefinition
+error 230..239 "@category": AttributeWithoutDefinition
+error 266..275 "@category": AttributeWithoutDefinition
+error 295..296 ")": Lex(UnmatchedCloser)

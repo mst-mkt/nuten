@@ -28,3 +28,7 @@ def tab [] {}
 use std/testing *
 @test  {a:  1}
 def  t  []  {}
+do {
+  @category  x
+  ls
+}

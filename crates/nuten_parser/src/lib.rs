@@ -107,6 +107,9 @@ pub enum ParseErrorKind {
     /// A spread among the column names or in a row of a table.
     /// Reported at the whole spread, where nu points at the value after `...`.
     SpreadInTable,
+    /// Attributes heading a statement of one element that is no `def` or `extern`.
+    /// Reported at the head of the last attribute, as nu does.
+    AttributeWithoutDefinition,
 }
 
 impl fmt::Display for ParseErrorKind {
@@ -154,6 +157,9 @@ impl fmt::Display for ParseErrorKind {
             ParseErrorKind::CellPathMember => "member of a cell path that is no string",
             ParseErrorKind::BinaryDigits => "binary whose items do not decode to bytes",
             ParseErrorKind::SpreadInTable => "spread in a table",
+            ParseErrorKind::AttributeWithoutDefinition => {
+                "attribute with no `def` or `extern` after it"
+            },
         };
         f.write_str(message)
     }

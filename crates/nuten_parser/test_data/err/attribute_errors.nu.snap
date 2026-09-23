@@ -49,7 +49,8 @@ Root@0..65
   Pipeline@48..65
     PipelineElement@48..65
       Attribute@48..65
-        Word@48..61 "@search-terms"
+        Error@48..61
+          Word@48..61 "@search-terms"
         Whitespace@61..62 " "
         Word@62..63 "a"
         Whitespace@63..64 " "
@@ -57,4 +58,5 @@ Root@0..65
           Pipe@64..65 "|"
 error 8..10 "o>": MissingRedirectionTarget
 error 33..35 "&&": ShellAndAnd
+error 48..61 "@search-terms": AttributeWithoutDefinition
 error 64..65 "|": PipeAtEof

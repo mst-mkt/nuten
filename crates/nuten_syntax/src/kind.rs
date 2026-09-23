@@ -104,6 +104,7 @@ macro_rules! syntax_kinds {
                 /// A keyword nu reads before an assignment operator heads a `Call` as written.
                 /// Each runs to the statement's end.
                 /// It holds an `AttributeBlock` in place of the call too.
+                /// Before its command come any `Attribute`s for no definition, with what ends each.
                 /// Nu allows arguments after a redirection; they stay bare tokens.
                 PipelineElement,
                 /// A command name followed by its arguments.

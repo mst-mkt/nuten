@@ -215,10 +215,11 @@ fn pipeline_element(
     p.start(SyntaxKind::PipelineElement);
     // Nu reads an attribute where a pipeline starts, or after a line break its lexer leaves.
     // It does so before it looks up an alias, even one of the same name.
+    // Where it returns `None`, `attributed` has read the attributes and leaves the command below.
     if attribute_ahead(p)
         && (heads_pipeline || p.last_unskipped_kind() == Some(SyntaxKind::Newline))
+        && let Some(ended) = attributed(p, heads_pipeline, assigned)
     {
-        let ended = attributed(p, heads_pipeline, assigned);
         p.finish();
         return ended;
     }

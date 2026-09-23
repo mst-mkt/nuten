@@ -28,26 +28,43 @@ fn heads_attribute((kind, text): (SyntaxKind, &str)) -> bool {
 /// `assigned` tells where the statement ends, as for the pipeline.
 /// Nu reads the attributes as such only where they head a statement of one element.
 /// Elsewhere it reads the whole element as one call, which goes on past what ends each attribute.
-pub(super) fn attributed(p: &mut Parser<'_>, heads_pipeline: bool, assigned: Assigned) -> Ended {
+///
+/// `None` when it has read attributes for no `def` or `extern`, and what ends the last of them.
+/// The command after them is then left to the element.
+pub(super) fn attributed(
+    p: &mut Parser<'_>,
+    heads_pipeline: bool,
+    assigned: Assigned,
+) -> Option<Ended> {
     if !heads_pipeline {
-        return attributed_call(p, assigned);
+        return Some(attributed_call(p, assigned));
     }
     let past = past_attributes(lite_tokens(p), assigned);
     if past.piped {
-        return attributed_call(p, assigned);
+        return Some(attributed_call(p, assigned));
     }
     if past.defines {
-        return attribute_block(p, assigned);
+        return Some(attribute_block(p, assigned));
     }
-    attribute(p);
-    Ended::default()
+    attributes(
+        p,
+        assigned,
+        Some(ParseErrorKind::AttributeWithoutDefinition),
+    );
+    if after_attribute(p, assigned) == After::Nothing {
+        return Some(Ended::default());
+    }
+    p.bump();
+    None
 }
 
 /// The attributes ahead, with the `;` or line break between each two.
-fn attributes(p: &mut Parser<'_>, assigned: Assigned) {
+/// `error` is what the head of the last one reports, unless that head has an error of its own.
+fn attributes(p: &mut Parser<'_>, assigned: Assigned, error: Option<ParseErrorKind>) {
     loop {
         let last = !attribute_follows(p, assigned);
-        attribute(p);
+        let reported = error.filter(|_| last && p.peek() != Some(SyntaxKind::Error));
+        attribute(p, reported);
         if last {
             break;
         }
@@ -65,7 +82,7 @@ fn attribute_follows(p: &Parser<'_>, assigned: Assigned) -> bool {
 /// The `AttributeBlock` ahead, where a `def` or an `extern` follows the attributes.
 fn attribute_block(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
     p.start(SyntaxKind::AttributeBlock);
-    attributes(p, assigned);
+    attributes(p, assigned, None);
     p.bump();
     let shape = argument_shape(p);
     if !keyword(p) {
@@ -78,9 +95,9 @@ fn attribute_block(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
     }
 }
 
-/// The `Attribute` ahead.
+/// The `Attribute` ahead, its head reporting `error` if given.
 /// Nu looks up `@name` as the command `attr name`.
-fn attribute(p: &mut Parser<'_>) {
+fn attribute(p: &mut Parser<'_>, error: Option<ParseErrorKind>) {
     let name = p.peek_text().map_or("", |head| &head[1..]);
     let shape = if builtin::is_attribute(name) {
         Shape::KnownArgument
@@ -88,7 +105,10 @@ fn attribute(p: &mut Parser<'_>) {
         Shape::UnknownArgument
     };
     p.start(SyntaxKind::Attribute);
-    p.bump();
+    match error {
+        Some(error) => p.bump_error(error),
+        None => p.bump(),
+    }
     attribute_arguments(p, shape);
     p.finish();
 }
