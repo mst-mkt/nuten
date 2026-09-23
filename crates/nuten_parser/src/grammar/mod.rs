@@ -13,6 +13,7 @@ mod keyword;
 mod list;
 mod match_;
 mod number;
+mod pattern;
 mod pipeline;
 mod range;
 mod record;

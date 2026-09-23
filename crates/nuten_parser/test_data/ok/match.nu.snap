@@ -141,7 +141,10 @@ Root@0..956
           Comma@152..153 ","
           Whitespace@153..154 " "
           MatchArm@154..163
-            Word@154..158 "1..3"
+            Range@154..158
+              Word@154..155 "1"
+              RangeOperator@155..157 ".."
+              Word@157..158 "3"
             Whitespace@158..159 " "
             FatArrow@159..161 "=>"
             Whitespace@161..162 " "

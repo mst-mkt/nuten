@@ -1,6 +1,8 @@
+use std::iter;
+
 use nuten_syntax::SyntaxKind;
 
-use super::{CURLY, Shape, call_items, item, shell_operator, value};
+use super::{CURLY, Shape, call_items, item, pattern::pattern, shell_operator, value};
 use crate::{lexer::Mode, parser::Parser};
 
 /// The `Match` ahead, when nu reads the call as one.
@@ -86,14 +88,67 @@ fn arms(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
         if kind == SyntaxKind::Comma {
             p.bump();
-            continue;
+        } else {
+            arm(p);
         }
-        p.start(SyntaxKind::MatchArm);
-        while p.peek_text() != Some("=>") {
-            p.bump();
-        }
-        p.bump_as(SyntaxKind::FatArrow);
-        value(p, Shape::Block);
-        p.finish();
+    }
+}
+
+/// How nu splits the tokens of an arm before `=>`.
+enum ArmHead {
+    /// Patterns with a `|` between two of them.
+    Patterns,
+    /// Patterns, then `if` and a guard.
+    Guarded,
+    /// Anything else, which nu rejects.
+    Rejected,
+}
+
+/// One arm: the patterns and the guard, then `=>` and the one item nu takes as what the arm does.
+/// Tokens before `=>` that nu rejects stay as they are.
+fn arm(p: &mut Parser<'_>) {
+    p.start(SyntaxKind::MatchArm);
+    match arm_head(&arm_tokens(p)) {
+        ArmHead::Patterns | ArmHead::Guarded => patterns(p),
+        ArmHead::Rejected => {},
+    }
+    while p.peek_text() != Some("=>") {
+        p.bump();
+    }
+    p.bump_as(SyntaxKind::FatArrow);
+    value(p, Shape::Block);
+    p.finish();
+}
+
+/// The patterns, with a `|` between two of them.
+fn patterns(p: &mut Parser<'_>) {
+    pattern(p);
+    while p.peek() == Some(SyntaxKind::Pipe) {
+        p.bump();
+        pattern(p);
+    }
+}
+
+/// The kinds and texts of the tokens ahead up to `=>`, the skipped ones aside.
+fn arm_tokens<'a>(p: &Parser<'a>) -> Vec<(SyntaxKind, &'a str)> {
+    p.remaining_tokens()
+        .filter(|(token, _)| !p.is_skipped(token.kind))
+        .map(|(token, text)| (token.kind, text))
+        .take_while(|&(_, text)| text != "=>")
+        .collect()
+}
+
+/// How nu splits `tokens`, those of an arm before `=>`.
+/// `is_arms` has seen that each pattern is an item.
+fn arm_head(tokens: &[(SyntaxKind, &str)]) -> ArmHead {
+    let after_patterns = iter::successors(tokens.get(1..), |rest| match rest {
+        [(SyntaxKind::Pipe, _), _, rest @ ..] => Some(rest),
+        _ => None,
+    })
+    .last();
+    match after_patterns {
+        Some([]) => ArmHead::Patterns,
+        Some([(_, "if"), _, ..]) => ArmHead::Guarded,
+        _ => ArmHead::Rejected,
     }
 }

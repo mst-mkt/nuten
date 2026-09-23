@@ -136,7 +136,9 @@ macro_rules! syntax_kinds {
                 /// The `{ }` of a `match` read as arms.
                 /// `{`, the `MatchArm`s with the `,` between them, and `}`.
                 MatchArms,
-                /// One arm: the tokens of its pattern and of any `if` guard, `|` among them.
+                /// One arm: its patterns with `|` between them, then `if` and the guard if there.
+                /// A pattern nu reads as a value is one, and any other stays as it is lexed.
+                /// So does the guard, and what comes before `=>` where nu rejects it.
                 /// Then `=>` and the one item nu takes as what the arm does.
                 MatchArm,
                 /// A redirection to a file: the operator, such as `o>`, and its target.
