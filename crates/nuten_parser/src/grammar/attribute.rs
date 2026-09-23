@@ -1,7 +1,7 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Shape, ends_statement, item,
+    Shape, builtin, ends_statement, item,
     pipeline::{bump_newlines, next_line_starts_with_pipe, pipe_ends_file},
 };
 use crate::{ParseErrorKind, parser::Parser};
@@ -17,10 +17,17 @@ fn heads_attribute((kind, text): (SyntaxKind, &str)) -> bool {
 }
 
 /// The `Attribute` ahead.
+/// Nu looks up `@name` as the command `attr name`.
 pub(super) fn attribute(p: &mut Parser<'_>) {
+    let name = p.peek_text().map_or("", |head| &head[1..]);
+    let shape = if builtin::is_attribute(name) {
+        Shape::KnownArgument
+    } else {
+        Shape::UnknownArgument
+    };
     p.start(SyntaxKind::Attribute);
     p.bump();
-    attribute_arguments(p, Shape::KnownArgument);
+    attribute_arguments(p, shape);
     p.finish();
 }
 

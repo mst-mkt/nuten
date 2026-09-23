@@ -51,6 +51,21 @@ pub(super) fn takes_variable_name(head: &str) -> bool {
     matches!(head, "let" | "mut" | "const")
 }
 
+/// Whether nu resolves the attribute `@name` to one of its own, a command `attr name`.
+pub(super) fn is_attribute(name: &str) -> bool {
+    ATTRIBUTES.binary_search(&name).is_ok()
+}
+
+/// The words after `attr` in the names of nu's attributes.
+/// Sorted, so that `is_attribute` can bisect.
+const ATTRIBUTES: &[&str] = &[
+    "category",
+    "complete",
+    "deprecated",
+    "example",
+    "search-terms",
+];
+
 /// Sorted, so that `resolves_after_percent` can bisect.
 /// No rule tells these apart from the rest, so the test asks nu which they are.
 const EXTERNAL_AFTER_PERCENT: &[&str] = &[
@@ -285,9 +300,13 @@ mod tests {
     use std::process::Command;
 
     use super::{
-        COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, reads_before_assignment,
+        ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, reads_before_assignment,
         resolves_after_percent, takes_any_argument, takes_row_condition,
     };
+
+    const ATTRIBUTES_OF_NU: &str = r#"help commands | get name
+        | where { |n| $n | str starts-with "attr " }
+        | each { |n| $n | split row " " | get 1 } | uniq | sort | str join "\n""#;
 
     const COMMANDS_OF_NU: &str = r#"help commands | get name
         | each { |n| $n | split row " " | first } | uniq | sort | str join "\n""#;
@@ -336,7 +355,7 @@ mod tests {
 
     #[test]
     fn lists_are_sorted_without_repeats() {
-        for list in [COMMANDS, EXTERNAL_AFTER_PERCENT] {
+        for list in [ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT] {
             assert!(list.windows(2).all(|pair| pair[0] < pair[1]), "{list:?}");
         }
     }
@@ -352,6 +371,14 @@ mod tests {
             return;
         };
         assert_eq!(COMMANDS, names);
+    }
+
+    #[test]
+    fn attributes_are_what_nu_has() {
+        let Some(names) = asked(ATTRIBUTES_OF_NU) else {
+            return;
+        };
+        assert_eq!(ATTRIBUTES, names);
     }
 
     #[test]

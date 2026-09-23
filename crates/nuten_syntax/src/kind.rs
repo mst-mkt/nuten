@@ -239,6 +239,7 @@ macro_rules! syntax_kinds {
                 /// They run to the end of the line or a `;`, which it does not hold.
                 /// A `|`, `||`, redirection, or assignment operator among them is an argument too.
                 /// It holds the line breaks before a line-start `|`, which nu joins to the line.
+                /// The arguments of an attribute nu does not have are those of an unknown command.
                 Attribute,
                 /// A `def` or an `extern` that nu reads as one.
                 /// `export` if there, the keyword, any flags, the name, and a `Signature`.

@@ -9,3 +9,6 @@ def g [] {}
 def h [] {}
 (@search-terms a
 b; def i [] {})
+use std/testing *
+@test {a:  1}
+def t [] {}
