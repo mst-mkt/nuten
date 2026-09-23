@@ -1,0 +1,112 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/variable_pattern_errors.nu
+---
+Root@0..116
+  Pipeline@0..115
+    PipelineElement@0..115
+      Match@0..115
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..115
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..20
+            Error@11..15
+              Word@11..15 "$a-b"
+            Whitespace@15..16 " "
+            FatArrow@16..18 "=>"
+            Whitespace@18..19 " "
+            Word@19..20 "1"
+          Comma@20..21 ","
+          Whitespace@21..22 " "
+          MatchArm@22..31
+            Error@22..26
+              Word@22..26 "$x.a"
+            Whitespace@26..27 " "
+            FatArrow@27..29 "=>"
+            Whitespace@29..30 " "
+            Word@30..31 "2"
+          Comma@31..32 ","
+          Whitespace@32..33 " "
+          MatchArm@33..43
+            Error@33..38
+              Word@33..38 "$x..3"
+            Whitespace@38..39 " "
+            FatArrow@39..41 "=>"
+            Whitespace@41..42 " "
+            Word@42..43 "3"
+          Comma@43..44 ","
+          Whitespace@44..45 " "
+          MatchArm@45..56
+            Error@45..51
+              InterpString@45..51 "$\"(a)\""
+            Whitespace@51..52 " "
+            FatArrow@52..54 "=>"
+            Whitespace@54..55 " "
+            Word@55..56 "4"
+          Comma@56..57 ","
+          Whitespace@57..58 " "
+          MatchArm@58..71
+            ListPattern@58..66
+              LBracket@58..59 "["
+              Error@59..65
+                Word@59..65 "..$a-b"
+              RBracket@65..66 "]"
+            Whitespace@66..67 " "
+            FatArrow@67..69 "=>"
+            Whitespace@69..70 " "
+            Word@70..71 "5"
+          Comma@71..72 ","
+          Whitespace@72..73 " "
+          MatchArm@73..84
+            ListPattern@73..79
+              LBracket@73..74 "["
+              Error@74..78
+                Word@74..78 "$a-b"
+              RBracket@78..79 "]"
+            Whitespace@79..80 " "
+            FatArrow@80..82 "=>"
+            Whitespace@82..83 " "
+            Word@83..84 "6"
+          Comma@84..85 ","
+          Whitespace@85..86 " "
+          MatchArm@86..97
+            RecordPattern@86..92
+              LBrace@86..87 "{"
+              Error@87..91
+                Word@87..91 "$a-b"
+              RBrace@91..92 "}"
+            Whitespace@92..93 " "
+            FatArrow@93..95 "=>"
+            Whitespace@95..96 " "
+            Word@96..97 "7"
+          Comma@97..98 ","
+          Whitespace@98..99 " "
+          MatchArm@99..113
+            RecordPattern@99..108
+              LBrace@99..100 "{"
+              RecordField@100..107
+                Word@100..101 "c"
+                Colon@101..102 ":"
+                Whitespace@102..103 " "
+                Error@103..107
+                  Word@103..107 "$a-b"
+              RBrace@107..108 "}"
+            Whitespace@108..109 " "
+            FatArrow@109..111 "=>"
+            Whitespace@111..112 " "
+            Word@112..113 "8"
+          Whitespace@113..114 " "
+          RBrace@114..115 "}"
+  Newline@115..116 "\n"
+error 11..15 "$a-b": InvalidVariableName
+error 22..26 "$x.a": InvalidVariableName
+error 33..38 "$x..3": InvalidVariableName
+error 45..51 "$\"(a)\"": InvalidVariableName
+error 59..65 "..$a-b": InvalidVariableName
+error 74..78 "$a-b": InvalidVariableName
+error 87..91 "$a-b": InvalidVariableName
+error 103..107 "$a-b": InvalidVariableName

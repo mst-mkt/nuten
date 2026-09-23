@@ -88,6 +88,7 @@ pub enum ParseErrorKind {
     /// A `$` with no name after it, where nu takes a value.
     MissingVariableName,
     /// A `$` and a name with a character no variable name takes, as `$a-b`, where nu takes a value.
+    /// Also a variable pattern with one, as `$x.a`, alone or after the `..` of a rest, as `..$a-b`.
     InvalidVariableName,
     /// A token of a cell path where nu takes only the separators `expected` names.
     /// Nu reads no more of the path after it.

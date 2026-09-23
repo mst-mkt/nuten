@@ -2,21 +2,36 @@ use std::iter;
 
 use nuten_syntax::SyntaxKind;
 
-use super::{CURLY, SQUARE, Shape, record::bump_separators, value};
+use super::{CURLY, SQUARE, Shape, record::bump_separators, value, variable::is_variable_name};
 use crate::{
+    ParseErrorKind,
     lexer::{Mode, Token},
     parser::Parser,
 };
 
 /// The pattern ahead as nu reads it, which nu tells by its first byte.
-/// A variable stays as it is.
-/// Anything else but a record or a list pattern is a value, `_` among them.
+/// Anything else but a variable, a record, or a list pattern is a value, `_` among them.
 pub(super) fn pattern(p: &mut Parser<'_>) {
     match p.peek_text().map(str::as_bytes) {
-        Some([b'$', ..]) => p.bump(),
+        Some([b'$', ..]) => variable(p, "$"),
         Some([b'{', ..]) => record_pattern(p),
         Some([b'[', ..]) => list_pattern(p),
         _ => value(p, Shape::Any),
+    }
+}
+
+/// The variable ahead, which binds the name after `prefix`.
+/// It is in an `Error` where nu takes no variable of that name.
+/// Nu takes a `$` alone for a name there, unlike where it reads a variable as a value.
+fn variable(p: &mut Parser<'_>, prefix: &str) {
+    let name = p
+        .peek_text()
+        .and_then(|text| text.strip_prefix(prefix))
+        .expect("a variable ahead");
+    if name.is_empty() || is_variable_name(name) {
+        p.bump();
+    } else {
+        p.bump_error(ParseErrorKind::InvalidVariableName);
     }
 }
 
@@ -88,8 +103,10 @@ impl<'t, 'a> Field<'t, 'a> {
 /// The fields of a record pattern, a `RecordField` for each key.
 fn record_pattern_fields(p: &mut Parser<'_>) {
     while let Some((kind, text)) = p.peek().zip(p.peek_text()) {
-        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) || text.starts_with('$') {
+        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) {
             p.bump();
+        } else if text.starts_with('$') {
+            variable(p, "$");
         } else {
             record_field(p);
         }
@@ -136,8 +153,10 @@ fn is_rest(text: &str) -> bool {
 /// The patterns of a list pattern, and the rest.
 fn list_pattern_items(p: &mut Parser<'_>) {
     while let Some((kind, text)) = p.peek().zip(p.peek_text()) {
-        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) || is_rest(text) {
+        if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) || text == ".." {
             p.bump();
+        } else if is_rest(text) {
+            variable(p, "..$");
         } else {
             pattern(p);
         }

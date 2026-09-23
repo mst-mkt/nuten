@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/match_pattern.nu
 ---
-Root@0..342
+Root@0..397
   Pipeline@0..113
     PipelineElement@0..113
       Match@0..113
@@ -301,33 +301,82 @@ Root@0..342
           Newline@308..309 "\n"
           RBrace@309..310 "}"
   Newline@310..311 "\n"
-  Pipeline@311..341
-    PipelineElement@311..341
-      Match@311..341
+  Pipeline@311..365
+    PipelineElement@311..365
+      Match@311..365
         Word@311..316 "match"
         Whitespace@316..317 " "
         Word@317..319 "$x"
         Whitespace@319..320 " "
-        MatchArms@320..341
+        MatchArms@320..365
           LBrace@320..321 "{"
           Whitespace@321..322 " "
-          MatchArm@322..339
-            Word@322..323 "1"
+          MatchArm@322..328
+            Word@322..323 "$"
             Whitespace@323..324 " "
-            Pipe@324..325 "|"
-            Whitespace@325..326 " "
-            Word@326..327 "2"
-            Whitespace@327..328 " "
-            Pipe@328..329 "|"
-            Whitespace@329..330 " "
-            Range@330..334
-              Word@330..331 "3"
-              RangeOperator@331..333 ".."
-              Word@333..334 "5"
-            Whitespace@334..335 " "
-            FatArrow@335..337 "=>"
-            Whitespace@337..338 " "
-            Word@338..339 "a"
-          Whitespace@339..340 " "
-          RBrace@340..341 "}"
-  Newline@341..342 "\n"
+            FatArrow@324..326 "=>"
+            Whitespace@326..327 " "
+            Word@327..328 "1"
+          Comma@328..329 ","
+          Whitespace@329..330 " "
+          MatchArm@330..340
+            ListPattern@330..335
+              LBracket@330..331 "["
+              Word@331..334 "..$"
+              RBracket@334..335 "]"
+            Whitespace@335..336 " "
+            FatArrow@336..338 "=>"
+            Whitespace@338..339 " "
+            Word@339..340 "2"
+          Comma@340..341 ","
+          Whitespace@341..342 " "
+          MatchArm@342..353
+            InterpString@342..348 "$\"a b\""
+            Whitespace@348..349 " "
+            FatArrow@349..351 "=>"
+            Whitespace@351..352 " "
+            Word@352..353 "3"
+          Comma@353..354 ","
+          Whitespace@354..355 " "
+          MatchArm@355..363
+            RecordPattern@355..358
+              LBrace@355..356 "{"
+              Word@356..357 "$"
+              RBrace@357..358 "}"
+            Whitespace@358..359 " "
+            FatArrow@359..361 "=>"
+            Whitespace@361..362 " "
+            Word@362..363 "4"
+          Whitespace@363..364 " "
+          RBrace@364..365 "}"
+  Newline@365..366 "\n"
+  Pipeline@366..396
+    PipelineElement@366..396
+      Match@366..396
+        Word@366..371 "match"
+        Whitespace@371..372 " "
+        Word@372..374 "$x"
+        Whitespace@374..375 " "
+        MatchArms@375..396
+          LBrace@375..376 "{"
+          Whitespace@376..377 " "
+          MatchArm@377..394
+            Word@377..378 "1"
+            Whitespace@378..379 " "
+            Pipe@379..380 "|"
+            Whitespace@380..381 " "
+            Word@381..382 "2"
+            Whitespace@382..383 " "
+            Pipe@383..384 "|"
+            Whitespace@384..385 " "
+            Range@385..389
+              Word@385..386 "3"
+              RangeOperator@386..388 ".."
+              Word@388..389 "5"
+            Whitespace@389..390 " "
+            FatArrow@390..392 "=>"
+            Whitespace@392..393 " "
+            Word@393..394 "a"
+          Whitespace@394..395 " "
+          RBrace@395..396 "}"
+  Newline@396..397 "\n"
