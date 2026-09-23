@@ -91,9 +91,9 @@ fn skipped_in(mode: Mode) -> &'static [SyntaxKind] {
         Mode::Binary => &[Whitespace, Newline, Comment, Comma],
         Mode::RecordPattern => &[Whitespace, Newline, Comment, Comma],
         Mode::MatchArms => &[Whitespace, Newline, Comment, Comma],
-        Mode::Signature | Mode::IoTypes | Mode::TypeParams => {
-            unimplemented!("how nu splits in {mode:?} is not recorded")
-        },
+        Mode::IoTypes => &[Whitespace, Newline, Comment, Comma],
+        Mode::TypeParams => &[Whitespace, Newline, Comment],
+        Mode::Signature => unimplemented!("how nu splits in {mode:?} is not recorded"),
     }
 }
 
@@ -572,6 +572,57 @@ const NU_VAR_TYPE_SPLITS: &[(&str, &[&str])] = &[
 fn var_type_splits_match_nu() {
     for &(src, expected) in NU_VAR_TYPE_SPLITS {
         assert_eq!(split_in(src, Mode::VarType), expected, "{src:?}");
+    }
+}
+
+/// How nu 0.115.1 splits the input and output types after a signature.
+const NU_IO_TYPES_SPLITS: &[(&str, &[&str])] = &[
+    (
+        "int -> string, nothing -> int",
+        &["int", "->", "string", "nothing", "->", "int"],
+    ),
+    (
+        "record<a: int, b: string> -> list<int>",
+        &["record<a: int, b: string>", "->", "list<int>"],
+    ),
+    ("int\r\n-> int", &["int", "->", "int"]),
+    ("int # c\n-> int", &["int", "->", "int"]),
+    ("a<b,c>", &["a<b,c>"]),
+    ("a<\nb>", &["a<\nb>"]),
+    ("record<a: int # c\n>", &["record<a: int # c\n>"]),
+    ("list<int -> int", &["list<int ->", "int"]),
+    ("int#c", &["int#c"]),
+    ("a:b=c", &["a:b=c"]),
+    ("a|b", &["a", "|", "b"]),
+    ("\"a b\" -> c", &["\"a b\"", "->", "c"]),
+];
+
+#[test]
+fn io_types_splits_match_nu() {
+    for &(src, expected) in NU_IO_TYPES_SPLITS {
+        assert_eq!(split_in(src, Mode::IoTypes), expected, "{src:?}");
+    }
+}
+
+/// How nu 0.115.1 splits the inside of the `< >` of a type.
+const NU_TYPE_PARAMS_SPLITS: &[(&str, &[&str])] = &[
+    (
+        "a: int, b: string",
+        &["a", ":", "int", ",", "b", ":", "string"],
+    ),
+    ("a:\r\nint", &["a", ":", "int"]),
+    ("a # c\n: int", &["a", ":", "int"]),
+    ("a: list<b: c>", &["a", ":", "list<b: c>"]),
+    ("\"a:b\": int", &["\"a:b\"", ":", "int"]),
+    ("a,,b", &["a", ",", ",", "b"]),
+    ("a=b", &["a=b"]),
+    ("a|b", &["a", "|", "b"]),
+];
+
+#[test]
+fn type_params_splits_match_nu() {
+    for &(src, expected) in NU_TYPE_PARAMS_SPLITS {
+        assert_eq!(split_in(src, Mode::TypeParams), expected, "{src:?}");
     }
 }
 
