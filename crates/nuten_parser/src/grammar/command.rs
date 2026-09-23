@@ -70,7 +70,11 @@ impl Head {
 }
 
 /// The items nu reads as an expression, as a `MathExpression` where it takes an operator.
+/// An `if` or a `match` first heads a call over them instead, as in nu's `parse_math_expression`.
 pub(super) fn expression(p: &mut Parser<'_>) {
+    if keyword_as_term(p) {
+        return;
+    }
     if takes_operator(&call_items(p)) {
         math_expression(p);
     } else {
