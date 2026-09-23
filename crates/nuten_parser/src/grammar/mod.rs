@@ -22,6 +22,7 @@ mod record;
 mod signature;
 mod spread;
 mod table;
+mod use_;
 mod var_type;
 mod variable;
 

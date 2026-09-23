@@ -261,6 +261,11 @@ macro_rules! syntax_kinds {
                 /// It stays a `Word` where it holds nothing but trivia, or starts with a `|`.
                 /// So it does where its statements report an error.
                 Module,
+                /// `use`, the flags, then the import pattern: the module and its members.
+                /// Nu reads the module as an argument of a command it knows.
+                /// It reads each member as any value, or a `Spread` of one.
+                /// A `use` with nothing after it stays a `Call`.
+                Use,
             }
         }
     };
