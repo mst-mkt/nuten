@@ -5,3 +5,4 @@ echo {
   b'
 }
 echo {|x| $x }
+ls | each {|x: int, y| $x }

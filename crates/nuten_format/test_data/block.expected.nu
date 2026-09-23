@@ -83,10 +83,8 @@ echo {|x|
     # c
     $x
 }
-echo {|x,
-y| $x }
-echo {|x,
-  y|
+echo {|x, y| $x }
+echo {|x, y|
     $x
 }
 echo {|| 1 } {|x|
