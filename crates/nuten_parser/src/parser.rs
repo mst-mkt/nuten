@@ -134,7 +134,13 @@ impl<'a> Relexed<'a> {
 }
 
 pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
-    let mut parser = Parser::new(src, lexed, Mode::Block, grammar::alias_names(src), 0);
+    let mut parser = Parser::new(
+        src,
+        lexed,
+        Mode::Block.skips_newline(),
+        grammar::alias_names(src),
+        0,
+    );
     // Not `start`: that would put leading trivia outside Root.
     parser.events.push(Event::Start(SyntaxKind::Root));
     grammar::file(&mut parser);
@@ -167,7 +173,7 @@ impl<'a> Parser<'a> {
     fn new(
         src: &'a str,
         lexed: Lexed,
-        mode: Mode,
+        skips_newline: bool,
         alias_names: Rc<[&'a str]>,
         depth: usize,
     ) -> Parser<'a> {
@@ -177,7 +183,7 @@ impl<'a> Parser<'a> {
             lex_errors: lexed.errors.into_iter(),
             pos: 0,
             events: Vec::new(),
-            skips_newline: mode.skips_newline(),
+            skips_newline,
             alias_names,
             depth,
             errors: 0,
@@ -482,6 +488,21 @@ impl<'a> Parser<'a> {
         self.errors += inner.errors;
     }
 
+    /// Emits the tokens ahead up to `end` as the events `items` makes of them.
+    /// `items` sees no token past `end`.
+    pub(crate) fn bump_bounded(&mut self, end: TextSize, items: impl FnOnce(&mut Parser<'a>)) {
+        let taken = self.take_to(end);
+        let mut inner = Parser::new(
+            self.src,
+            taken,
+            self.skips_newline,
+            Rc::clone(&self.alias_names),
+            self.depth,
+        );
+        self.read_inner(&mut inner, items);
+        self.errors += inner.errors;
+    }
+
     /// Moves past the tokens ahead up to `end`, and returns them with their lexing errors.
     fn take_to(&mut self, end: TextSize) -> Lexed {
         let count = self.tokens[self.pos..]
@@ -509,7 +530,13 @@ impl<'a> Parser<'a> {
     /// A parser of `range` of the source lexed in `mode`, inside `depth` brackets.
     fn nested(&self, range: TextRange, mode: Mode, depth: usize) -> Parser<'a> {
         let lexed = lexer::lex(self.src, range, mode);
-        Parser::new(self.src, lexed, mode, Rc::clone(&self.alias_names), depth)
+        Parser::new(
+            self.src,
+            lexed,
+            mode.skips_newline(),
+            Rc::clone(&self.alias_names),
+            depth,
+        )
     }
 
     /// A parser of `tokens`, pieces of the tokens here with no lexing error.
@@ -521,7 +548,7 @@ impl<'a> Parser<'a> {
         Parser::new(
             self.src,
             lexed,
-            Mode::Block,
+            Mode::Block.skips_newline(),
             Rc::clone(&self.alias_names),
             self.depth,
         )
@@ -680,7 +707,13 @@ mod tests {
 
     fn parser(src: &str) -> Parser<'_> {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-        Parser::new(src, lexed, Mode::Block, grammar::alias_names(src), 0)
+        Parser::new(
+            src,
+            lexed,
+            Mode::Block.skips_newline(),
+            grammar::alias_names(src),
+            0,
+        )
     }
 
     #[test]
@@ -827,6 +860,17 @@ mod tests {
             })
             .collect();
         assert_eq!(errors, [range(1, 2), range(4, 5)]);
+    }
+
+    #[test]
+    fn bump_bounded_hides_tokens_past_end() {
+        let mut p = parser("a b) c");
+        p.bump_bounded(TextSize::new(4), |p| {
+            bump_all(p);
+            assert_eq!(p.peek(), None);
+        });
+        assert_eq!(p.peek_text(), Some("c"));
+        assert_eq!(p.errors, 1);
     }
 
     #[test]

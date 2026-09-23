@@ -138,7 +138,9 @@ macro_rules! syntax_kinds {
                 MatchArms,
                 /// One arm: its patterns with `|` between them, then `if` and the guard if there.
                 /// A pattern nu reads as a value is one, and any other stays as it is lexed.
-                /// So does the guard, and what comes before `=>` where nu rejects it.
+                /// The guard is an expression, as what heads a statement is.
+                /// A guard that starts with `if` or `match`, or holds a `|`, stays as it is lexed.
+                /// So does what comes before `=>` where nu rejects it.
                 /// Then `=>` and the one item nu takes as what the arm does.
                 MatchArm,
                 /// A redirection to a file: the operator, such as `o>`, and its target.

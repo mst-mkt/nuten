@@ -70,7 +70,7 @@ impl Head {
 }
 
 /// The items nu reads as an expression, as a `MathExpression` where it takes an operator.
-fn expression(p: &mut Parser<'_>) {
+pub(super) fn expression(p: &mut Parser<'_>) {
     if takes_operator(&call_items(p)) {
         math_expression(p);
     } else {

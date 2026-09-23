@@ -2,7 +2,9 @@ use std::iter;
 
 use nuten_syntax::SyntaxKind;
 
-use super::{CURLY, Shape, call_items, item, pattern::pattern, shell_operator, value};
+use super::{
+    CURLY, Shape, call_items, command::expression, item, pattern::pattern, shell_operator, value,
+};
 use crate::{lexer::Mode, parser::Parser};
 
 /// The `Match` ahead, when nu reads the call as one.
@@ -109,7 +111,12 @@ enum ArmHead {
 fn arm(p: &mut Parser<'_>) {
     p.start(SyntaxKind::MatchArm);
     match arm_head(&arm_tokens(p)) {
-        ArmHead::Patterns | ArmHead::Guarded => patterns(p),
+        ArmHead::Patterns => patterns(p),
+        ArmHead::Guarded => {
+            patterns(p);
+            p.bump();
+            guard(p);
+        },
         ArmHead::Rejected => {},
     }
     while p.peek_text() != Some("=>") {
@@ -127,6 +134,24 @@ fn patterns(p: &mut Parser<'_>) {
         p.bump();
         pattern(p);
     }
+}
+
+/// The guard ahead, up to `=>`, which nu reads as an expression.
+/// It stays as it is where it starts with `if` or `match`, which nu reads as a call there.
+/// So it does where it holds a `|`, which nu rejects as an operator.
+fn guard(p: &mut Parser<'_>) {
+    let tokens = arm_tokens(p);
+    if matches!(tokens.first(), Some((_, "if" | "match")))
+        || tokens.iter().any(|&(kind, _)| kind == SyntaxKind::Pipe)
+    {
+        return;
+    }
+    let arrow = p
+        .remaining_tokens()
+        .find(|&(_, text)| text == "=>")
+        .map(|(token, _)| token.range.start())
+        .expect("an arm has `=>`");
+    p.bump_bounded(arrow, expression);
 }
 
 /// The kinds and texts of the tokens ahead up to `=>`, the skipped ones aside.
