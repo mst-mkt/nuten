@@ -114,7 +114,7 @@ macro_rules! syntax_kinds {
                 /// A term is a value after the `not`s that take it, which are `Operator`s too.
                 /// An item where nu takes an operator but reads none stays as it is written.
                 /// An `if` or a `match` as a term is the keyword syntax over the rest of the items.
-                /// The rest stays as written where it holds a flag, which the syntax does not read.
+                /// The rest stays as written where it holds a flag the syntax does not read.
                 MathExpression,
 
                 // Keyword syntax, read where nu reads the call as the syntax over a `Call`.
@@ -123,12 +123,15 @@ macro_rules! syntax_kinds {
                 /// `if`, the condition, the body, then any number of `else`, `if`, condition, body.
                 /// A last `else` takes one more argument.
                 /// The `if`s after the `else`s are in this one flat node.
+                /// Each condition is any flags of its `if`, then any items left as one expression.
+                /// It is a `MathExpression`, or a term of one standing alone.
                 If,
                 /// `for`, the variable, `in`, the value, and the body.
                 /// A variable ending in `:` takes its type after it, up to the first `in`.
                 /// The value is at least one argument.
                 For,
-                /// `while`, at least one argument of the condition, and the body.
+                /// `while`, the condition, and the body.
+                /// The condition is at least one item, read as that of an `If`.
                 While,
                 /// `loop` and the body.
                 Loop,

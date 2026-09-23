@@ -5,6 +5,7 @@ use super::{
     binary::is_binary_like,
     builtin, call_items, declaration, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_as_term},
+    leading_flags,
     number::is_number,
     range::is_number_range,
     shell_operator, value,
@@ -79,6 +80,23 @@ pub(super) fn expression(p: &mut Parser<'_>) {
         math_expression(p);
     } else {
         item(p, Shape::Any);
+    }
+}
+
+/// The `len` items ahead as nu reads the condition of an `if` or a `while`.
+/// Nu reads the flags first as those of the keyword, then the rest as one expression.
+/// The items after the condition are other arguments, so the expression takes none of them.
+pub(super) fn condition(p: &mut Parser<'_>, len: usize) {
+    let flags = leading_flags(&call_items(p)[..len]);
+    for _ in 0..flags {
+        p.bump();
+    }
+    if flags < len {
+        let end = p
+            .nth_range(len - flags - 1)
+            .expect("a condition ahead")
+            .end();
+        p.bump_bounded(end, expression);
     }
 }
 

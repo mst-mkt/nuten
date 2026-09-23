@@ -29,7 +29,6 @@ if $a { # c
   1
 } else { 2 }
 if $a { 1 } else { 2 } o> out.txt
-if true {1} {2}
 if $x {a} else {b} {c}
 if $x { 1 }
 else   {  2  }
@@ -58,3 +57,6 @@ do { if $a { 1 } else { 2 } # c
 if true {} else {...$x, a: 1}
 if true {} else [1,  2]
 if true {} else {a:  1}
+if --  $x  ==  1 {1}
+if -h {1}
+if match 1 {_ => true} {1}

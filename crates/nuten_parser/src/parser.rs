@@ -215,7 +215,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn peek_range(&self) -> Option<TextRange> {
-        self.nth_token(0).map(|token| token.range)
+        self.nth_range(0)
     }
 
     /// The kind of the `n`th token ahead, `0` being the next, or `None` past the end.
@@ -226,6 +226,11 @@ impl<'a> Parser<'a> {
     /// The text of the `n`th token ahead, `0` being the next, or `None` past the end.
     pub(crate) fn nth_text(&self, n: usize) -> Option<&'a str> {
         self.nth_token(n).map(|token| &self.src[token.range])
+    }
+
+    /// The range of the `n`th token ahead, `0` being the next, or `None` past the end.
+    pub(crate) fn nth_range(&self, n: usize) -> Option<TextRange> {
+        self.nth_token(n).map(|token| token.range)
     }
 
     /// The kind of the last token emitted, trivia aside.
@@ -837,6 +842,15 @@ mod tests {
         for piece in [range(0, 3), range(1, 2), range(4, 6)] {
             assert!(p.item_at(piece).is_none(), "{piece:?}");
         }
+    }
+
+    #[test]
+    fn nth_range_counts_tokens_past_whitespace_and_comments() {
+        let p = parser("a  # c\n  b");
+        assert_eq!(p.nth_range(0), Some(range(0, 1)));
+        assert_eq!(p.nth_range(1), Some(range(6, 7)));
+        assert_eq!(p.nth_range(2), Some(range(9, 10)));
+        assert_eq!(p.nth_range(3), None);
     }
 
     fn bump_all(p: &mut Parser<'_>) {

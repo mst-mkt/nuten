@@ -115,3 +115,9 @@ try {
 } catch {
     ...$x, a: 1
 }
+while -h $a {
+    1
+}
+while if true { true } else { false } {
+    1
+}

@@ -199,14 +199,15 @@ Root@0..749
       If@176..195
         Word@176..178 "if"
         Whitespace@178..179 " "
-        Word@179..181 "$x"
-        Whitespace@181..182 " "
-        Word@182..184 "in"
-        Whitespace@184..185 " "
-        Range@185..191
-          Word@185..187 "$y"
-          RangeOperator@187..189 ".."
-          Word@189..191 "$z"
+        MathExpression@179..191
+          Word@179..181 "$x"
+          Whitespace@181..182 " "
+          Operator@182..184 "in"
+          Whitespace@184..185 " "
+          Range@185..191
+            Word@185..187 "$y"
+            RangeOperator@187..189 ".."
+            Word@189..191 "$z"
         Whitespace@191..192 " "
         Word@192..195 "{ }"
   Newline@195..196 "\n"

@@ -21,7 +21,7 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
     if keyword(p) {
         return true;
     }
-    // `if` and `match` read no flag, yet nu accepts a `--` or a help flag in their call.
+    // Nu accepts a `--` or a help flag in the call of `if` or `match`, where the syntax reads none.
     // So a call with one stays as written, not as terms that would each lack an operator.
     if !call_items(p).iter().any(|item| is_flag(item)) {
         return false;

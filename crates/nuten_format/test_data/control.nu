@@ -43,3 +43,5 @@ while [1,  2] == $x { 1 }
 if true {...$x, a: 1}
 for x in [1] {...$x,  a: 1}
 try {...$x} catch {...$x, a: 1}
+while -h  $a  {1}
+while if true {true} else {false} {1}

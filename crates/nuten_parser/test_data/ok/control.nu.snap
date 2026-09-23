@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/control.nu
 ---
-Root@0..867
+Root@0..961
   Pipeline@0..27
     PipelineElement@0..27
       For@0..27
@@ -86,11 +86,12 @@ Root@0..867
       While@73..97
         Word@73..78 "while"
         Whitespace@78..79 " "
-        Word@79..81 "$a"
-        Whitespace@81..82 " "
-        Word@82..83 "<"
-        Whitespace@83..84 " "
-        Word@84..85 "3"
+        MathExpression@79..85
+          Word@79..81 "$a"
+          Whitespace@81..82 " "
+          Operator@82..83 "<"
+          Whitespace@83..84 " "
+          Word@84..85 "3"
         Whitespace@85..86 " "
         Block@86..97
           LBrace@86..87 "{"
@@ -884,3 +885,91 @@ Root@0..867
                 Word@864..865 "1"
           RBrace@865..866 "}"
   Newline@866..867 "\n"
+  Pipeline@867..882
+    PipelineElement@867..882
+      While@867..882
+        Word@867..872 "while"
+        Whitespace@872..873 " "
+        Word@873..875 "-h"
+        Whitespace@875..876 " "
+        Word@876..878 "$a"
+        Whitespace@878..879 " "
+        Block@879..882
+          LBrace@879..880 "{"
+          Pipeline@880..881
+            PipelineElement@880..881
+              Word@880..881 "1"
+          RBrace@881..882 "}"
+  Newline@882..883 "\n"
+  Pipeline@883..905
+    PipelineElement@883..905
+      While@883..905
+        Word@883..888 "while"
+        Whitespace@888..889 " "
+        MathExpression@889..901
+          Word@889..891 "$a"
+          Whitespace@891..892 " "
+          Operator@892..894 "in"
+          Whitespace@894..895 " "
+          List@895..901
+            LBracket@895..896 "["
+            Word@896..897 "1"
+            Comma@897..898 ","
+            Whitespace@898..899 " "
+            Word@899..900 "2"
+            RBracket@900..901 "]"
+        Whitespace@901..902 " "
+        Block@902..905
+          LBrace@902..903 "{"
+          Pipeline@903..904
+            PipelineElement@903..904
+              Word@903..904 "1"
+          RBrace@904..905 "}"
+  Newline@905..906 "\n"
+  Pipeline@906..922
+    PipelineElement@906..922
+      While@906..922
+        Word@906..911 "while"
+        Whitespace@911..912 " "
+        Word@912..918 "--help"
+        Whitespace@918..919 " "
+        Block@919..922
+          LBrace@919..920 "{"
+          Pipeline@920..921
+            PipelineElement@920..921
+              Word@920..921 "1"
+          RBrace@921..922 "}"
+  Newline@922..923 "\n"
+  Pipeline@923..960
+    PipelineElement@923..960
+      While@923..960
+        Word@923..928 "while"
+        Whitespace@928..929 " "
+        If@929..956
+          Word@929..931 "if"
+          Whitespace@931..932 " "
+          Word@932..936 "true"
+          Whitespace@936..937 " "
+          Block@937..943
+            LBrace@937..938 "{"
+            Pipeline@938..942
+              PipelineElement@938..942
+                Word@938..942 "true"
+            RBrace@942..943 "}"
+          Whitespace@943..944 " "
+          Word@944..948 "else"
+          Whitespace@948..949 " "
+          Block@949..956
+            LBrace@949..950 "{"
+            Pipeline@950..955
+              PipelineElement@950..955
+                Word@950..955 "false"
+            RBrace@955..956 "}"
+        Whitespace@956..957 " "
+        Block@957..960
+          LBrace@957..958 "{"
+          Pipeline@958..959
+            PipelineElement@958..959
+              Word@958..959 "1"
+          RBrace@959..960 "}"
+  Newline@960..961 "\n"

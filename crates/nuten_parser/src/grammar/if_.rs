@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{Shape, call_items, item, value};
+use super::{Shape, call_items, command::condition, item, value};
 use crate::parser::Parser;
 
 /// The `If` ahead, when nu reads the call as one.
@@ -12,9 +12,7 @@ pub(super) fn if_(p: &mut Parser<'_>) -> bool {
     let mut at = 0;
     for link in &chain {
         p.bump();
-        for _ in at + 1..link.body {
-            item(p, Shape::Any);
-        }
+        condition(p, link.body - at - 1);
         value(p, Shape::Block);
         at = link.body + 1;
         if link.has_else {

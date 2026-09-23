@@ -1,6 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
-use super::{Shape, call_items, item, value, var_type::var_type};
+use super::{Shape, call_items, command::condition, item, value, var_type::var_type};
 use crate::parser::Parser;
 
 /// The `For`, `While`, `Loop`, or `Try` ahead, when nu reads the call as one.
@@ -12,6 +12,9 @@ pub(super) fn control(p: &mut Parser<'_>) -> bool {
     p.bump();
     if shape.kind == SyntaxKind::For {
         for_variable(p);
+    }
+    if shape.kind == SyntaxKind::While {
+        condition(p, shape.values_at - 1);
     }
     for at in shape.values_at..shape.len {
         if at + 1 == shape.len || (shape.has_catch && at == 1) {
@@ -42,7 +45,9 @@ struct ControlShape {
     kind: SyntaxKind,
     len: usize,
     has_catch: bool,
-    /// Where the items nu reads as values start: at the `in` of a `for`, else after the keyword.
+    /// Where the items nu reads as values start.
+    /// That is at the `in` of a `for`, at the body of a `while`, and after the keyword otherwise.
+    /// The condition of a `while` comes before them, which nu reads as an expression.
     values_at: usize,
 }
 
@@ -54,7 +59,7 @@ fn control_shape(items: &[&str]) -> Option<ControlShape> {
     }
     let (kind, has_catch, values_at) = match items[0] {
         "for" => (SyntaxKind::For, false, for_in(items)?),
-        "while" if last >= 2 => (SyntaxKind::While, false, 1),
+        "while" if last >= 2 => (SyntaxKind::While, false, last),
         "loop" if last == 1 => (SyntaxKind::Loop, false, 1),
         "try" if last == 1 => (SyntaxKind::Try, false, 1),
         "try" if last == 3 && braced(1) && items[2] == "catch" => (SyntaxKind::Try, true, 1),
