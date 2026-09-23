@@ -1,0 +1,57 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/source.nu
+---
+Root@0..107
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..13
+        Word@0..6 "source"
+        Whitespace@6..9 "   "
+        Word@9..13 "a.nu"
+  Newline@13..14 "\n"
+  Pipeline@14..26
+    PipelineElement@14..26
+      Call@14..26
+        Word@14..20 "source"
+        Whitespace@20..21 " "
+        Word@21..26 "[a,b]"
+  Newline@26..27 "\n"
+  Pipeline@27..46
+    PipelineElement@27..46
+      Call@27..46
+        Word@27..33 "source"
+        Whitespace@33..34 " "
+        Word@34..40 "--help"
+        Whitespace@40..41 " "
+        Word@41..46 "[a,b]"
+  Newline@46..47 "\n"
+  Pipeline@47..67
+    PipelineElement@47..67
+      Call@47..67
+        Word@47..53 "source"
+        Whitespace@53..54 " "
+        InterpString@54..67 "$\"(pwd)/a.nu\""
+  Newline@67..68 "\n"
+  Pipeline@68..89
+    PipelineElement@68..89
+      Call@68..89
+        Word@68..73 "print"
+        Whitespace@73..74 " "
+        Subexpression@74..89
+          LParen@74..75 "("
+          Pipeline@75..88
+            PipelineElement@75..88
+              Call@75..88
+                Word@75..81 "source"
+                Whitespace@81..84 "   "
+                Word@84..88 "a.nu"
+          RParen@88..89 ")"
+  Newline@89..90 "\n"
+  Pipeline@90..106
+    PipelineElement@90..106
+      Call@90..106
+        Word@90..100 "source-env"
+        Whitespace@100..101 " "
+        Word@101..106 "[a,b]"
+  Newline@106..107 "\n"
