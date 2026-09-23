@@ -13,6 +13,7 @@ mod if_;
 mod keyword;
 mod list;
 mod match_;
+mod module;
 mod number;
 mod pattern;
 mod pipeline;
@@ -289,6 +290,11 @@ fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
         .take_while(|(token, _)| !ends_call(token.kind))
         .map(|(_, text)| text)
         .collect()
+}
+
+/// Whether nu reads `text` as a flag, where no parameter takes a number.
+fn is_flag(text: &str) -> bool {
+    text.starts_with('-') && text.len() > 1
 }
 
 fn is_pipe(kind: SyntaxKind) -> bool {

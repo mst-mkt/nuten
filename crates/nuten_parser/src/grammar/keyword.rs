@@ -1,4 +1,4 @@
-use super::{control::control, def::def, if_::if_, match_::match_};
+use super::{control::control, def::def, if_::if_, match_::match_, module::module};
 use crate::parser::Parser;
 
 /// The keyword syntax nu reads after an operator, as a call over the rest of the element.
@@ -20,6 +20,7 @@ pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
         Some("for" | "while" | "loop" | "try") => control(p),
         Some("match") => match_(p),
         Some("def" | "extern" | "export") => def(p),
+        Some("module") => module(p),
         _ => false,
     }
 }
