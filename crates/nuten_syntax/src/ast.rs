@@ -244,6 +244,14 @@ impl Node {
                 .try_header()
                 .is_none()
                 .then_some("does not hold its column names and their `;` first"),
+            Node::IoTypes(_) => {
+                let node = self.syntax();
+                let opens = node.first_child_or_token().as_ref().and_then(kind_if_token)
+                    == Some(SyntaxKind::LBracket);
+                let closes = node.last_child_or_token().as_ref().and_then(kind_if_token)
+                    == Some(SyntaxKind::RBracket);
+                (opens != closes).then_some("holds one of its brackets without the other")
+            },
             Node::CellPath(_) | Node::Range(_) | Node::Spread(_) => self
                 .syntax()
                 .children_with_tokens()
@@ -332,6 +340,27 @@ impl Type {
     }
 }
 
+impl IoTypes {
+    /// The `[`, what it holds, and the `]`, when the pairs are written in `[ ]`.
+    pub fn brackets(&self) -> Option<(SyntaxToken, Inside, SyntaxToken)> {
+        let open = self
+            .syntax()
+            .first_child_or_token()
+            .and_then(SyntaxElement::into_token)
+            .filter(|open| open.kind() == SyntaxKind::LBracket)?;
+        let close = self
+            .syntax()
+            .last_child_or_token()
+            .and_then(SyntaxElement::into_token)
+            .expect("types that open with `[` close with `]`");
+        let inside = Inside {
+            next: open.next_sibling_or_token(),
+            close: close.clone(),
+        };
+        Some((open, inside, close))
+    }
+}
+
 impl Binary {
     /// The `0x`, `0o`, or `0b` before the `[`.
     pub fn prefix(&self) -> SyntaxToken {
@@ -349,7 +378,7 @@ mod tests {
     use rowan::{GreenNodeBuilder, NodeOrToken};
 
     use super::{
-        AstNode, Block, Bracketed, Def, List, Node, Pipeline, Table, Type, kind_of, typed,
+        AstNode, Block, Bracketed, Def, IoTypes, List, Node, Pipeline, Table, Type, kind_of, typed,
     };
     use crate::{SyntaxElement, SyntaxKind, SyntaxNode};
 
@@ -554,6 +583,22 @@ mod tests {
                 SyntaxKind::Word
             ]
         );
+    }
+
+    #[test]
+    fn io_types_give_their_brackets_and_what_they_hold() {
+        let pair = node(SyntaxKind::IoType, vec![token(SyntaxKind::Word, "int")]);
+        let tree = node(SyntaxKind::IoTypes, bracketed(vec![pair]));
+        let (open, inside, close) = IoTypes::cast(build(&tree)).unwrap().brackets().unwrap();
+        assert_eq!((open.text(), close.text()), ("[", "]"));
+        assert_eq!(kinds(inside), [SyntaxKind::IoType]);
+    }
+
+    #[test]
+    fn bare_io_types_give_no_brackets() {
+        let pair = node(SyntaxKind::IoType, vec![token(SyntaxKind::Word, "int")]);
+        let bare = IoTypes::cast(build(&node(SyntaxKind::IoTypes, vec![pair]))).unwrap();
+        assert!(bare.brackets().is_none());
     }
 
     #[test]
@@ -816,6 +861,31 @@ mod tests {
                     ],
                 ),
                 None,
+            ),
+            (node(SyntaxKind::IoTypes, bracketed(vec![])), None),
+            (
+                node(SyntaxKind::IoTypes, vec![node(SyntaxKind::IoType, vec![])]),
+                None,
+            ),
+            (
+                node(
+                    SyntaxKind::IoTypes,
+                    vec![
+                        token(SyntaxKind::LBracket, "["),
+                        node(SyntaxKind::IoType, vec![]),
+                    ],
+                ),
+                Some("holds one of its brackets without the other"),
+            ),
+            (
+                node(
+                    SyntaxKind::IoTypes,
+                    vec![
+                        node(SyntaxKind::IoType, vec![]),
+                        token(SyntaxKind::RBracket, "]"),
+                    ],
+                ),
+                Some("holds one of its brackets without the other"),
             ),
             (
                 node(

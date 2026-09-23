@@ -135,7 +135,7 @@ def tt [
 ] {
     ls
 }
-def tu []: record< a : int > -> int {
+def tu []: record<a: int> -> int {
     ls
 }
 def tv [x: list<int> = [1]] {

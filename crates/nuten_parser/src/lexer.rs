@@ -81,6 +81,7 @@ pub(crate) enum Mode {
     /// The inside of the `[ ]` or `( )` of a `def` or an `extern`.
     Signature,
     /// The input and output types after the signature, as in `]: nothing -> string`.
+    /// Nu lexes a line break as whitespace there, as it does a `,`.
     IoTypes,
     /// The inside of the `< >` of a type, as in `record<a: int>`.
     TypeParams,
@@ -173,7 +174,7 @@ impl Mode {
 
     /// Whether the parser skips a line break instead of reading it.
     pub(crate) fn skips_newline(self) -> bool {
-        matches!(self, Mode::Paren | Mode::MatchArms)
+        matches!(self, Mode::Paren | Mode::MatchArms | Mode::IoTypes)
     }
 
     pub(crate) fn special_kind(self, byte: u8) -> Option<SyntaxKind> {

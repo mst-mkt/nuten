@@ -221,6 +221,7 @@ macro_rules! syntax_kinds {
                 /// `export` if there, the keyword, any flags, the name, and a `Signature`.
                 /// Then the `:` and the input and output types if there.
                 /// They are an `Error` where nu fails to lex them.
+                /// They are an `IoTypes` where nu pairs them all up.
                 /// Otherwise the items stay as they are.
                 /// Then the body, which only a `def` has.
                 Def,
@@ -233,12 +234,19 @@ macro_rules! syntax_kinds {
                 /// It holds the `,` that ends it, and the `|`, `;`, and redirections nu ignores.
                 Param,
                 /// A type that takes parameters: its name, `<`, what it holds, `>`.
-                /// Nu reads one in a `Signature` and in the type of a variable.
+                /// Nu reads one in a `Signature`, in the type of a variable, and in an `IoType`.
                 Type,
                 /// One field of a `record` or a `table` type, starting with its key.
                 /// Then the `:` that follows the key while nu gives it to that key.
                 /// Then the one item after that `:`, which nu takes for the type whatever it is.
                 TypeField,
+                /// The input and output types of a `Def`: the `IoType`s, with any `,` among them.
+                /// Written in `[ ]`, they have the `[` first and the `]` last.
+                /// Comments may stand among the pairs and inside one.
+                IoTypes,
+                /// An input type, `->`, and an output type.
+                /// Each type is a `Type` where nu reads one, or else the item as it is.
+                IoType,
             }
         }
     };

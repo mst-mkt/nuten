@@ -170,11 +170,13 @@ Root@0..1506
           RBracket@247..248 "]"
         Colon@248..249 ":"
         Whitespace@249..250 " "
-        Word@250..257 "nothing"
-        Whitespace@257..258 " "
-        Word@258..260 "->"
-        Whitespace@260..261 " "
-        Word@261..267 "string"
+        IoTypes@250..267
+          IoType@250..267
+            Word@250..257 "nothing"
+            Whitespace@257..258 " "
+            Word@258..260 "->"
+            Whitespace@260..261 " "
+            Word@261..267 "string"
         Whitespace@267..268 " "
         Block@268..275
           LBrace@268..269 "{"
@@ -198,11 +200,13 @@ Root@0..1506
         Whitespace@284..285 " "
         Colon@285..286 ":"
         Whitespace@286..287 " "
-        Word@287..290 "int"
-        Whitespace@290..291 " "
-        Word@291..293 "->"
-        Whitespace@293..294 " "
-        Word@294..297 "int"
+        IoTypes@287..297
+          IoType@287..297
+            Word@287..290 "int"
+            Whitespace@290..291 " "
+            Word@291..293 "->"
+            Whitespace@293..294 " "
+            Word@294..297 "int"
         Whitespace@297..298 " "
         Block@298..303
           LBrace@298..299 "{"
@@ -225,7 +229,23 @@ Root@0..1506
           RBracket@311..312 "]"
         Colon@312..313 ":"
         Whitespace@313..314 " "
-        Word@314..345 "[int -> string, nothing -> int]"
+        IoTypes@314..345
+          LBracket@314..315 "["
+          IoType@315..328
+            Word@315..318 "int"
+            Whitespace@318..319 " "
+            Word@319..321 "->"
+            Whitespace@321..322 " "
+            Word@322..328 "string"
+          Comma@328..329 ","
+          Whitespace@329..330 " "
+          IoType@330..344
+            Word@330..337 "nothing"
+            Whitespace@337..338 " "
+            Word@338..340 "->"
+            Whitespace@340..341 " "
+            Word@341..344 "int"
+          RBracket@344..345 "]"
         Whitespace@345..346 " "
         Block@346..353
           LBrace@346..347 "{"
@@ -1124,13 +1144,21 @@ Root@0..1506
           RBracket@1294..1295 "]"
         Colon@1295..1296 ":"
         Whitespace@1296..1297 " "
-        Word@1297..1306 "record<a:"
-        Whitespace@1306..1307 " "
-        Word@1307..1311 "int>"
-        Whitespace@1311..1312 " "
-        Word@1312..1314 "->"
-        Whitespace@1314..1315 " "
-        Word@1315..1318 "int"
+        IoTypes@1297..1318
+          IoType@1297..1318
+            Type@1297..1311
+              Word@1297..1303 "record"
+              LAngle@1303..1304 "<"
+              TypeField@1304..1310
+                Word@1304..1305 "a"
+                Colon@1305..1306 ":"
+                Whitespace@1306..1307 " "
+                Word@1307..1310 "int"
+              RAngle@1310..1311 ">"
+            Whitespace@1311..1312 " "
+            Word@1312..1314 "->"
+            Whitespace@1314..1315 " "
+            Word@1315..1318 "int"
         Whitespace@1318..1319 " "
         Block@1319..1325
           LBrace@1319..1320 "{"

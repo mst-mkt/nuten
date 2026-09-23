@@ -2,7 +2,7 @@ use std::iter;
 
 use nuten_doc::{
     Element, empty_line, expand_parent, group, indent, soft_line_break, soft_line_break_or_space,
-    space,
+    space, text,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxToken,
@@ -33,6 +33,7 @@ impl<'a> Formatter<'a> {
             line,
             line,
             &container.close(),
+            false,
         )
     }
 
@@ -54,10 +55,16 @@ impl<'a> Formatter<'a> {
             soft_line_break_or_space,
             soft_line_break,
             &table.close(),
+            false,
         )
     }
 
-    fn items(
+    /// `commas` puts a `,` after each item but the last, comments aside.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "each container lays out its items with its own choice of these"
+    )]
+    pub(super) fn items(
         &mut self,
         head: Vec<Element<'a>>,
         items: impl Iterator<Item = Child>,
@@ -65,15 +72,22 @@ impl<'a> Formatter<'a> {
         before_first: SoftLine,
         before_close: SoftLine,
         close: &SyntaxToken,
+        commas: bool,
     ) -> Vec<Element<'a>> {
         let items: Vec<_> = without_commas(items).collect();
         let expand = expand
             || items.first().is_some_and(|first| first.newlines > 0)
             || items.iter().any(Child::is_comment);
+        let last = items.iter().rposition(|item| !item.is_comment());
         let inner: Vec<_> = items
             .iter()
             .enumerate()
-            .flat_map(|(index, item)| self.item(index, item, before_first))
+            .flat_map(|(index, item)| {
+                let comma = commas && !item.is_comment() && Some(index) != last;
+                self.item(index, item, before_first)
+                    .into_iter()
+                    .chain(comma.then(|| text(",")))
+            })
             .collect();
         let mut out = head;
         if inner.is_empty() {

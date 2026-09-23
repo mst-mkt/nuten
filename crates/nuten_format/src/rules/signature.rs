@@ -1,6 +1,6 @@
 use std::iter;
 
-use nuten_doc::{Element, space, text};
+use nuten_doc::{Element, space};
 use nuten_syntax::{
     SyntaxKind,
     ast::{AstNode, Bracketed, Param, Type, TypeField},
@@ -33,15 +33,7 @@ impl<'a> Formatter<'a> {
     pub(super) fn type_(&mut self, type_: &Type) -> Vec<Element<'a>> {
         let head = [self.token(&type_.name()), self.token(&type_.open())];
         let close = self.token(&type_.close());
-        let params = without_commas(children(type_.inside()))
-            .enumerate()
-            .flat_map(|(index, param)| {
-                let comma = (index > 0).then(|| [text(","), space()]);
-                comma
-                    .into_iter()
-                    .flatten()
-                    .chain(self.element(&param.element))
-            });
+        let params = self.comma_spaced(children(type_.inside()));
         head.into_iter()
             .chain(params)
             .chain(iter::once(close))

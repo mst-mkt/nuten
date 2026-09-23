@@ -167,11 +167,13 @@ Root@0..315
           RBracket@164..165 "]"
         Colon@165..166 ":"
         Whitespace@166..167 " "
-        Word@167..174 "nothing"
-        Whitespace@174..175 " "
-        Word@175..177 "->"
-        Whitespace@177..178 " "
-        Word@178..181 "int"
+        IoTypes@167..181
+          IoType@167..181
+            Word@167..174 "nothing"
+            Whitespace@174..175 " "
+            Word@175..177 "->"
+            Whitespace@177..178 " "
+            Word@178..181 "int"
         Whitespace@181..182 " "
         Word@182..184 "{}"
   Newline@184..185 "\n"

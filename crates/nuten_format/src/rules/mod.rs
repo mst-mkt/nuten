@@ -175,6 +175,8 @@ impl<'a> Formatter<'a> {
             Node::Type(type_) => self.type_(type_),
             Node::Binary(binary) => self.binary(binary),
             Node::TypeField(field) => self.type_field(field),
+            Node::IoTypes(types) => self.io_types(types),
+            Node::IoType(pair) => self.io_type(pair),
             Node::Block(block) => self.block(block),
             Node::Subexpression(subexpression) => self.subexpression(subexpression),
             Node::Root(_) => unreachable!("Root is laid out by file"),
@@ -218,6 +220,20 @@ impl<'a> Formatter<'a> {
                         .chain(self.element(&item.element))
                         .collect(),
                 }
+            })
+            .collect()
+    }
+
+    /// `items` on one line, with a `,` and a space between each two.
+    fn comma_spaced(&mut self, items: impl Iterator<Item = Child>) -> Vec<Element<'a>> {
+        without_commas(items)
+            .enumerate()
+            .flat_map(|(index, item)| {
+                let comma = (index > 0).then(|| [text(","), space()]);
+                comma
+                    .into_iter()
+                    .flatten()
+                    .chain(self.element(&item.element))
             })
             .collect()
     }

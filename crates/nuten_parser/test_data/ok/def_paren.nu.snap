@@ -61,11 +61,13 @@ Root@0..413
           RParen@45..46 ")"
         Colon@46..47 ":"
         Whitespace@47..48 " "
-        Word@48..55 "nothing"
-        Whitespace@55..56 " "
-        Word@56..58 "->"
-        Whitespace@58..59 " "
-        Word@59..65 "string"
+        IoTypes@48..65
+          IoType@48..65
+            Word@48..55 "nothing"
+            Whitespace@55..56 " "
+            Word@56..58 "->"
+            Whitespace@58..59 " "
+            Word@59..65 "string"
         Whitespace@65..66 " "
         Block@66..73
           LBrace@66..67 "{"
@@ -89,11 +91,13 @@ Root@0..413
         Whitespace@82..83 " "
         Colon@83..84 ":"
         Whitespace@84..85 " "
-        Word@85..88 "int"
-        Whitespace@88..89 " "
-        Word@89..91 "->"
-        Whitespace@91..92 " "
-        Word@92..95 "int"
+        IoTypes@85..95
+          IoType@85..95
+            Word@85..88 "int"
+            Whitespace@88..89 " "
+            Word@89..91 "->"
+            Whitespace@91..92 " "
+            Word@92..95 "int"
         Whitespace@95..96 " "
         Block@96..101
           LBrace@96..97 "{"
