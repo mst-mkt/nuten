@@ -122,6 +122,7 @@ macro_rules! syntax_kinds {
                 // A body is an argument that starts with `{`.
                 /// `if`, the condition, the body, then any number of `else`, `if`, condition, body.
                 /// A last `else` takes one more argument.
+                /// More items after it are one expression, as what heads a statement is.
                 /// The `if`s after the `else`s are in this one flat node.
                 /// Each condition is any flags of its `if`, then any items left as one expression.
                 /// It is a `MathExpression`, or a term of one standing alone.

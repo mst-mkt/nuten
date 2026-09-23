@@ -60,3 +60,13 @@ if true {} else {a:  1}
 if --  $x  ==  1 {1}
 if -h {1}
 if match 1 {_ => true} {1}
+if $a {1} else foo {1}
+if $a {1} else 1  +  2
+if $a {1} else foo  {1}  o>  f
+if $a {1} else match $x {_ => 2}
+let y = if $a {1} else print  [1,  2]
+if $a {1} else @foo  {1}
+if $a {1} else if $b {2} else foo  {1}
+if $a {1} else $a  --help
+if $a {1} else (1)  --help
+if $a {1} else r#'x'#  --help

@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/if.nu
 ---
-Root@0..662
+Root@0..945
   Pipeline@0..11
     PipelineElement@0..11
       If@0..11
@@ -413,7 +413,7 @@ Root@0..662
   Newline@400..401 "\n"
   Pipeline@401..423
     PipelineElement@401..423
-      Call@401..423
+      If@401..423
         Word@401..403 "if"
         Whitespace@403..404 " "
         Word@404..408 "true"
@@ -427,11 +427,12 @@ Root@0..662
         Whitespace@412..413 " "
         Word@413..417 "else"
         Whitespace@417..418 " "
-        Word@418..419 "1"
-        Whitespace@419..420 " "
-        Word@420..421 "+"
-        Whitespace@421..422 " "
-        Word@422..423 "2"
+        MathExpression@418..423
+          Word@418..419 "1"
+          Whitespace@419..420 " "
+          Operator@420..421 "+"
+          Whitespace@421..422 " "
+          Word@422..423 "2"
   Newline@423..424 "\n"
   Pipeline@424..433
     PipelineElement@424..433
@@ -683,3 +684,254 @@ Root@0..662
               Word@659..660 "1"
           RBrace@660..661 "}"
   Newline@661..662 "\n"
+  Pipeline@662..684
+    PipelineElement@662..684
+      If@662..684
+        Word@662..664 "if"
+        Whitespace@664..665 " "
+        Word@665..667 "$a"
+        Whitespace@667..668 " "
+        Block@668..671
+          LBrace@668..669 "{"
+          Pipeline@669..670
+            PipelineElement@669..670
+              Word@669..670 "1"
+          RBrace@670..671 "}"
+        Whitespace@671..672 " "
+        Word@672..676 "else"
+        Whitespace@676..677 " "
+        Call@677..684
+          Word@677..680 "foo"
+          Whitespace@680..681 " "
+          Word@681..684 "{1}"
+  Newline@684..685 "\n"
+  Pipeline@685..705
+    PipelineElement@685..705
+      If@685..705
+        Word@685..687 "if"
+        Whitespace@687..688 " "
+        Word@688..690 "$a"
+        Whitespace@690..691 " "
+        Block@691..694
+          LBrace@691..692 "{"
+          Pipeline@692..693
+            PipelineElement@692..693
+              Word@692..693 "1"
+          RBrace@693..694 "}"
+        Whitespace@694..695 " "
+        Word@695..699 "else"
+        Whitespace@699..700 " "
+        MathExpression@700..705
+          Word@700..701 "1"
+          Whitespace@701..702 " "
+          Operator@702..703 "+"
+          Whitespace@703..704 " "
+          Word@704..705 "2"
+  Newline@705..706 "\n"
+  Pipeline@706..733
+    PipelineElement@706..733
+      If@706..728
+        Word@706..708 "if"
+        Whitespace@708..709 " "
+        Word@709..711 "$a"
+        Whitespace@711..712 " "
+        Block@712..715
+          LBrace@712..713 "{"
+          Pipeline@713..714
+            PipelineElement@713..714
+              Word@713..714 "1"
+          RBrace@714..715 "}"
+        Whitespace@715..716 " "
+        Word@716..720 "else"
+        Whitespace@720..721 " "
+        Call@721..728
+          Word@721..724 "foo"
+          Whitespace@724..725 " "
+          Word@725..728 "{1}"
+      Whitespace@728..729 " "
+      Redirection@729..733
+        OutGt@729..731 "o>"
+        Whitespace@731..732 " "
+        Word@732..733 "f"
+  Newline@733..734 "\n"
+  Pipeline@734..766
+    PipelineElement@734..766
+      If@734..766
+        Word@734..736 "if"
+        Whitespace@736..737 " "
+        Word@737..739 "$a"
+        Whitespace@739..740 " "
+        Block@740..743
+          LBrace@740..741 "{"
+          Pipeline@741..742
+            PipelineElement@741..742
+              Word@741..742 "1"
+          RBrace@742..743 "}"
+        Whitespace@743..744 " "
+        Word@744..748 "else"
+        Whitespace@748..749 " "
+        Match@749..766
+          Word@749..754 "match"
+          Whitespace@754..755 " "
+          Word@755..757 "$x"
+          Whitespace@757..758 " "
+          MatchArms@758..766
+            LBrace@758..759 "{"
+            MatchArm@759..765
+              Word@759..760 "_"
+              Whitespace@760..761 " "
+              FatArrow@761..763 "=>"
+              Whitespace@763..764 " "
+              Word@764..765 "2"
+            RBrace@765..766 "}"
+  Newline@766..767 "\n"
+  Pipeline@767..802
+    PipelineElement@767..802
+      Let@767..802
+        Word@767..770 "let"
+        Whitespace@770..771 " "
+        Word@771..772 "y"
+        Whitespace@772..773 " "
+        Assign@773..774 "="
+        Whitespace@774..775 " "
+        Pipeline@775..802
+          PipelineElement@775..802
+            If@775..802
+              Word@775..777 "if"
+              Whitespace@777..778 " "
+              Word@778..780 "$a"
+              Whitespace@780..781 " "
+              Block@781..784
+                LBrace@781..782 "{"
+                Pipeline@782..783
+                  PipelineElement@782..783
+                    Word@782..783 "1"
+                RBrace@783..784 "}"
+              Whitespace@784..785 " "
+              Word@785..789 "else"
+              Whitespace@789..790 " "
+              Call@790..802
+                Word@790..795 "print"
+                Whitespace@795..796 " "
+                Word@796..802 "[1, 2]"
+  Newline@802..803 "\n"
+  Pipeline@803..826
+    PipelineElement@803..826
+      If@803..826
+        Word@803..805 "if"
+        Whitespace@805..806 " "
+        Word@806..808 "$a"
+        Whitespace@808..809 " "
+        Block@809..812
+          LBrace@809..810 "{"
+          Pipeline@810..811
+            PipelineElement@810..811
+              Word@810..811 "1"
+          RBrace@811..812 "}"
+        Whitespace@812..813 " "
+        Word@813..817 "else"
+        Whitespace@817..818 " "
+        Call@818..826
+          Word@818..822 "@foo"
+          Whitespace@822..823 " "
+          Word@823..826 "{1}"
+  Newline@826..827 "\n"
+  Pipeline@827..864
+    PipelineElement@827..864
+      If@827..864
+        Word@827..829 "if"
+        Whitespace@829..830 " "
+        Word@830..832 "$a"
+        Whitespace@832..833 " "
+        Block@833..836
+          LBrace@833..834 "{"
+          Pipeline@834..835
+            PipelineElement@834..835
+              Word@834..835 "1"
+          RBrace@835..836 "}"
+        Whitespace@836..837 " "
+        Word@837..841 "else"
+        Whitespace@841..842 " "
+        Word@842..844 "if"
+        Whitespace@844..845 " "
+        Word@845..847 "$b"
+        Whitespace@847..848 " "
+        Block@848..851
+          LBrace@848..849 "{"
+          Pipeline@849..850
+            PipelineElement@849..850
+              Word@849..850 "2"
+          RBrace@850..851 "}"
+        Whitespace@851..852 " "
+        Word@852..856 "else"
+        Whitespace@856..857 " "
+        Call@857..864
+          Word@857..860 "foo"
+          Whitespace@860..861 " "
+          Word@861..864 "{1}"
+  Newline@864..865 "\n"
+  Pipeline@865..889
+    PipelineElement@865..889
+      Call@865..889
+        Word@865..867 "if"
+        Whitespace@867..868 " "
+        Word@868..870 "$a"
+        Whitespace@870..871 " "
+        Block@871..874
+          LBrace@871..872 "{"
+          Pipeline@872..873
+            PipelineElement@872..873
+              Word@872..873 "1"
+          RBrace@873..874 "}"
+        Whitespace@874..875 " "
+        Word@875..879 "else"
+        Whitespace@879..880 " "
+        Word@880..882 "$a"
+        Whitespace@882..883 " "
+        Word@883..889 "--help"
+  Newline@889..890 "\n"
+  Pipeline@890..915
+    PipelineElement@890..915
+      Call@890..915
+        Word@890..892 "if"
+        Whitespace@892..893 " "
+        Word@893..895 "$a"
+        Whitespace@895..896 " "
+        Block@896..899
+          LBrace@896..897 "{"
+          Pipeline@897..898
+            PipelineElement@897..898
+              Word@897..898 "1"
+          RBrace@898..899 "}"
+        Whitespace@899..900 " "
+        Word@900..904 "else"
+        Whitespace@904..905 " "
+        Subexpression@905..908
+          LParen@905..906 "("
+          Pipeline@906..907
+            PipelineElement@906..907
+              Word@906..907 "1"
+          RParen@907..908 ")"
+        Whitespace@908..909 " "
+        Word@909..915 "--help"
+  Newline@915..916 "\n"
+  Pipeline@916..944
+    PipelineElement@916..944
+      Call@916..944
+        Word@916..918 "if"
+        Whitespace@918..919 " "
+        Word@919..921 "$a"
+        Whitespace@921..922 " "
+        Block@922..925
+          LBrace@922..923 "{"
+          Pipeline@923..924
+            PipelineElement@923..924
+              Word@923..924 "1"
+          RBrace@924..925 "}"
+        Whitespace@925..926 " "
+        Word@926..930 "else"
+        Whitespace@930..931 " "
+        RawString@931..937 "r#'x'#"
+        Whitespace@937..938 " "
+        Word@938..944 "--help"
+  Newline@944..945 "\n"
