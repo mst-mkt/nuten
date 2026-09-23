@@ -1,9 +1,9 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    CURLY, at_call_item,
+    CURLY, Shape, at_call_item,
     block::{holds_more_than_trivia, params_start},
-    call_items, file, is_flag, keyword_words,
+    call_items, file, is_flag, keyword_words, value,
 };
 use crate::{lexer::Mode, parser::Parser};
 
@@ -14,7 +14,23 @@ pub(super) fn module(p: &mut Parser<'_>) -> bool {
     if call_items(p).get(words..).is_some_and(takes_body) {
         module_with_body(p, words);
     } else {
-        module_without_body(p);
+        // Nu reads nothing past the name.
+        // Any more is an error, unless a help flag makes the call do nothing else.
+        call_as_written(p);
+    }
+    true
+}
+
+/// The `ExportEnv` ahead, where `export-env` takes one `{ }`.
+/// Nu reads nothing past the first item, so a call with more stays as written.
+pub(super) fn export_env(p: &mut Parser<'_>) -> bool {
+    if matches!(call_items(p)[..], [_, body] if body.starts_with('{')) {
+        p.start(SyntaxKind::ExportEnv);
+        p.bump();
+        value(p, Shape::Block);
+        p.finish();
+    } else {
+        call_as_written(p);
     }
     true
 }
@@ -29,9 +45,8 @@ fn module_with_body(p: &mut Parser<'_>, words: usize) {
     p.finish();
 }
 
-/// The `module` call ahead, where nu reads nothing past the name.
-/// Any more is an error, unless a help flag makes the call do nothing else.
-fn module_without_body(p: &mut Parser<'_>) {
+/// The call ahead with its items as written.
+fn call_as_written(p: &mut Parser<'_>) {
     p.start(SyntaxKind::Call);
     while at_call_item(p) {
         p.bump();

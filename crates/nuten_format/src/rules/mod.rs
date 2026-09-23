@@ -172,6 +172,7 @@ impl<'a> Formatter<'a> {
             Node::Def(def) => self.def(def),
             Node::Alias(alias) => self.alias(alias),
             Node::Module(module) => self.module(module),
+            Node::ExportEnv(export_env) => self.export_env(export_env),
             Node::List(list) => self.container(list),
             Node::Record(record) => self.container(record),
             Node::RecordField(field) => self.field(field),

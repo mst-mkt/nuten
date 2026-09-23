@@ -266,6 +266,10 @@ macro_rules! syntax_kinds {
                 /// It stays a `Word` where it holds nothing but trivia, or starts with a `|`.
                 /// So it does where its statements report an error.
                 Module,
+                /// `export-env` and its body, the one item nu reads after it.
+                /// The body is what a `{ }` is where nu takes a block.
+                /// An `export-env` with no `{ }` or more than one item stays a `Call` as written.
+                ExportEnv,
                 /// `use`, the flags, then the import pattern: the module and its members.
                 /// `export` comes before `use` if there.
                 /// Nu reads the module as an argument of a command it knows.

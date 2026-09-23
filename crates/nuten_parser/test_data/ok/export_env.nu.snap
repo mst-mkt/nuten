@@ -1,0 +1,197 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/export_env.nu
+---
+Root@0..277
+  Pipeline@0..25
+    PipelineElement@0..25
+      ExportEnv@0..25
+        Word@0..10 "export-env"
+        Whitespace@10..11 " "
+        Block@11..25
+          LBrace@11..12 "{"
+          Whitespace@12..13 " "
+          Pipeline@13..23
+            PipelineElement@13..23
+              Assignment@13..23
+                CellPath@13..19
+                  Word@13..17 "$env"
+                  Dot@17..18 "."
+                  Word@18..19 "A"
+                Whitespace@19..20 " "
+                Assign@20..21 "="
+                Whitespace@21..22 " "
+                Pipeline@22..23
+                  PipelineElement@22..23
+                    Word@22..23 "1"
+          Whitespace@23..24 " "
+          RBrace@24..25 "}"
+  Newline@25..26 "\n"
+  Pipeline@26..51
+    PipelineElement@26..51
+      ExportEnv@26..51
+        Word@26..36 "export-env"
+        Whitespace@36..37 " "
+        Block@37..51
+          LBrace@37..38 "{"
+          Newline@38..39 "\n"
+          Pipeline@39..49
+            PipelineElement@39..49
+              Assignment@39..49
+                CellPath@39..45
+                  Word@39..43 "$env"
+                  Dot@43..44 "."
+                  Word@44..45 "B"
+                Whitespace@45..46 " "
+                Assign@46..47 "="
+                Whitespace@47..48 " "
+                Pipeline@48..49
+                  PipelineElement@48..49
+                    Word@48..49 "2"
+          Newline@49..50 "\n"
+          RBrace@50..51 "}"
+  Newline@51..52 "\n"
+  Pipeline@52..65
+    PipelineElement@52..65
+      ExportEnv@52..65
+        Word@52..62 "export-env"
+        Whitespace@62..63 " "
+        Word@63..65 "{}"
+  Newline@65..66 "\n"
+  Pipeline@66..101
+    PipelineElement@66..101
+      Call@66..101
+        Word@66..76 "export-env"
+        Whitespace@76..77 " "
+        Word@77..91 "{ $env.C = 1 }"
+        Whitespace@91..92 " "
+        Word@92..101 "(ls   -a)"
+  Newline@101..102 "\n"
+  Pipeline@102..112
+    PipelineElement@102..112
+      Call@102..112
+        Word@102..112 "export-env"
+  Newline@112..113 "\n"
+  Pipeline@113..151
+    PipelineElement@113..151
+      Module@113..151
+        Word@113..119 "module"
+        Whitespace@119..120 " "
+        Word@120..121 "m"
+        Whitespace@121..122 " "
+        Block@122..151
+          LBrace@122..123 "{"
+          Whitespace@123..124 " "
+          Pipeline@124..149
+            PipelineElement@124..149
+              ExportEnv@124..149
+                Word@124..134 "export-env"
+                Whitespace@134..135 " "
+                Block@135..149
+                  LBrace@135..136 "{"
+                  Whitespace@136..137 " "
+                  Pipeline@137..147
+                    PipelineElement@137..147
+                      Assignment@137..147
+                        CellPath@137..143
+                          Word@137..141 "$env"
+                          Dot@141..142 "."
+                          Word@142..143 "D"
+                        Whitespace@143..144 " "
+                        Assign@144..145 "="
+                        Whitespace@145..146 " "
+                        Pipeline@146..147
+                          PipelineElement@146..147
+                            Word@146..147 "1"
+                  Whitespace@147..148 " "
+                  RBrace@148..149 "}"
+          Whitespace@149..150 " "
+          RBrace@150..151 "}"
+  Newline@151..152 "\n"
+  Pipeline@152..170
+    PipelineElement@152..170
+      ExportEnv@152..170
+        Word@152..162 "export-env"
+        Whitespace@162..163 " "
+        Block@163..170
+          LBrace@163..164 "{"
+          Pipeline@164..169
+            PipelineElement@164..169
+              Call@164..169
+                Word@164..169 "...$x"
+          RBrace@169..170 "}"
+  Newline@170..171 "\n"
+  Pipeline@171..184
+    PipelineElement@171..184
+      Call@171..184
+        Word@171..181 "export-env"
+        Whitespace@181..182 " "
+        Word@182..184 "$x"
+  Newline@184..185 "\n"
+  Pipeline@185..215
+    PipelineElement@185..215
+      ExportEnv@185..210
+        Word@185..195 "export-env"
+        Whitespace@195..196 " "
+        Block@196..210
+          LBrace@196..197 "{"
+          Whitespace@197..198 " "
+          Pipeline@198..208
+            PipelineElement@198..208
+              Assignment@198..208
+                CellPath@198..204
+                  Word@198..202 "$env"
+                  Dot@202..203 "."
+                  Word@203..204 "A"
+                Whitespace@204..205 " "
+                Assign@205..206 "="
+                Whitespace@206..207 " "
+                Pipeline@207..208
+                  PipelineElement@207..208
+                    Word@207..208 "1"
+          Whitespace@208..209 " "
+          RBrace@209..210 "}"
+      Whitespace@210..211 " "
+      Redirection@211..215
+        OutGt@211..213 "o>"
+        Whitespace@213..214 " "
+        Word@214..215 "x"
+  Newline@215..216 "\n"
+  Pipeline@216..248
+    PipelineElement@216..248
+      Call@216..248
+        Word@216..226 "export-env"
+        Whitespace@226..227 " "
+        Word@227..233 "--help"
+        Whitespace@233..234 " "
+        Word@234..248 "{ $env.A = 1 }"
+  Newline@248..249 "\n"
+  Pipeline@249..276
+    PipelineElement@249..276
+      Subexpression@249..276
+        LParen@249..250 "("
+        Pipeline@250..275
+          PipelineElement@250..275
+            ExportEnv@250..275
+              Word@250..260 "export-env"
+              Newline@260..261 "\n"
+              Block@261..275
+                LBrace@261..262 "{"
+                Whitespace@262..263 " "
+                Pipeline@263..273
+                  PipelineElement@263..273
+                    Assignment@263..273
+                      CellPath@263..269
+                        Word@263..267 "$env"
+                        Dot@267..268 "."
+                        Word@268..269 "A"
+                      Whitespace@269..270 " "
+                      Assign@270..271 "="
+                      Whitespace@271..272 " "
+                      Pipeline@272..273
+                        PipelineElement@272..273
+                          Word@272..273 "1"
+                Whitespace@273..274 " "
+                RBrace@274..275 "}"
+        RParen@275..276 ")"
+  Newline@276..277 "\n"

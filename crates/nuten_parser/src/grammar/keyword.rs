@@ -1,6 +1,13 @@
 use super::{
-    at_call_item, call_items, control::control, def::def, if_::if_, is_flag, match_::match_,
-    module::module, use_::use_, where_::where_,
+    at_call_item, call_items,
+    control::control,
+    def::def,
+    if_::if_,
+    is_flag,
+    match_::match_,
+    module::{export_env, module},
+    use_::use_,
+    where_::where_,
 };
 use crate::parser::Parser;
 
@@ -42,6 +49,7 @@ pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
         Some("use") => use_(p),
         Some("where") => where_(p),
         Some("export") => exported(p),
+        Some("export-env") => export_env(p),
         _ => false,
     }
 }
