@@ -453,7 +453,7 @@ mod tests {
     }
 
     #[test]
-    fn node_casts_error_and_every_kind_from_root_on() {
+    fn node_casts_only_error_and_node_kinds() {
         for &kind in SyntaxKind::ALL {
             let is_node = kind >= SyntaxKind::Root || kind == SyntaxKind::Error;
             assert_eq!(Node::can_cast(kind), is_node, "{kind:?}");
@@ -503,7 +503,7 @@ mod tests {
     }
 
     #[test]
-    fn bracketed_node_gives_its_brackets_and_what_they_hold() {
+    fn bracketed_node_gives_brackets_and_contents() {
         let list = List::cast(build(&node(
             SyntaxKind::List,
             bracketed(vec![
@@ -532,7 +532,7 @@ mod tests {
     }
 
     #[test]
-    fn statements_of_block_follow_its_params_or_its_brace() {
+    fn block_statements_follow_params_or_brace() {
         let with_params = node(
             SyntaxKind::Block,
             vec![
@@ -567,7 +567,7 @@ mod tests {
     }
 
     #[test]
-    fn table_gives_its_columns_and_semicolon_with_rows_following() {
+    fn table_gives_columns_semicolon_and_following_rows() {
         let table = Table::cast(build(&node(
             SyntaxKind::Table,
             bracketed(vec![
@@ -593,7 +593,7 @@ mod tests {
     }
 
     #[test]
-    fn type_gives_its_name_and_what_its_brackets_hold() {
+    fn type_gives_name_brackets_and_contents() {
         let type_ = Type::cast(build(&node(
             SyntaxKind::Type,
             vec![
@@ -622,7 +622,7 @@ mod tests {
     }
 
     #[test]
-    fn io_types_give_their_brackets_and_what_they_hold() {
+    fn io_types_give_brackets_and_contents() {
         let pair = node(SyntaxKind::IoType, vec![token(SyntaxKind::Word, "int")]);
         let tree = node(SyntaxKind::IoTypes, bracketed(vec![pair]));
         let (open, inside, close) = IoTypes::cast(build(&tree)).unwrap().brackets().unwrap();
@@ -638,7 +638,7 @@ mod tests {
     }
 
     #[test]
-    fn def_body_is_its_last_child_when_that_is_block() {
+    fn def_body_is_last_child_if_block() {
         let block = || {
             node(
                 SyntaxKind::Block,

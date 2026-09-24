@@ -32,7 +32,7 @@ mod tests {
     use super::{SyntaxKind, SyntaxNode};
 
     #[test]
-    fn build_and_read_back() {
+    fn built_tree_gives_back_kinds_and_text() {
         let mut builder = GreenNodeBuilder::new();
         builder.start_node(SyntaxKind::Root.to_raw());
         builder.token(SyntaxKind::Word.to_raw(), "ls");
