@@ -1,8 +1,9 @@
-//! Reads the settings of the formatter from a config file, and writes the JSON Schema of one.
+//! Finds a config file, reads the settings from it, and writes the JSON Schema of one.
 //!
 //! A file is read into a `Value` first, whatever its format.
 //! The settings are then taken from that.
 
+mod find;
 mod json;
 mod nuon;
 mod schema;
@@ -11,14 +12,17 @@ mod settings;
 mod test_support;
 pub mod value;
 
-use std::fmt;
+use std::{fmt, path::Path};
 
 pub use nuten_format::{Config, IndentStyle, LineEnding};
 use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
-pub use crate::schema::schema;
 use crate::value::Value;
+pub use crate::{
+    find::{FILE_NAMES, FindError, find},
+    schema::schema,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {
@@ -28,6 +32,28 @@ pub enum Format {
     Jsonc,
     /// Nushell Object Notation, as `from nuon` reads it.
     Nuon,
+}
+
+impl Format {
+    /// In the order their files win in one directory.
+    pub const ALL: [Format; 3] = [Format::Nuon, Format::Jsonc, Format::Json];
+
+    /// What a file name in the format ends with, after the `.`.
+    pub fn extension(self) -> &'static str {
+        match self {
+            Format::Json => "json",
+            Format::Jsonc => "jsonc",
+            Format::Nuon => "nuon",
+        }
+    }
+
+    /// The format the extension of `path` names.
+    pub fn of_path(path: &Path) -> Option<Format> {
+        let extension = path.extension()?;
+        Format::ALL
+            .into_iter()
+            .find(|format| extension == format.extension())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,4 +161,28 @@ pub(crate) fn error(kind: ConfigErrorKind, range: TextRange) -> Vec<ConfigError>
         kind,
         range,
     }]
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use crate::Format;
+
+    #[test]
+    fn extension_names_format() {
+        for (path, format) in [
+            ("nuten.json", Some(Format::Json)),
+            ("a/b.jsonc", Some(Format::Jsonc)),
+            ("/a.b/c.nuon", Some(Format::Nuon)),
+            ("nuten.toml", None),
+            ("nuten.JSON", None),
+            ("nuten", None),
+            (".json", None),
+            ("json", None),
+            ("a.nuon/b", None),
+        ] {
+            assert_eq!(Format::of_path(Path::new(path)), format, "{path}");
+        }
+    }
 }
