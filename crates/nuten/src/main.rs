@@ -56,7 +56,7 @@ struct Format {
     #[usage(short = 'c', long)]
     config: Option<PathBuf>,
     /// Files to format in place; a directory stands for the `.nu` files under it
-    #[usage(required)]
+    #[usage(default = ".")]
     paths: Vec<PathBuf>,
 }
 
