@@ -217,7 +217,9 @@ Root@0..333
       Where@240..248
         Word@240..245 "where"
         Whitespace@245..246 " "
-        Word@246..248 "{}"
+        Block@246..248
+          LBrace@246..247 "{"
+          RBrace@247..248 "}"
   Newline@248..249 "\n"
   Pipeline@249..265
     PipelineElement@249..265
@@ -242,7 +244,12 @@ Root@0..333
       Where@266..279
         Word@266..271 "where"
         Whitespace@271..272 " "
-        Word@272..279 "{ # c\n}"
+        Block@272..279
+          LBrace@272..273 "{"
+          Whitespace@273..274 " "
+          Comment@274..277 "# c"
+          Newline@277..278 "\n"
+          RBrace@278..279 "}"
   Newline@279..280 "\n"
   Pipeline@280..295
     PipelineElement@280..295

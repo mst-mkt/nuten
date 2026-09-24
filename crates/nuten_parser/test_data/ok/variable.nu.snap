@@ -77,7 +77,10 @@ Root@0..150
           LBracket@59..60 "["
           RBracket@60..61 "]"
         Whitespace@61..62 " "
-        Word@62..65 "{ }"
+        Block@62..65
+          LBrace@62..63 "{"
+          Whitespace@63..64 " "
+          RBrace@64..65 "}"
   Newline@65..66 "\n"
   Pipeline@66..84
     PipelineElement@66..84

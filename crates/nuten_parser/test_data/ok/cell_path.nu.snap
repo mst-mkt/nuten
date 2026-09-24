@@ -306,7 +306,10 @@ Root@0..754
           Dot@280..281 "."
           Word@281..282 "a"
         Whitespace@282..283 " "
-        Word@283..286 "{ }"
+        Block@283..286
+          LBrace@283..284 "{"
+          Whitespace@284..285 " "
+          RBrace@285..286 "}"
         Whitespace@286..287 " "
         Word@287..291 "else"
         Whitespace@291..292 " "
@@ -516,7 +519,10 @@ Root@0..754
         Whitespace@475..476 " "
         Word@476..480 "true"
         Whitespace@480..481 " "
-        Word@481..484 "{ }"
+        Block@481..484
+          LBrace@481..482 "{"
+          Whitespace@482..483 " "
+          RBrace@483..484 "}"
         Whitespace@484..485 " "
         Word@485..489 "else"
         Whitespace@489..490 " "
@@ -601,7 +607,12 @@ Root@0..754
   Newline@557..558 "\n"
   Pipeline@558..562
     PipelineElement@558..562
-      Word@558..562 "{}.a"
+      CellPath@558..562
+        Record@558..560
+          LBrace@558..559 "{"
+          RBrace@559..560 "}"
+        Dot@560..561 "."
+        Word@561..562 "a"
   Newline@562..563 "\n"
   Pipeline@563..567
     PipelineElement@563..567
@@ -822,7 +833,10 @@ Root@0..754
         Whitespace@725..726 " "
         Word@726..730 "true"
         Whitespace@730..731 " "
-        Word@731..734 "{ }"
+        Block@731..734
+          LBrace@731..732 "{"
+          Whitespace@732..733 " "
+          RBrace@733..734 "}"
         Whitespace@734..735 " "
         Word@735..739 "else"
         Whitespace@739..740 " "

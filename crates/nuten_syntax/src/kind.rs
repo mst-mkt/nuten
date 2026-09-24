@@ -234,6 +234,7 @@ macro_rules! syntax_kinds {
                 Table,
                 /// A `Word` in `{ }` read as a record: `{`, its fields and spreads, and `}`.
                 /// Nu reads one where it takes a value, or a block unless a spread comes first.
+                /// It reads an empty one only where it takes a value.
                 /// It is a `Block` as the body of a `def`.
                 Record,
                 /// A key, the token nu takes as its `:`, then its value.
@@ -243,6 +244,7 @@ macro_rules! syntax_kinds {
                 RecordField,
                 /// A `Word` in `{ }` that is no record: `{`, any parameters, the statements, `}`.
                 /// Nu reads one where it takes a value or a block, or an argument of a nu command.
+                /// It reads an empty one only where it takes a block or a closure.
                 /// An external command takes it as a string instead.
                 /// The body of a `def` is one whatever it holds.
                 Block,
@@ -293,7 +295,7 @@ macro_rules! syntax_kinds {
                 /// A `module` nu reads a body in: `module`, the name as written, and the body.
                 /// `export` comes before `module` if there.
                 /// The body is a `Block` of statements, since nu reads no parameters there.
-                /// It stays a `Word` where it holds nothing but trivia, or starts with a `|`.
+                /// It stays a `Word` where it starts with a `|`.
                 /// So it does where its statements report an error.
                 Module,
                 /// `export-env` and its body, the one item nu reads after it.

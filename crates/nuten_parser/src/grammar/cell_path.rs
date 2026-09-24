@@ -64,7 +64,7 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
 
 /// Whether nu reads `head`, which `inner` starts with, as the value of a cell path for `shape`.
 /// Nu reads a `[ ]` there only where it takes any value.
-/// It reads a `{ }` there only as a record with a `:` second.
+/// It reads a `{ }` there only as a record with a `:` second, or an empty one.
 /// Each bracket must close at the last byte of `head`.
 fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
     match head.as_bytes() {
@@ -73,7 +73,10 @@ fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
         [b'[', ..] => shape.takes_any_value() && inner.bracketed(&SQUARE, Mode::List).is_some(),
         [b'{', ..] => inner.bracketed(&CURLY, Mode::Brace).is_some_and(|braced| {
             let sign = record_sign(braced.inner().remaining_tokens());
-            matches!(shape.braced(sign), Braced::Record(RecordSign::ColonSecond))
+            matches!(
+                shape.braced(sign),
+                Braced::Record(RecordSign::ColonSecond | RecordSign::Empty)
+            )
         }),
         _ => false,
     }

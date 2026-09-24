@@ -299,7 +299,9 @@ Root@0..795
             Whitespace@314..315 " "
             FatArrow@315..317 "=>"
             Whitespace@317..318 " "
-            Word@318..320 "{}"
+            Block@318..320
+              LBrace@318..319 "{"
+              RBrace@319..320 "}"
           Whitespace@320..321 " "
           RBrace@321..322 "}"
   Newline@322..323 "\n"

@@ -43,7 +43,10 @@ Root@0..87
         Whitespace@47..48 " "
         Word@48..52 "true"
         Whitespace@52..53 " "
-        Word@53..56 "{ }"
+        Block@53..56
+          LBrace@53..54 "{"
+          Whitespace@54..55 " "
+          RBrace@55..56 "}"
         Whitespace@56..57 " "
         Word@57..61 "else"
         Whitespace@61..62 " "

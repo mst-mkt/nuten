@@ -37,15 +37,19 @@ pub(super) fn record<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, sign: Rec
 /// What makes nu read `{ }` as a record where it takes any value.
 /// Nu reads a `:` second as a record whatever it takes.
 /// It reads a spread first as one only where it takes no closure, block, or match arms.
+/// It reads nothing but trivia as one only where it takes no closure, block, or match arms either.
 /// So which sign shows must not depend on a `,`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RecordSign {
     ColonSecond,
     SpreadFirst,
+    Empty,
 }
 
-/// The `RecordSign` among the first two of `tokens`, the inside of `{ }`, trivia aside.
-/// `None` when a pipe comes first, or when neither sign does.
+/// The `RecordSign` that the first two of `tokens` show, trivia aside.
+/// `tokens` are the inside of `{ }`.
+/// `Empty` when there are none.
+/// `None` when a pipe comes first, or when what comes first shows no sign.
 /// Nu looks with `,` as no whitespace, so brace mode tells what it sees.
 /// Record mode without its `,` tells what it would see in the output.
 pub(super) fn record_sign<'a>(
@@ -56,7 +60,7 @@ pub(super) fn record_sign<'a>(
         (Some((first, text)), _) if nu_lexes_as_pipe(first.kind, text) => None,
         (_, Some((second, _))) if second.kind == SyntaxKind::Colon => Some(RecordSign::ColonSecond),
         (Some((_, text)), _) => is_spread(text, Target::Record).then_some(RecordSign::SpreadFirst),
-        (None, _) => None,
+        (None, _) => Some(RecordSign::Empty),
     }
 }
 

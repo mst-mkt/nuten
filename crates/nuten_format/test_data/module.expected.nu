@@ -21,7 +21,7 @@ module g {
 module "j k" {
     export def l [] {}
 }
-module m { }
+module m {}
 module n {}
 module o {
     # c

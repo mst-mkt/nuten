@@ -175,7 +175,9 @@ Root@0..315
             Whitespace@177..178 " "
             Word@178..181 "int"
         Whitespace@181..182 " "
-        Word@182..184 "{}"
+        Block@182..184
+          LBrace@182..183 "{"
+          RBrace@183..184 "}"
   Newline@184..185 "\n"
   Pipeline@185..220
     PipelineElement@185..220

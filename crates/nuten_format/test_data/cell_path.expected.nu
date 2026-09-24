@@ -29,7 +29,7 @@ print (
 [[a]; [1]].a
 { a: 1 }.a?
 print { a: 1 }.a
-if true { } else [1].0
+if true {} else [1].0
 [1] | get $.0?
 {
     alpha: 1

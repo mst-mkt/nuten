@@ -132,7 +132,10 @@ Root@0..222
         Whitespace@138..139 " "
         Word@139..143 "true"
         Whitespace@143..144 " "
-        Word@144..147 "{ }"
+        Block@144..147
+          LBrace@144..145 "{"
+          Whitespace@145..146 " "
+          RBrace@146..147 "}"
         Whitespace@147..148 " "
         Word@148..152 "else"
         Whitespace@152..153 " "

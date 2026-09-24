@@ -44,7 +44,9 @@ Root@0..65
             LBracket@42..43 "["
             RBracket@43..44 "]"
           Whitespace@44..45 " "
-          Word@45..47 "{}"
+          Block@45..47
+            LBrace@45..46 "{"
+            RBrace@46..47 "}"
   Newline@47..48 "\n"
   Pipeline@48..65
     PipelineElement@48..65

@@ -289,13 +289,19 @@ Root@0..347
               Whitespace@222..223 " "
               Word@223..225 "$c"
               Whitespace@225..226 " "
-              Word@226..229 "{ }"
+              Block@226..229
+                LBrace@226..227 "{"
+                Whitespace@227..228 " "
+                RBrace@228..229 "}"
               Newline@229..230 "\n"
               Comment@230..233 "# c"
               Newline@233..234 "\n"
               Word@234..238 "else"
               Whitespace@238..239 " "
-              Word@239..242 "{ }"
+              Block@239..242
+                LBrace@239..240 "{"
+                Whitespace@240..241 " "
+                RBrace@241..242 "}"
         RParen@242..243 ")"
   Newline@243..244 "\n"
   Pipeline@244..267

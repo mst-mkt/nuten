@@ -40,5 +40,7 @@ Root@0..45
             LBracket@38..39 "["
             RBracket@39..40 "]"
           Whitespace@40..41 " "
-          Word@41..43 "{}"
+          Block@41..43
+            LBrace@41..42 "{"
+            RBrace@42..43 "}"
   Newline@43..45 "\r\n"

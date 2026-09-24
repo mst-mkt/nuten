@@ -80,7 +80,8 @@ enum Shape {
     /// An argument of a command nu resolves to one of its own.
     /// A `[ ]` stays a word, since the signature may take it as a string.
     /// A `{ }` is never a string, unlike for an external command.
-    /// A spread first stays a word: only the signature tells a record from a closure there.
+    /// An empty one stays a word, and so does one with a spread first.
+    /// Only the signature tells a record from a closure there.
     /// An argument like `...$x` stays a word as well.
     /// Nu reads no spread where a flag takes it as its value, which only the signature tells.
     KnownArgument,
@@ -145,13 +146,13 @@ impl Shape {
             | (Shape::KnownArgument | Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
                 Braced::Record(sign)
             },
-            (Shape::KnownArgument, Some(RecordSign::SpreadFirst))
+            (Shape::KnownArgument, Some(RecordSign::SpreadFirst | RecordSign::Empty))
             | (Shape::RowCondition, Some(_))
             | (Shape::UnknownArgument | Shape::VariableName | Shape::ExternalArgument, _) => {
                 Braced::Word
             },
             (Shape::Any | Shape::KnownArgument | Shape::RowCondition, None)
-            | (Shape::Block, None | Some(RecordSign::SpreadFirst))
+            | (Shape::Block, None | Some(RecordSign::SpreadFirst | RecordSign::Empty))
             | (Shape::DefBody, _) => Braced::Block,
         }
     }

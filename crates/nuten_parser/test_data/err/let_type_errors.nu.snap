@@ -35,7 +35,9 @@ Root@0..163
         Whitespace@39..40 " "
         Pipeline@40..42
           PipelineElement@40..42
-            Word@40..42 "{}"
+            Record@40..42
+              LBrace@40..41 "{"
+              RBrace@41..42 "}"
   Newline@42..43 "\n"
   Pipeline@43..66
     PipelineElement@43..66

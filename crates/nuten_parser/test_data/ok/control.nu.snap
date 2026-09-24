@@ -846,7 +846,9 @@ Root@0..961
       Loop@821..828
         Word@821..825 "loop"
         Whitespace@825..826 " "
-        Word@826..828 "{}"
+        Block@826..828
+          LBrace@826..827 "{"
+          RBrace@827..828 "}"
   Newline@828..829 "\n"
   Pipeline@829..832
     PipelineElement@829..832

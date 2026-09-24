@@ -21,19 +21,11 @@ pub(super) fn block<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
 }
 
 /// Whether the inside of `{ }` in block mode has the shape of a block or a closure.
-/// It must hold something but trivia.
 /// Its parameters must close at a `|` with no `;` or shell operator before it.
 /// Its statements must report no error either, since nothing inside may be reported.
 /// Only reading the statements tells that.
 fn may_be_block(inner: &Parser<'_>) -> bool {
-    if !holds_more_than_trivia(inner) {
-        return false;
-    }
     params_start(inner) != Some(SyntaxKind::Pipe) || params_close(inner)
-}
-
-pub(super) fn holds_more_than_trivia(inner: &Parser<'_>) -> bool {
-    inner.remaining_kinds().any(|kind| !kind.is_trivia())
 }
 
 /// Whether the `|` that starts parameters has another `|` after it.

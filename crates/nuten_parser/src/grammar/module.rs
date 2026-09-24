@@ -1,9 +1,8 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    CURLY, Shape, at_call_item,
-    block::{holds_more_than_trivia, params_start},
-    call_items, file, is_flag, keyword_words, value,
+    CURLY, Shape, at_call_item, block::params_start, call_items, file, is_flag, keyword_words,
+    value,
 };
 use crate::{lexer::Mode, parser::Parser};
 
@@ -60,15 +59,11 @@ fn takes_body(items: &[&str]) -> bool {
 }
 
 /// Nu reads what the braces hold as statements, whatever they are.
-/// An empty body stays a `Word`, as any empty `{ }` does.
-/// So does one that starts with a `|`, which a block lays out apart from its brace.
+/// One that starts with a `|` stays a `Word`, since a block lays that `|` out apart from its brace.
 /// Nu reads no parameters there, so that would only add a line.
 fn body(p: &mut Parser<'_>) {
     match p.bracketed(&CURLY, Mode::Block) {
-        Some(bracketed)
-            if holds_more_than_trivia(bracketed.inner())
-                && params_start(bracketed.inner()).is_none() =>
-        {
+        Some(bracketed) if params_start(bracketed.inner()).is_none() => {
             p.bump_bracketed_or_word(SyntaxKind::Block, bracketed, file);
         },
         _ => p.bump(),

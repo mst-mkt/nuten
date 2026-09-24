@@ -214,7 +214,9 @@ Root@0..378
         LBrace@222..223 "{"
         Spread@223..228
           SpreadOperator@223..226 "..."
-          Word@226..228 "{}"
+          Record@226..228
+            LBrace@226..227 "{"
+            RBrace@227..228 "}"
         Whitespace@228..229 " "
         Spread@229..239
           SpreadOperator@229..232 "..."

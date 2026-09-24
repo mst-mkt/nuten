@@ -113,11 +113,18 @@ Root@0..945
               Whitespace@96..97 " "
               Word@97..99 "$a"
               Whitespace@99..100 " "
-              Word@100..102 "{}"
+              Block@100..102
+                LBrace@100..101 "{"
+                RBrace@101..102 "}"
               Whitespace@102..103 " "
               Word@103..107 "else"
               Whitespace@107..108 " "
-              Word@108..115 "{ # c\n}"
+              Block@108..115
+                LBrace@108..109 "{"
+                Whitespace@109..110 " "
+                Comment@110..113 "# c"
+                Newline@113..114 "\n"
+                RBrace@114..115 "}"
   Newline@115..116 "\n"
   Pipeline@116..148
     PipelineElement@116..118
@@ -519,7 +526,9 @@ Root@0..945
         Whitespace@504..505 " "
         Word@505..509 "true"
         Whitespace@509..510 " "
-        Word@510..512 "{}"
+        Block@510..512
+          LBrace@510..511 "{"
+          RBrace@511..512 "}"
         Whitespace@512..513 " "
         Word@513..517 "else"
         Whitespace@517..518 " "

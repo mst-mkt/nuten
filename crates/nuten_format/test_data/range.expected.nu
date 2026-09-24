@@ -20,7 +20,7 @@ $x..(
 [1..($n - 1) ..5 1..$x.a]
 { a: 1..(2) }
 1..10 | each {|i| $i }
-if true { } else 1..3
+if true {} else 1..3
 match $x {
     _ => 1..3
 }

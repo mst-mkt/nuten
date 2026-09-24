@@ -209,7 +209,10 @@ Root@0..749
             RangeOperator@187..189 ".."
             Word@189..191 "$z"
         Whitespace@191..192 " "
-        Word@192..195 "{ }"
+        Block@192..195
+          LBrace@192..193 "{"
+          Whitespace@193..194 " "
+          RBrace@194..195 "}"
   Newline@195..196 "\n"
   Pipeline@196..215
     PipelineElement@196..215
@@ -225,7 +228,10 @@ Root@0..749
           RangeOperator@207..209 ".."
           Word@209..211 "$y"
         Whitespace@211..212 " "
-        Word@212..215 "{ }"
+        Block@212..215
+          LBrace@212..213 "{"
+          Whitespace@213..214 " "
+          RBrace@214..215 "}"
   Newline@215..216 "\n"
   Pipeline@216..244
     PipelineElement@216..244
@@ -488,7 +494,10 @@ Root@0..749
         Whitespace@469..470 " "
         Word@470..474 "true"
         Whitespace@474..475 " "
-        Word@475..478 "{ }"
+        Block@475..478
+          LBrace@475..476 "{"
+          Whitespace@476..477 " "
+          RBrace@477..478 "}"
         Whitespace@478..479 " "
         Word@479..483 "else"
         Whitespace@483..484 " "
@@ -504,7 +513,10 @@ Root@0..749
         Whitespace@491..492 " "
         Word@492..496 "true"
         Whitespace@496..497 " "
-        Word@497..500 "{ }"
+        Block@497..500
+          LBrace@497..498 "{"
+          Whitespace@498..499 " "
+          RBrace@499..500 "}"
         Whitespace@500..501 " "
         Word@501..505 "else"
         Whitespace@505..506 " "
@@ -554,7 +566,10 @@ Root@0..749
           RangeOperator@557..559 ".."
           Word@559..561 "$n"
         Whitespace@561..562 " "
-        Word@562..565 "{ }"
+        Block@562..565
+          LBrace@562..563 "{"
+          Whitespace@563..564 " "
+          RBrace@564..565 "}"
   Newline@565..566 "\n"
   Pipeline@566..575
     PipelineElement@566..575

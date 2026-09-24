@@ -196,7 +196,9 @@ Root@0..771
                   LBracket@262..263 "["
                   RBracket@263..264 "]"
                 Whitespace@264..265 " "
-                Word@265..267 "{}"
+                Block@265..267
+                  LBrace@265..266 "{"
+                  RBrace@266..267 "}"
           Newline@267..268 "\n"
           RBrace@268..269 "}"
   Newline@269..270 "\n"
@@ -207,7 +209,10 @@ Root@0..771
         Whitespace@276..277 " "
         Word@277..278 "m"
         Whitespace@278..279 " "
-        Word@279..282 "{ }"
+        Block@279..282
+          LBrace@279..280 "{"
+          Whitespace@280..281 " "
+          RBrace@281..282 "}"
   Newline@282..283 "\n"
   Pipeline@283..294
     PipelineElement@283..294
@@ -216,7 +221,9 @@ Root@0..771
         Whitespace@289..290 " "
         Word@290..291 "n"
         Whitespace@291..292 " "
-        Word@292..294 "{}"
+        Block@292..294
+          LBrace@292..293 "{"
+          RBrace@293..294 "}"
   Newline@294..295 "\n"
   Pipeline@295..353
     PipelineElement@295..353
@@ -529,7 +536,9 @@ Root@0..771
         Whitespace@717..718 " "
         Word@718..719 "p"
         Whitespace@719..720 " "
-        Word@720..722 "{}"
+        Block@720..722
+          LBrace@720..721 "{"
+          RBrace@721..722 "}"
   Newline@722..723 "\n"
   Pipeline@723..745
     PipelineElement@723..745
@@ -557,6 +566,8 @@ Root@0..771
               Whitespace@764..765 " "
               Word@765..766 "m"
               Whitespace@766..767 " "
-              Word@767..769 "{}"
+              Block@767..769
+                LBrace@767..768 "{"
+                RBrace@768..769 "}"
         RParen@769..770 ")"
   Newline@770..771 "\n"

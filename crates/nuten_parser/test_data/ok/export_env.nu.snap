@@ -56,7 +56,9 @@ Root@0..277
       ExportEnv@52..65
         Word@52..62 "export-env"
         Whitespace@62..63 " "
-        Word@63..65 "{}"
+        Block@63..65
+          LBrace@63..64 "{"
+          RBrace@64..65 "}"
   Newline@65..66 "\n"
   Pipeline@66..101
     PipelineElement@66..101

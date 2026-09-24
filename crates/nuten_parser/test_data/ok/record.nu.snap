@@ -259,9 +259,14 @@ Root@0..777
               Word@196..198 "$x"
           RBrace@198..199 "}"
         Whitespace@199..200 " "
-        Word@200..202 "{}"
+        Record@200..202
+          LBrace@200..201 "{"
+          RBrace@201..202 "}"
         Whitespace@202..203 " "
-        Word@203..206 "{ }"
+        Record@203..206
+          LBrace@203..204 "{"
+          Whitespace@204..205 " "
+          RBrace@205..206 "}"
         Whitespace@206..207 " "
         Block@207..212
           LBrace@207..208 "{"
