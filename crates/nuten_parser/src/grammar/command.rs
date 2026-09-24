@@ -267,9 +267,9 @@ pub(super) fn is_math_expression_like(text: &str) -> bool {
 }
 
 /// Nu runs a head it finds no declaration for as an external command.
-/// What a file imports declares is unknowable here.
+/// What an import nuten cannot read declares is unknowable here.
 /// So a head that neither the lists here nor a block around it names stays unknown.
-/// So does one after an import, which may bring an alias of an external command in its name.
+/// So does one after such an import, which may bring an alias of an external command in its name.
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
 /// It reads the name after `let`, `mut`, `const`, or `export const` as written, never as a value.

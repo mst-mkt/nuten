@@ -1,10 +1,10 @@
 use std::{cmp::Reverse, iter, rc::Rc};
 
 use nuten_syntax::SyntaxKind;
-use rowan::TextSize;
+use rowan::{TextRange, TextSize};
 
 use super::{builtin, is_pipe};
-use crate::lexer::Token;
+use crate::lexer::{self, Mode, Token};
 
 /// What the parser of every level of brackets knows of the names in the file.
 #[derive(Clone)]
@@ -27,7 +27,7 @@ struct FileNames<'a> {
 /// What a call runs, as far as the blocks around it tell.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Callee {
-    /// A command a block around it defines.
+    /// A command a block around it defines, or one an import nuten reads brings.
     Defined,
     /// One an import or a `hide` may put in place of what a block defines or nu has.
     Unknowable,
@@ -54,19 +54,15 @@ impl<'a> Names<'a> {
     /// `src` is the text `tokens` range over.
     /// `skips_newline` is whether a line break there is no more than whitespace.
     pub(crate) fn within(&self, src: &'a str, tokens: &[Token], skips_newline: bool) -> Names<'a> {
-        let lexemes: Vec<_> = tokens
-            .iter()
-            .filter(|token| !matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
-            .map(|token| Lexeme {
-                kind: token.kind,
-                text: &src[token.range],
-                start: token.range.start(),
-            })
-            .collect();
-        let scope = Scope::of(&lexemes, skips_newline, self.scope.clone());
+        let scope = Scope::of(
+            src,
+            &lexemes(src, tokens),
+            skips_newline,
+            self.scope.clone(),
+        );
         Names {
             file: Rc::clone(&self.file),
-            scope: if scope.definitions.is_empty() && scope.imports.is_empty() {
+            scope: if scope.is_empty() {
                 self.scope.clone()
             } else {
                 Some(Rc::new(scope))
@@ -81,8 +77,9 @@ impl<'a> Names<'a> {
     /// It looks the name up in the innermost block that declares it.
     /// What a block imports takes the place of a name that block declares from there on.
     /// It takes the place of one an outer block declares as well.
-    /// What an import holds is unknowable here, so it is taken to hold every name, however long.
+    /// What an import nuten cannot read holds is unknowable, so it is taken to hold every name.
     /// Nu rejects a keyword as the name of a command, so no import brings one of those.
+    /// An import of a module a block declares is read, and brings a command of each name it names.
     pub(crate) fn callee<'w>(
         &self,
         head: TextSize,
@@ -100,17 +97,21 @@ impl<'a> Names<'a> {
             })
             .max_by_key(|&(depth, _, definition)| (definition.words.len(), Reverse(depth)))
         else {
-            let imported = scopes().any(|scope| scope.imports_before(head))
+            let unknowable = scopes().any(|scope| scope.imports_before(head))
                 && word(0).is_some_and(|head| !builtin::is_parser_keyword(head));
-            return if imported {
+            return if unknowable {
+                Callee::Unknowable
+            } else if !scopes().any(|scope| scope.imports_spelled(&spelled, head)) {
+                Callee::Undefined
+            } else if self.is_hidden(spelled[0]) {
                 Callee::Unknowable
             } else {
-                Callee::Undefined
+                Callee::Defined
             };
         };
         let longer_imported = word(definition.words.len()).is_some()
             && scopes().any(|scope| scope.imports_before(head));
-        let replaceable = self.is_hidden(definition)
+        let replaceable = self.is_hidden(definition.words[0])
             || scopes().take(depth).any(|scope| scope.imports_before(head))
             || scope.imports_between(definition.start, head)
             || longer_imported;
@@ -121,11 +122,11 @@ impl<'a> Names<'a> {
         }
     }
 
-    fn is_hidden(&self, definition: &Definition<'_>) -> bool {
+    fn is_hidden(&self, first_word: &str) -> bool {
         self.file
             .hidden
             .as_ref()
-            .is_none_or(|hidden| hidden.binary_search(&definition.words[0]).is_ok())
+            .is_none_or(|hidden| hidden.binary_search(&first_word).is_ok())
     }
 }
 
@@ -137,18 +138,37 @@ struct Lexeme<'a> {
     start: TextSize,
 }
 
+/// The lexemes of `tokens`, which range over `src`.
+fn lexemes<'a>(src: &'a str, tokens: &[Token]) -> Vec<Lexeme<'a>> {
+    tokens
+        .iter()
+        .filter(|token| !matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment))
+        .map(|token| Lexeme {
+            kind: token.kind,
+            text: &src[token.range],
+            start: token.range.start(),
+        })
+        .collect()
+}
+
 /// A block of statements, with what nu declares before it reads them and what they import.
 struct Scope<'a> {
     /// Sorted by name, so that `longest_spelled` can bisect them.
     definitions: Box<[Definition<'a>]>,
-    /// How many words the longest name among `definitions` has.
+    /// The commands the imports nuten reads bring, each starting where its import does.
+    /// Sorted by name, then by where they start.
+    imported: Box<[Definition<'a>]>,
+    /// How many words the longest name among `definitions` and `imported` has.
     longest_name: usize,
-    /// Where each statement that imports names starts, in order.
+    /// Where each statement that imports what nuten cannot read starts, in order.
     imports: Box<[TextSize]>,
+    /// The modules the block declares, in order.
+    modules: Box<[Module<'a>]>,
     outer: Option<Rc<Scope<'a>>>,
 }
 
 /// A command a `def` or an `extern` defines, as nu declares it before it reads the block.
+/// Or one an import brings.
 struct Definition<'a> {
     /// The words of the name, which a call spells out one item each.
     words: Vec<&'a str>,
@@ -156,8 +176,29 @@ struct Definition<'a> {
     start: TextSize,
 }
 
+/// A module a `module` declares with a body, from where the statement starts.
+struct Module<'a> {
+    name: &'a str,
+    start: TextSize,
+    /// `None` where it exports what nuten cannot read.
+    exports: Option<Exports<'a>>,
+}
+
+/// The commands a module exports.
+struct Exports<'a> {
+    /// The words of each name but `main`.
+    commands: Vec<Vec<&'a str>>,
+    /// Whether it exports `main`, which an import brings as the name of the module.
+    main: bool,
+}
+
 impl<'a> Scope<'a> {
-    fn of(lexemes: &[Lexeme<'a>], skips_newline: bool, outer: Option<Rc<Scope<'a>>>) -> Scope<'a> {
+    fn of(
+        src: &'a str,
+        lexemes: &[Lexeme<'a>],
+        skips_newline: bool,
+        outer: Option<Rc<Scope<'a>>>,
+    ) -> Scope<'a> {
         // Nu declares from the statements it reads, where a line break skipped here is whitespace.
         let statement_lexemes: Vec<_> = lexemes
             .iter()
@@ -165,21 +206,54 @@ impl<'a> Scope<'a> {
             .filter(|lexeme| !(skips_newline && lexeme.kind == SyntaxKind::Newline))
             .collect();
         let statements = statements(&statement_lexemes);
-        let mut definitions: Vec<_> = (0..statements.len())
+        let alone: Vec<_> = (0..statements.len())
             .filter(|&nth| stands_alone(&statements, nth))
-            .filter_map(|nth| definition(statements[nth]))
+            .map(|nth| statements[nth])
+            .collect();
+        let mut definitions: Vec<_> = alone
+            .iter()
+            .filter_map(|statement| definition(statement))
             .collect();
         definitions.sort_by(|one, other| one.words.cmp(&other.words));
+        let modules: Box<[_]> = alone
+            .iter()
+            .filter_map(|statement| module(src, statement))
+            .collect();
+        let read = read_imports(src, &alone, &modules, outer.as_deref());
+        let mut imported: Vec<_> = read
+            .iter()
+            .flat_map(|(start, names)| {
+                names.iter().map(|words| Definition {
+                    words: words.clone(),
+                    start: *start,
+                })
+            })
+            .collect();
+        imported.sort_by(|one, other| (&one.words, one.start).cmp(&(&other.words, other.start)));
+        let imports: Box<[_]> = imports(lexemes)
+            .into_iter()
+            .filter(|import| !read.iter().any(|(start, _)| start == import))
+            .collect();
         Scope {
             longest_name: definitions
                 .iter()
+                .chain(&imported)
                 .map(|definition| definition.words.len())
                 .max()
                 .unwrap_or(0),
             definitions: definitions.into(),
-            imports: imports(lexemes).into(),
+            imported: imported.into(),
+            imports,
+            modules,
             outer,
         }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.definitions.is_empty()
+            && self.imported.is_empty()
+            && self.imports.is_empty()
+            && self.modules.is_empty()
     }
 
     /// The command of the longest name `spelled` starts with, among those this block defines.
@@ -194,6 +268,18 @@ impl<'a> Scope<'a> {
             })
     }
 
+    /// Whether an import nuten reads brings a command of a name `spelled` starts with before `end`.
+    fn imports_spelled(&self, spelled: &[&str], end: TextSize) -> bool {
+        (1..=spelled.len().min(self.longest_name)).any(|len| {
+            let first = self
+                .imported
+                .partition_point(|command| command.words.as_slice() < &spelled[..len]);
+            self.imported
+                .get(first)
+                .is_some_and(|command| command.words == spelled[..len] && command.start < end)
+        })
+    }
+
     fn imports_before(&self, end: TextSize) -> bool {
         self.imports.first().is_some_and(|&import| import < end)
     }
@@ -202,6 +288,47 @@ impl<'a> Scope<'a> {
         let after = self.imports.partition_point(|&import| import <= start);
         self.imports.get(after).is_some_and(|&import| import < end)
     }
+}
+
+/// Where each import nuten reads among `statements` starts, with the names it brings.
+/// `statements` are those of a block that stand alone, whose modules are `modules`.
+/// `outer` is the scope around the block.
+fn read_imports<'a>(
+    src: &'a str,
+    statements: &[&[Lexeme<'a>]],
+    modules: &[Module<'a>],
+    outer: Option<&Scope<'a>>,
+) -> Vec<(TextSize, Vec<Vec<&'a str>>)> {
+    statements
+        .iter()
+        .flat_map(|statement| assigned_parts(statement))
+        .filter_map(|part| {
+            let start = part.first()?.start;
+            let module = |name: &str| visible_module(modules, outer, name, start);
+            imported_names(src, part, module).map(|names| (start, names))
+        })
+        .collect()
+}
+
+/// The module named `name` that an import starting at `start` finds, if a block declares one.
+/// Nu looks in the innermost block first, and takes the last module declared before the import.
+/// `modules` are those of the block of the import, and `outer` the scope around it.
+fn visible_module<'s, 'a>(
+    modules: &'s [Module<'a>],
+    outer: Option<&'s Scope<'a>>,
+    name: &str,
+    start: TextSize,
+) -> Option<&'s Module<'a>> {
+    let declared = |modules: &'s [Module<'a>]| {
+        modules
+            .iter()
+            .rev()
+            .find(|module| module.name == name && module.start < start)
+    };
+    declared(modules).or_else(|| {
+        iter::successors(outer, |scope| scope.outer.as_deref())
+            .find_map(|scope| declared(&scope.modules))
+    })
 }
 
 /// The statements of `lexemes`, each with at least one lexeme.
@@ -292,6 +419,201 @@ fn unquoted(text: &str) -> Option<&str> {
         '`' => quoted('`'),
         _ => (!text.contains(['"', '\'', '`', '\\', '$', '(', '[', '{'])).then_some(text),
     }
+}
+
+/// The statement, then what follows each assignment operator in it.
+/// Nu reads each of those as a statement of the block.
+fn assigned_parts<'l, 'a>(statement: &'l [Lexeme<'a>]) -> impl Iterator<Item = &'l [Lexeme<'a>]> {
+    iter::once(statement).chain(
+        statement
+            .iter()
+            .enumerate()
+            .filter(|(_, lexeme)| lexeme.kind == SyntaxKind::Assign)
+            .map(|(nth, _)| &statement[nth + 1..]),
+    )
+}
+
+/// The module the statement declares, as `module` or `export module`, a name, and a body.
+/// `None` for one with no body, which names a file nuten does not read.
+fn module<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Module<'a>> {
+    let words = match statement {
+        [keyword, rest @ ..] if keyword.text == "module" => rest,
+        [export, keyword, rest @ ..] if export.text == "export" && keyword.text == "module" => rest,
+        _ => return None,
+    };
+    let [name, body] = words else {
+        return None;
+    };
+    let inside = body.text.strip_prefix('{')?.strip_suffix('}')?;
+    let name = unquoted(name.text)
+        .filter(|name| name_words(name).is_some_and(|words| words.len() == 1))?;
+    let inside = TextRange::at(body.start + TextSize::of('{'), TextSize::of(inside));
+    Some(Module {
+        name,
+        start: statement[0].start,
+        exports: exports(src, inside, name),
+    })
+}
+
+/// What a module body exports, as its `export` statements tell.
+/// `inside` is where the text inside its braces stands in `src`.
+/// `None` where the body fails to lex, or where an `export` brings in what nuten cannot read.
+/// An `export use` or an `export module` does, and so does a name nuten cannot tell.
+fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<'a>> {
+    let lexed = lexer::lex(src, inside, Mode::Block);
+    if !lexed.errors.is_empty() {
+        return None;
+    }
+    let lexemes = lexemes(src, &lexed.tokens);
+    let statements = statements(&lexemes);
+    let names = (0..statements.len())
+        .map(|nth| exported(&statements, nth))
+        .filter(|export| !matches!(export, Export::Nothing))
+        .map(|export| match export {
+            Export::Command(words) => Some(words),
+            Export::Nothing | Export::Unreadable => None,
+        })
+        .collect::<Option<Vec<_>>>()?;
+    // Nu takes an export named after its module for its `main`, which nuten does not read.
+    if names.iter().any(|words| words.as_slice() == [module]) {
+        return None;
+    }
+    let (main, commands): (Vec<_>, Vec<_>) = names
+        .into_iter()
+        .partition(|words| words.as_slice() == ["main"]);
+    Some(Exports {
+        commands,
+        main: !main.is_empty(),
+    })
+}
+
+/// What a statement of a module body exports.
+#[derive(Debug)]
+enum Export<'a> {
+    /// A command, by the words of its name.
+    Command(Vec<&'a str>),
+    /// No command, as a `def` with no `export` or an `export const`.
+    Nothing,
+    /// What nuten cannot read.
+    Unreadable,
+}
+
+/// What the statement at `nth` exports.
+fn exported<'a>(statements: &[&[Lexeme<'a>]], nth: usize) -> Export<'a> {
+    let statement = statements[nth];
+    let command = match statement {
+        [export, keyword, ..] if export.text == "export" => match keyword.text {
+            "def" | "extern" if stands_alone(statements, nth) => {
+                definition(statement).map(|definition| definition.words)
+            },
+            "alias" if stands_alone(statements, nth) => statement
+                .get(2)
+                .and_then(|name| unquoted(name.text))
+                .and_then(name_words),
+            "const" => return Export::Nothing,
+            _ => None,
+        },
+        [export] if export.text == "export" => None,
+        _ => return Export::Nothing,
+    };
+    command.map_or(Export::Unreadable, Export::Command)
+}
+
+/// The names the import `statement` brings, as `use` or `export use`, a module, and any members.
+/// `module` finds the module a name stands for, where a block declares it.
+/// `None` where nuten cannot tell them all, as for a module it does not read.
+/// An import with flags, or with more than one item of members, is left unread as well.
+/// So is a member the module does not export, which nu rejects.
+/// So is a member `main`, which nu reads apart from the other exports.
+fn imported_names<'s, 'a: 's>(
+    src: &'a str,
+    statement: &[Lexeme<'a>],
+    module: impl Fn(&str) -> Option<&'s Module<'a>>,
+) -> Option<Vec<Vec<&'a str>>> {
+    let words = match statement {
+        [keyword, rest @ ..] if keyword.text == "use" => rest,
+        [export, keyword, rest @ ..] if export.text == "export" && keyword.text == "use" => rest,
+        _ => return None,
+    };
+    let (name, members) = match words {
+        [name] => (name, None),
+        [name, members] => (name, Some(members)),
+        _ => return None,
+    };
+    if !name.kind.is_item() || name.kind == SyntaxKind::Error {
+        return None;
+    }
+    let module = module(unquoted(name.text)?)?;
+    let exports = module.exports.as_ref()?;
+    let main = exports.main.then(|| vec![module.name]);
+    let Some(members) = members else {
+        let prefixed = exports.commands.iter().map(|words| {
+            iter::once(module.name)
+                .chain(words.iter().copied())
+                .collect()
+        });
+        return Some(main.into_iter().chain(prefixed).collect());
+    };
+    if !members.kind.is_item() || members.kind == SyntaxKind::Error {
+        return None;
+    }
+    if unquoted(members.text) == Some("*") {
+        return Some(
+            main.into_iter()
+                .chain(exports.commands.iter().cloned())
+                .collect(),
+        );
+    }
+    member_names(src, members)?
+        .into_iter()
+        .map(|member| {
+            exports
+                .commands
+                .iter()
+                .find(|words| words.iter().copied().eq(member.split(' ')))
+                .cloned()
+        })
+        .collect()
+}
+
+/// The names of the members `members` spells: one name, or a list of them.
+fn member_names<'a>(src: &'a str, members: &Lexeme<'a>) -> Option<Vec<&'a str>> {
+    if !members.text.starts_with('[') {
+        return Some(vec![unquoted(members.text)?]);
+    }
+    bracketed_tokens(src, members.text, members.start, ('[', ']'), Mode::List)?
+        .iter()
+        .map(|token| {
+            token
+                .kind
+                .is_item()
+                .then(|| unquoted(&src[token.range]))
+                .flatten()
+        })
+        .collect()
+}
+
+/// The tokens between the brackets `open` and `close` of `text`, lexed in `mode`.
+/// Trivia and `,` are left out.
+/// `text` stands at `start` in `src`.
+/// `None` where the brackets do not enclose it, or where it fails to lex.
+fn bracketed_tokens(
+    src: &str,
+    text: &str,
+    start: TextSize,
+    (open, close): (char, char),
+    mode: Mode,
+) -> Option<Vec<Token>> {
+    let inside = text.strip_prefix(open)?.strip_suffix(close)?;
+    let range = TextRange::at(start + TextSize::of(open), TextSize::of(inside));
+    let lexed = lexer::lex(src, range, mode);
+    lexed.errors.is_empty().then(|| {
+        lexed
+            .tokens
+            .into_iter()
+            .filter(|token| !token.kind.is_trivia() && token.kind != SyntaxKind::Comma)
+            .collect()
+    })
 }
 
 /// Where each statement that imports names starts, in order.
@@ -643,6 +965,174 @@ mod tests {
     #[test]
     fn import_in_outer_block_makes_command_in_inner_block_unknowable() {
         assert_eq!(callee_nested("use m.nu *", "ls"), Callee::Unknowable);
+    }
+
+    const MODULE: &str = "module m { export def f [] {}; export def g [] {}; def h [] {} }";
+
+    #[test]
+    fn import_of_module_block_declares_brings_commands_it_names() {
+        for (import, call) in [
+            ("use m f", "f"),
+            ("use m", "m f"),
+            ("use m *", "g"),
+            ("use m [f g]", "g"),
+            ("use m [f, \"g\"]", "g"),
+            ("use m \"*\"", "f"),
+            ("use \"m\" f", "f"),
+            ("export use m f", "f"),
+            ("let x = use m f", "f"),
+        ] {
+            let src = format!("{MODULE}\n{import}\n{call}");
+            assert_eq!(callee(&src), Callee::Defined, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn import_of_module_block_declares_brings_no_command_it_leaves_out() {
+        for (import, call) in [
+            ("use m f", "g"),
+            ("use m", "f"),
+            ("use m *", "h"),
+            ("use m []", "f"),
+        ] {
+            let src = format!("{MODULE}\n{import}\n{call}");
+            assert_eq!(callee(&src), Callee::Undefined, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn import_of_main_brings_command_of_module_name() {
+        let module = "module m { export def main [] {}; export def f [] {} }";
+        for import in ["use m", "use m *"] {
+            let src = format!("{module}\n{import}\nm");
+            assert_eq!(callee(&src), Callee::Defined, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn import_nuten_cannot_read_from_module_block_declares_makes_command_unknowable() {
+        for (module, import) in [
+            (MODULE, "use m main"),
+            (MODULE, "use m nosuch"),
+            (MODULE, "use m [f nosuch]"),
+            (MODULE, "use m f g"),
+            (MODULE, "use --help m f"),
+            (MODULE, "use m [f (g)]"),
+            (
+                "module m { export module n { export def f [] {} } }",
+                "use m *",
+            ),
+            ("module m { export use n.nu f }", "use m *"),
+            ("module m { export def f [] {} | ignore }", "use m *"),
+            ("module m { export def m [] {} }", "use m *"),
+            ("module m {\nexport\nexport def f [] {}\n}", "use m f"),
+            ("module m { export def \"f\\tg\" [] {} }", "use m *"),
+        ] {
+            let src = format!("{module}\n{import}\nf");
+            assert_eq!(callee(&src), Callee::Unknowable, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn statement_that_exports_no_command_leaves_module_readable() {
+        let module = "module m {
+            export const c = 1
+            export-env { $env.A = 1 }
+            def g [] {}
+            export def f [] {}
+        }";
+        assert_eq!(callee(&format!("{module}\nuse m f\nf")), Callee::Defined);
+    }
+
+    #[test]
+    fn alias_module_block_exports_is_command_import_brings() {
+        let src = "module m { export alias f = ls }\nuse m f\nf";
+        assert_eq!(callee(src), Callee::Defined);
+    }
+
+    #[test]
+    fn module_exported_or_of_quoted_name_is_one_import_finds() {
+        for module in [
+            "export module m { export def f [] {} }",
+            "module \"m\" { export def f [] {} }",
+        ] {
+            let src = format!("{module}\nuse m f\nf");
+            assert_eq!(callee(&src), Callee::Defined, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn module_declared_after_import_is_none_it_finds() {
+        assert_eq!(
+            callee("use m f\nmodule m { export def f [] {} }\nf"),
+            Callee::Unknowable
+        );
+    }
+
+    #[test]
+    fn module_in_pipeline_declares_nothing() {
+        assert_eq!(
+            callee("module m { export def f [] {} } | ignore\nuse m f\nf"),
+            Callee::Unknowable
+        );
+    }
+
+    #[test]
+    fn import_in_pipeline_brings_nothing_nuten_reads() {
+        assert_eq!(
+            callee(&format!("{MODULE}\nuse m f | ignore\nf")),
+            Callee::Unknowable
+        );
+    }
+
+    #[test]
+    fn last_module_of_name_declared_before_import_is_one_it_finds() {
+        let src = "module m { export def f [] {} }\nmodule m { export def g [] {} }\nuse m *";
+        assert_eq!(callee(&format!("{src}\ng")), Callee::Defined);
+        assert_eq!(callee(&format!("{src}\nf")), Callee::Undefined);
+    }
+
+    #[test]
+    fn module_outer_block_declares_is_found_from_inner_block() {
+        assert_eq!(callee_nested(MODULE, "use m f\nf"), Callee::Defined);
+    }
+
+    #[test]
+    fn module_inner_block_declares_takes_place_of_outer_one() {
+        assert_eq!(
+            callee_nested(MODULE, "module m { export def k [] {} }\nuse m *\nf"),
+            Callee::Undefined
+        );
+    }
+
+    #[test]
+    fn module_inner_block_declares_is_none_outer_block_finds() {
+        assert_eq!(
+            callee("do { module m { export def f [] {} } }\nuse m f\nf"),
+            Callee::Unknowable
+        );
+    }
+
+    #[test]
+    fn import_nuten_cannot_read_before_call_makes_command_imported_from_module_unknowable() {
+        for imports in ["use other.nu *\nuse m f", "use m f\nuse other.nu *"] {
+            let src = format!("{MODULE}\n{imports}\nf");
+            assert_eq!(callee(&src), Callee::Unknowable, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn hidden_name_makes_command_imported_from_module_unknowable() {
+        assert_eq!(
+            callee(&format!("{MODULE}\nuse m f\nhide f\nf")),
+            Callee::Unknowable
+        );
+    }
+
+    #[test]
+    fn import_that_line_break_does_not_end_brings_nothing_nuten_reads() {
+        let src = format!("{MODULE}\nuse m f\nf");
+        assert_eq!(callee_lexed_in(&src, 2, Mode::Paren), Callee::Unknowable);
     }
 
     #[test]
