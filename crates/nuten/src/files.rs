@@ -1,7 +1,7 @@
 //! The files to format.
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     error::Error,
     ffi::OsStr,
     fs, io, iter,
@@ -10,7 +10,7 @@ use std::{
 
 use ignore::{DirEntry, WalkBuilder, gitignore::Gitignore};
 
-use crate::unique;
+use crate::{config::Reported, unique};
 
 /// Directories of version control, which hold no code of the author's.
 const VCS_DIRS: [&str; 5] = [".git", ".hg", ".svn", ".bzr", ".jj"];
@@ -22,24 +22,39 @@ pub(crate) struct Expanded {
     pub(crate) problems: Vec<String>,
 }
 
+/// The directories among `paths`.
+pub(crate) fn dirs(paths: &[PathBuf]) -> Vec<&Path> {
+    paths
+        .iter()
+        .map(PathBuf::as_path)
+        .filter(|path| path.is_dir())
+        .collect()
+}
+
 /// The files `paths` name, in their order: a file as it is, and a directory as its `.nu` files.
-pub(crate) fn expand(paths: &[PathBuf]) -> Expanded {
-    let global_problems = if paths.iter().any(|path| path.is_dir()) {
+/// `respect_gitignore` tells for each of `dirs(paths)` whether to walk it respecting ignore files.
+pub(crate) fn expand(
+    paths: &[PathBuf],
+    respect_gitignore: &HashMap<&Path, Result<bool, Reported>>,
+) -> Expanded {
+    let global_problems = if respect_gitignore
+        .values()
+        .any(|respect| matches!(respect, Ok(true)))
+    {
         global_ignore_problems()
     } else {
         Vec::new()
     };
     let found: Vec<_> = paths
         .iter()
-        .flat_map(|path| {
-            if !path.is_dir() {
-                vec![Ok(path.clone())]
-            } else if global_problems.is_empty() {
-                walk(path)
-            } else {
-                // Not walked, since what the global excludes file of git ignores is unknown.
-                Vec::new()
-            }
+        .flat_map(|path| match respect_gitignore.get(path.as_path()) {
+            None => vec![Ok(path.clone())],
+            // Not walked, since the config to walk it with is unknown.
+            // The problem has been reported already.
+            Some(Err(_)) => Vec::new(),
+            // Not walked, since what the global excludes file of git ignores is unknown.
+            Some(Ok(true)) if !global_problems.is_empty() => Vec::new(),
+            Some(&Ok(respect_gitignore)) => walk(path, respect_gitignore),
         })
         .collect();
     let walk_problems = found.iter().filter_map(|found| found.as_ref().err());
@@ -59,14 +74,16 @@ fn global_ignore_problems() -> Vec<String> {
         .map_or_else(Vec::new, |error| problem_lines(&error))
 }
 
-/// The `.nu` files under `dir` that no ignore file ignores, in path order, and the problems.
+/// The `.nu` files under `dir` in path order, and the problems.
+/// Leaves out the files that ignore files ignore when `respect_gitignore`.
 /// Walks no symlink, since a link could lead out of `dir` or back into it.
 /// Hidden files are walked, since config of Nushell lives in them.
-fn walk(dir: &Path) -> Vec<Result<PathBuf, String>> {
+fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Result<PathBuf, String>> {
     // Directories covered by an ignore file with lines the walker drops.
     // Their files are left alone, since what those lines ignore is unknown.
     let mut untrusted: Vec<PathBuf> = Vec::new();
     WalkBuilder::new(dir)
+        .standard_filters(respect_gitignore)
         .hidden(false)
         .filter_entry(|entry| !is_vcs_dir(entry))
         .sort_by_file_name(OsStr::cmp)

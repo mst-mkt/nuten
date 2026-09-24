@@ -19,7 +19,7 @@ mod files;
 mod parallel;
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt::Display,
     fs,
     hash::Hash,
@@ -84,24 +84,45 @@ fn print_schema() -> ExitCode {
 
 /// Formats the files `paths` name, with the config file `config_file` or else the nearest one.
 fn format_paths(paths: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
-    let expanded = files::expand(paths);
+    let Ok(given) = config_file.map(config::load).transpose() else {
+        return ExitCode::from(2);
+    };
+    let Ok(respect_gitignore) = respect_gitignore_of_dirs(paths, given.as_ref()) else {
+        return ExitCode::from(2);
+    };
+    let expanded = files::expand(paths, &respect_gitignore);
     for problem in &expanded.problems {
         eprintln!("{problem}");
     }
     // Also keeps two threads off one file, which could read it halfway written.
     let files = files::distinct(&expanded.files);
-    let Ok(configs) = config::of_files(&files, config_file) else {
+    let Ok(configs) = config::of_files(&files, given.as_ref()) else {
         return ExitCode::from(2);
     };
     let failures = format_all(&files, &configs);
     for problem in failures.iter().flatten() {
         eprintln!("{problem}");
     }
-    if expanded.problems.is_empty() && failures.is_empty() {
+    let dirs_resolved = respect_gitignore.values().all(Result::is_ok);
+    if dirs_resolved && expanded.problems.is_empty() && failures.is_empty() {
         ExitCode::SUCCESS
     } else {
         ExitCode::from(2)
     }
+}
+
+/// Whether to walk each directory among `paths` respecting ignore files, by its path.
+/// Fails as a whole as `config::of_dirs` does.
+fn respect_gitignore_of_dirs<'a>(
+    paths: &'a [PathBuf],
+    given: Option<&Config>,
+) -> Result<HashMap<&'a Path, Result<bool, Reported>>, Reported> {
+    let dirs = files::dirs(paths);
+    let configs = config::of_dirs(&dirs, given)?;
+    let respect_gitignore = configs
+        .into_iter()
+        .map(|config| config.map(|config| config.respect_gitignore));
+    Ok(dirs.into_iter().zip(respect_gitignore).collect())
 }
 
 /// The problems of each of `files` that fails to be formatted, in their order.

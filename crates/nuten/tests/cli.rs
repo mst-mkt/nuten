@@ -1323,6 +1323,143 @@ fn format_reports_problems_of_walking_before_problems_of_formatting() {
 }
 
 #[test]
+fn format_formats_ignored_files_when_respect_gitignore_is_off() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{respect_gitignore: false}");
+    dir.dir("d/.git");
+    dir.file("d/.gitignore", "gen/\n");
+    dir.file("d/.ignore", "local.nu\n");
+    let taken = write_unformatted(&dir, ["d/gen/a.nu", "d/local.nu"]);
+    let [vcs] = write_unformatted(&dir, ["d/.git/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    for path in &taken {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+    assert_eq!(read(&vcs), UNFORMATTED);
+}
+
+#[test]
+fn format_reads_no_ignore_file_when_respect_gitignore_is_off() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{respect_gitignore: false}");
+    dir.file("d/.ignore", "a{b\n");
+    dir.file("config/git/ignore", "a{b\n");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_takes_respect_gitignore_from_config_file_nearest_directory_given() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{respect_gitignore: false}");
+    dir.file("d/e/nuten.nuon", "{respect_gitignore: true}");
+    dir.dir("d/.git");
+    dir.file("d/.gitignore", "gen/\n");
+    let [path] = write_unformatted(&dir, ["d/e/gen/a.nu"]);
+    let output = format_in(&dir, &["d/e"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), UNFORMATTED);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_takes_respect_gitignore_from_config_file_where_symlinked_directory_leads() {
+    let dir = TempDir::new();
+    dir.file("real/nuten.nuon", "{respect_gitignore: false}");
+    dir.file("real/sub/.ignore", "a.nu\n");
+    let [path] = write_unformatted(&dir, ["real/sub/a.nu"]);
+    dir.file("e/nuten.nuon", "{respect_gitignore: true}");
+    std::os::unix::fs::symlink(dir.path("real/sub"), dir.path("e/link")).unwrap();
+    let output = format_in(&dir, &["e/link"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_reads_no_global_excludes_file_of_git_when_respect_gitignore_is_off() {
+    let dir = TempDir::new();
+    dir.file("config/git/ignore", "a{b\n");
+    dir.file("off/nuten.nuon", "{respect_gitignore: false}");
+    let [on, off] = write_unformatted(&dir, ["on/a.nu", "off/a.nu"]);
+    let output = nuten_command()
+        .args(["format", "on", "off"])
+        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert_eq!(read(&on), UNFORMATTED);
+    assert_eq!(read(&off), FORMATTED);
+}
+
+#[test]
+fn format_takes_respect_gitignore_from_given_config_file() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{respect_gitignore: true}");
+    dir.file("off.nuon", "{respect_gitignore: false}");
+    dir.file("d/.ignore", "a.nu\n");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = format_in(&dir, &["-c", "off.nuon", "d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_reads_no_config_file_of_directory_when_given_config_file() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{");
+    dir.file("two.nuon", "{indent_width: 2}");
+    let path = dir.file("d/a.nu", BLOCK);
+    let output = format_in(&dir, &["-c", "two.nuon", "d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), "if true {\n  ls\n}\n");
+}
+
+#[test]
+fn format_reports_missing_file_once_when_given_config_file() {
+    let dir = TempDir::new();
+    dir.file("two.nuon", "{indent_width: 2}");
+    let error = fs::read(dir.path("missing.nu")).unwrap_err();
+    let output = format_in(&dir, &["-c", "two.nuon", "missing.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        io_error_line(Path::new("missing.nu"), &error)
+    );
+}
+
+#[test]
+fn format_writes_nothing_when_config_file_of_directory_is_wrong() {
+    let dir = TempDir::new();
+    let nuon = dir.file("d/nuten.nuon", "{respect_gitignore: 1}");
+    let paths = write_unformatted(&dir, ["d/a.nu", "a.nu"]);
+    let output = format_in(&dir, &["a.nu", "d"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        format!(
+            "{}:1:21: `respect_gitignore` takes a boolean, not an integer\n",
+            nuon.display()
+        )
+    );
+    for path in &paths {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+}
+#[test]
 fn wants_subcommand() {
     let output = nuten(&[]);
     assert_eq!(output.status.code(), Some(2));
