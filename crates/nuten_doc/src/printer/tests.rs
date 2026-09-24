@@ -35,13 +35,13 @@ fn comment() -> Element<'static> {
 }
 
 #[test]
-fn text_and_space_go_out_as_they_are() {
+fn text_and_space_print_verbatim() {
     let doc = vec![text("echo"), space(), text("a")];
     assert_eq!(print(&doc, &WIDE), "echo a");
 }
 
 #[test]
-fn hard_line_breaks_indent_the_next_text() {
+fn hard_line_break_indents_next_text() {
     let doc = vec![
         text("a"),
         indent(vec![
@@ -57,13 +57,13 @@ fn hard_line_breaks_indent_the_next_text() {
 }
 
 #[test]
-fn indent_without_a_line_break_prints_nothing() {
+fn indent_without_line_break_prints_nothing() {
     let doc = vec![indent(vec![text("a")])];
     assert_eq!(print(&doc, &WIDE), "a");
 }
 
 #[test]
-fn space_at_start_of_line_comes_after_indent() {
+fn line_start_space_comes_after_indent() {
     let doc = vec![
         text("a"),
         indent(vec![hard_line_break(), space(), text("b")]),
@@ -72,7 +72,7 @@ fn space_at_start_of_line_comes_after_indent() {
 }
 
 #[test]
-fn spaces_and_tabs_at_the_end_of_a_line_go() {
+fn trailing_spaces_and_tabs_are_trimmed() {
     let doc = vec![
         text("a "),
         space(),
@@ -85,7 +85,7 @@ fn spaces_and_tabs_at_the_end_of_a_line_go() {
 }
 
 #[test]
-fn line_breaks_in_a_row_collapse() {
+fn consecutive_line_breaks_collapse() {
     let doc = vec![
         text("a"),
         hard_line_break(),
@@ -105,7 +105,7 @@ fn line_breaks_in_a_row_collapse() {
 }
 
 #[test]
-fn line_breaks_collapse_with_crlf_too() {
+fn consecutive_line_breaks_collapse_with_crlf() {
     let doc = vec![
         text("a "),
         hard_line_break(),
@@ -119,7 +119,7 @@ fn line_breaks_collapse_with_crlf_too() {
 }
 
 #[test]
-fn empty_line_prints_blank_lines_it_carries() {
+fn consecutive_empty_lines_never_add_up() {
     let doc = vec![
         text("a"),
         empty_lines(2),
@@ -133,20 +133,20 @@ fn empty_line_prints_blank_lines_it_carries() {
 }
 
 #[test]
-fn only_the_last_line_of_a_text_is_trimmed() {
+fn only_last_line_of_text_is_trimmed() {
     let doc = vec![text("a \nb "), hard_line_break(), text("c")];
     assert_eq!(print(&doc, &WIDE), "a \nb\nc");
 }
 
 #[test]
-fn carriage_returns_before_printed_line_break_go_only_with_lf() {
+fn only_lf_trims_cr_before_hard_line_break() {
     let doc = vec![text("a \r\r"), hard_line_break(), text("b\r \r")];
     assert_eq!(print(&doc, &WIDE), "a\nb\r \r");
     assert_eq!(print(&doc, &CRLF), "a \r\r\r\nb\r \r");
 }
 
 #[test]
-fn carriage_returns_before_line_break_inside_text_go_only_with_lf() {
+fn only_lf_trims_cr_before_line_break_in_text() {
     let doc = vec![text("a\r\r\nb \r\nc")];
     assert_eq!(print(&doc, &WIDE), "a\nb \nc");
     assert_eq!(print(&doc, &CRLF), "a\r\r\nb \r\nc");
@@ -156,7 +156,7 @@ fn carriage_returns_before_line_break_inside_text_go_only_with_lf() {
 }
 
 #[test]
-fn first_line_of_text_is_measured_without_carriage_returns_of_its_line_break() {
+fn only_untrimmed_cr_takes_width() {
     let doc = vec![
         group(vec![text("a"), soft_line_break_or_space(), text("b")]),
         text("x\r\r\ny"),
@@ -170,7 +170,7 @@ fn first_line_of_text_is_measured_without_carriage_returns_of_its_line_break() {
 }
 
 #[test]
-fn line_of_spaces_alone_goes() {
+fn line_of_only_spaces_disappears() {
     let doc = vec![
         text("a"),
         hard_line_break(),
@@ -204,13 +204,13 @@ fn final_line_break_leaves_no_indent_behind() {
 }
 
 #[test]
-fn line_ending_is_configurable() {
+fn line_ending_sets_line_break_characters() {
     let doc = vec![text("a"), indent(vec![hard_line_break(), text("b")])];
     assert_eq!(print(&doc, &CRLF), "a\r\n  b");
 }
 
 #[test]
-fn indent_width_sets_the_spaces_per_level() {
+fn indent_width_sets_spaces_per_level() {
     let doc = vec![text("a"), indent(vec![hard_line_break(), text("b")])];
     let four_column_indent = PrinterOptions {
         indent_width: 4,
@@ -233,13 +233,13 @@ fn group_stays_flat_up_to_line_width() {
 }
 
 #[test]
-fn group_past_line_width_breaks_at_once() {
+fn group_starting_past_line_width_breaks() {
     let doc = vec![text("aaaa"), group(vec![soft_line_break(), text("b")])];
     assert_eq!(print(&doc, &narrow(3)), "aaaa\nb");
 }
 
 #[test]
-fn soft_lines_outside_a_group_break() {
+fn soft_lines_outside_group_break() {
     let doc = vec![text("a"), soft_line_break_or_space(), text("b")];
     assert_eq!(print(&doc, &WIDE), "a\nb");
 }
@@ -255,7 +255,7 @@ fn group_inside_flat_group_stays_flat() {
 }
 
 #[test]
-fn forced_break_breaks_groups_around() {
+fn forced_break_breaks_enclosing_groups() {
     let hard = vec![group(vec![
         text("a"),
         soft_line_break_or_space(),
@@ -291,7 +291,7 @@ fn forced_break_breaks_groups_around() {
 }
 
 #[test]
-fn forced_break_inside_line_suffix_breaks_group_around() {
+fn forced_break_in_line_suffix_breaks_enclosing_group() {
     let forced_breaks = [
         vec![expand_parent()],
         vec![hard_line_break()],
@@ -311,7 +311,7 @@ fn forced_break_inside_line_suffix_breaks_group_around() {
 }
 
 #[test]
-fn boundary_inside_line_suffix_does_not_end_measurement() {
+fn boundary_in_line_suffix_never_ends_measurement() {
     let doc = vec![group(vec![
         text("a"),
         line_suffix(vec![line_suffix_boundary(), hard_line_break()]),
@@ -322,7 +322,7 @@ fn boundary_inside_line_suffix_does_not_end_measurement() {
 }
 
 #[test]
-fn forced_break_inside_line_suffix_after_group_leaves_it_flat() {
+fn group_ignores_forced_break_in_following_line_suffix() {
     let doc = vec![
         group(vec![text("a"), soft_line_break_or_space(), text("b")]),
         line_suffix(vec![hard_line_break(), text("# c")]),
@@ -331,7 +331,7 @@ fn forced_break_inside_line_suffix_after_group_leaves_it_flat() {
 }
 
 #[test]
-fn groups_inside_a_broken_group_fit_on_their_own() {
+fn groups_inside_broken_group_fit_independently() {
     let doc = vec![group(vec![
         text("call"),
         soft_line_break_or_space(),
@@ -343,7 +343,7 @@ fn groups_inside_a_broken_group_fit_on_their_own() {
 }
 
 #[test]
-fn what_follows_a_group_on_the_line_counts() {
+fn rest_of_line_counts_toward_group_fit() {
     let group_then = |rest: Vec<Element<'static>>| {
         let mut doc = vec![group(vec![
             text("a"),
@@ -385,7 +385,7 @@ fn indent_takes_columns() {
 }
 
 #[test]
-fn line_breaks_inside_a_text_come_out_as_the_line_ending() {
+fn line_breaks_in_text_become_line_ending() {
     let doc = vec![text("a\r\nb\nc\rd"), hard_line_break(), text("e")];
     assert_eq!(print(&doc, &WIDE), "a\nb\nc\rd\ne");
     assert_eq!(print(&doc, &CRLF), "a\r\nb\r\nc\rd\r\ne");
@@ -395,13 +395,13 @@ fn line_breaks_inside_a_text_come_out_as_the_line_ending() {
 }
 
 #[test]
-fn only_the_first_line_of_a_text_is_indented() {
+fn only_first_line_of_text_is_indented() {
     let doc = vec![text("a"), indent(vec![hard_line_break(), text("b\nc")])];
     assert_eq!(print(&doc, &WIDE), "a\n  b\nc");
 }
 
 #[test]
-fn empty_first_line_of_text_takes_no_indent() {
+fn empty_first_line_of_text_carries_no_indent() {
     for multiline in ["\nb", "\r\nb"] {
         let doc = vec![text("a"), indent(vec![hard_line_break(), text(multiline)])];
         assert_eq!(print(&doc, &WIDE), "a\n\nb", "{multiline:?}");
@@ -428,7 +428,7 @@ fn multiline_text_resets_column() {
 }
 
 #[test]
-fn line_suffix_keeps_indent_and_mode_of_its_place() {
+fn line_suffix_keeps_written_indent_and_mode() {
     let doc = vec![
         text("a"),
         indent(vec![line_suffix(vec![hard_line_break(), text("# c")])]),
@@ -450,7 +450,7 @@ fn line_suffix_keeps_indent_and_mode_of_its_place() {
 }
 
 #[test]
-fn boundary_in_flat_group_keeps_suffix_group_flat() {
+fn boundary_in_flat_group_keeps_line_suffix_group_flat() {
     let doc = vec![
         text("a"),
         line_suffix(vec![group(vec![
@@ -505,7 +505,7 @@ fn line_suffix_at_end_still_prints() {
 }
 
 #[test]
-fn boundary_breaks_line_only_after_suffix() {
+fn boundary_breaks_line_only_after_line_suffix() {
     let doc = vec![text("a"), comment(), line_suffix_boundary(), text("b")];
     assert_eq!(print(&doc, &WIDE), "a # c\nb");
     let doc = vec![text("a"), line_suffix_boundary(), text("b")];
@@ -524,7 +524,7 @@ fn line_suffix_takes_no_width() {
 }
 
 #[test]
-fn boundary_after_suffix_ends_line_when_measuring() {
+fn boundary_after_line_suffix_ends_measurement() {
     let doc = vec![
         text("aaa"),
         comment(),
@@ -556,7 +556,7 @@ fn alignment_adds_its_columns_to_indent() {
 }
 
 #[test]
-fn with_tabs_an_alignment_before_a_level_takes_a_tab() {
+fn alignment_before_indent_level_becomes_tab() {
     let doc = vec![
         text("a"),
         align(
@@ -576,7 +576,7 @@ fn with_tabs_an_alignment_before_a_level_takes_a_tab() {
 }
 
 #[test]
-fn alignment_on_group_follows_how_group_printed() {
+fn alignment_on_group_follows_whether_it_broke() {
     let doc = vec![
         group_with_id(
             GroupId(0),
@@ -639,7 +639,7 @@ fn zero_columns_are_no_alignment() {
 }
 
 #[test]
-fn alignment_on_flat_or_unprinted_group_does_nothing() {
+fn alignment_on_group_needs_it_already_broken() {
     let flat = vec![group(vec![
         group_with_id(GroupId(0), vec![text("a")]),
         align_if_group_breaks(GroupId(0), 2, vec![hard_line_break(), text("b")]),
@@ -671,7 +671,7 @@ fn alignment_on_flat_or_unprinted_group_does_nothing() {
 }
 
 #[test]
-fn alignment_leaves_empty_lines_empty_and_suffixes_in_place() {
+fn alignment_spares_empty_lines_not_line_suffixes() {
     let doc = vec![
         text("a"),
         align(

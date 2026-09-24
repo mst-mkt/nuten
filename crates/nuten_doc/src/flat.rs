@@ -67,7 +67,7 @@ mod tests {
     };
 
     #[test]
-    fn flat_document_has_every_group_printed_flat() {
+    fn every_group_comes_out_flat() {
         let doc = [
             text("("),
             group([
@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn what_keeps_off_one_line_leaves_no_flat_document() {
+    fn hard_line_breaks_and_line_suffixes_prevent_flat() {
         for doc in [
             vec![group([text("a"), hard_line_break()])],
             vec![text("a\nb")],
@@ -109,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn only_forced_break_breaks_groups_wherever_it_stands() {
+    fn only_forced_break_at_any_depth_breaks_groups() {
         for doc in [
             vec![group([text("a"), hard_line_break()])],
             vec![indent([expand_parent()])],
