@@ -334,7 +334,7 @@ fn shell_operator(text: &str) -> Option<ParseErrorKind> {
 
 #[cfg(test)]
 mod tests {
-    use nuten_syntax::SyntaxKind;
+    use nuten_syntax::{SyntaxKind, SyntaxNode};
 
     use crate::parse;
 
@@ -369,6 +369,74 @@ mod tests {
             tree.descendants_with_tokens()
                 .any(|element| element.kind() == SyntaxKind::Word
                     && element.to_string() == "{a: {a: 1}}")
+        );
+    }
+
+    /// The tree of `src`, with no errors, and how many nodes of `kind` it holds.
+    fn parsed_with(src: &str, kind: SyntaxKind) -> (SyntaxNode, usize) {
+        let parsed = parse(src);
+        assert!(parsed.errors().is_empty());
+        let tree = parsed.syntax();
+        let count = tree
+            .descendants()
+            .filter(|node| node.kind() == kind)
+            .count();
+        (tree, count)
+    }
+
+    /// The text of the last node of `kind` in `tree`, which must have no child nodes.
+    fn innermost(tree: &SyntaxNode, kind: SyntaxKind) -> String {
+        let innermost = tree
+            .descendants()
+            .filter(|node| node.kind() == kind)
+            .last()
+            .unwrap();
+        assert!(innermost.children().next().is_none());
+        innermost.to_string()
+    }
+
+    #[test]
+    fn assignments_chained_too_deep_stay_as_written() {
+        let src = format!("mut a = 1\n{}1", "$a = ".repeat(10_000));
+        let (tree, assignments) = parsed_with(&src, SyntaxKind::Assignment);
+        assert_eq!(assignments, 128);
+        assert_eq!(
+            innermost(&tree, SyntaxKind::Call),
+            format!("{}1", "$a = ".repeat(10_000 - 128))
+        );
+    }
+
+    #[test]
+    fn declarations_chained_too_deep_stay_as_written() {
+        let src = format!("{}1", "let a = ".repeat(10_000));
+        let (tree, declarations) = parsed_with(&src, SyntaxKind::Let);
+        assert_eq!(declarations, 128);
+        assert_eq!(
+            innermost(&tree, SyntaxKind::Call),
+            format!("{}1", "let a = ".repeat(10_000 - 128))
+        );
+    }
+
+    #[test]
+    fn keyword_terms_chained_too_deep_stay_as_written() {
+        let src = format!("{}1", "1 + if true {} else ".repeat(10_000));
+        let (tree, ifs) = parsed_with(&src, SyntaxKind::If);
+        assert_eq!(ifs, 128);
+        assert_eq!(
+            innermost(&tree, SyntaxKind::MathExpression),
+            format!("{}1", "1 + if true {} else ".repeat(10_000 - 128))
+        );
+    }
+
+    #[test]
+    fn keywords_nested_in_conditions_too_deep_stay_as_written() {
+        let src = format!("{}true{}", "if 1 + ".repeat(10_000), " {}".repeat(10_000));
+        let (tree, ifs) = parsed_with(&src, SyntaxKind::If);
+        assert_eq!(ifs, 128);
+        let rest = 10_000 - 128;
+        assert_eq!(
+            innermost(&tree, SyntaxKind::MathExpression),
+            format!("1 + {}true{}", "if 1 + ".repeat(rest), " {}".repeat(rest))
         );
     }
 

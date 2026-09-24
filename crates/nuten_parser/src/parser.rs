@@ -20,6 +20,8 @@ pub(crate) enum Event {
 }
 
 /// How deep brackets may nest before a bracketed word stays a word.
+/// Syntax that nests with no brackets, as a chain of assignments, counts toward it too.
+/// Past it nuten keeps the syntax as written, which cannot change what it means.
 const MAX_DEPTH: usize = 128;
 
 /// A pair of one-byte brackets and the kinds of their tokens.
@@ -156,7 +158,7 @@ pub(crate) struct Parser<'a> {
     skips_newline: bool,
     /// What the file names, and what the blocks around the tokens declare.
     names: Names<'a>,
-    /// Brackets around the tokens.
+    /// Brackets around the tokens, and syntax nested with no brackets, as `deeper` counts it.
     depth: usize,
     /// How many errors were reported among these tokens.
     /// Those inside a bracketed word read as a node are not counted.
@@ -206,6 +208,19 @@ impl<'a> Parser<'a> {
                 .filter(|token| token.kind.is_item())
                 .map(|token| &self.src[token.range])
         })
+    }
+
+    /// Whether one more level of brackets, or of syntax nested with no brackets, may be read.
+    pub(crate) fn can_nest(&self) -> bool {
+        self.depth < MAX_DEPTH
+    }
+
+    /// Runs `read` one level deeper, for syntax that nests with no brackets around it.
+    pub(crate) fn deeper<T>(&mut self, read: impl FnOnce(&mut Parser<'a>) -> T) -> T {
+        self.depth += 1;
+        let value = read(self);
+        self.depth -= 1;
+        value
     }
 
     pub(crate) fn is_skipped(&self, kind: SyntaxKind) -> bool {
@@ -325,7 +340,7 @@ impl<'a> Parser<'a> {
         affix: Affix,
     ) -> Option<Bracketed<'a>> {
         let token = self.nth_token(0)?;
-        if token.kind != SyntaxKind::Word || self.depth == MAX_DEPTH {
+        if token.kind != SyntaxKind::Word || !self.can_nest() {
             return None;
         }
         let range = affix.brackets_within(token.range);

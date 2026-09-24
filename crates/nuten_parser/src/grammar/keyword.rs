@@ -36,11 +36,13 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
 /// The keyword alone decides which syntax to try, or the one after an `export`.
 /// The shape of the items is then that syntax's own to check.
 /// Where a block around the call defines a command of its name, nu may run that instead.
+/// A syntax may hold another with no brackets between them, as an `if` does in its condition.
+/// So it counts toward the depth limit of brackets, past which the call stays a call.
 pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
-    if p.callee() != Callee::Undefined {
+    if p.callee() != Callee::Undefined || !p.can_nest() {
         return false;
     }
-    match p.peek_text() {
+    p.deeper(|p| match p.peek_text() {
         Some("if") => if_(p),
         Some("for" | "while" | "loop" | "try") => control(p),
         Some("match") => match_(p),
@@ -51,7 +53,7 @@ pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
         Some("export") => exported(p),
         Some("export-env") => export_env(p),
         _ => false,
-    }
+    })
 }
 
 /// An `export` and the keyword after it, which nu reads as that keyword alone.

@@ -67,7 +67,7 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
 
 #[cfg(test)]
 mod tests {
-    use super::{Config, ParseErrorKind, format};
+    use super::{Config, ParseErrorKind, format, invariants};
 
     #[test]
     fn file_with_errors_is_rejected() {
@@ -89,6 +89,24 @@ mod tests {
     fn output_ends_with_one_line_break() {
         for src in ["ls", "ls\n", "ls \n\n", "ls\r\n", "\n\nls\n\n\n"] {
             assert_eq!(format(src, &Config::default()).unwrap(), "ls\n", "{src:?}");
+        }
+    }
+
+    #[test]
+    fn syntax_nested_past_depth_limit_keeps_every_invariant() {
+        for src in [
+            format!("mut a = 1\n{}1\n", "$a  =  ".repeat(1_000)),
+            format!("{}1\n", "let a  =  ".repeat(1_000)),
+            format!("{}1\n", "1  +  if true {  1 } else  ".repeat(1_000)),
+            format!(
+                "{}true{}\n",
+                "if 1  +  ".repeat(1_000),
+                " {  1 }".repeat(1_000)
+            ),
+        ] {
+            let checked = invariants::check(&src, &Config::default());
+            assert!(checked.syntax_errors.is_empty(), "{src:?}");
+            assert_eq!(checked.violations, [], "{src:?}");
         }
     }
 

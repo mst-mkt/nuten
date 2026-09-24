@@ -228,6 +228,10 @@ fn pipeline_element(
         None
     } else if !assignment_ahead(p) {
         command(p, false)
+    } else if !p.can_nest() {
+        // What an assignment operator takes may hold another, and so on with no brackets.
+        call_as_written(p, assigned);
+        None
     } else if first && let Some((keyword, words)) = declaration(p) {
         p.start(SyntaxKind::Let);
         for _ in 0..words {
@@ -245,9 +249,7 @@ fn pipeline_element(
         // Nu reads the syntax of the keyword, where the operator is only one more item.
         // Nu accepts that only where the operator is a name, or where the rest is left unread.
         // So the items stay as written.
-        p.start(SyntaxKind::Call);
-        rest_of_statement(p, assigned, Parser::bump);
-        p.finish();
+        call_as_written(p, assigned);
         None
     } else {
         p.start(SyntaxKind::Assignment);
@@ -263,10 +265,17 @@ fn pipeline_element(
     }
 }
 
-/// The assignment operator ahead and the statements it takes.
+/// The items ahead to the statement's end as one `Call` of bare tokens.
+fn call_as_written(p: &mut Parser<'_>, assigned: Assigned) {
+    p.start(SyntaxKind::Call);
+    rest_of_statement(p, assigned, Parser::bump);
+    p.finish();
+}
+
+/// The assignment operator ahead and the statements it takes, one level deeper.
 fn assignment_operator(p: &mut Parser<'_>) {
     p.bump();
-    assigned_statements(p);
+    p.deeper(assigned_statements);
 }
 
 #[cfg(test)]
