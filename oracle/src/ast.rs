@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use jsonc_parser::{JsonValue, Map, ParseOptions, parse_to_value};
 
 /// Where what nu parses in `before` and `after` first differs, in one line.
-/// Positions, line endings, and the layout in the flattened tokens are left aside.
+/// Positions, span ids, line endings, and the layout in the flattened tokens are left aside.
 /// `None` when the two are the same.
 /// Fails when either is not JSON.
 pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, String> {
@@ -60,6 +60,8 @@ fn json(text: &str) -> Result<JsonValue<'_>, String> {
 /// Without the `span_source` beside them, which is the text between.
 /// Nu writes positions as such pairs, in `span` objects and elsewhere.
 /// It writes them as the source excerpt it draws into the message of a `LabeledError` too.
+/// Without a numeric `span_id` either, which counts the spans nu registers as it parses.
+/// Nu registers some for expressions it then drops, and how many depends on the layout.
 fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
     match value {
         JsonValue::Object(object) => {
@@ -70,6 +72,9 @@ fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
                 for key in ["start", "end", "span_source"] {
                     map.remove(key);
                 }
+            }
+            if matches!(map.get("span_id"), Some(JsonValue::Number(_))) {
+                map.remove("span_id");
             }
             let map: Map<_, _> = map
                 .into_iter()
@@ -314,6 +319,15 @@ mod tests {
         assert_eq!(
             without_positions(ast),
             value(r#"{"span": {}, "head": {}, "start": 5, "items": [{}]}"#)
+        );
+    }
+
+    #[test]
+    fn numeric_span_ids_are_dropped() {
+        let ast = value(r#"{"expr": {"span_id": 5618, "ty": "Int"}, "span_id": "x"}"#);
+        assert_eq!(
+            without_positions(ast),
+            value(r#"{"expr": {"ty": "Int"}, "span_id": "x"}"#)
         );
     }
 
