@@ -33,7 +33,6 @@ mod where_;
 
 use nuten_syntax::SyntaxKind;
 
-pub(crate) use self::names::{Callee, Names};
 use self::{
     assignment::Assigned,
     binary::{binary, binary_ahead},
@@ -41,13 +40,17 @@ use self::{
     cell_path::{cell_path, cell_path_ahead},
     interpolation::interpolation,
     list::{is_list, items_as, list_items},
-    parameters::{Param, Takes},
+    parameters::Takes,
     pipeline::pipeline,
     range::{range, range_ahead},
     record::{RecordSign, record, record_sign},
     spread::{Target, is_spread, spread},
     table::{is_table, table_items},
     variable::variable_error,
+};
+pub(crate) use self::{
+    names::{Callee, Names},
+    parameters::Param,
 };
 use crate::{
     ParseErrorKind,

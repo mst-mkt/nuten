@@ -7,7 +7,7 @@ use rowan::{TextRange, TextSize};
 
 use crate::{
     ParseError, ParseErrorKind,
-    grammar::{self, Callee, Names},
+    grammar::{self, Callee, Names, Param},
     lexer::{self, LexError, Lexed, Mode, Token},
 };
 
@@ -221,6 +221,13 @@ impl<'a> Parser<'a> {
         let value = read(self);
         self.depth -= 1;
         value
+    }
+
+    /// What nu takes each of `items` as, the items of the call ahead.
+    /// `None` unless it runs a command a block around it defines, with a signature nuten reads.
+    pub(crate) fn defined_parameters(&self, items: &[&str]) -> Option<Vec<Option<Param>>> {
+        self.names
+            .defined_parameters(self.peek_range()?.start(), items)
     }
 
     pub(crate) fn is_skipped(&self, kind: SyntaxKind) -> bool {

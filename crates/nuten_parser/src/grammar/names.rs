@@ -3,7 +3,10 @@ use std::{cmp::Reverse, iter, rc::Rc};
 use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
 
-use super::{builtin, is_pipe};
+use super::{
+    builtin, is_pipe,
+    parameters::{Declared, Item, Param},
+};
 use crate::lexer::{self, Mode, Token};
 
 /// What the parser of every level of brackets knows of the names in the file.
@@ -85,41 +88,108 @@ impl<'a> Names<'a> {
         head: TextSize,
         word: impl Fn(usize) -> Option<&'w str>,
     ) -> Callee {
-        let scopes = || iter::successors(self.scope.as_deref(), |scope| scope.outer.as_deref());
-        let longest_name = scopes().map(|scope| scope.longest_name).max().unwrap_or(0);
-        let spelled: Vec<_> = (0..longest_name).map_while(&word).collect();
-        let Some((depth, scope, definition)) = scopes()
-            .enumerate()
-            .filter_map(|(depth, scope)| {
-                scope
-                    .longest_spelled(&spelled)
-                    .map(|definition| (depth, scope, definition))
-            })
-            .max_by_key(|&(depth, _, definition)| (definition.words.len(), Reverse(depth)))
-        else {
-            let unknowable = scopes().any(|scope| scope.imports_before(head))
+        self.resolved(head, word).0
+    }
+
+    /// What `callee` tells, and the definition the call runs if a block defines its command.
+    fn resolved<'w>(
+        &self,
+        head: TextSize,
+        word: impl Fn(usize) -> Option<&'w str>,
+    ) -> (Callee, Option<(usize, &Scope<'a>, &Definition<'a>)>) {
+        let spelled: Vec<_> = (0..self.longest_name()).map_while(&word).collect();
+        let Some(defining @ (depth, scope, definition)) = self.defining(&spelled) else {
+            let unknowable = self.scopes().any(|scope| scope.imports_before(head))
                 && word(0).is_some_and(|head| !builtin::is_parser_keyword(head));
-            return if unknowable {
+            let callee = if unknowable {
                 Callee::Unknowable
-            } else if !scopes().any(|scope| scope.imports_spelled(&spelled, head)) {
+            } else if !self
+                .scopes()
+                .any(|scope| scope.imports_spelled(&spelled, head))
+            {
                 Callee::Undefined
             } else if self.is_hidden(spelled[0]) {
                 Callee::Unknowable
             } else {
                 Callee::Defined
             };
+            return (callee, None);
         };
         let longer_imported = word(definition.words.len()).is_some()
-            && scopes().any(|scope| scope.imports_before(head));
+            && self.scopes().any(|scope| scope.imports_before(head));
         let replaceable = self.is_hidden(definition.words[0])
-            || scopes().take(depth).any(|scope| scope.imports_before(head))
+            || self
+                .scopes()
+                .take(depth)
+                .any(|scope| scope.imports_before(head))
             || scope.imports_between(definition.start, head)
             || longer_imported;
         if replaceable {
-            Callee::Unknowable
+            (Callee::Unknowable, None)
         } else {
-            Callee::Defined
+            (Callee::Defined, Some(defining))
         }
+    }
+
+    /// What nu takes each of `items` as, the items of the call with its head at `head`.
+    /// `None` unless it runs a command a block defines, with a signature nuten reads.
+    /// A command nu has may take its place where the name starts with a word that names one.
+    /// Nu runs the one of the longer name then.
+    /// It runs one an import nuten reads brings in place of the definition too.
+    /// An import in the block of the definition does so only after it.
+    /// Nu brings the definition in at its own statement, over any import before it.
+    pub(crate) fn defined_parameters(
+        &self,
+        head: TextSize,
+        items: &[&str],
+    ) -> Option<Vec<Option<Param>>> {
+        let (_, defining) = self.resolved(head, |nth| items.get(nth).copied());
+        let (depth, scope, definition) = defining?;
+        let declared = definition.declared.as_ref()?;
+        let words = definition.words.len();
+        let spelled = &items[..self.longest_name().min(items.len())];
+        let imported = |scope: &Scope<'a>, len, from| scope.imports_named(spelled, len, from, head);
+        let replaced = builtin::is_command(definition.words[0])
+            || self
+                .scopes()
+                .any(|scope| imported(scope, words + 1, TextSize::new(0)))
+            || self
+                .scopes()
+                .take(depth)
+                .any(|scope| imported(scope, words, TextSize::new(0)))
+            || imported(scope, words, definition.start);
+        if replaced {
+            return None;
+        }
+        let arguments = declared.arguments(&items[words..]);
+        Some(iter::repeat_n(None, words).chain(arguments).collect())
+    }
+
+    /// The scopes around the tokens, innermost first.
+    fn scopes(&self) -> impl Iterator<Item = &Scope<'a>> {
+        iter::successors(self.scope.as_deref(), |scope| scope.outer.as_deref())
+    }
+
+    /// How many words the longest name any block around the tokens defines or imports has.
+    fn longest_name(&self) -> usize {
+        self.scopes()
+            .map(|scope| scope.longest_name)
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// The command of the longest name `spelled` starts with among those the blocks define.
+    /// With how many blocks out it stands, and the scope of that block.
+    /// The innermost one where two blocks define a name that long.
+    fn defining(&self, spelled: &[&str]) -> Option<(usize, &Scope<'a>, &Definition<'a>)> {
+        self.scopes()
+            .enumerate()
+            .filter_map(|(depth, scope)| {
+                scope
+                    .longest_spelled(spelled)
+                    .map(|definition| (depth, scope, definition))
+            })
+            .max_by_key(|&(depth, _, definition)| (definition.words.len(), Reverse(depth)))
     }
 
     fn is_hidden(&self, first_word: &str) -> bool {
@@ -174,6 +244,8 @@ struct Definition<'a> {
     words: Vec<&'a str>,
     /// Where the statement starts; nu takes it over a name imported before there.
     start: TextSize,
+    /// The parameters of a `def` nuten reads, which an import of it does not carry here.
+    declared: Option<Declared<'a>>,
 }
 
 /// A module a `module` declares with a body, from where the statement starts.
@@ -212,7 +284,7 @@ impl<'a> Scope<'a> {
             .collect();
         let mut definitions: Vec<_> = alone
             .iter()
-            .filter_map(|statement| definition(statement))
+            .filter_map(|statement| definition(src, statement))
             .collect();
         definitions.sort_by(|one, other| one.words.cmp(&other.words));
         let modules: Box<[_]> = alone
@@ -226,6 +298,7 @@ impl<'a> Scope<'a> {
                 names.iter().map(|words| Definition {
                     words: words.clone(),
                     start: *start,
+                    declared: None,
                 })
             })
             .collect();
@@ -277,6 +350,16 @@ impl<'a> Scope<'a> {
             self.imported
                 .get(first)
                 .is_some_and(|command| command.words == spelled[..len] && command.start < end)
+        })
+    }
+
+    /// Whether an import nuten reads brings a command of a name `spelled` starts with.
+    /// The name has at least `len` words, and the import starts at or after `from`, before `end`.
+    fn imports_named(&self, spelled: &[&str], len: usize, from: TextSize, end: TextSize) -> bool {
+        self.imported.iter().any(|command| {
+            command.words.len() >= len
+                && spelled.starts_with(&command.words)
+                && (from..end).contains(&command.start)
         })
     }
 
@@ -361,24 +444,54 @@ fn joins_commands(kind: SyntaxKind) -> bool {
 
 /// What the statement defines, as nu's `parse_def_predecl` reads it.
 /// `None` where nu declares nothing, or where nuten cannot tell the name nu reads.
-fn definition<'a>(statement: &[Lexeme<'a>]) -> Option<Definition<'a>> {
+/// `src` is the text the lexemes range over.
+fn definition<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Definition<'a>> {
     let start = statement.first()?.start;
     let mut lexemes = statement.iter();
-    if !matches!(
-        unexported(lexemes.by_ref().map(|lexeme| lexeme.text)),
-        Some("def" | "extern")
-    ) {
+    let keyword = unexported(lexemes.by_ref().map(|lexeme| lexeme.text))
+        .filter(|keyword| matches!(*keyword, "def" | "extern"))?;
+    let rest: Vec<_> = lexemes.collect();
+    let flags = rest
+        .iter()
+        .take_while(|lexeme| lexeme.text.starts_with('-'))
+        .count();
+    let name = rest.get(flags).filter(|lexeme| lexeme.kind.is_item())?;
+    let after_name = &rest[flags + 1..];
+    if !after_name
+        .iter()
+        .any(|lexeme| lexeme.text.starts_with(['[', '(']))
+    {
         return None;
     }
-    let mut rest = lexemes.skip_while(|lexeme| lexeme.text.starts_with('-'));
-    let name = rest.next().filter(|lexeme| lexeme.kind.is_item())?;
-    if !rest.any(|lexeme| lexeme.text.starts_with(['[', '('])) {
-        return None;
-    }
+    // A wrapped `def` and an `extern` take arguments their signature does not declare.
+    let wrapped = rest[..flags]
+        .iter()
+        .any(|lexeme| lexeme.text == "--wrapped");
+    let declared = after_name
+        .first()
+        .filter(|_| keyword == "def" && !wrapped)
+        .and_then(|signature| declared(src, signature));
     Some(Definition {
         words: name_words(name.text)?,
         start,
+        declared,
     })
+}
+
+/// The parameters the signature `lexeme` declares, a `[ ]` or a `( )`.
+/// The `:` before input and output types may touch it.
+fn declared<'a>(src: &'a str, lexeme: &Lexeme<'a>) -> Option<Declared<'a>> {
+    let text = lexeme.text.strip_suffix(':').unwrap_or(lexeme.text);
+    let tokens = [('[', ']'), ('(', ')')].into_iter().find_map(|brackets| {
+        bracketed_tokens(src, text, lexeme.start, brackets, Mode::Signature)
+    })?;
+    Declared::of(tokens.iter().map(|token| match token.kind {
+        SyntaxKind::Word => Item::Word(&src[token.range]),
+        SyntaxKind::Colon => Item::Colon,
+        SyntaxKind::Eq => Item::Eq,
+        kind if kind.is_item() => Item::Value,
+        _ => Item::Other,
+    }))
 }
 
 /// The words of the name `text` spells, as nu's `parse_string` reads it.
@@ -467,7 +580,7 @@ fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<
     let lexemes = lexemes(src, &lexed.tokens);
     let statements = statements(&lexemes);
     let names = (0..statements.len())
-        .map(|nth| exported(&statements, nth))
+        .map(|nth| exported(src, &statements, nth))
         .filter(|export| !matches!(export, Export::Nothing))
         .map(|export| match export {
             Export::Command(words) => Some(words),
@@ -499,12 +612,12 @@ enum Export<'a> {
 }
 
 /// What the statement at `nth` exports.
-fn exported<'a>(statements: &[&[Lexeme<'a>]], nth: usize) -> Export<'a> {
+fn exported<'a>(src: &'a str, statements: &[&[Lexeme<'a>]], nth: usize) -> Export<'a> {
     let statement = statements[nth];
     let command = match statement {
         [export, keyword, ..] if export.text == "export" => match keyword.text {
             "def" | "extern" if stands_alone(statements, nth) => {
-                definition(statement).map(|definition| definition.words)
+                definition(src, statement).map(|definition| definition.words)
             },
             "alias" if stands_alone(statements, nth) => statement
                 .get(2)
@@ -711,7 +824,147 @@ mod tests {
     use rowan::{TextRange, TextSize};
 
     use super::{Callee, Names, alias_names};
-    use crate::lexer::{self, Mode};
+    use crate::{
+        grammar::parameters::Takes,
+        lexer::{self, Mode},
+    };
+
+    /// What each word of the last line of `src` takes, as `defined_parameters` reads it.
+    /// `None` where no command a block defines runs, with a signature nuten reads.
+    fn defined_takes(src: &str) -> Option<Vec<Option<Takes>>> {
+        defined_takes_on(src, src.lines().count() - 1)
+    }
+
+    /// What each word of line `line` of `src` takes, as `defined_takes` tells of the last one.
+    fn defined_takes_on(src: &str, line: usize) -> Option<Vec<Option<Takes>>> {
+        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
+        let start: usize = src.lines().take(line).map(|text| text.len() + 1).sum();
+        let words: Vec<_> = src.lines().nth(line)?.split_whitespace().collect();
+        let params = Names::of(src)
+            .within(src, &lexed.tokens, false)
+            .defined_parameters(TextSize::try_from(start).unwrap(), &words)?;
+        Some(
+            params
+                .into_iter()
+                .map(|param| param.map(|param| param.takes))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn call_of_def_takes_arguments_as_its_signature_tells() {
+        use Takes::{List, Word};
+        for src in [
+            "def f [x: list, y: string] {}\nf [a] [b]",
+            "f [a] [b]\ndef f [x: list, y: string] {}\nf [a] [b]",
+            "def f (x: list, y: string) {}\nf [a] [b]",
+            "def f [x: list, y: string]: any -> any {}\nf [a] [b]",
+            "def --env f [x: list, y: string] {}\nf [a] [b]",
+        ] {
+            assert_eq!(
+                defined_takes(src),
+                Some(vec![None, Some(List), Some(Word)]),
+                "{src:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn command_that_takes_arguments_it_does_not_declare_takes_nothing_nuten_reads() {
+        for src in [
+            "extern f [x: list]\nf [a]",
+            "def --wrapped f [...x] {}\nf [a]",
+        ] {
+            assert_eq!(defined_takes(src), None, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn command_nu_has_of_longer_name_may_take_place_of_one_block_defines() {
+        assert_eq!(defined_takes("def str [x] {}\nstr join [a]"), None);
+    }
+
+    #[test]
+    fn def_named_after_command_nu_has_takes_nothing_nuten_reads() {
+        assert_eq!(defined_takes("def ls [x] {}\nls [a]"), None);
+    }
+
+    #[test]
+    fn command_import_brings_after_call_does_not_take_place_of_one_block_defines() {
+        let src = "def f [...x] {}\nf g [a]\nmodule m { export def \"f g\" [] {} }\nuse m *";
+        assert_eq!(
+            defined_takes_on(src, 1),
+            Some(vec![None, Some(Takes::List), Some(Takes::List)])
+        );
+    }
+
+    #[test]
+    fn command_import_brings_of_same_name_takes_place_of_one_block_defines() {
+        let module = "module n { export def f [x: string] {} }";
+        for src in [
+            format!("{module}\ndef f [x: list] {{}}\nuse n f\nf [a]"),
+            format!("{module}\ndef \"n f\" [x: list] {{}}\nuse n\nn f [a]"),
+        ] {
+            let line = src.lines().position(|line| line.ends_with("[a]")).unwrap();
+            assert_eq!(defined_takes_on(&src, line), None, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn command_import_in_inner_block_brings_takes_place_of_one_outer_block_defines() {
+        let outer = "module n { export def f [x: string] {} }\ndef f [x: list] {}";
+        assert_eq!(defined_takes_nested(outer, "use n f\nf [a]"), None);
+        assert_eq!(
+            defined_takes_nested(outer, "f [a]"),
+            Some(vec![None, Some(Takes::List)])
+        );
+    }
+
+    #[test]
+    fn def_after_import_of_same_name_takes_place_of_it() {
+        let src = "module n { export def f [x: string] {} }\nuse n f\ndef f [x: list] {}\nf [a]";
+        assert_eq!(defined_takes(src), Some(vec![None, Some(Takes::List)]));
+    }
+
+    #[test]
+    fn command_import_brings_of_longer_name_takes_place_of_one_block_defines() {
+        let src = "module m { export def \"f g\" [] {} }\nuse m *\ndef f [x] {}\nf g [a]";
+        assert_eq!(defined_takes(src), None);
+        let src = "module m { export def \"f h\" [] {} }\nuse m *\ndef f [x] {}\nf g [a]";
+        assert_eq!(
+            defined_takes(src),
+            Some(vec![None, Some(Takes::List), None])
+        );
+    }
+
+    #[test]
+    fn call_nuten_cannot_tell_command_of_takes_nothing_nuten_reads() {
+        assert_eq!(defined_takes("def f [x] {}\nuse m.nu *\nf [a]"), None);
+    }
+
+    #[test]
+    fn call_of_command_no_block_defines_takes_nothing_nuten_reads() {
+        assert_eq!(defined_takes("nosuch [a]"), None);
+    }
+
+    #[test]
+    fn def_with_signature_nuten_cannot_read_declares_nothing_it_reads() {
+        for def in [
+            "def f [x: nosuch] {}",
+            "def f [x = [1]] {}",
+            "def f [x = \"a] {}",
+            "def f [...r = 1] {}",
+        ] {
+            let src = format!("{def}\nf [a]");
+            assert_eq!(defined_takes(&src), None, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn parameter_with_string_default_takes_word() {
+        let src = "def f [x = \"a\"] {}\nf [a]";
+        assert_eq!(defined_takes(src), Some(vec![None, Some(Takes::Word)]));
+    }
 
     /// What the last line of `src` runs, as a call of its words in the block `src` makes.
     fn callee(src: &str) -> Callee {
@@ -737,6 +990,31 @@ mod tests {
 
     /// What the last line of `inner` runs, with `inner` as a block inside that of `outer`.
     fn callee_nested(outer: &str, inner: &str) -> Callee {
+        in_nested(outer, inner, |names, head, words| {
+            names.callee(head, |nth| words.get(nth).copied())
+        })
+    }
+
+    /// What each word of the last line of `inner` takes, with `inner` as a block inside `outer`.
+    fn defined_takes_nested(outer: &str, inner: &str) -> Option<Vec<Option<Takes>>> {
+        in_nested(outer, inner, |names, head, words| {
+            let params = names.defined_parameters(head, words)?;
+            Some(
+                params
+                    .into_iter()
+                    .map(|param| param.map(|param| param.takes))
+                    .collect(),
+            )
+        })
+    }
+
+    /// What `read` tells of the last line of `inner`, as a block inside that of `outer`.
+    /// It is given the names there, where the line starts, and its words.
+    fn in_nested<T>(
+        outer: &str,
+        inner: &str,
+        read: impl Fn(&Names<'_>, TextSize, &[&str]) -> T,
+    ) -> T {
         let src = format!("{outer}\n{inner}");
         let lex = |range| lexer::lex(&src, range, Mode::Block).tokens;
         let inner_start = TextSize::of(outer) + TextSize::of("\n");
@@ -744,12 +1022,11 @@ mod tests {
         let inner_tokens = lex(TextRange::new(inner_start, TextSize::of(src.as_str())));
         let last_line_start = src.rfind('\n').unwrap() + 1;
         let words: Vec<_> = src[last_line_start..].split_whitespace().collect();
-        Names::of(&src)
-            .within(&src, &outer_tokens, false)
-            .within(&src, &inner_tokens, false)
-            .callee(TextSize::try_from(last_line_start).unwrap(), |nth| {
-                words.get(nth).copied()
-            })
+        let names =
+            Names::of(&src)
+                .within(&src, &outer_tokens, false)
+                .within(&src, &inner_tokens, false);
+        read(&names, TextSize::try_from(last_line_start).unwrap(), &words)
     }
 
     #[test]

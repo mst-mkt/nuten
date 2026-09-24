@@ -325,9 +325,9 @@ fn command_shape(name: &str) -> Shape {
 }
 
 /// The head, then the arguments as `shape`.
-/// Where the call runs a command nu has, a `[ ]` is what the parameter it stands for takes.
+/// Where the call runs a command nuten knows the signature of, a `[ ]` is what its parameter takes.
 pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
-    let params = builtin_parameters(p, shape);
+    let params = call_parameters(p, shape);
     start_call(p, shape);
     for param in params.into_iter().skip(1) {
         if !at_call_item(p) {
@@ -341,23 +341,29 @@ pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
     p.finish();
 }
 
-/// What nu takes each item of the call ahead as, the head first, where it runs a command nu has.
-/// Empty where it runs another, or one nuten cannot tell.
+/// What nu takes each item of the call ahead as, the head first.
+/// Empty where it runs a command nuten does not know the signature of, or cannot tell which.
 /// A `%` before the head looks up a command nu has, whatever the file defines.
-fn builtin_parameters(p: &Parser<'_>, shape: Shape) -> Vec<Option<Param>> {
-    if shape != Shape::KnownArgument || p.callee() != Callee::Undefined {
+fn call_parameters(p: &Parser<'_>, shape: Shape) -> Vec<Option<Param>> {
+    if shape != Shape::KnownArgument {
         return Vec::new();
     }
     let items = call_items(p);
-    let Some((head, rest)) = items.split_first() else {
-        return Vec::new();
-    };
-    let name = head.strip_prefix('%').unwrap_or(head);
-    parameters(
-        &iter::once(name)
-            .chain(rest.iter().copied())
-            .collect::<Vec<_>>(),
-    )
+    match p.callee() {
+        Callee::Defined => p.defined_parameters(&items).unwrap_or_default(),
+        Callee::Unknowable => Vec::new(),
+        Callee::Undefined => {
+            let Some((head, rest)) = items.split_first() else {
+                return Vec::new();
+            };
+            let name = head.strip_prefix('%').unwrap_or(head);
+            parameters(
+                &iter::once(name)
+                    .chain(rest.iter().copied())
+                    .collect::<Vec<_>>(),
+            )
+        },
+    }
 }
 
 /// The argument ahead, with a `[ ]` read as `param` takes it.
