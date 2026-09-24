@@ -1,0 +1,37 @@
+---
+source: crates/nuten_config/tests/schema.rs
+expression: schema()
+---
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "nuten",
+  "description": "Settings of nuten, a formatter for Nushell.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "Where an editor finds the JSON Schema; nuten does not read it.",
+      "type": "string"
+    },
+    "line_width": {
+      "description": "Columns a line may take before it breaks where it can.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967295
+    },
+    "indent_style": {
+      "description": "Whether to indent with spaces or with tabs.",
+      "enum": ["space", "tab"]
+    },
+    "indent_width": {
+      "description": "Columns per indent level, and per tab when indenting with tabs.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255
+    },
+    "line_ending": {
+      "description": "What ends each line.",
+      "enum": ["lf", "crlf"]
+    }
+  },
+  "additionalProperties": false
+}

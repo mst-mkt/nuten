@@ -1,10 +1,11 @@
-//! Reads the settings of the formatter from a config file.
+//! Reads the settings of the formatter from a config file, and writes the JSON Schema of one.
 //!
 //! A file is read into a `Value` first, whatever its format.
 //! The settings are then taken from that.
 
 mod json;
 mod nuon;
+mod schema;
 mod settings;
 #[cfg(test)]
 mod test_support;
@@ -16,6 +17,7 @@ pub use nuten_format::{Config, IndentStyle, LineEnding};
 use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
+pub use crate::schema::schema;
 use crate::value::Value;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

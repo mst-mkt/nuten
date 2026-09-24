@@ -12,5 +12,8 @@ nuten-format = { workspace = true }
 nuten-parser = { workspace = true }
 nuten-syntax = { workspace = true }
 
+[dev-dependencies]
+insta = { workspace = true }
+
 [lints]
 workspace = true

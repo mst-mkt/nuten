@@ -1,7 +1,7 @@
 //! The settings a config file may hold, and the `Config` they make.
 //!
 //! Each setting says what it takes and what it changes in a `Config`, in one place.
-//! The loader reads them from here.
+//! The loader and the JSON Schema both read them from here.
 
 use crate::{
     Config, ConfigError, ConfigErrorKind, IndentStyle, LineEnding, error,
@@ -11,6 +11,8 @@ use crate::{
 #[derive(Debug)]
 pub(crate) struct Setting {
     pub(crate) key: &'static str,
+    /// What an editor shows for the key.
+    pub(crate) description: &'static str,
     pub(crate) kind: Kind,
 }
 
@@ -37,10 +39,12 @@ pub(crate) struct Choice {
 pub(crate) const SETTINGS: [Setting; 5] = [
     Setting {
         key: "$schema",
+        description: "Where an editor finds the JSON Schema; nuten does not read it.",
         kind: Kind::String,
     },
     Setting {
         key: "line_width",
+        description: "Columns a line may take before it breaks where it can.",
         kind: Kind::Integer {
             min: 1,
             max: u32::MAX as i64,
@@ -52,6 +56,7 @@ pub(crate) const SETTINGS: [Setting; 5] = [
     },
     Setting {
         key: "indent_style",
+        description: "Whether to indent with spaces or with tabs.",
         kind: Kind::Choice(&[
             Choice {
                 name: "space",
@@ -71,6 +76,7 @@ pub(crate) const SETTINGS: [Setting; 5] = [
     },
     Setting {
         key: "indent_width",
+        description: "Columns per indent level, and per tab when indenting with tabs.",
         kind: Kind::Integer {
             min: 1,
             max: u8::MAX as i64,
@@ -82,6 +88,7 @@ pub(crate) const SETTINGS: [Setting; 5] = [
     },
     Setting {
         key: "line_ending",
+        description: "What ends each line.",
         kind: Kind::Choice(&[
             Choice {
                 name: "lf",
