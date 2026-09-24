@@ -4,7 +4,7 @@ use nuten_syntax::{
     ast::{AstNode, Def, IoType, IoTypes},
 };
 
-use super::{Child, Formatter, children, line_break_or_space, stays_as_is};
+use super::{Child, Formatter, children, line_break_or_space};
 
 impl<'a> Formatter<'a> {
     pub(super) fn def(&mut self, def: &Def) -> Vec<Element<'a>> {
@@ -25,7 +25,7 @@ impl<'a> Formatter<'a> {
 
     pub(super) fn io_types(&mut self, types: &IoTypes) -> Vec<Element<'a>> {
         let syntax = types.syntax();
-        if stays_as_is(syntax) || holds_joining_comment(types) {
+        if holds_joining_comment(types) {
             return vec![self.source(syntax.text_range())];
         }
         match types.brackets() {

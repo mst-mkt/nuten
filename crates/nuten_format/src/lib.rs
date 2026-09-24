@@ -101,6 +101,7 @@ mod tests {
         for (src, expected) in [
             ("ls # d\r\r\r\n", "ls # d\r\r\r\n"),
             ("echo 'a\r\r\nb'\r\n", "echo 'a\r\r\nb'\r\n"),
+            ("[a # c\r]\r\n", "[\r\n    a # c\r\r\n]\r\n"),
         ] {
             assert_eq!(format(src, &crlf).unwrap(), expected, "{src:?}");
             let checked = invariants::check(src, &crlf);

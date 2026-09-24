@@ -14,8 +14,11 @@ pub(super) struct BlockLayout<'a> {
     /// Parameters over lines then leave the rest to fit after their last line.
     pub(super) head: Vec<Element<'a>>,
     pub(super) rest: Vec<Element<'a>>,
-    /// Whether a line break comes after the parameters in the source.
-    line_break: bool,
+    /// Whether it breaks over lines whatever its width.
+    /// It does when the source breaks the body over lines, or the body holds a comment.
+    /// A comment the `}` follows on its line ends at a lone `\r`.
+    /// As a line suffix it would move past the `}`.
+    expand: bool,
     /// Whether it holds at most one statement and nothing else.
     pub(super) one_statement: bool,
 }
@@ -25,10 +28,10 @@ impl<'a> Formatter<'a> {
         let BlockLayout {
             mut head,
             mut rest,
-            line_break,
+            expand,
             ..
         } = self.block_layout(block);
-        if line_break {
+        if expand {
             rest.push(expand_parent());
         }
         head.push(group(rest));
@@ -75,13 +78,14 @@ impl<'a> Formatter<'a> {
             return BlockLayout {
                 head,
                 rest: vec![close],
-                line_break: false,
+                expand: false,
                 one_statement,
             };
         };
-        let line_break = block
-            .statements()
-            .any(|element| element.kind() == SyntaxKind::Newline);
+        let expand = body.iter().any(Child::is_comment)
+            || block
+                .statements()
+                .any(|element| element.kind() == SyntaxKind::Newline);
         let lead = if first.is_comment() && first.newlines == 0 {
             None
         } else if params.is_none()
@@ -100,7 +104,7 @@ impl<'a> Formatter<'a> {
         BlockLayout {
             head,
             rest: vec![indent(inner), soft_line_break_or_space(), close],
-            line_break,
+            expand,
             one_statement,
         }
     }

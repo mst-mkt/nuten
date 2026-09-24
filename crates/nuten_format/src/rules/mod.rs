@@ -335,23 +335,6 @@ fn headed_by_attribute(node: &SyntaxNode) -> bool {
         .is_some_and(|head| head.text().starts_with('@'))
 }
 
-/// Whether the brackets of `node` stay as they are, with everything between them.
-/// A comment inside ending in a lone `\r` keeps them so.
-/// The line break printed after the comment would make that `\r` part of the break.
-fn stays_as_is(node: &SyntaxNode) -> bool {
-    node.children_with_tokens()
-        .flat_map(|child| {
-            let field = child
-                .as_node()
-                .filter(|node| node.kind() == SyntaxKind::RecordField)
-                .map(SyntaxNode::children_with_tokens);
-            let own = field.is_none().then_some(child);
-            own.into_iter().chain(field.into_iter().flatten())
-        })
-        .filter_map(SyntaxElement::into_token)
-        .any(|token| token.kind() == SyntaxKind::Comment && token.text().ends_with('\r'))
-}
-
 fn line_break_or_space(item: &Child) -> Element<'static> {
     if item.newlines > 0 {
         hard_line_break()

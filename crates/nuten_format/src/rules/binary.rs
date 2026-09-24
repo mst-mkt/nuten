@@ -4,7 +4,7 @@ use nuten_syntax::{
     ast::{AstNode, Binary, Bracketed},
 };
 
-use super::{Child, Formatter, children, stays_as_is, without_commas};
+use super::{Child, Formatter, children, without_commas};
 
 impl<'a> Formatter<'a> {
     /// The items stay on the lines they are on, since the author may group the bytes by line.
@@ -18,12 +18,16 @@ impl<'a> Formatter<'a> {
             .iter()
             .filter_map(Child::as_comment)
             .any(|comment| comment.text().trim_end_matches('\r').contains('\r'));
-        if stays_as_is(binary.syntax()) || cr_inside_comment {
-            return vec![self.source(binary.syntax().text_range())];
-        }
         let multiline = binary
             .inside()
             .any(|element| element.kind() == SyntaxKind::Newline);
+        // On one line with the items, a comment ends at a lone `\r` before the `]`.
+        // As a line suffix it would move past the `]`.
+        // Breaking before the `]` instead would put items on lines they are not on.
+        let one_line_with_comment = !multiline && items.iter().any(Child::is_comment);
+        if cr_inside_comment || one_line_with_comment {
+            return vec![self.source(binary.syntax().text_range())];
+        }
         let inner = self.spaced_children(&items, |_, item| {
             Some(match item.newlines {
                 0 => space(),

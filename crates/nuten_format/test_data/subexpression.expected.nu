@@ -58,5 +58,7 @@ echo (1 + 2)
     )
 }
 let ( x ) = 1
-(a # c)
+(
+    a # c
+)
 ls | let ( x ) = 1

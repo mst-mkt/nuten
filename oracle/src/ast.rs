@@ -203,6 +203,8 @@ fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
 /// Such a run becomes nothing elsewhere.
 /// A string that closes in `content` and a comment stay as they are.
 /// A comment loses the whitespace it ends with, but keeps its line break.
+/// A lone `\r` ends a comment as a line break does.
+/// Nu ends a comment there when it looks for the closing bracket.
 fn words(content: &str) -> String {
     let is_word = |char: char| {
         !matches!(
@@ -225,14 +227,14 @@ fn words(content: &str) -> String {
         }
         let comment = char == '#' && (after_gap || !after_word);
         let len = match char {
-            _ if comment => rest.find('\n').map_or(rest.len(), |end| end + 1),
+            _ if comment => rest.find(['\r', '\n']).map_or(rest.len(), |end| end + 1),
             '"' | '\'' | '`' => closing(rest).map_or(1, |close| close + 1),
             _ => char.len_utf8(),
         };
         let (part, after) = rest.split_at(len);
         if comment {
             out.push_str(part.trim_end_matches([' ', '\t', '\r', '\n']));
-            if part.ends_with('\n') {
+            if part.ends_with(['\r', '\n']) {
                 out.push('\n');
             }
         } else {
@@ -379,6 +381,14 @@ mod tests {
         assert_eq!(words("[a#b  c]"), words("[a#b c]"));
         assert_eq!(words("\"\n  }"), words("\"\n      }"));
         assert_eq!(words("'a  b' 日本  語"), "'a  b' 日本 語");
+    }
+
+    #[test]
+    fn lone_carriage_return_ends_comment_as_line_break_does() {
+        assert_eq!(words("[a # c\r]"), words("[\n    a # c\n]"));
+        assert_eq!(words("[a # c\r\r\nb]"), words("[\n    a # c\n    b\n]"));
+        assert_eq!(words("[a # c\rb]"), words("[\n    a # c\rb\n]"));
+        assert_ne!(words("[a # c\rb]"), words("[a # c b]"));
     }
 
     #[test]

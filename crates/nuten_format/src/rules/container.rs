@@ -9,16 +9,13 @@ use nuten_syntax::{
     ast::{AstNode, Bracketed, RecordField, Table},
 };
 
-use super::{Child, Formatter, children, stays_as_is, without_commas};
+use super::{Child, Formatter, children, without_commas};
 
 /// Makes a line break that prints as nothing or as a space when the group is flat.
 type SoftLine = fn() -> Element<'static>;
 
 impl<'a> Formatter<'a> {
     pub(super) fn container(&mut self, container: &dyn Bracketed) -> Vec<Element<'a>> {
-        if stays_as_is(container.syntax()) {
-            return vec![self.source(container.syntax().text_range())];
-        }
         let kind = container.syntax().kind();
         let line = if matches!(kind, SyntaxKind::Record | SyntaxKind::RecordPattern) {
             soft_line_break_or_space
@@ -38,9 +35,6 @@ impl<'a> Formatter<'a> {
     }
 
     pub(super) fn table(&mut self, table: &Table) -> Vec<Element<'a>> {
-        if stays_as_is(table.syntax()) {
-            return vec![self.source(table.syntax().text_range())];
-        }
         let expand = children(table.inside())
             .next()
             .is_some_and(|columns| columns.newlines > 0);

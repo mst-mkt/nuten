@@ -1,16 +1,13 @@
 use nuten_doc::{Element, expand_parent, group, indent, soft_line_break};
 use nuten_syntax::{
     SyntaxKind,
-    ast::{AstNode, Bracketed, Subexpression},
+    ast::{Bracketed, Subexpression},
 };
 
-use super::{Child, Formatter, children, stays_as_is};
+use super::{Child, Formatter, children};
 
 impl<'a> Formatter<'a> {
     pub(super) fn subexpression(&mut self, subexpression: &Subexpression) -> Vec<Element<'a>> {
-        if stays_as_is(subexpression.syntax()) {
-            return vec![self.source(subexpression.syntax().text_range())];
-        }
         let open = self.token(&subexpression.open());
         let close = self.token(&subexpression.close());
         let statements: Vec<_> = children(subexpression.inside()).collect();
