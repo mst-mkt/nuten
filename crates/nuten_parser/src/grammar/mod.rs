@@ -82,7 +82,8 @@ enum Shape {
     /// So it stays a word, which reads the same either way.
     RowCondition,
     /// An argument of a head nuten cannot look up: an alias, or one no list or block names.
-    /// So is one a block around it defines, where an import or a `hide` may replace it.
+    /// So is one an import before it may bring, in place of one a block defines or nu has.
+    /// So is one a block around it defines, where a `hide` may take it away.
     /// Every bracketed word but `( )` stays one, since what nu reads it as is unknowable here.
     /// So does an argument like `...$x`, as after a command nu resolves to one of its own.
     UnknownArgument,

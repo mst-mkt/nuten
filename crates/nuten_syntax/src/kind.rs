@@ -113,6 +113,7 @@ macro_rules! syntax_kinds {
                 Call,
                 /// A `Call` whose name starts with `^`, or is `else` or `catch`.
                 /// Nu runs those two as external commands outside an `if` or a `try`.
+                /// That is, unless a block defines them or an import before them may bring them.
                 ExternalCall,
                 /// A term, then an `Operator` and a term while the element lasts.
                 /// A term is a value after the `not`s that take it, which are `Operator`s too.

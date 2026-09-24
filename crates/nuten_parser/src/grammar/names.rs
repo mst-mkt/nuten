@@ -29,9 +29,9 @@ struct FileNames<'a> {
 pub(crate) enum Callee {
     /// A command a block around it defines.
     Defined,
-    /// One a block around it defines, where an import or a `hide` may put another in its place.
+    /// One an import or a `hide` may put in place of what a block defines or nu has.
     Unknowable,
-    /// No command a block around it defines.
+    /// No command a block around it defines, and none an import may bring.
     Undefined,
 }
 
@@ -82,6 +82,7 @@ impl<'a> Names<'a> {
     /// What a block imports takes the place of a name that block declares from there on.
     /// It takes the place of one an outer block declares as well.
     /// What an import holds is unknowable here, so it is taken to hold every name, however long.
+    /// Nu rejects a keyword as the name of a command, so no import brings one of those.
     pub(crate) fn callee<'w>(
         &self,
         head: TextSize,
@@ -99,7 +100,13 @@ impl<'a> Names<'a> {
             })
             .max_by_key(|&(depth, _, definition)| (definition.words.len(), Reverse(depth)))
         else {
-            return Callee::Undefined;
+            let imported = scopes().any(|scope| scope.imports_before(head))
+                && word(0).is_some_and(|head| !builtin::is_parser_keyword(head));
+            return if imported {
+                Callee::Unknowable
+            } else {
+                Callee::Undefined
+            };
         };
         let longer_imported = word(definition.words.len()).is_some()
             && scopes().any(|scope| scope.imports_before(head));
@@ -601,6 +608,41 @@ mod tests {
     #[test]
     fn import_after_call_leaves_command_defined() {
         assert_eq!(callee_on("def f [] {}\nf\nuse m.nu *", 1), Callee::Defined);
+    }
+
+    #[test]
+    fn import_before_call_makes_command_no_block_defines_unknowable() {
+        for keyword in ["use", "export use", "source", "source-env", "overlay use"] {
+            let src = format!("{keyword} m.nu *\nls");
+            assert_eq!(callee(&src), Callee::Unknowable, "{src:?}");
+        }
+        assert_eq!(callee("let x = use m.nu *\nnosuch"), Callee::Unknowable);
+    }
+
+    #[test]
+    fn import_before_keyword_leaves_it_undefined() {
+        for src in [
+            "use m.nu *\nif",
+            "use m.nu *\nexport def",
+            "use m.nu *\nwhere",
+        ] {
+            assert_eq!(callee(src), Callee::Undefined, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn import_after_call_leaves_command_no_block_defines_undefined() {
+        assert_eq!(callee_on("ls\nuse m.nu *", 0), Callee::Undefined);
+    }
+
+    #[test]
+    fn import_inside_block_leaves_call_outside_it_undefined() {
+        assert_eq!(callee("do { use m.nu * }\nls"), Callee::Undefined);
+    }
+
+    #[test]
+    fn import_in_outer_block_makes_command_in_inner_block_unknowable() {
+        assert_eq!(callee_nested("use m.nu *", "ls"), Callee::Unknowable);
     }
 
     #[test]
