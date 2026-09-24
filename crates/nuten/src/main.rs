@@ -98,7 +98,7 @@ fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
 /// Reports every problem to stderr; returns whether the file is formatted.
 /// Leaves the file alone when it is formatted already.
 fn format_file(path: &Path, config: &Config) -> bool {
-    let src = match fs::read_to_string(path) {
+    let src = match read_regular_file(path) {
         Ok(src) => src,
         Err(error) => {
             eprintln!("{}: {error}", path.display());
@@ -122,6 +122,15 @@ fn format_file(path: &Path, config: &Config) -> bool {
         return false;
     }
     true
+}
+
+/// Not `fs::read_to_string` alone, which waits forever on a FIFO.
+fn read_regular_file(path: &Path) -> io::Result<String> {
+    if fs::metadata(path)?.is_file() {
+        fs::read_to_string(path)
+    } else {
+        Err(io::Error::other("not a regular file"))
+    }
 }
 
 /// Reports `message` to stderr with the line and column of `offset` in `src`, the text of `path`.

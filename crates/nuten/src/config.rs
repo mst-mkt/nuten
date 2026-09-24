@@ -5,13 +5,12 @@ use std::{
     fmt::Display,
     fs,
     hash::Hash,
-    io,
     path::{Path, PathBuf},
 };
 
 use nuten_config::{Config, Format, find};
 
-use crate::report_at;
+use crate::{read_regular_file, report_at};
 
 /// A problem already reported to stderr.
 #[derive(Debug, Clone, Copy)]
@@ -109,15 +108,6 @@ fn load(path: &Path) -> Result<Config, Reported> {
         }
         Reported
     })
-}
-
-/// Not `fs::read_to_string` alone, which waits forever on a FIFO.
-fn read_regular_file(path: &Path) -> io::Result<String> {
-    if fs::metadata(path)?.is_file() {
-        fs::read_to_string(path)
-    } else {
-        Err(io::Error::other("not a regular file"))
-    }
 }
 
 fn report(message: impl Display) -> Reported {

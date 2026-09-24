@@ -147,6 +147,22 @@ fn format_reports_unreadable_file() {
     assert!(stderr(&output).starts_with(&format!("{}: ", missing.display())));
 }
 
+#[cfg(unix)]
+#[test]
+fn format_reports_fifo_without_waiting_and_continues() {
+    let dir = TempDir::new();
+    let fifo_path = dir.path("fifo.nu");
+    fifo(&fifo_path);
+    let good = dir.file("good.nu", "ls|first");
+    let output = format_in_time(&[&fifo_path, &good]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        format!("{}: not a regular file\n", fifo_path.display())
+    );
+    assert_eq!(read(&good), "ls | first\n");
+}
+
 #[test]
 fn format_wants_at_least_one_file() {
     let output = format(&[]);
@@ -400,30 +416,42 @@ fn format_writes_nothing_when_config_file_is_directory() {
     assert_eq!(read(&path), "ls|first");
 }
 
+/// Makes a FIFO at `path`.
+#[cfg(unix)]
+fn fifo(path: &Path) {
+    let status = Command::new("mkfifo").arg(path).status().unwrap();
+    assert!(status.success());
+}
+
+/// Runs `nuten format` on `paths`, and fails when it has not ended in 10 seconds.
+/// Not `format`, which would hang along with the binary if it read a FIFO.
+#[cfg(unix)]
+fn format_in_time(paths: &[&Path]) -> Output {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_nuten"))
+        .arg("format")
+        .args(paths)
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while child.try_wait().unwrap().is_none() {
+        if Instant::now() > deadline {
+            child.kill().unwrap();
+            panic!("the binary waits on a FIFO");
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    child.wait_with_output().unwrap()
+}
+
 #[cfg(unix)]
 #[test]
 fn format_writes_nothing_without_waiting_when_config_file_is_fifo() {
     let dir = TempDir::new();
     let nuon = dir.path("nuten.nuon");
-    let status = Command::new("mkfifo").arg(&nuon).status().unwrap();
-    assert!(status.success());
+    fifo(&nuon);
     let path = dir.file("a.nu", "ls|first");
-    let mut child = Command::new(env!("CARGO_BIN_EXE_nuten"))
-        .arg("format")
-        .arg(&path)
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-    // Not `output`, which would hang along with the binary if it read the FIFO.
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while child.try_wait().unwrap().is_none() {
-        if Instant::now() > deadline {
-            child.kill().unwrap();
-            panic!("the binary waits on the FIFO");
-        }
-        thread::sleep(Duration::from_millis(10));
-    }
-    let output = child.wait_with_output().unwrap();
+    let output = format_in_time(&[&path]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
         stderr(&output),
