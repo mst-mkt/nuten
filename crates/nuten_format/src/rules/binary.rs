@@ -11,7 +11,7 @@ impl<'a> Formatter<'a> {
     /// Nu joins the items before it decodes them.
     /// So the breaks and spaces among them change nothing.
     pub(super) fn binary(&mut self, binary: &Binary) -> Vec<Element<'a>> {
-        let items: Vec<_> = without_commas(children(binary.inside())).collect();
+        let items: Vec<_> = without_commas(children(binary.inside(), &self.kept)).collect();
         // Nu ends a comment in the word at a lone `\r`, but one among the items at the line break.
         // What comes between is in the comment alone, so only the source can place it.
         let cr_inside_comment = items

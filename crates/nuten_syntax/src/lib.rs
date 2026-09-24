@@ -4,7 +4,7 @@ pub mod ast;
 mod kind;
 
 pub use kind::SyntaxKind;
-pub use rowan::{NodeOrToken, TextRange};
+pub use rowan::{NodeOrToken, TextRange, TextSize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum NuLanguage {}

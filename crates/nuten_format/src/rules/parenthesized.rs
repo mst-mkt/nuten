@@ -15,7 +15,7 @@ impl<'a> Formatter<'a> {
     /// An expression `breaks_by_width` picks, broken before each loosest operator if need be.
     /// Those split it into the parts nu evaluates last, so each line holds a whole part.
     pub(super) fn parenthesized_expression(&mut self, expression: &SyntaxNode) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(expression.children_with_tokens()).collect();
+        let items: Vec<_> = children(expression.children_with_tokens(), &self.kept).collect();
         let laid_out = self
             .laid_out_ahead
             .remove(expression)
@@ -59,7 +59,7 @@ impl<'a> Formatter<'a> {
         }) else {
             return false;
         };
-        let items: Vec<_> = children(expression.children_with_tokens()).collect();
+        let items: Vec<_> = children(expression.children_with_tokens(), &self.kept).collect();
         let laid_out = self.laid_out_items(&items);
         let breaks = broken_at(&items, &laid_out).is_some();
         self.laid_out_ahead.insert(expression, laid_out);

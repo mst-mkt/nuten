@@ -16,7 +16,7 @@ mod pipeline;
 mod signature;
 mod subexpression;
 
-use std::{collections::HashMap, mem};
+use std::{collections::HashMap, iter, mem};
 
 use nuten_doc::{
     Element, GroupIds, empty_line, empty_lines, hard_line_break, line_suffix, space, text,
@@ -26,7 +26,10 @@ use nuten_syntax::{
     ast::{self, AstNode, Node},
 };
 
-use self::{kept::Kept, parenthesized::breaks_by_width};
+use self::{
+    kept::{Kept, Member},
+    parenthesized::breaks_by_width,
+};
 
 /// A child of a container: neither whitespace nor a line break.
 struct Child {
@@ -57,12 +60,17 @@ impl Child {
 
 /// The children among `elements`, in source order.
 /// Line breaks at the end belong to no child, so nothing is printed for them.
-fn children(elements: impl IntoIterator<Item = SyntaxElement>) -> impl Iterator<Item = Child> {
+/// A run kept as written is one child, its first.
+fn children(
+    elements: impl IntoIterator<Item = SyntaxElement>,
+    kept: &Kept,
+) -> impl Iterator<Item = Child> {
     let mut newlines = 0;
     elements
         .into_iter()
         .filter_map(move |element| match element.kind() {
             SyntaxKind::Whitespace => None,
+            _ if kept.is_rest(&element) => None,
             SyntaxKind::Newline => {
                 newlines += 1;
                 None
@@ -101,7 +109,7 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
         laid_out_ahead: HashMap::new(),
         kept: Kept::of(src, root),
     };
-    let statements: Vec<_> = children(root.children_with_tokens()).collect();
+    let statements: Vec<_> = children(root.children_with_tokens(), &formatter.kept).collect();
     let mut out = formatter.statements(&statements, true);
     debug_assert!(
         formatter.laid_out_ahead.is_empty(),
@@ -222,7 +230,7 @@ impl<'a> Formatter<'a> {
     /// A `;` touches what comes before it, as it does between statements.
     /// Only a call that an attribute heads holds one.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(parent.children_with_tokens()).collect();
+        let items: Vec<_> = children(parent.children_with_tokens(), &self.kept).collect();
         self.spaced_children(&items, |_, item| {
             (item.kind() != SyntaxKind::Semicolon).then(|| line_break_or_space(item))
         })
@@ -258,8 +266,19 @@ impl<'a> Formatter<'a> {
             .enumerate()
             .flat_map(|(index, item)| {
                 let prev = items[..index].last().map(Child::kind);
+                // The layout would otherwise join this line to the one above.
+                // Formatted again, the kept run on it would then take in that line too.
+                let starts_kept_line = item.newlines > 0
+                    && items[index..]
+                        .iter()
+                        .enumerate()
+                        .take_while(|(offset, next)| *offset == 0 || next.newlines == 0)
+                        .any(|(_, next)| self.kept.keeps(&ast::untyped(&next.element)));
                 match item.as_comment() {
                     Some(comment) => self.comment(comment, item.newlines, false),
+                    None if starts_kept_line => iter::once(hard_line_break())
+                        .chain(element(self, &item.element))
+                        .collect(),
                     None => separator(prev, plain(index, item))
                         .into_iter()
                         .chain(element(self, &item.element))
@@ -269,9 +288,11 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// `items` on one line, with a `,` and a space between each two.
-    fn comma_spaced(&mut self, items: impl Iterator<Item = Child>) -> Vec<Element<'a>> {
-        without_commas(items)
+    /// The children among `elements` on one line, with a `,` and a space between each two.
+    fn comma_spaced(&mut self, elements: impl Iterator<Item = SyntaxElement>) -> Vec<Element<'a>> {
+        let items: Vec<_> = without_commas(children(elements, &self.kept)).collect();
+        items
+            .iter()
             .enumerate()
             .flat_map(|(index, item)| {
                 let comma = (index > 0).then(|| [text(","), space()]);
@@ -284,12 +305,11 @@ impl<'a> Formatter<'a> {
     }
 
     fn element(&mut self, element: &ast::Element) -> Vec<Element<'a>> {
-        match element {
-            NodeOrToken::Node(node) if self.kept.keeps(&ast::untyped(element)) => {
-                vec![self.source(node.syntax().text_range())]
-            },
-            NodeOrToken::Node(node) => self.node(node),
-            NodeOrToken::Token(token) => vec![self.token(token)],
+        match (self.kept.member(&ast::untyped(element)), element) {
+            (Some(Member::First(run)), _) => vec![self.source(run)],
+            (Some(Member::Rest), _) => Vec::new(),
+            (None, NodeOrToken::Node(node)) => self.node(node),
+            (None, NodeOrToken::Token(token)) => vec![self.token(token)],
         }
     }
 
@@ -317,13 +337,14 @@ impl<'a> Formatter<'a> {
 /// Whether the last statement before `item` still reaches a line-start `|` after one blank line.
 /// A `|` it ends with does while no blank line has come since, as in the source.
 /// So does a call that an attribute heads, since nu goes on past one blank line after it.
+/// It reads the siblings with nothing kept, since a run kept as written hides all but its first.
 fn reaches_past_blank_line(item: &SyntaxElement) -> bool {
     let siblings = item
         .parent()
         .into_iter()
         .flat_map(|parent| parent.children_with_tokens())
         .take_while(|sibling| sibling != item);
-    let before: Vec<_> = children(siblings).collect();
+    let before: Vec<_> = children(siblings, &Kept::default()).collect();
     before
         .iter()
         .rev()

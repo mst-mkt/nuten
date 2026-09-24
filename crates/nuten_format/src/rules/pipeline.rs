@@ -40,8 +40,8 @@ impl<'a> Formatter<'a> {
     }
 
     fn assigned(&mut self, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
-        let assigned =
-            assignment_of(pipeline, &self.kept).map(|assignment| assigned_children(&assignment));
+        let assigned = assignment_of(pipeline, &self.kept)
+            .map(|assignment| assigned_children(&assignment, &self.kept));
         let Some((items, Some(first))) = assigned else {
             return Vec::new();
         };
@@ -216,14 +216,14 @@ fn is_assignment(node: &SyntaxNode) -> bool {
     matches!(node.kind(), SyntaxKind::Assignment | SyntaxKind::Let)
 }
 
-fn assigned_children(assignment: &SyntaxNode) -> (Vec<Child>, Option<usize>) {
-    let items: Vec<_> = children(assignment.children_with_tokens()).collect();
+fn assigned_children(assignment: &SyntaxNode, kept: &Kept) -> (Vec<Child>, Option<usize>) {
+    let items: Vec<_> = children(assignment.children_with_tokens(), kept).collect();
     let first = items.iter().position(Child::is_statement);
     (items, first)
 }
 
 fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, kept: &Kept) -> Vec<Part> {
-    children(pipeline.children_with_tokens())
+    children(pipeline.children_with_tokens(), kept)
         .enumerate()
         .flat_map(|(index, child)| {
             let (before, joined) = if index == 0 {
@@ -258,7 +258,7 @@ fn flatten_assignment(
     joined: bool,
     kept: &Kept,
 ) -> Vec<Part> {
-    let (items, first) = assigned_children(assignment);
+    let (items, first) = assigned_children(assignment, kept);
     let end = first.map_or(items.len(), |first| first + 1);
     items
         .into_iter()

@@ -1,15 +1,27 @@
 //! What `# nuten-ignore` keeps as written.
 
-use std::{collections::HashSet, iter};
+use std::{cmp::Reverse, collections::HashMap, iter};
 
-use nuten_syntax::{NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
+use nuten_syntax::{
+    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange, TextSize,
+};
 
 const IGNORE: &str = "nuten-ignore";
 
-/// The children kept as written.
+/// The runs of children kept as written.
+/// A run is one child, or siblings from a first to a last with all between them.
+/// The first child of a run stands for all of it, so `children` drops the rest.
 #[derive(Debug, Default)]
 pub(super) struct Kept {
-    children: HashSet<SyntaxElement>,
+    members: HashMap<SyntaxElement, Member>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) enum Member {
+    /// The first child, with the source of the whole run.
+    First(TextRange),
+    /// A child after the first, printed by the first.
+    Rest,
 }
 
 impl Kept {
@@ -19,23 +31,42 @@ impl Kept {
         if !src.contains(IGNORE) {
             return Kept::default();
         }
-        let children = root
+        let runs = root
             .descendants_with_tokens()
             .filter_map(SyntaxElement::into_token)
-            .filter(|token| {
-                token.kind() == SyntaxKind::Comment
-                    && ignores(token.text())
-                    && stands_on_own_line(token)
+            .filter(|token| token.kind() == SyntaxKind::Comment && ignores(token.text()))
+            .filter_map(|comment| {
+                if stands_on_own_line(&comment) {
+                    run_after(&comment)
+                } else {
+                    run_before(&comment)
+                }
             })
-            .filter_map(|comment| kept_after(&comment))
+            .collect();
+        let members = outermost(runs)
+            .into_iter()
+            .flat_map(|run| {
+                let members =
+                    iter::once(Member::First(span(&run))).chain(iter::repeat(Member::Rest));
+                run.into_iter().zip(members)
+            })
             .collect();
         Kept {
-            children,
+            members,
         }
     }
 
+    pub(super) fn member(&self, element: &SyntaxElement) -> Option<Member> {
+        self.members.get(element).copied()
+    }
+
+    pub(super) fn is_rest(&self, element: &SyntaxElement) -> bool {
+        matches!(self.member(element), Some(Member::Rest))
+    }
+
+    /// Whether `element` is in a run, first or not.
     pub(super) fn keeps(&self, element: &SyntaxElement) -> bool {
-        self.children.contains(element)
+        self.member(element).is_some()
     }
 }
 
@@ -55,21 +86,96 @@ fn stands_on_own_line(comment: &SyntaxToken) -> bool {
 }
 
 /// The sibling after `comment`, past comments, line breaks, and the `|` of a line-start `|`.
-fn kept_after(comment: &SyntaxToken) -> Option<SyntaxElement> {
+fn run_after(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
     iter::successors(
         comment.next_sibling_or_token(),
         SyntaxElement::next_sibling_or_token,
     )
     .find(|sibling| !sibling.kind().is_trivia() && sibling.kind() != SyntaxKind::Pipe)
     .filter(is_keepable)
+    .map(|sibling| vec![sibling])
+}
+
+/// The run that `comment` ends the line of.
+/// The line decides rather than where the comment is, since a comment after a `{` is inside it.
+/// A `,` before the comment is passed over, since the layout drops it or puts one there.
+/// A bracket opened on an earlier line ends no run.
+/// The layout may move that bracket to a line of its own, and the comment with it.
+fn run_before(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
+    let before: Vec<_> = iter::successors(comment.prev_token(), SyntaxToken::prev_token)
+        .take_while(|token| token.kind() != SyntaxKind::Newline)
+        .collect();
+    let line_start = before.last()?.text_range().start();
+    let last = before
+        .iter()
+        .find(|token| !matches!(token.kind(), SyntaxKind::Whitespace | SyntaxKind::Comma))
+        .map(|token| outermost_on_line(token.clone(), line_start))
+        .filter(is_keepable)?;
+    let first = before
+        .into_iter()
+        .rev()
+        .map(|token| outermost_on_line(token, line_start))
+        .find(|top| is_keepable(top) && top.parent() == last.parent())?;
+    Some(siblings_between(&first, &last))
+}
+
+/// The outermost element that holds `token` and starts on the line from `line_start`.
+/// Never the file itself, which starts on the first line but is no child to keep.
+fn outermost_on_line(token: SyntaxToken, line_start: TextSize) -> SyntaxElement {
+    iter::successors(Some(SyntaxElement::from(token)), |element| {
+        element
+            .parent()
+            .filter(|parent| {
+                parent.kind() != SyntaxKind::Root && parent.text_range().start() >= line_start
+            })
+            .map(SyntaxElement::from)
+    })
+    .last()
+    .expect("`successors` yields its first element")
 }
 
 /// A node or an item, since the layout of anything else is its container's.
+/// The parameters of a closure are no child to keep either, since its block puts them by its `{`.
 fn is_keepable(element: &SyntaxElement) -> bool {
     match element {
-        NodeOrToken::Node(_) => true,
+        NodeOrToken::Node(node) => node.kind() != SyntaxKind::ClosureParams,
         NodeOrToken::Token(token) => token.kind().is_item(),
     }
+}
+
+/// `first`, `last`, and the siblings between them.
+fn siblings_between(first: &SyntaxElement, last: &SyntaxElement) -> Vec<SyntaxElement> {
+    let end = last.text_range().start();
+    iter::successors(Some(first.clone()), SyntaxElement::next_sibling_or_token)
+        .take_while(|sibling| sibling.text_range().start() <= end)
+        .collect()
+}
+
+/// `runs` without those inside another.
+/// Two runs never overlap otherwise, since each is of siblings that start on one line.
+fn outermost(mut runs: Vec<Vec<SyntaxElement>>) -> Vec<Vec<SyntaxElement>> {
+    runs.sort_by_key(|run| {
+        let span = span(run);
+        (span.start(), Reverse(span.end()))
+    });
+    runs.into_iter()
+        .scan(TextSize::from(0), |end, run| {
+            let span = span(&run);
+            let outer = span.start() >= *end;
+            if outer {
+                *end = span.end();
+            }
+            Some(outer.then_some(run))
+        })
+        .flatten()
+        .collect()
+}
+
+/// The source a run takes, from its first child to its last.
+fn span(run: &[SyntaxElement]) -> TextRange {
+    let first = run.first().expect("a run holds a child");
+    let last = run.last().expect("a run holds a child");
+    TextRange::new(first.text_range().start(), last.text_range().end())
 }
 
 #[cfg(test)]

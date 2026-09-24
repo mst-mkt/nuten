@@ -8,11 +8,13 @@ use super::{Child, Formatter, block::holds_at_most_one_statement, children, line
 
 impl<'a> Formatter<'a> {
     pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(keyword.children_with_tokens()).collect();
+        let items: Vec<_> = children(keyword.children_with_tokens(), &self.kept).collect();
         let bodies = body_blocks(&items);
         let expand = !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try)
             || is_statement(keyword)
-            || bodies.iter().any(|body| !holds_at_most_one_statement(body));
+            || bodies
+                .iter()
+                .any(|body| !holds_at_most_one_statement(body, &self.kept));
         let out = self.spaced_children_by(
             &items,
             |_, item| Some(line_break_or_space(item)),

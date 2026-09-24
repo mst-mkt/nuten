@@ -11,7 +11,7 @@ use super::{Formatter, children, without_commas};
 impl<'a> Formatter<'a> {
     pub(super) fn param(&mut self, param: &Param) -> Vec<Element<'a>> {
         let items: Vec<_> =
-            without_commas(children(param.syntax().children_with_tokens())).collect();
+            without_commas(children(param.syntax().children_with_tokens(), &self.kept)).collect();
         let name_is_long_flag = items
             .first()
             .and_then(|name| name.element.as_token())
@@ -33,7 +33,7 @@ impl<'a> Formatter<'a> {
     pub(super) fn type_(&mut self, type_: &Type) -> Vec<Element<'a>> {
         let head = [self.token(&type_.name()), self.token(&type_.open())];
         let close = self.token(&type_.close());
-        let params = self.comma_spaced(children(type_.inside()));
+        let params = self.comma_spaced(type_.inside());
         head.into_iter()
             .chain(params)
             .chain(iter::once(close))
@@ -42,7 +42,7 @@ impl<'a> Formatter<'a> {
 
     /// A `,` here is the type nu takes for the key, so it stays, unlike one among the fields.
     pub(super) fn type_field(&mut self, field: &TypeField) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(field.syntax().children_with_tokens()).collect();
+        let items: Vec<_> = children(field.syntax().children_with_tokens(), &self.kept).collect();
         self.spaced_children(&items, |_, item| {
             (item.kind() != SyntaxKind::Colon).then(space)
         })

@@ -6,7 +6,7 @@ use nuten_syntax::{
     ast::{self, AstNode, Block, Bracketed, ClosureParams, Node},
 };
 
-use super::{Child, Formatter, children, without_commas};
+use super::{Child, Formatter, children, kept::Kept, without_commas};
 
 /// A block laid out for its container to group.
 pub(super) struct BlockLayout<'a> {
@@ -65,7 +65,7 @@ impl<'a> Formatter<'a> {
             head.extend(self.closure_params(params));
         }
         let close = self.token(&block.close());
-        let body: Vec<_> = children(block.statements()).collect();
+        let body: Vec<_> = children(block.statements(), &self.kept).collect();
         let Some(first) = body.first() else {
             return BlockLayout {
                 head,
@@ -102,10 +102,11 @@ impl<'a> Formatter<'a> {
     /// A space stays between two `|` with nothing between them, since `||` is lexed as one token.
     fn closure_params(&mut self, params: &ClosureParams) -> Vec<Element<'a>> {
         let syntax = params.syntax();
-        if closure_params_stay_as_is(params) {
+        if closure_params_stay_as_is(params, &self.kept) {
             return vec![self.source(syntax.text_range())];
         }
-        let items: Vec<_> = without_commas(children(syntax.children_with_tokens())).collect();
+        let items: Vec<_> =
+            without_commas(children(syntax.children_with_tokens(), &self.kept)).collect();
         items
             .iter()
             .enumerate()
@@ -123,8 +124,8 @@ impl<'a> Formatter<'a> {
 }
 
 /// Whether `block` holds at most one statement and nothing else.
-pub(super) fn holds_at_most_one_statement(block: &Block) -> bool {
-    let body: Vec<_> = children(block.statements()).collect();
+pub(super) fn holds_at_most_one_statement(block: &Block, kept: &Kept) -> bool {
+    let body: Vec<_> = children(block.statements(), kept).collect();
     matches!(
         body.as_slice(),
         [] | [Child {
@@ -135,14 +136,14 @@ pub(super) fn holds_at_most_one_statement(block: &Block) -> bool {
 }
 
 /// Whether the parameters stay as they are.
-fn closure_params_stay_as_is(params: &ClosureParams) -> bool {
-    holds_stray_token(params) || holds_ignored_token(params)
+fn closure_params_stay_as_is(params: &ClosureParams, kept: &Kept) -> bool {
+    holds_stray_token(params, kept) || holds_ignored_token(params)
 }
 
 /// Whether something between the pipes, other than a `,`, is outside any `Param`.
 /// The layout would join it to what follows it.
-fn holds_stray_token(params: &ClosureParams) -> bool {
-    without_commas(children(params.syntax().children_with_tokens())).any(|child| {
+fn holds_stray_token(params: &ClosureParams, kept: &Kept) -> bool {
+    without_commas(children(params.syntax().children_with_tokens(), kept)).any(|child| {
         !matches!(
             child.kind(),
             SyntaxKind::Pipe | SyntaxKind::PipePipe | SyntaxKind::Param

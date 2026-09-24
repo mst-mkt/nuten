@@ -8,7 +8,7 @@ use super::{Child, Formatter, children, line_break_or_space};
 
 impl<'a> Formatter<'a> {
     pub(super) fn def(&mut self, def: &Def) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(def.syntax().children_with_tokens()).collect();
+        let items: Vec<_> = children(def.syntax().children_with_tokens(), &self.kept).collect();
         let body = def.body();
         let has_body = has_body(def);
         self.spaced_children_by(
@@ -33,7 +33,7 @@ impl<'a> Formatter<'a> {
                 let head = vec![self.token(&open)];
                 self.items(
                     head,
-                    children(inside),
+                    inside,
                     false,
                     soft_line_break,
                     soft_line_break,
@@ -41,12 +41,12 @@ impl<'a> Formatter<'a> {
                     true,
                 )
             },
-            None => self.comma_spaced(children(syntax.children_with_tokens())),
+            None => self.comma_spaced(syntax.children_with_tokens()),
         }
     }
 
     pub(super) fn io_type(&mut self, pair: &IoType) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(pair.syntax().children_with_tokens()).collect();
+        let items: Vec<_> = children(pair.syntax().children_with_tokens(), &self.kept).collect();
         self.spaced_children(&items, |_, _| Some(space()))
     }
 }

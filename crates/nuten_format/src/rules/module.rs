@@ -21,7 +21,7 @@ impl<'a> Formatter<'a> {
         node: &SyntaxNode,
         body: Option<&Block>,
     ) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(node.children_with_tokens()).collect();
+        let items: Vec<_> = children(node.children_with_tokens(), &self.kept).collect();
         self.spaced_children_by(
             &items,
             |_, item| Some(line_break_or_space(item)),

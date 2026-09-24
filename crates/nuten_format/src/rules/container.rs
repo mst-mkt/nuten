@@ -5,7 +5,7 @@ use nuten_doc::{
     space, text,
 };
 use nuten_syntax::{
-    NodeOrToken, SyntaxKind, SyntaxToken,
+    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxToken,
     ast::{AstNode, Bracketed, RecordField, Table},
 };
 
@@ -25,7 +25,7 @@ impl<'a> Formatter<'a> {
         let head = vec![self.token(&container.open())];
         self.items(
             head,
-            children(container.inside()),
+            container.inside(),
             kind == SyntaxKind::MatchArms,
             line,
             line,
@@ -35,16 +35,21 @@ impl<'a> Formatter<'a> {
     }
 
     pub(super) fn table(&mut self, table: &Table) -> Vec<Element<'a>> {
-        let expand = children(table.inside())
+        let (columns, semicolon) = table.header();
+        // As the head, a run kept from the columns through the `;` would join the `[`.
+        // Formatted again, it would then take in the whole table.
+        if self.kept.is_rest(&semicolon.clone().into()) {
+            return self.container(table);
+        }
+        let expand = children(table.inside(), &self.kept)
             .next()
             .is_some_and(|columns| columns.newlines > 0);
-        let (columns, semicolon) = table.header();
         let mut head = vec![self.token(&table.open())];
         head.extend(self.element(&columns));
         head.push(self.token(&semicolon));
         self.items(
             head,
-            children(table.following(&semicolon.into())),
+            table.following(&semicolon.into()),
             expand,
             soft_line_break_or_space,
             soft_line_break,
@@ -61,14 +66,14 @@ impl<'a> Formatter<'a> {
     pub(super) fn items(
         &mut self,
         head: Vec<Element<'a>>,
-        items: impl Iterator<Item = Child>,
+        elements: impl Iterator<Item = SyntaxElement>,
         expand: bool,
         before_first: SoftLine,
         before_close: SoftLine,
         close: &SyntaxToken,
         commas: bool,
     ) -> Vec<Element<'a>> {
-        let items: Vec<_> = without_commas(items).collect();
+        let items: Vec<_> = without_commas(children(elements, &self.kept)).collect();
         let expand = expand
             || items.first().is_some_and(|first| first.newlines > 0)
             || items.iter().any(Child::is_comment);
@@ -125,7 +130,7 @@ impl<'a> Formatter<'a> {
 
     pub(super) fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
         let items: Vec<_> =
-            without_commas(children(field.syntax().children_with_tokens())).collect();
+            without_commas(children(field.syntax().children_with_tokens(), &self.kept)).collect();
         let colon = items
             .iter()
             .enumerate()

@@ -10,7 +10,7 @@ impl<'a> Formatter<'a> {
     pub(super) fn subexpression(&mut self, subexpression: &Subexpression) -> Vec<Element<'a>> {
         let open = self.token(&subexpression.open());
         let close = self.token(&subexpression.close());
-        let statements: Vec<_> = children(subexpression.inside()).collect();
+        let statements: Vec<_> = children(subexpression.inside(), &self.kept).collect();
         if statements.is_empty() {
             return vec![open, close];
         }

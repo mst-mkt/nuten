@@ -5,7 +5,7 @@ use super::{Formatter, children};
 
 impl<'a> Formatter<'a> {
     pub(super) fn arm(&mut self, arm: &MatchArm) -> Vec<Element<'a>> {
-        let items: Vec<_> = children(arm.syntax().children_with_tokens()).collect();
+        let items: Vec<_> = children(arm.syntax().children_with_tokens(), &self.kept).collect();
         self.spaced_children(&items, |_, _| Some(space()))
     }
 }

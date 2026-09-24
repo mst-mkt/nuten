@@ -11,11 +11,11 @@ impl<'a> Formatter<'a> {
         interpolation
             .syntax()
             .children_with_tokens()
-            .flat_map(|piece| match ast::typed(piece) {
-                NodeOrToken::Node(Node::Subexpression(subexpression)) => {
+            .flat_map(|piece| match (self.kept.keeps(&piece), ast::typed(piece)) {
+                (false, NodeOrToken::Node(Node::Subexpression(subexpression))) => {
                     self.embedded(&subexpression)
                 },
-                piece => self.element(&piece),
+                (_, piece) => self.element(&piece),
             })
             .collect()
     }
