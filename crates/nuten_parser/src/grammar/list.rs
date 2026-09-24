@@ -25,3 +25,11 @@ pub(super) fn list_items(p: &mut Parser<'_>) {
         }
     }
 }
+
+/// The items of a list whose items nu reads as another type than any value, each as `shape`.
+/// A spread stays a word, which reads the same as its value would.
+pub(super) fn items_as(p: &mut Parser<'_>, shape: Shape) {
+    while p.peek().is_some() {
+        value(p, shape);
+    }
+}

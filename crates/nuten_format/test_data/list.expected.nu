@@ -1,6 +1,7 @@
-echo [a,  b] [
-  c
-      d ]
+echo [a b] [
+    c
+    d
+]
 [1 2 3] | each {|x| $x }
 let x = [a b c]
 let y = [
@@ -31,7 +32,7 @@ let long = [
     cccccccccccccccccccccccccccc
     dddddddddddddddddddd
 ]
-echo [ 1 2 ]
+echo [1 2]
 [a]
 [
     a # c

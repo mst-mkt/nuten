@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/argument_shape.nu
 ---
-Root@0..514
+Root@0..531
   Pipeline@0..29
     PipelineElement@0..29
       Call@0..29
@@ -117,7 +117,13 @@ Root@0..514
         Whitespace@188..189 " "
         Word@189..206 "{...$x, print hi}"
         Whitespace@206..207 " "
-        Word@207..214 "[a,  b]"
+        List@207..214
+          LBracket@207..208 "["
+          Word@208..209 "a"
+          Comma@209..210 ","
+          Whitespace@210..212 "  "
+          Word@212..213 "b"
+          RBracket@213..214 "]"
   Newline@214..215 "\n"
   Pipeline@215..232
     PipelineElement@215..217
@@ -331,5 +337,19 @@ Root@0..514
         Whitespace@503..504 " "
         Word@504..507 "not"
         Whitespace@507..508 " "
-        Word@508..513 "[1 2]"
+        List@508..513
+          LBracket@508..509 "["
+          Word@509..510 "1"
+          Whitespace@510..511 " "
+          Word@511..512 "2"
+          RBracket@512..513 "]"
   Newline@513..514 "\n"
+  Pipeline@514..530
+    PipelineElement@514..530
+      Call@514..530
+        Word@514..517 "str"
+        Whitespace@517..518 " "
+        Word@518..522 "join"
+        Whitespace@522..523 " "
+        Word@523..530 "[a,  b]"
+  Newline@530..531 "\n"

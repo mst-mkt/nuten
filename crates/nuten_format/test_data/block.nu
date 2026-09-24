@@ -58,6 +58,7 @@ echo {
 [{ls}   {pwd}]
 {a: {ls}}
 echo [{ls}]
+str join [{ls}]
 ls | each {|x|
       print $x
   $x

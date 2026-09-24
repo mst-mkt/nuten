@@ -1,16 +1,19 @@
+use std::iter;
+
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Callee, Shape, at_call_item,
+    Callee, SQUARE, Shape, at_call_item,
     binary::is_binary_like,
     builtin, call_items, declaration, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_as_term},
-    leading_flags,
+    leading_flags, listed,
     number::is_number,
+    parameters::{Param, Takes, parameters},
     range::is_number_range,
     shell_operator, value,
 };
-use crate::{ParseErrorKind, parser::Parser};
+use crate::{ParseErrorKind, lexer::Mode, parser::Parser};
 
 /// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
 /// A value or a `not` where the head would be is an expression: a `MathExpression`, or the value.
@@ -322,12 +325,51 @@ fn command_shape(name: &str) -> Shape {
 }
 
 /// The head, then the arguments as `shape`.
+/// Where the call runs a command nu has, a `[ ]` is what the parameter it stands for takes.
 pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
+    let params = builtin_parameters(p, shape);
     start_call(p, shape);
+    for param in params.into_iter().skip(1) {
+        if !at_call_item(p) {
+            break;
+        }
+        argument(p, shape, param);
+    }
     while at_call_item(p) {
         item(p, shape);
     }
     p.finish();
+}
+
+/// What nu takes each item of the call ahead as, the head first, where it runs a command nu has.
+/// Empty where it runs another, or one nuten cannot tell.
+/// A `%` before the head looks up a command nu has, whatever the file defines.
+fn builtin_parameters(p: &Parser<'_>, shape: Shape) -> Vec<Option<Param>> {
+    if shape != Shape::KnownArgument || p.callee() != Callee::Undefined {
+        return Vec::new();
+    }
+    let items = call_items(p);
+    let Some((head, rest)) = items.split_first() else {
+        return Vec::new();
+    };
+    let name = head.strip_prefix('%').unwrap_or(head);
+    parameters(
+        &iter::once(name)
+            .chain(rest.iter().copied())
+            .collect::<Vec<_>>(),
+    )
+}
+
+/// The argument ahead, with a `[ ]` read as `param` takes it.
+fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
+    if let Some(param) = param
+        && param.takes != Takes::Word
+        && let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
+    {
+        listed(p, bracketed, param);
+    } else {
+        item(p, shape);
+    }
 }
 
 /// Starts the `Call`, or the `ExternalCall` where `shape` is external, with the head in it.

@@ -18,6 +18,7 @@ mod match_;
 mod module;
 mod names;
 mod number;
+mod parameters;
 mod pattern;
 mod pipeline;
 mod range;
@@ -39,7 +40,8 @@ use self::{
     block::block,
     cell_path::{cell_path, cell_path_ahead},
     interpolation::interpolation,
-    list::{is_list, list_items},
+    list::{is_list, items_as, list_items},
+    parameters::{Param, Takes},
     pipeline::pipeline,
     range::{range, range_ahead},
     record::{RecordSign, record, record_sign},
@@ -233,6 +235,23 @@ fn squared<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     } else {
         p.bump();
     }
+}
+
+/// The `[ ]` ahead as nu reads it where a parameter takes a list: a `List`, a `Table`, or a word.
+/// `bracketed` is what it holds in list mode.
+/// A list of items of another type holds no table, and its items take no `[ ]` or `{ }`.
+fn listed<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, param: Param) {
+    let list = is_list(bracketed.inner());
+    let (kind, items): (_, fn(&mut Parser<'a>)) = match param.takes {
+        Takes::List if list => (SyntaxKind::List, list_items),
+        Takes::List if is_table(bracketed.inner()) => (SyntaxKind::Table, table_items),
+        Takes::ListOf if list => (SyntaxKind::List, |p| items_as(p, Shape::UnknownArgument)),
+        Takes::List | Takes::ListOf | Takes::Word => {
+            p.bump();
+            return;
+        },
+    };
+    p.bump_bracketed(kind, bracketed, items);
 }
 
 /// The `{ }` ahead as nu reads it where it takes `shape`: a `Record`, a `Block`, or a word.

@@ -339,12 +339,11 @@ const COMMANDS: &[&str] = &[
 
 #[cfg(test)]
 mod tests {
-    use std::process::Command;
-
     use super::{
         ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, is_parser_keyword,
         reads_before_assignment, resolves_after_percent, takes_any_argument, takes_row_condition,
     };
+    use crate::test_support::asked;
 
     const ATTRIBUTES_OF_NU: &str = r#"help commands | get name
         | where { |n| $n | str starts-with "attr " }
@@ -379,26 +378,6 @@ mod tests {
         | where { |n| (ast $"def \"($n)\" [] {}" --json | get error | from json | default {}
             | columns | get -o 0) == "NameIsKeyword" }
         | sort | str join "\n""#;
-
-    /// `None` when nu cannot be run, so that a machine without it still runs every other test.
-    /// Nu failing means the pipeline no longer asks what it meant to, which must not pass.
-    fn asked(pipeline: &str) -> Option<Vec<String>> {
-        let output = Command::new("nu")
-            .args(["-n", "-c", pipeline])
-            .output()
-            .ok()?;
-        assert!(
-            output.status.success(),
-            "{pipeline}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        Some(
-            String::from_utf8_lossy(&output.stdout)
-                .lines()
-                .map(str::to_owned)
-                .collect(),
-        )
-    }
 
     #[test]
     fn lists_are_sorted_without_repeats() {

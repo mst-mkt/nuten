@@ -220,7 +220,12 @@ Root@0..315
       Call@259..274
         Word@259..263 "echo"
         Whitespace@263..264 " "
-        Word@264..274 "[[#(\n)] c]"
+        List@264..274
+          LBracket@264..265 "["
+          Word@265..271 "[#(\n)]"
+          Whitespace@271..272 " "
+          Word@272..273 "c"
+          RBracket@273..274 "]"
   Newline@274..275 "\n"
   Pipeline@275..296
     PipelineElement@275..296

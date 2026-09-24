@@ -6,7 +6,8 @@ if $x {
 }
 else {  2  }
 ^echo [a b] [[a]; [1]]
-echo [a,  b]
+echo [a b]
+str join [a,  b]
 docker ps --format {{.Names}}
 alias open = ^open
 open -a {Google Chrome}

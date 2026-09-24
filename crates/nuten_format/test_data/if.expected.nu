@@ -135,7 +135,7 @@ if $a {
 } else match $x {
     _ => 2
 }
-let y = if $a { 1 } else print [1,  2]
+let y = if $a { 1 } else print [1 2]
 if $a {
     1
 } else @foo {1}

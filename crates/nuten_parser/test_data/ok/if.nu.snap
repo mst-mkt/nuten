@@ -813,7 +813,13 @@ Root@0..945
               Call@790..802
                 Word@790..795 "print"
                 Whitespace@795..796 " "
-                Word@796..802 "[1, 2]"
+                List@796..802
+                  LBracket@796..797 "["
+                  Word@797..798 "1"
+                  Comma@798..799 ","
+                  Whitespace@799..800 " "
+                  Word@800..801 "2"
+                  RBracket@801..802 "]"
   Newline@802..803 "\n"
   Pipeline@803..826
     PipelineElement@803..826
