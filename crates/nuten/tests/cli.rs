@@ -189,6 +189,69 @@ fn format_takes_file_named_like_subcommand() {
 }
 
 #[test]
+fn format_reports_file_given_by_several_paths_once() {
+    let dir = TempDir::new();
+    dir.dir("a");
+    let bad = dir.file("bad.nu", "ls ||");
+    let output = format_in(&dir, &["bad.nu", "a/../bad.nu", "bad.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(stderr.starts_with("bad.nu:1:4: "), "{stderr}");
+    assert_eq!(read(&bad), "ls ||");
+}
+
+#[test]
+fn format_reports_missing_file_once_when_given_twice() {
+    let dir = TempDir::new();
+    let error = fs::read(dir.path("missing.nu")).unwrap_err();
+    let output = format_in(&dir, &["missing.nu", "missing.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        io_error_line(Path::new("missing.nu"), &error)
+    );
+}
+
+#[test]
+fn format_reports_each_missing_file() {
+    let dir = TempDir::new();
+    let [a, b] = ["a.nu", "b.nu"].map(|name| fs::read(dir.path(name)).unwrap_err());
+    let output = format_in(&dir, &["a.nu", "b.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        io_error_line(Path::new("a.nu"), &a) + &io_error_line(Path::new("b.nu"), &b)
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_file_given_with_symlink_to_it_once_at_first_path() {
+    let dir = TempDir::new();
+    let bad = dir.file("bad.nu", "ls ||");
+    std::os::unix::fs::symlink(&bad, dir.path("link.nu")).unwrap();
+    let output = format_in(&dir, &["link.nu", "bad.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(stderr.starts_with("link.nu:1:4: "), "{stderr}");
+}
+
+#[cfg(unix)]
+#[test]
+fn format_formats_hard_linked_file_once_with_config_of_first_path() {
+    let dir = TempDir::new();
+    dir.file("a/nuten.nuon", "{indent_width: 2}");
+    dir.file("b/nuten.nuon", "{indent_width: 3}");
+    let path = dir.file("a/a.nu", BLOCK);
+    fs::hard_link(&path, dir.path("b/a.nu")).unwrap();
+    let output = format_in(&dir, &["a/a.nu", "b/a.nu"]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert_eq!(read(&path), "if true {\n  ls\n}\n");
+}
+
+#[test]
 fn format_takes_config_file_in_directory_of_file() {
     let dir = TempDir::new();
     dir.file("nuten.nuon", "{indent_width: 2}");
@@ -472,17 +535,19 @@ fn format_writes_nothing_when_existence_of_config_file_cannot_be_told() {
         .map(|index| if index % 100 == 99 { '/' } else { 'd' })
         .collect();
     let deep = dir.dir(relative.trim_end_matches('/'));
-    let path = deep.join("a.nu");
-    fs::write(&path, "ls|first").unwrap();
+    let paths = ["a.nu", "b.nu"].map(|name| deep.join(name));
+    for path in &paths {
+        fs::write(path, "ls|first").unwrap();
+    }
     let good = dir.file("b.nu", "ls|first");
     let nuon = deep.join("nuten.nuon");
     let error = fs::symlink_metadata(&nuon).unwrap_err();
-    // `a.nu` twice, so that a directory is looked up and reported once for both.
+    // Two files in one directory, so that it is looked up and reported once for both.
     let output = Command::new(env!("CARGO_BIN_EXE_nuten"))
         .args([
             OsStr::new("format"),
             OsStr::new("a.nu"),
-            OsStr::new("a.nu"),
+            OsStr::new("b.nu"),
             good.as_os_str(),
         ])
         .current_dir(&deep)
@@ -490,7 +555,9 @@ fn format_writes_nothing_when_existence_of_config_file_cannot_be_told() {
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(stderr(&output), io_error_line(&nuon, &error));
-    assert_eq!(read(&path), "ls|first");
+    for path in &paths {
+        assert_eq!(read(path), "ls|first");
+    }
     assert_eq!(read(&good), "ls|first");
 }
 

@@ -13,6 +13,7 @@
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
 mod config;
+mod files;
 
 use std::{
     fmt::Display,
@@ -75,7 +76,8 @@ fn print_schema() -> ExitCode {
 
 /// Formats each of `files` with the config file `config_file`, or else with the one nearest it.
 fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
-    let Ok(configs) = config::of_files(files, config_file) else {
+    let files = files::distinct(files);
+    let Ok(configs) = config::of_files(&files, config_file) else {
         return ExitCode::from(2);
     };
     let failures: Vec<_> = files
