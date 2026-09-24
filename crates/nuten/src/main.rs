@@ -14,6 +14,7 @@
 
 mod config;
 mod files;
+mod parallel;
 
 use std::{
     fmt::Display,
@@ -25,6 +26,8 @@ use std::{
 
 use nuten_format::{Config, format};
 use usage::{Args, Cli, Subcommands};
+
+use crate::config::Reported;
 
 #[derive(Cli)]
 #[usage(bin = "nuten", version, unknown_flags = "error")]
@@ -76,19 +79,12 @@ fn print_schema() -> ExitCode {
 
 /// Formats each of `files` with the config file `config_file`, or else with the one nearest it.
 fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
+    // Also keeps two threads off one file, which could read it halfway written.
     let files = files::distinct(files);
     let Ok(configs) = config::of_files(&files, config_file) else {
         return ExitCode::from(2);
     };
-    let failures: Vec<_> = files
-        .iter()
-        .zip(&configs)
-        .filter_map(|(path, config)| {
-            // The problem with its config has been reported already, so it adds no line.
-            let config = config.as_ref().map_err(|_| Vec::new());
-            config.and_then(|config| format_file(path, config)).err()
-        })
-        .collect();
+    let failures = format_all(&files, &configs);
     for problem in failures.iter().flatten() {
         eprintln!("{problem}");
     }
@@ -97,6 +93,19 @@ fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
     } else {
         ExitCode::from(2)
     }
+}
+
+/// The problems of each of `files` that fails to be formatted, in their order.
+fn format_all(files: &[PathBuf], configs: &[Result<Config, Reported>]) -> Vec<Vec<String>> {
+    let jobs: Vec<_> = files.iter().zip(configs).collect();
+    parallel::map(&jobs, |(path, config)| {
+        // The problem with its config has been reported already, so it adds no line.
+        let config = config.as_ref().map_err(|_| Vec::new());
+        config.and_then(|config| format_file(path, config))
+    })
+    .into_iter()
+    .filter_map(Result::err)
+    .collect()
 }
 
 /// Formats the file `path` in place, and leaves it alone when it is formatted already.

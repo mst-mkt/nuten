@@ -189,6 +189,39 @@ fn format_takes_file_named_like_subcommand() {
 }
 
 #[test]
+fn format_reports_files_in_order_given() {
+    let dir = TempDir::new();
+    // Many, so that they are spread over threads, and named against their order.
+    let bad: Vec<_> = (0..64)
+        .rev()
+        .map(|index| dir.file(&format!("bad{index:02}.nu"), "ls ||"))
+        .collect();
+    let good: Vec<_> = (0..64)
+        .map(|index| dir.file(&format!("good{index:02}.nu"), "ls|first"))
+        .collect();
+    let paths: Vec<_> = bad
+        .iter()
+        .zip(&good)
+        .flat_map(|(bad, good)| [bad.as_path(), good.as_path()])
+        .collect();
+    let output = format(&paths);
+    assert_eq!(output.status.code(), Some(2));
+    let expected: Vec<_> = bad
+        .iter()
+        .map(|path| format!("{}:1:4", path.display()))
+        .collect();
+    let stderr = stderr(&output);
+    let heads: Vec<_> = stderr
+        .lines()
+        .map(|line| &line[..line.find(": ").unwrap()])
+        .collect();
+    assert_eq!(heads, expected, "{stderr}");
+    for path in &good {
+        assert_eq!(read(path), "ls | first\n");
+    }
+}
+
+#[test]
 fn format_reports_file_given_by_several_paths_once() {
     let dir = TempDir::new();
     dir.dir("a");
