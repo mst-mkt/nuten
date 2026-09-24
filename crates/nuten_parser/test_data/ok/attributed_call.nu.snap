@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/attributed_call.nu
 ---
-Root@0..340
+Root@0..354
   Pipeline@0..30
     PipelineElement@0..20
       Call@0..20
@@ -342,3 +342,19 @@ Root@0..340
       Call@338..339
         Word@338..339 "y"
   Newline@339..340 "\n"
+  Pipeline@340..353
+    PipelineElement@340..344
+      Call@340..344
+        Word@340..342 "@a"
+        Whitespace@342..343 " "
+        Word@343..344 "x"
+    Whitespace@344..345 " "
+    Comment@345..348 "# c"
+    Newline@348..349 "\n"
+    Newline@349..350 "\n"
+    Pipe@350..351 "|"
+    Whitespace@351..352 " "
+    PipelineElement@352..353
+      Call@352..353
+        Word@352..353 "y"
+  Newline@353..354 "\n"
