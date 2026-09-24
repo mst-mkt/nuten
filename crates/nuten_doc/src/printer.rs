@@ -849,6 +849,10 @@ mod tests {
         let doc = vec![text("a\r\nb\nc\rd"), hard_line_break(), text("e")];
         assert_eq!(print(&doc, &WIDE), "a\nb\nc\rd\ne");
         assert_eq!(print(&doc, &CRLF), "a\r\nb\r\nc\rd\r\ne");
+    }
+
+    #[test]
+    fn line_break_ending_text_collapses_with_hard_line_break() {
         let doc = vec![text("a\n"), hard_line_break(), text("b")];
         assert_eq!(print(&doc, &WIDE), "a\nb");
         assert_eq!(print(&doc, &CRLF), "a\r\nb");
