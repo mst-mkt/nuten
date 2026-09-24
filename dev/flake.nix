@@ -102,6 +102,7 @@
             "parser"
             "doc"
             "format"
+            "config"
             "nix"
             "oracle"
           ];
