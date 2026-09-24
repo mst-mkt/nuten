@@ -13,8 +13,8 @@ use std::fmt;
 use nuten_syntax::SyntaxNode;
 use rowan::{GreenNode, TextRange, TextSize};
 
-pub use crate::lexer::LexErrorKind;
 use crate::lexer::{LexError, Mode};
+pub use crate::{grammar::operator_precedence, lexer::LexErrorKind};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Parsed {

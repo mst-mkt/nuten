@@ -33,6 +33,7 @@ mod where_;
 
 use nuten_syntax::SyntaxKind;
 
+pub use self::command::operator_precedence;
 use self::{
     assignment::Assigned,
     binary::{binary, binary_ahead},

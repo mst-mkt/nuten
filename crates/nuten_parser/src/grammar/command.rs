@@ -182,47 +182,36 @@ fn takes_term(p: &Parser<'_>) -> bool {
 }
 
 /// Whether nu's `parse_operator` reads `text` as an operator.
-/// Its arms are in nu's order, so that the port can be checked against them.
+fn is_operator(text: &str) -> bool {
+    operator_precedence(text).is_some()
+}
+
+/// How tightly nu binds the operator `text`, as its `Operator::precedence` ranks it.
+/// The smaller, the looser.
+/// `None` where nu's `parse_operator` reads no operator.
+/// Its arms are in the order of `parse_operator`, so that the port can be checked against them.
 /// The spellings it takes only to reject are left out; `unknown_operator` holds them.
 /// So is an assignment operator, which the lexer gives a kind of its own.
 /// So is `not`, which nu reads as a prefix of a term, though `term` emits it as an `Operator` too.
-fn is_operator(text: &str) -> bool {
-    matches!(
-        text,
-        "==" | "!="
-            | "<"
-            | "<="
-            | ">"
-            | ">="
-            | "=~"
-            | "like"
-            | "!~"
-            | "not-like"
-            | "in"
-            | "not-in"
-            | "has"
-            | "not-has"
-            | "starts-with"
-            | "not-starts-with"
-            | "ends-with"
-            | "not-ends-with"
-            | "+"
-            | "-"
-            | "*"
-            | "/"
-            | "//"
-            | "mod"
-            | "**"
-            | "++"
-            | "bit-or"
-            | "bit-xor"
-            | "bit-and"
-            | "bit-shl"
-            | "bit-shr"
-            | "or"
-            | "xor"
-            | "and"
-    )
+#[expect(clippy::match_same_arms, reason = "the arms follow `parse_operator`")]
+pub fn operator_precedence(text: &str) -> Option<u8> {
+    Some(match text {
+        "==" | "!=" | "<" | "<=" | ">" | ">=" | "=~" | "like" | "!~" | "not-like" | "in"
+        | "not-in" | "has" | "not-has" | "starts-with" | "not-starts-with" | "ends-with"
+        | "not-ends-with" => 80,
+        "+" | "-" => 90,
+        "*" | "/" | "//" | "mod" => 95,
+        "**" => 100,
+        "++" => 80,
+        "bit-or" => 60,
+        "bit-xor" => 70,
+        "bit-and" => 75,
+        "bit-shl" | "bit-shr" => 85,
+        "or" => 40,
+        "xor" => 45,
+        "and" => 50,
+        _ => return None,
+    })
 }
 
 /// What nu says to write instead of `text`, among the spellings it takes only to reject.
@@ -493,8 +482,10 @@ impl Streams {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_math_expression_like, is_operator, takes_operator, unknown_operator};
-    use crate::{ParseErrorKind, parse};
+    use super::{
+        is_math_expression_like, is_operator, operator_precedence, takes_operator, unknown_operator,
+    };
+    use crate::{ParseErrorKind, parse, test_support::asked};
 
     fn errors(src: &str) -> Vec<ParseErrorKind> {
         parse(src).errors().iter().map(|error| error.kind).collect()
@@ -517,45 +508,90 @@ mod tests {
         }
     }
 
+    /// The spellings nu's `parse_operator` reads as operators.
+    const OPERATORS: &[&str] = &[
+        "==",
+        "!=",
+        "<",
+        "<=",
+        ">",
+        ">=",
+        "=~",
+        "like",
+        "!~",
+        "not-like",
+        "in",
+        "not-in",
+        "has",
+        "not-has",
+        "starts-with",
+        "not-starts-with",
+        "ends-with",
+        "not-ends-with",
+        "+",
+        "-",
+        "*",
+        "/",
+        "//",
+        "mod",
+        "**",
+        "++",
+        "bit-or",
+        "bit-xor",
+        "bit-and",
+        "bit-shl",
+        "bit-shr",
+        "or",
+        "xor",
+        "and",
+    ];
+
+    /// For each two of the `$ops` operators, `L` where nu groups `1 a 2 b 3` as `(1 a 2) b 3`.
+    /// `R` where it groups them as `1 a (2 b 3)`.
+    const GROUPINGS_OF_NU: &str = r#"$ops | each {|a| $ops | each {|b|
+            let expr = ast --json $"1 ($a) 2 ($b) 3" | get block | from json
+                | get pipelines.0.elements.0.expr.expr
+            let left = $expr.BinaryOp.0.expr
+            let grouped = if 'BinaryOp' in ($left | columns) { 'L' } else { 'R' }
+            $"($a) ($b) ($grouped)"
+        } } | flatten | str join "\n""#;
+
     #[test]
     fn operators_are_the_spellings_nu_joins_terms_with() {
-        for text in [
-            "==",
-            "!=",
-            "<",
-            "<=",
-            ">",
-            ">=",
-            "=~",
-            "like",
-            "!~",
-            "not-like",
-            "in",
-            "not-in",
-            "has",
-            "not-has",
-            "starts-with",
-            "not-starts-with",
-            "ends-with",
-            "not-ends-with",
-            "+",
-            "-",
-            "*",
-            "/",
-            "//",
-            "mod",
-            "**",
-            "++",
-            "bit-or",
-            "bit-xor",
-            "bit-and",
-            "bit-shl",
-            "bit-shr",
-            "or",
-            "xor",
-            "and",
-        ] {
+        for text in OPERATORS {
             assert!(is_operator(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn looser_operator_groups_what_tighter_one_joins() {
+        let list = OPERATORS
+            .iter()
+            .map(|operator| format!("'{operator}'"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let Some(groupings) = asked(&format!("let ops = [{list}]\n{GROUPINGS_OF_NU}")) else {
+            return;
+        };
+        let left = |a: &str, b: &str| {
+            let line = format!("{a} {b} L");
+            groupings.contains(&line)
+        };
+        for a in OPERATORS {
+            for b in OPERATORS {
+                let (Some(first), Some(second)) = (operator_precedence(a), operator_precedence(b))
+                else {
+                    panic!("{a:?} {b:?} have no precedence");
+                };
+                // `**` groups to the right and the rest to the left.
+                // So operators of equal precedence only have to group alike whichever comes first.
+                let expected = if first == second {
+                    left(b, a)
+                } else {
+                    first > second
+                };
+                assert_eq!(left(a, b), expected, "{a:?} {b:?}");
+            }
         }
     }
 
