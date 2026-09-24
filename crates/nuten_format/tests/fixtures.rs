@@ -1,4 +1,4 @@
-//! Each `test_data/<name>.nu` must format to `test_data/<name>.expected.nu`.
+//! Each `test_data/**/<name>.input.nu` must format to `<name>.expected.nu` next to it.
 //! The expected output must format to itself.
 //! Formatting either must keep every invariant `nuten_format::invariants` asks about.
 //! That covers those of the parser and of the formatter alike.
@@ -17,16 +17,34 @@ use std::{
 
 use nuten_format::{Config, format, invariants};
 
-use crate::support::caught;
+use crate::support::{caught, files_below};
+
+const INPUT_SUFFIX: &str = ".input.nu";
+const EXPECTED_SUFFIX: &str = ".expected.nu";
+
+#[test]
+fn test_data_holds_only_fixture_pairs() {
+    let strays: Vec<_> = files_below_test_data()
+        .iter()
+        .filter(|name| stem_of(name).is_none())
+        .map(|name| name.display().to_string())
+        .collect();
+    assert!(
+        strays.is_empty(),
+        "neither an input nor an expected output:\n{}",
+        strays.join("\n")
+    );
+}
 
 #[test]
 fn fixtures_format_as_expected() {
-    let fixtures = fixtures();
-    assert!(!fixtures.is_empty(), "no fixtures");
+    let names = files_below_test_data();
+    let stems: BTreeSet<_> = names.iter().filter_map(|name| stem_of(name)).collect();
+    assert!(!stems.is_empty(), "no fixtures");
     let config = Config::default();
-    let failures: Vec<_> = fixtures
+    let failures: Vec<_> = stems
         .iter()
-        .flat_map(|fixture| fixture.failures(&config))
+        .flat_map(|stem| Fixture::of(stem).failures(&config))
         .collect();
     assert!(
         failures.is_empty(),
@@ -35,21 +53,12 @@ fn fixtures_format_as_expected() {
     );
 }
 
-fn fixtures() -> Vec<Fixture> {
+fn files_below_test_data() -> Vec<PathBuf> {
     let dir = test_data();
-    let stems: BTreeSet<_> = fs::read_dir(&dir)
-        .unwrap_or_else(|error| panic!("{}: {error}", dir.display()))
-        .filter_map(|entry| {
-            let file_name = entry
-                .unwrap_or_else(|error| panic!("an entry of {}: {error}", dir.display()))
-                .file_name();
-            let name = file_name
-                .to_str()
-                .unwrap_or_else(|| panic!("{}: not UTF-8", dir.join(&file_name).display()));
-            stem_of(name)
-        })
-        .collect();
-    stems.iter().map(|stem| Fixture::of(stem)).collect()
+    files_below(&dir, &|_| true)
+        .iter()
+        .map(|path| path.strip_prefix(&dir).unwrap().to_path_buf())
+        .collect()
 }
 
 fn test_data() -> PathBuf {
@@ -58,54 +67,58 @@ fn test_data() -> PathBuf {
 
 /// The fixture `name` belongs to, whichever of its two files it names.
 /// A file left without its pair then stands as a fixture that fails to read.
-fn stem_of(name: &str) -> Option<String> {
-    let stem = name.strip_suffix(".nu")?;
-    Some(stem.strip_suffix(".expected").unwrap_or(stem).to_owned())
+fn stem_of(name: &Path) -> Option<&str> {
+    let name = name.to_str()?;
+    name.strip_suffix(INPUT_SUFFIX)
+        .or_else(|| name.strip_suffix(EXPECTED_SUFFIX))
 }
 
 struct Fixture {
-    src_name: String,
-    expected_name: String,
+    input_name: PathBuf,
+    expected_name: PathBuf,
 }
 
 impl Fixture {
     fn of(stem: &str) -> Fixture {
         Fixture {
-            src_name: format!("{stem}.nu"),
-            expected_name: format!("{stem}.expected.nu"),
+            input_name: format!("{stem}{INPUT_SUFFIX}").into(),
+            expected_name: format!("{stem}{EXPECTED_SUFFIX}").into(),
         }
     }
 
     fn failures(&self, config: &Config) -> Vec<String> {
         match (
-            contents_of(&self.src_name),
+            contents_of(&self.input_name),
             contents_of(&self.expected_name),
         ) {
-            (Ok(src), Ok(expected)) => [
-                failures_in(&self.src_name, &src, &expected, config),
+            (Ok(input), Ok(expected)) => [
+                failures_in(&self.input_name, &input, &expected, config),
                 failures_in(&self.expected_name, &expected, &expected, config),
             ]
             .into_iter()
             .flatten()
             .collect(),
-            (read_src, read_expected) => [
-                (&self.src_name, read_src),
+            (read_input, read_expected) => [
+                (&self.input_name, read_input),
                 (&self.expected_name, read_expected),
             ]
             .into_iter()
-            .filter_map(|(name, read)| read.err().map(|error| format!("{name}\n{error}")))
+            .filter_map(|(name, read)| {
+                read.err()
+                    .map(|error| format!("{}\n{error}", name.display()))
+            })
             .collect(),
         }
     }
 }
 
-fn contents_of(name: &str) -> io::Result<String> {
+fn contents_of(name: &Path) -> io::Result<String> {
     fs::read_to_string(test_data().join(name))
 }
 
 /// What the checks find wrong with `name`.
 /// Its contents are `src`, and it must format to `expected`.
-fn failures_in(name: &str, src: &str, expected: &str, config: &Config) -> Vec<String> {
+fn failures_in(name: &Path, src: &str, expected: &str, config: &Config) -> Vec<String> {
     let formatting = detail_of(|| formats_to(src, expected, config));
     let invariant = detail_of(|| keeps_invariants(src, config));
     // Where both checks format, a panic in the rules reaches both, which report it alike.
@@ -116,7 +129,7 @@ fn failures_in(name: &str, src: &str, expected: &str, config: &Config) -> Vec<St
     };
     details
         .into_iter()
-        .map(|detail| format!("{name}\n{detail}"))
+        .map(|detail| format!("{}\n{detail}", name.display()))
         .collect()
 }
 

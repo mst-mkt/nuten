@@ -9,6 +9,7 @@
 mod support;
 
 use std::{
+    borrow::Cow,
     collections::BTreeSet,
     env, fs, io,
     path::{Path, PathBuf},
@@ -16,7 +17,7 @@ use std::{
 
 use nuten_format::{Config, invariants};
 
-use crate::support::caught;
+use crate::support::{caught, files_below};
 
 /// The files with syntax errors, relative to the corpus.
 /// Nu rejects each of them too.
@@ -31,8 +32,12 @@ fn every_corpus_file_keeps_the_invariants() {
         eprintln!("skipping the corpus: NUTEN_CORPUS is not set");
         return;
     };
-    let mut paths = Vec::new();
-    nu_files_below(&dir, &mut paths);
+    // Skipping hidden directories spares walking `.git` when the corpus is a clone.
+    // None of its scripts lives in one.
+    let paths: Vec<_> = files_below(&dir, &|subdir| !name_of(subdir).starts_with('.'))
+        .into_iter()
+        .filter(|path| name_of(path).ends_with(".nu"))
+        .collect();
     assert!(!paths.is_empty(), "no .nu files in {}", dir.display());
 
     let config = Config::default();
@@ -89,22 +94,6 @@ fn every_corpus_file_keeps_the_invariants() {
     );
 }
 
-/// Every `.nu` file below `dir`, in a fixed order, hidden directories aside.
-fn nu_files_below(dir: &Path, paths: &mut Vec<PathBuf>) {
-    let mut entries: Vec<_> = fs::read_dir(dir)
-        .unwrap_or_else(|error| panic!("{}: {error}", dir.display()))
-        .map(Result::unwrap)
-        .collect();
-    entries.sort_by_key(fs::DirEntry::path);
-    for entry in entries {
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        if entry.file_type().unwrap().is_dir() {
-            if !name.starts_with('.') {
-                nu_files_below(&entry.path(), paths);
-            }
-        } else if name.ends_with(".nu") {
-            paths.push(entry.path());
-        }
-    }
+fn name_of(path: &Path) -> Cow<'_, str> {
+    path.file_name().unwrap_or_default().to_string_lossy()
 }
