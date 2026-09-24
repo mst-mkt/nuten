@@ -3,13 +3,18 @@
 //! `nuten format` exits with 0 when every file is formatted.
 //! It exits with 2 when any file has syntax errors or cannot be read or written.
 //! The other files are still formatted then.
+//! It formats nothing and exits with 2 when a config file is wrong or cannot be read.
+//! It does the same when it cannot tell whether a config file exists.
 //! Exit code 1 is kept for a future check mode.
 //! `nuten schema` exits with 2 when stdout cannot be written, unless its reader has closed it.
 //! Any command exits with 2 when the arguments are invalid.
 
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
+mod config;
+
 use std::{
+    fmt::Display,
     fs,
     io::{self, Write},
     path::{Path, PathBuf},
@@ -62,12 +67,20 @@ fn print_schema() -> ExitCode {
     }
 }
 
+/// Formats each of `files` with the config file nearest it.
 fn format_files(files: &[PathBuf]) -> ExitCode {
-    let config = Config::default();
+    let Ok(configs) = config::nearest(files) else {
+        return ExitCode::from(2);
+    };
     // Not `any`: the files after a failure are still to be formatted.
     let failures = files
         .iter()
-        .filter(|path| !format_file(path, &config))
+        .zip(&configs)
+        .filter(|(path, config)| {
+            !config
+                .as_ref()
+                .is_ok_and(|config| format_file(path, config))
+        })
         .count();
     if failures == 0 {
         ExitCode::SUCCESS
@@ -90,8 +103,7 @@ fn format_file(path: &Path, config: &Config) -> bool {
         Ok(formatted) => formatted,
         Err(errors) => {
             for error in &errors.errors {
-                let (line, column) = line_column(&src, error.range.start().into());
-                eprintln!("{}:{line}:{column}: {}", path.display(), error.kind);
+                report_at(path, &src, error.range.start().into(), error.kind);
             }
             return false;
         },
@@ -104,6 +116,12 @@ fn format_file(path: &Path, config: &Config) -> bool {
         return false;
     }
     true
+}
+
+/// Reports `message` to stderr with the line and column of `offset` in `src`, the text of `path`.
+fn report_at(path: &Path, src: &str, offset: usize, message: impl Display) {
+    let (line, column) = line_column(src, offset);
+    eprintln!("{}:{line}:{column}: {message}", path.display());
 }
 
 /// 1-based, the column in characters.
