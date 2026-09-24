@@ -78,50 +78,41 @@ fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
     let Ok(configs) = config::of_files(files, config_file) else {
         return ExitCode::from(2);
     };
-    // Not `any`: the files after a failure are still to be formatted.
-    let failures = files
+    let failures: Vec<_> = files
         .iter()
         .zip(&configs)
-        .filter(|(path, config)| {
-            !config
-                .as_ref()
-                .is_ok_and(|config| format_file(path, config))
+        .filter_map(|(path, config)| {
+            // The problem with its config has been reported already, so it adds no line.
+            let config = config.as_ref().map_err(|_| Vec::new());
+            config.and_then(|config| format_file(path, config)).err()
         })
-        .count();
-    if failures == 0 {
+        .collect();
+    for problem in failures.iter().flatten() {
+        eprintln!("{problem}");
+    }
+    if failures.is_empty() {
         ExitCode::SUCCESS
     } else {
         ExitCode::from(2)
     }
 }
 
-/// Reports every problem to stderr; returns whether the file is formatted.
-/// Leaves the file alone when it is formatted already.
-fn format_file(path: &Path, config: &Config) -> bool {
-    let src = match read_regular_file(path) {
-        Ok(src) => src,
-        Err(error) => {
-            eprintln!("{}: {error}", path.display());
-            return false;
-        },
-    };
-    let formatted = match format(&src, config) {
-        Ok(formatted) => formatted,
-        Err(errors) => {
-            for error in &errors.errors {
-                report_at(path, &src, error.range.start().into(), error.kind);
-            }
-            return false;
-        },
-    };
-    if formatted == src {
-        return true;
+/// Formats the file `path` in place, and leaves it alone when it is formatted already.
+/// The error holds a line for each problem.
+fn format_file(path: &Path, config: &Config) -> Result<(), Vec<String>> {
+    let io_problem = |error: io::Error| vec![format!("{}: {error}", path.display())];
+    let src = read_regular_file(path).map_err(io_problem)?;
+    let formatted = format(&src, config).map_err(|errors| {
+        errors
+            .errors
+            .iter()
+            .map(|error| located(path, &src, error.range.start().into(), error.kind))
+            .collect::<Vec<_>>()
+    })?;
+    if formatted != src {
+        fs::write(path, formatted).map_err(io_problem)?;
     }
-    if let Err(error) = fs::write(path, formatted) {
-        eprintln!("{}: {error}", path.display());
-        return false;
-    }
-    true
+    Ok(())
 }
 
 /// Not `fs::read_to_string` alone, which waits forever on a FIFO.
@@ -133,10 +124,10 @@ fn read_regular_file(path: &Path) -> io::Result<String> {
     }
 }
 
-/// Reports `message` to stderr with the line and column of `offset` in `src`, the text of `path`.
-fn report_at(path: &Path, src: &str, offset: usize, message: impl Display) {
+/// `message` headed by the line and column of `offset` in `src`, the text of `path`.
+fn located(path: &Path, src: &str, offset: usize, message: impl Display) -> String {
     let (line, column) = line_column(src, offset);
-    eprintln!("{}:{line}:{column}: {message}", path.display());
+    format!("{}:{line}:{column}: {message}", path.display())
 }
 
 /// 1-based, the column in characters.

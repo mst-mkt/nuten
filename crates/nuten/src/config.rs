@@ -10,7 +10,7 @@ use std::{
 
 use nuten_config::{Config, Format, find};
 
-use crate::{read_regular_file, report_at};
+use crate::{located, read_regular_file};
 
 /// A problem already reported to stderr.
 #[derive(Debug, Clone, Copy)]
@@ -104,7 +104,8 @@ fn load(path: &Path) -> Result<Config, Reported> {
         read_regular_file(path).map_err(|error| report(format!("{}: {error}", path.display())))?;
     nuten_config::load(&text, format).map_err(|errors| {
         for error in &errors {
-            report_at(path, &text, error.range.start().into(), &error.kind);
+            let offset = error.range.start().into();
+            report(located(path, &text, offset, &error.kind));
         }
         Reported
     })
