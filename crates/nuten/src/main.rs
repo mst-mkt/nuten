@@ -28,7 +28,8 @@ use std::{
     process::ExitCode,
 };
 
-use nuten_format::{Config, format};
+use nuten_config::{Config, FormatConfig};
+use nuten_format::format;
 use usage::{Args, Cli, Subcommands};
 
 use crate::config::Reported;
@@ -109,7 +110,7 @@ fn format_all(files: &[PathBuf], configs: &[Result<Config, Reported>]) -> Vec<Ve
     parallel::map(&jobs, |(path, config)| {
         // The problem with its config has been reported already, so it adds no line.
         let config = config.as_ref().map_err(|_| Vec::new());
-        config.and_then(|config| format_file(path, config))
+        config.and_then(|config| format_file(path, &config.format))
     })
     .into_iter()
     .filter_map(Result::err)
@@ -118,7 +119,7 @@ fn format_all(files: &[PathBuf], configs: &[Result<Config, Reported>]) -> Vec<Ve
 
 /// Formats the file `path` in place, and leaves it alone when it is formatted already.
 /// The error holds a line for each problem.
-fn format_file(path: &Path, config: &Config) -> Result<(), Vec<String>> {
+fn format_file(path: &Path, config: &FormatConfig) -> Result<(), Vec<String>> {
     let io_problem = |error: io::Error| vec![format!("{}: {error}", path.display())];
     let src = read_regular_file(path).map_err(io_problem)?;
     let formatted = format(&src, config).map_err(|errors| {

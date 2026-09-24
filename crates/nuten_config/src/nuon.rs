@@ -173,7 +173,8 @@ fn unreadable(range: TextRange) -> Vec<ConfigError> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Config, ConfigErrorKind, Format, IndentStyle, LineEnding, load, read, test_support,
+        Config, ConfigErrorKind, Format, FormatConfig, IndentStyle, LineEnding, load, read,
+        test_support,
         value::{Value, ValueKind},
     };
 
@@ -205,13 +206,17 @@ mod tests {
             "    line_width: 80 # c\n",
             "    'indent_style': tab,\n",
             "    \"indent_width\": 2, `line_ending`: \"crlf\"\n",
+            "    respect_gitignore: false\n",
             "}\n",
         );
         let expected = Config {
-            line_width: 80,
-            indent_style: IndentStyle::Tab,
-            indent_width: 2,
-            line_ending: LineEnding::CrLf,
+            format: FormatConfig {
+                line_width: 80,
+                indent_style: IndentStyle::Tab,
+                indent_width: 2,
+                line_ending: LineEnding::CrLf,
+            },
+            respect_gitignore: false,
         };
         assert_eq!(load(text, Format::Nuon), Ok(expected));
     }
@@ -224,7 +229,10 @@ mod tests {
     #[test]
     fn field_without_space_after_colon_is_read() {
         assert_eq!(
-            load("{line_width:80}", Format::Nuon).unwrap().line_width,
+            load("{line_width:80}", Format::Nuon)
+                .unwrap()
+                .format
+                .line_width,
             80
         );
     }
@@ -233,19 +241,22 @@ mod tests {
     fn field_split_across_lines_is_read() {
         let text = "{\n  line_width:\n  # c\n  80,\n  \"indent_width\" : 2,\n}";
         let config = load(text, Format::Nuon).unwrap();
-        assert_eq!((config.line_width, config.indent_width), (80, 2));
+        assert_eq!(
+            (config.format.line_width, config.format.indent_width),
+            (80, 2)
+        );
     }
 
     #[test]
     fn crlf_line_endings_are_read() {
         let text = "{\r\n  line_width: 80 # c\r\n}\r\n";
-        assert_eq!(load(text, Format::Nuon).unwrap().line_width, 80);
+        assert_eq!(load(text, Format::Nuon).unwrap().format.line_width, 80);
     }
 
     #[test]
     fn schema_key_is_read_when_quoted() {
         let text = r#"{"$schema": "./nuten.schema.json", line_width: 80}"#;
-        assert_eq!(load(text, Format::Nuon).unwrap().line_width, 80);
+        assert_eq!(load(text, Format::Nuon).unwrap().format.line_width, 80);
     }
 
     #[test]

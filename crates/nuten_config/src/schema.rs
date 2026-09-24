@@ -53,6 +53,9 @@ fn property(setting: &Setting) -> Json {
                 ),
             ),
         ]),
+        Kind::Boolean {
+            ..
+        } => Json::object([description, ("type", Json::String("boolean"))]),
         Kind::String => Json::object([description, ("type", Json::String("string"))]),
     }
 }

@@ -4,7 +4,7 @@
 //! The loader and the JSON Schema both read them from here.
 
 use crate::{
-    Config, ConfigError, ConfigErrorKind, IndentStyle, LineEnding, error,
+    Config, ConfigError, ConfigErrorKind, FormatConfig, IndentStyle, LineEnding, error,
     value::{self, Field, Value, ValueKind},
 };
 
@@ -26,6 +26,9 @@ pub(crate) enum Kind {
         set: fn(Config, i64) -> Config,
     },
     Choice(&'static [Choice]),
+    Boolean {
+        set: fn(Config, bool) -> Config,
+    },
     /// Any string, which changes nothing.
     String,
 }
@@ -36,7 +39,7 @@ pub(crate) struct Choice {
     pub(crate) set: fn(Config) -> Config,
 }
 
-pub(crate) const SETTINGS: [Setting; 5] = [
+pub(crate) const SETTINGS: [Setting; 6] = [
     Setting {
         key: "$schema",
         description: "Where an editor finds the JSON Schema; nuten does not read it.",
@@ -49,7 +52,10 @@ pub(crate) const SETTINGS: [Setting; 5] = [
             min: 1,
             max: u32::MAX as i64,
             set: |config, width| Config {
-                line_width: u32::try_from(width).expect("the width is from min to max"),
+                format: FormatConfig {
+                    line_width: u32::try_from(width).expect("the width is from min to max"),
+                    ..config.format
+                },
                 ..config
             },
         },
@@ -61,14 +67,20 @@ pub(crate) const SETTINGS: [Setting; 5] = [
             Choice {
                 name: "space",
                 set: |config| Config {
-                    indent_style: IndentStyle::Space,
+                    format: FormatConfig {
+                        indent_style: IndentStyle::Space,
+                        ..config.format
+                    },
                     ..config
                 },
             },
             Choice {
                 name: "tab",
                 set: |config| Config {
-                    indent_style: IndentStyle::Tab,
+                    format: FormatConfig {
+                        indent_style: IndentStyle::Tab,
+                        ..config.format
+                    },
                     ..config
                 },
             },
@@ -81,7 +93,10 @@ pub(crate) const SETTINGS: [Setting; 5] = [
             min: 1,
             max: u8::MAX as i64,
             set: |config, width| Config {
-                indent_width: u8::try_from(width).expect("the width is from min to max"),
+                format: FormatConfig {
+                    indent_width: u8::try_from(width).expect("the width is from min to max"),
+                    ..config.format
+                },
                 ..config
             },
         },
@@ -93,18 +108,37 @@ pub(crate) const SETTINGS: [Setting; 5] = [
             Choice {
                 name: "lf",
                 set: |config| Config {
-                    line_ending: LineEnding::Lf,
+                    format: FormatConfig {
+                        line_ending: LineEnding::Lf,
+                        ..config.format
+                    },
                     ..config
                 },
             },
             Choice {
                 name: "crlf",
                 set: |config| Config {
-                    line_ending: LineEnding::CrLf,
+                    format: FormatConfig {
+                        line_ending: LineEnding::CrLf,
+                        ..config.format
+                    },
                     ..config
                 },
             },
         ]),
+    },
+    Setting {
+        key: "respect_gitignore",
+        description: "Whether formatting a directory skips the files ignored by `.gitignore`, \
+                      `.ignore`, the exclude file of the repository, or the global excludes file \
+                      of git. The config file nearest the directory, or the one `--config` names, \
+                      decides it for everything under the directory.",
+        kind: Kind::Boolean {
+            set: |config, respect_gitignore| Config {
+                respect_gitignore,
+                ..config
+            },
+        },
     },
 ];
 
@@ -112,6 +146,7 @@ pub(crate) const SETTINGS: [Setting; 5] = [
 enum Change {
     Integer(fn(Config, i64) -> Config, i64),
     Choice(fn(Config) -> Config),
+    Boolean(fn(Config, bool) -> Config, bool),
     Nothing,
 }
 
@@ -120,6 +155,7 @@ impl Change {
         match self {
             Change::Integer(set, integer) => set(config, integer),
             Change::Choice(set) => set(config),
+            Change::Boolean(set, boolean) => set(config, boolean),
             Change::Nothing => config,
         }
     }
@@ -194,6 +230,18 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
                     choices: choices.iter().map(|choice| choice.name).collect(),
                 })
             }),
+        (
+            &Kind::Boolean {
+                set,
+            },
+            &ValueKind::Bool(boolean),
+        ) => Ok(Change::Boolean(set, boolean)),
+        (
+            Kind::Boolean {
+                ..
+            },
+            _,
+        ) => Err(wrong_type("a boolean")),
         (Kind::String, ValueKind::String(_)) => Ok(Change::Nothing),
         (Kind::Choice(_) | Kind::String, _) => Err(wrong_type("a string")),
     }
@@ -202,7 +250,9 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
 #[cfg(test)]
 mod tests {
     use super::{Kind, SETTINGS};
-    use crate::{Config, Format, IndentStyle, LineEnding, load, test_support::errors};
+    use crate::{
+        Config, Format, FormatConfig, IndentStyle, LineEnding, load, test_support::errors,
+    };
 
     #[test]
     fn given_settings_replace_defaults() {
@@ -210,13 +260,17 @@ mod tests {
             "line_width": 80,
             "indent_style": "tab",
             "indent_width": 2,
-            "line_ending": "crlf"
+            "line_ending": "crlf",
+            "respect_gitignore": false
         }"#;
         let expected = Config {
-            line_width: 80,
-            indent_style: IndentStyle::Tab,
-            indent_width: 2,
-            line_ending: LineEnding::CrLf,
+            format: FormatConfig {
+                line_width: 80,
+                indent_style: IndentStyle::Tab,
+                indent_width: 2,
+                line_ending: LineEnding::CrLf,
+            },
+            respect_gitignore: false,
         };
         assert_eq!(load(text, Format::Json), Ok(expected));
     }
@@ -228,10 +282,28 @@ mod tests {
         assert_eq!(
             config,
             Config {
-                indent_width: 2,
+                format: FormatConfig {
+                    indent_width: 2,
+                    ..FormatConfig::default()
+                },
                 ..Config::default()
             }
         );
+    }
+
+    #[test]
+    fn gitignore_is_respected_by_default() {
+        assert!(Config::default().respect_gitignore);
+    }
+
+    #[test]
+    fn respect_gitignore_takes_either_boolean() {
+        for boolean in [true, false] {
+            let text = format!(r#"{{"respect_gitignore": {boolean}}}"#);
+            let config = load(&text, Format::Json).unwrap();
+            assert_eq!(config.respect_gitignore, boolean, "{text}");
+            assert_eq!(config.format, FormatConfig::default(), "{text}");
+        }
     }
 
     #[test]
@@ -257,19 +329,19 @@ mod tests {
     fn choices_set_what_they_name() {
         let config = |text| load(text, Format::Json).unwrap();
         assert_eq!(
-            config(r#"{"indent_style": "space"}"#).indent_style,
+            config(r#"{"indent_style": "space"}"#).format.indent_style,
             IndentStyle::Space
         );
         assert_eq!(
-            config(r#"{"indent_style": "tab"}"#).indent_style,
+            config(r#"{"indent_style": "tab"}"#).format.indent_style,
             IndentStyle::Tab
         );
         assert_eq!(
-            config(r#"{"line_ending": "lf"}"#).line_ending,
+            config(r#"{"line_ending": "lf"}"#).format.line_ending,
             LineEnding::Lf
         );
         assert_eq!(
-            config(r#"{"line_ending": "crlf"}"#).line_ending,
+            config(r#"{"line_ending": "crlf"}"#).format.line_ending,
             LineEnding::CrLf
         );
     }
@@ -279,12 +351,15 @@ mod tests {
         let text = r#"{"line_width": 4294967295, "indent_width": 255}"#;
         let config = load(text, Format::Json).unwrap();
         assert_eq!(
-            (config.line_width, config.indent_width),
+            (config.format.line_width, config.format.indent_width),
             (u32::MAX, u8::MAX)
         );
         let text = r#"{"line_width": 1, "indent_width": 1}"#;
         let config = load(text, Format::Json).unwrap();
-        assert_eq!((config.line_width, config.indent_width), (1, 1));
+        assert_eq!(
+            (config.format.line_width, config.format.indent_width),
+            (1, 1)
+        );
     }
 
     #[test]
@@ -296,7 +371,7 @@ mod tests {
     #[test]
     fn schema_key_changes_no_setting() {
         let text = r#"{"line_width": 80, "$schema": "x"}"#;
-        assert_eq!(load(text, Format::Json).unwrap().line_width, 80);
+        assert_eq!(load(text, Format::Json).unwrap().format.line_width, 80);
     }
 
     #[test]
@@ -362,6 +437,16 @@ mod tests {
                 r#"{"line_ending": {}}"#,
                 "`line_ending` takes a string, not a record",
                 "{}",
+            ),
+            (
+                r#"{"respect_gitignore": "false"}"#,
+                "`respect_gitignore` takes a boolean, not a string",
+                r#""false""#,
+            ),
+            (
+                r#"{"respect_gitignore": 0}"#,
+                "`respect_gitignore` takes a boolean, not an integer",
+                "0",
             ),
         ] {
             assert_eq!(

@@ -14,7 +14,7 @@ pub mod value;
 
 use std::{fmt, path::Path};
 
-pub use nuten_format::{Config, IndentStyle, LineEnding};
+pub use nuten_format::{Config as FormatConfig, IndentStyle, LineEnding};
 use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
@@ -23,6 +23,23 @@ pub use crate::{
     find::{FILE_NAMES, FindError, find},
     schema::schema,
 };
+
+/// What a config file sets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Config {
+    pub format: FormatConfig,
+    /// Whether formatting a directory skips the files that ignore files ignore.
+    pub respect_gitignore: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            format: FormatConfig::default(),
+            respect_gitignore: true,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {

@@ -31,6 +31,10 @@ expression: schema()
     "line_ending": {
       "description": "What ends each line.",
       "enum": ["lf", "crlf"]
+    },
+    "respect_gitignore": {
+      "description": "Whether formatting a directory skips the files ignored by `.gitignore`, `.ignore`, the exclude file of the repository, or the global excludes file of git. The config file nearest the directory, or the one `--config` names, decides it for everything under the directory.",
+      "type": "boolean"
     }
   },
   "additionalProperties": false
