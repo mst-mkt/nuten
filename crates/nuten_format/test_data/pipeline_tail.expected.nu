@@ -34,3 +34,37 @@ ls
 | to json [
     a
 ] o+e>|
+$alpha | $in + [
+    $beta
+    $gamma
+    $delta
+    $epsilon
+    $zeta
+    $eta
+    $theta
+    $iota
+    $kappa
+    $lambda
+    $mu
+    $nu
+    $xi
+    $omicron
+]
+ls | where name in [
+    alpha
+    beta
+    gamma
+    delta
+    epsilon
+    zeta
+    eta
+    theta
+    iota
+    kappa
+    lambda
+    mu
+    nu
+    xi
+    omicron
+    pi
+]

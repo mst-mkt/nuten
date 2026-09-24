@@ -42,7 +42,19 @@ echo (1 + 2)
     | foo
 )
 (
-    $alpha + $beta + $gamma + $delta + $epsilon + $zeta + $eta + $theta + $iota + $kappa + $mu + $nu + $xi
+    $alpha
+    + $beta
+    + $gamma
+    + $delta
+    + $epsilon
+    + $zeta
+    + $eta
+    + $theta
+    + $iota
+    + $kappa
+    + $mu
+    + $nu
+    + $xi
 )
 (echo (1 + 2))
 [

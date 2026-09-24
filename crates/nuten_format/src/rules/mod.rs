@@ -10,11 +10,12 @@ mod def;
 mod interpolation;
 mod match_;
 mod module;
+mod parenthesized;
 mod pipeline;
 mod signature;
 mod subexpression;
 
-use std::mem;
+use std::{collections::HashMap, mem};
 
 use nuten_doc::{
     Element, GroupIds, empty_line, empty_lines, hard_line_break, line_suffix, space, text,
@@ -23,6 +24,8 @@ use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange,
     ast::{self, AstNode, Node},
 };
+
+use self::parenthesized::breaks_by_width;
 
 /// A child of a container: neither whitespace nor a line break.
 struct Child {
@@ -94,18 +97,28 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     let mut formatter = Formatter {
         src,
         groups: GroupIds::default(),
+        laid_out_ahead: HashMap::new(),
     };
     let statements: Vec<_> = children(root.children_with_tokens()).collect();
     let mut out = formatter.statements(&statements, true);
+    debug_assert!(
+        formatter.laid_out_ahead.is_empty(),
+        "each expression laid out ahead takes its items"
+    );
     out.push(hard_line_break());
     out
 }
 
 /// What every rule reads while a file is formatted.
 /// The source the elements borrow their text from, and the group ids given out so far.
+/// Also the items of expressions laid out ahead.
 struct Formatter<'a> {
     src: &'a str,
     groups: GroupIds,
+    /// The items of each expression a pipeline laid out to tell its tail.
+    /// They stay until the expression takes them.
+    /// Laying them out again would double the work at each level of nested `( )`.
+    laid_out_ahead: HashMap<SyntaxNode, Vec<Vec<Element<'a>>>>,
 }
 
 impl<'a> Formatter<'a> {
@@ -155,6 +168,9 @@ impl<'a> Formatter<'a> {
     fn node(&mut self, node: &Node) -> Vec<Element<'a>> {
         match node {
             Node::Pipeline(pipeline) => self.pipeline(pipeline),
+            Node::MathExpression(_) if breaks_by_width(node.syntax()) => {
+                self.parenthesized_expression(node.syntax())
+            },
             Node::PipelineElement(_)
             | Node::Call(_)
             | Node::ExternalCall(_)
