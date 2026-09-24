@@ -79,6 +79,21 @@ pub enum TextWidth {
     Multiline,
 }
 
+impl Element<'_> {
+    /// Whether it breaks every group around it, whatever the width.
+    pub(crate) fn forces_break(&self) -> bool {
+        matches!(
+            self,
+            Element::Line(LineMode::Hard { .. })
+                | Element::ExpandParent
+                | Element::Text {
+                    width: TextWidth::Multiline,
+                    ..
+                }
+        )
+    }
+}
+
 impl TextWidth {
     /// Wide characters and emoji sequences take two columns.
     /// Control characters, tabs included, take one.

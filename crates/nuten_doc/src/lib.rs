@@ -12,5 +12,5 @@ pub use builder::{
     soft_line_break_or_space, space, text,
 };
 pub use element::{Element, GroupId, GroupIds, LineMode, TextWidth};
-pub use flat::flat;
+pub use flat::{breaks_groups, flat};
 pub use printer::{IndentStyle, LineEnding, PrinterOptions, print};

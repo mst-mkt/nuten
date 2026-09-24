@@ -1,4 +1,4 @@
-//! A document laid out on one line whatever its width.
+//! A document laid out on one line whatever its width, and what keeps it off one line.
 
 use crate::{Element, LineMode, TextWidth};
 
@@ -10,6 +10,25 @@ pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
         .map(flat_element)
         .collect::<Option<Vec<_>>>()
         .map(|elements| elements.into_iter().flatten().collect())
+}
+
+/// Whether `elements` break every group around them, whatever the width.
+/// One inside a `LineSuffix` counts too, since `fits` measures the suffix with the line.
+pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
+    elements.iter().any(|element| {
+        element.forces_break()
+            || match element {
+                Element::Group {
+                    elements, ..
+                }
+                | Element::Indent(elements)
+                | Element::Align {
+                    elements, ..
+                }
+                | Element::LineSuffix(elements) => breaks_groups(elements),
+                _ => false,
+            }
+    })
 }
 
 fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
@@ -41,7 +60,7 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
 
 #[cfg(test)]
 mod tests {
-    use super::flat;
+    use super::{breaks_groups, flat};
     use crate::{
         align, expand_parent, group, hard_line_break, indent, line_suffix, line_suffix_boundary,
         soft_line_break, soft_line_break_or_space, space, text,
@@ -86,6 +105,25 @@ mod tests {
             vec![indent([line_suffix([text("# c")])])],
         ] {
             assert_eq!(flat(&doc), None, "{doc:?}");
+        }
+    }
+
+    #[test]
+    fn only_forced_break_breaks_groups_wherever_it_stands() {
+        for doc in [
+            vec![group([text("a"), hard_line_break()])],
+            vec![indent([expand_parent()])],
+            vec![align(2, [text("a\nb")])],
+            vec![line_suffix([text("a\nb")])],
+            vec![text("a\nb")],
+        ] {
+            assert!(breaks_groups(&doc), "{doc:?}");
+        }
+        for doc in [
+            vec![group([text("a"), soft_line_break_or_space(), text("b")])],
+            vec![line_suffix([text("# c")])],
+        ] {
+            assert!(!breaks_groups(&doc), "{doc:?}");
         }
     }
 }

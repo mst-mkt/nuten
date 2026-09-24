@@ -263,6 +263,8 @@ impl<'a> Printer<'a> {
                 return true;
             };
             let width = match (element, measure) {
+                // The elements `Element::forces_break` names, spelled out.
+                // A guard would take this arm out of the check that the match covers every pair.
                 (
                     Element::Line(LineMode::Hard {
                         ..
