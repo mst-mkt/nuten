@@ -144,7 +144,7 @@ impl<'a> Formatter<'a> {
             (_, 1) => Some(hard_line_break()),
             // With one blank line, a `|` starting the next line would join the statement above.
             // So two stay.
-            (_, 3..) if reaches_past_blank_line(before) => Some(empty_lines(2)),
+            (_, 3..) if reaches_past_blank_line(&ast::untyped(element)) => Some(empty_lines(2)),
             _ => Some(empty_line()),
         };
         let item = match element {
@@ -308,17 +308,27 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether the last statement among `before` still reaches a line-start `|` after one blank line.
+/// Whether the last statement before `item` still reaches a line-start `|` after one blank line.
 /// A `|` it ends with does while no blank line has come since, as in the source.
 /// So does a call that an attribute heads, since nu goes on past one blank line after it.
-fn reaches_past_blank_line(before: &[Child]) -> bool {
+fn reaches_past_blank_line(item: &SyntaxElement) -> bool {
+    let siblings = item
+        .parent()
+        .into_iter()
+        .flat_map(|parent| parent.children_with_tokens())
+        .take_while(|sibling| sibling != item);
+    let before: Vec<_> = children(siblings).collect();
     before
         .iter()
         .rev()
         .find_map(|child| match &child.element {
+            // A closure's parameters are a sibling before its first statement, not a statement.
             NodeOrToken::Node(statement) => {
                 let statement = statement.syntax();
-                Some(ends_with_pipe(statement) || ends_with_attributed_call(statement))
+                Some(
+                    statement.kind() == SyntaxKind::Pipeline
+                        && (ends_with_pipe(statement) || ends_with_attributed_call(statement)),
+                )
             },
             NodeOrToken::Token(_) if child.newlines > 1 => Some(false),
             NodeOrToken::Token(_) => None,

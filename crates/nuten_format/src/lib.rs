@@ -140,6 +140,18 @@ mod tests {
             ("ls |\n\n\n| length\n", "ls |\n\n\n| length\n"),
             ("ls |\n\n\n\n| length\n", "ls |\n\n\n| length\n"),
             ("ls |\n\n\n# c\n| length\n", "ls |\n\n\n# c\n| length\n"),
+            (
+                "ls |\n# a\n# b\n\n\n| length\n",
+                "ls |\n# a\n# b\n\n\n| length\n",
+            ),
+            (
+                "ls |\n# a\n\n# b\n\n\n| length\n",
+                "ls |\n# a\n\n# b\n\n| length\n",
+            ),
+            (
+                "foo\n\n\nls |\n\n\n| length\n",
+                "foo\n\nls |\n\n\n| length\n",
+            ),
         ] {
             assert_eq!(
                 format(src, &Config::default()).unwrap(),

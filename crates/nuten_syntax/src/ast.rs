@@ -89,6 +89,13 @@ pub fn typed(element: SyntaxElement) -> Element {
     }
 }
 
+pub fn untyped(element: &Element) -> SyntaxElement {
+    match element {
+        NodeOrToken::Node(node) => NodeOrToken::Node(node.syntax().clone()),
+        NodeOrToken::Token(token) => NodeOrToken::Token(token.clone()),
+    }
+}
+
 pub fn kind_of(element: &Element) -> SyntaxKind {
     match element {
         NodeOrToken::Node(node) => node.syntax().kind(),
@@ -393,6 +400,7 @@ mod tests {
 
     use super::{
         AstNode, Block, Bracketed, Def, IoTypes, List, Node, Pipeline, Table, Type, kind_of, typed,
+        untyped,
     };
     use crate::{SyntaxElement, SyntaxKind, SyntaxNode};
 
@@ -478,6 +486,20 @@ mod tests {
         );
         assert_eq!(kind_of(&elements[0]), SyntaxKind::Pipeline);
         assert_eq!(kind_of(&elements[1]), SyntaxKind::Newline);
+    }
+
+    #[test]
+    fn untyped_gives_back_what_typed_took() {
+        let root = build(&node(
+            SyntaxKind::Root,
+            vec![
+                node(SyntaxKind::Pipeline, vec![token(SyntaxKind::Word, "ls")]),
+                token(SyntaxKind::Newline, "\n"),
+            ],
+        ));
+        for element in root.children_with_tokens() {
+            assert_eq!(untyped(&typed(element.clone())), element);
+        }
     }
 
     #[test]
