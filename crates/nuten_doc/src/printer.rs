@@ -357,7 +357,10 @@ impl<'a> Printer<'a> {
     }
 
     fn push_text(&mut self, text: &str, width: TextWidth) {
-        if let Some(indent) = self.pending_indent.take() {
+        // The printer trims only before breaks of its own.
+        // An indent here would stay at the end of the line.
+        let empty_first_line = width == TextWidth::Multiline && first_line(text).is_empty();
+        if let Some(indent) = self.pending_indent.take().filter(|_| !empty_first_line) {
             self.out.extend(iter::repeat_n('\t', indent.tabs as usize));
             self.out.extend(iter::repeat_n(' ', indent.spaces as usize));
         }

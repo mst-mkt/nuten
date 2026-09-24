@@ -370,6 +370,24 @@ fn only_the_first_line_of_a_text_is_indented() {
 }
 
 #[test]
+fn empty_first_line_of_text_takes_no_indent() {
+    for multiline in ["\nb", "\r\nb"] {
+        let doc = vec![text("a"), indent(vec![hard_line_break(), text(multiline)])];
+        assert_eq!(print(&doc, &WIDE), "a\n\nb", "{multiline:?}");
+        assert_eq!(print(&doc, &TABS), "a\n\nb", "{multiline:?}");
+    }
+}
+
+#[test]
+fn empty_text_leaves_indent_to_next_text() {
+    let doc = vec![
+        text("a"),
+        indent(vec![hard_line_break(), text(""), text("b")]),
+    ];
+    assert_eq!(print(&doc, &WIDE), "a\n  b");
+}
+
+#[test]
 fn multiline_text_resets_column() {
     let doc = vec![
         text("a\nbb"),
