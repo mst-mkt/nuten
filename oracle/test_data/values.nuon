@@ -1,0 +1,9 @@
+{
+    ints: [5, -5, +5, 05, -0, 9223372036854775807, -9223372036854775808]
+    keywords: [true, false, null]
+    words: [tab, crlf, TRUE, Null, a-b, a_b-c, x-, e5, E, in, Inf1, tab-1]
+    commands: [if, not, match, def, echo, ls, e, and, let, where]
+    strings: ["x y", 'x\ty', `x y`, "", '']
+    nested: {a: {b: []}, c: [{}, [[]]]}
+    a:1, b : 2
+}

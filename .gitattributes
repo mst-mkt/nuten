@@ -1,2 +1,3 @@
 crates/*/test_data/** -text
+oracle/test_data/** -text
 *.nu linguist-language=Nushell

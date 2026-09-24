@@ -32,17 +32,31 @@ pub(crate) fn check_version() -> Result<(), String> {
 /// Nu runs in `dir`, if given, so that it finds the modules `src` uses by relative path.
 /// Fails, in one line, when nu does.
 pub(crate) fn ast(src: &str, dir: Option<&Path>) -> Result<String, String> {
+    run(
+        "let src = $in; ast $src --json | update block { from json | reject ir_block } \
+         | update error { from json } | insert flat { ast $src --flatten | reject span } \
+         | to json -r",
+        src,
+        dir,
+    )
+}
+
+/// The value nu reads from the NUON `src`, as JSON text.
+/// Fails, in one line, when nu does.
+pub(crate) fn from_nuon(src: &str) -> Result<String, String> {
+    run("from nuon | to json -r", src, None)
+}
+
+/// What `script` writes to stdout with `src` as its input.
+/// Nu runs in `dir`, if given.
+/// Fails, in one line, when nu does.
+fn run(script: &str, src: &str, dir: Option<&Path>) -> Result<String, String> {
     let mut nu = Command::new("nu");
     if let Some(dir) = dir {
         nu.current_dir(dir);
     }
     let mut nu = nu
-        .args(["-n", "--stdin", "-c"])
-        .arg(
-            "let src = $in; ast $src --json | update block { from json | reject ir_block } \
-             | update error { from json } | insert flat { ast $src --flatten | reject span } \
-             | to json -r",
-        )
+        .args(["-n", "--stdin", "-c", script])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

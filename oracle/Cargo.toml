@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 jsonc-parser = { workspace = true }
+nuten-config = { workspace = true }
 nuten-format = { workspace = true }
 usage = { workspace = true }
 

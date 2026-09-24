@@ -1,0 +1,6 @@
+# nuten
+{
+    line_width: 80 # c
+    'indent_style': tab,
+    "indent_width": 2, `line_ending`: "crlf"
+}

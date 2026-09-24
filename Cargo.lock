@@ -201,6 +201,7 @@ name = "nuten-oracle"
 version = "0.0.0"
 dependencies = [
  "jsonc-parser",
+ "nuten-config",
  "nuten-format",
  "usage-rs",
 ]

@@ -30,7 +30,7 @@ pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, St
 
 /// `value` in one line: an array by its length, an object by its keys.
 /// A string comes quoted and cut to 200 characters, and anything else as JSON.
-fn excerpt(value: JsonValue<'_>) -> String {
+pub(crate) fn excerpt(value: JsonValue<'_>) -> String {
     match value {
         JsonValue::Array(array) => format!("an array of length {}", array.len()),
         JsonValue::Object(object) => {
@@ -50,7 +50,7 @@ fn excerpt(value: JsonValue<'_>) -> String {
     }
 }
 
-fn json(text: &str) -> Result<JsonValue<'_>, String> {
+pub(crate) fn json(text: &str) -> Result<JsonValue<'_>, String> {
     parse_to_value(text, &ParseOptions::default())
         .map_err(|error| format!("nu wrote invalid JSON: {error}"))?
         .ok_or_else(|| "nu wrote no JSON".to_string())

@@ -4,11 +4,14 @@
 //! The AST refers to the blocks inside by id only, so inside them only the tokens are compared.
 //! Those show neither `;` nor line breaks between statements.
 //! Nu parses each file in its directory.
+//! Asks nu too whether nuten reads each `.nuon` file into the value nu reads.
+//! `oracle/test_data` holds NUON files to run the oracle on.
 //!
-//! Takes files, and directories to search for `.nu` files.
+//! Takes files, and directories to search for `.nu` and `.nuon` files.
 //! Skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
-//! Exits with 1 when any other file cannot be checked, or its AST differs.
-//! Exits with 2 when the arguments are invalid or name no `.nu` file.
+//! Skips a `.nuon` file that nu reads and nuten leaves unread too.
+//! Exits with 1 when any other file cannot be checked, or its AST or value differs.
+//! Exits with 2 when the arguments are invalid or name no `.nu` or `.nuon` file.
 //! Exits with 2 too when nu cannot be run, or is not of the series the formatter targets.
 
 #![expect(
@@ -19,6 +22,7 @@
 
 mod ast;
 mod nu;
+mod nuon;
 
 use std::{
     fs, io, panic,
@@ -35,7 +39,7 @@ struct Args {
     /// Skip files larger than this many bytes
     #[usage(long, default = "524288")]
     max_size: u64,
-    /// Files, and directories to search for `.nu` files
+    /// Files, and directories to search for `.nu` and `.nuon` files
     #[usage(required)]
     paths: Vec<PathBuf>,
 }
@@ -48,21 +52,21 @@ fn main() -> ExitCode {
     }
     let mut files = Vec::new();
     for path in &args.paths {
-        nu_files(path, &mut files);
+        files_to_check(path, &mut files);
     }
     files.sort();
     files.dedup();
     if files.is_empty() {
-        eprintln!("no .nu files in the paths given");
+        eprintln!("no .nu or .nuon files in the paths given");
         return ExitCode::from(2);
     }
     let (mut failed, mut skipped) = (0, 0);
     for path in &files {
         // The panic hook has printed the message already.
         let checked = panic::catch_unwind(|| check(path, args.max_size))
-            .unwrap_or_else(|_| Err("the formatter panics".to_string()));
+            .unwrap_or_else(|_| Err("nuten panics".to_string()));
         match checked {
-            Ok(Checked::Kept) => {},
+            Ok(Checked::Passed) => {},
             Ok(Checked::Skipped(reason)) => {
                 eprintln!("skipping {}: {reason}", path.display());
                 skipped += 1;
@@ -84,8 +88,9 @@ fn main() -> ExitCode {
     }
 }
 
-/// `path` if it is not a directory, or else every `.nu` file below it, hidden directories aside.
-fn nu_files(path: &Path, files: &mut Vec<PathBuf>) {
+/// `path` if it is not a directory, or else every `.nu` and `.nuon` file below it.
+/// Hidden directories are left aside.
+fn files_to_check(path: &Path, files: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(path).and_then(Iterator::collect::<io::Result<Vec<_>>>) else {
         // A file, or a directory that cannot be read, which `check` reports.
         files.push(path.to_path_buf());
@@ -96,18 +101,23 @@ fn nu_files(path: &Path, files: &mut Vec<PathBuf>) {
         let name = name.to_string_lossy();
         if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
             if !name.starts_with('.') {
-                nu_files(&entry.path(), files);
+                files_to_check(&entry.path(), files);
             }
-        } else if name.ends_with(".nu") {
+        } else if entry
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "nu" || extension == "nuon")
+        {
             files.push(entry.path());
         }
     }
 }
 
 /// A file whose check did not fail.
+#[derive(Debug)]
 enum Checked {
-    /// Nu parses the same AST before and after formatting.
-    Kept,
+    /// Nu parses the same AST before and after formatting, or reads the NUON as nuten does.
+    Passed,
     /// Not checked, for the reason given.
     Skipped(String),
 }
@@ -125,18 +135,24 @@ fn check(path: &Path, max_size: u64) -> Result<Checked, String> {
         },
         Err(error) => return Err(error.to_string()),
     };
+    if path
+        .extension()
+        .is_some_and(|extension| extension == "nuon")
+    {
+        return nuon::check(&src);
+    }
     let Ok(output) = format(&src, &Config::default()) else {
         return Ok(Checked::Skipped("syntax errors".to_string()));
     };
     // Nu parses the same text into the same AST.
     if output == src {
-        return Ok(Checked::Kept);
+        return Ok(Checked::Passed);
     }
     let dir = path.parent().filter(|dir| !dir.as_os_str().is_empty());
     let before = nu::ast(&src, dir)?;
     let after = nu::ast(&output, dir).map_err(|error| format!("after formatting, {error}"))?;
     match ast::difference(&before, &after)? {
         Some(difference) => Err(difference),
-        None => Ok(Checked::Kept),
+        None => Ok(Checked::Passed),
     }
 }
