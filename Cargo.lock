@@ -172,6 +172,11 @@ dependencies = [
 [[package]]
 name = "nuten-config"
 version = "0.0.0"
+dependencies = [
+ "jsonc-parser",
+ "nuten-format",
+ "nuten-syntax",
+]
 
 [[package]]
 name = "nuten-doc"

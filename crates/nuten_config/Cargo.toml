@@ -6,5 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[dependencies]
+jsonc-parser = { workspace = true }
+nuten-format = { workspace = true }
+nuten-syntax = { workspace = true }
+
 [lints]
 workspace = true
