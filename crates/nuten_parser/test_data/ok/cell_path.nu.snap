@@ -419,7 +419,15 @@ Root@0..754
     PipelineElement@386..395
       Interpolation@386..395
         InterpText@386..388 "$\""
-        Word@388..394 "($x.a)"
+        Subexpression@388..394
+          LParen@388..389 "("
+          Pipeline@389..393
+            PipelineElement@389..393
+              CellPath@389..393
+                Word@389..391 "$x"
+                Dot@391..392 "."
+                Word@392..393 "a"
+          RParen@393..394 ")"
         InterpText@394..395 "\""
   Newline@395..396 "\n"
   Pipeline@396..403

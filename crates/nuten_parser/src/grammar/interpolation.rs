@@ -3,9 +3,14 @@ use std::{iter, ops::Range};
 use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
 
-use crate::parser::{Parser, Piece};
+use super::{PAREN, file};
+use crate::{
+    lexer::Mode,
+    parser::{Parser, Piece},
+};
 
-/// The `InterpString` ahead as an `Interpolation`: its text, and each `( )` in it as a `Word`.
+/// The `InterpString` ahead as an `Interpolation`: its text, and each `( )` in it.
+/// Nu reads a `( )` there as it does one that stands where it takes a value.
 pub(super) fn interpolation(p: &mut Parser<'_>) {
     let text = p.peek_text().expect("an interpolated string ahead");
     let start = p
@@ -18,7 +23,10 @@ pub(super) fn interpolation(p: &mut Parser<'_>) {
         .expect("pieces that cover the string ahead");
     p.bump_relexed(SyntaxKind::Interpolation, split, |p| {
         while p.peek().is_some() {
-            p.bump();
+            match p.bracketed(&PAREN, Mode::Paren) {
+                Some(bracketed) => p.bump_bracketed(SyntaxKind::Subexpression, bracketed, file),
+                None => p.bump(),
+            }
         }
     });
 }

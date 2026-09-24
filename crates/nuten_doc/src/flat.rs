@@ -1,0 +1,91 @@
+//! A document laid out on one line whatever its width.
+
+use crate::{Element, LineMode, TextWidth};
+
+/// `elements` as the printer prints them with every group flat, whether or not they fit.
+/// `None` where a hard line break, text over lines, or a line suffix keeps them off one line.
+pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
+    elements
+        .iter()
+        .map(flat_element)
+        .collect::<Option<Vec<_>>>()
+        .map(|elements| elements.into_iter().flatten().collect())
+}
+
+fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
+    match element {
+        Element::Text {
+            width: TextWidth::Multiline,
+            ..
+        }
+        | Element::Line(LineMode::Hard {
+            ..
+        })
+        | Element::LineSuffix(_) => None,
+        Element::Text {
+            ..
+        }
+        | Element::Space
+        | Element::LineSuffixBoundary => Some(vec![element.clone()]),
+        Element::Line(LineMode::Soft) | Element::ExpandParent => Some(Vec::new()),
+        Element::Line(LineMode::SoftOrSpace) => Some(vec![Element::Space]),
+        Element::Group {
+            elements, ..
+        }
+        | Element::Indent(elements)
+        | Element::Align {
+            elements, ..
+        } => flat(elements),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::flat;
+    use crate::{
+        align, expand_parent, group, hard_line_break, indent, line_suffix, line_suffix_boundary,
+        soft_line_break, soft_line_break_or_space, space, text,
+    };
+
+    #[test]
+    fn flat_document_has_every_group_printed_flat() {
+        let doc = [
+            text("("),
+            group([
+                indent([
+                    soft_line_break(),
+                    text("a"),
+                    soft_line_break_or_space(),
+                    text("b"),
+                ]),
+                soft_line_break(),
+                text(")"),
+                expand_parent(),
+            ]),
+            align(2, [space(), line_suffix_boundary()]),
+        ];
+        assert_eq!(
+            flat(&doc),
+            Some(vec![
+                text("("),
+                text("a"),
+                space(),
+                text("b"),
+                text(")"),
+                space(),
+                line_suffix_boundary(),
+            ])
+        );
+    }
+
+    #[test]
+    fn what_keeps_off_one_line_leaves_no_flat_document() {
+        for doc in [
+            vec![group([text("a"), hard_line_break()])],
+            vec![text("a\nb")],
+            vec![indent([line_suffix([text("# c")])])],
+        ] {
+            assert_eq!(flat(&doc), None, "{doc:?}");
+        }
+    }
+}

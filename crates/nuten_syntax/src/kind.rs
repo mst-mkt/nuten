@@ -194,6 +194,7 @@ macro_rules! syntax_kinds {
                 Alias,
                 /// A `Word` in `( )` read as a subexpression: `(`, the statements, and `)`.
                 /// Nu reads one wherever it takes a value, a `def` signature aside.
+                /// It reads one inside an `Interpolation` too.
                 Subexpression,
                 /// A `Word` nu reads as a value and a path into it, as in `$x.a?` or `(ls).name`.
                 /// The value, then the members and the `.`, `?`, and `!` among them, all touching.
@@ -215,7 +216,8 @@ macro_rules! syntax_kinds {
                 /// One as an argument of another command stays a `Word`.
                 Spread,
                 /// An `InterpString` nu reads as a value, as `$"a(1 + 2)b"`.
-                /// Its `InterpText`s, and each `( )` between them as a `Word`, all touching.
+                /// Its `InterpText`s, and each `( )` between them, all touching.
+                /// A `( )` is a `Subexpression` where it lexes as one, or else a `Word`.
                 Interpolation,
                 /// A `Word` nu reads as a binary, as in `0x[ff 00]`.
                 /// Its prefix as a `Word`, `[`, the items and any `,` and comments among them, `]`.

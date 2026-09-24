@@ -33,7 +33,13 @@ Root@0..107
         Whitespace@53..54 " "
         Interpolation@54..67
           InterpText@54..56 "$\""
-          Word@56..61 "(pwd)"
+          Subexpression@56..61
+            LParen@56..57 "("
+            Pipeline@57..60
+              PipelineElement@57..60
+                Call@57..60
+                  Word@57..60 "pwd"
+            RParen@60..61 ")"
           InterpText@61..67 "/a.nu\""
   Newline@67..68 "\n"
   Pipeline@68..89
