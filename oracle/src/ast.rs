@@ -311,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn positions_are_dropped_with_the_text_between_them() {
+    fn position_pairs_are_dropped_with_span_source() {
         let ast = value(
             r#"{"span": {"start": 1, "end": 2, "span_source": "ab"}, "head": {"start": 3, "end": 4},
                 "start": 5, "items": [{"start": 6, "end": 7}]}"#,
@@ -332,7 +332,7 @@ mod tests {
     }
 
     #[test]
-    fn excerpt_in_message_of_labeled_error_is_dropped() {
+    fn labeled_error_message_excerpt_is_dropped() {
         let error = |line: u32| {
             format!(
                 concat!(
@@ -351,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn layout_is_dropped_from_the_flattened_tokens_of_layout_shapes() {
+    fn layout_is_dropped_from_flattened_tokens() {
         let ast = value(
             r#"{"block": {"content": " , "}, "flat": [
                 {"content": "{ |x, y|\r\n\t", "shape": "shape_closure"},
@@ -377,7 +377,7 @@ mod tests {
     }
 
     #[test]
-    fn words_stay_apart() {
+    fn words_drops_layout_but_keeps_words_apart() {
         assert_ne!(words("{|x, y| "), words("{|xy| "));
         assert_ne!(words("[1, 2]"), words("[12]"));
         assert_eq!(words("{ |x| "), words("{|x|"));
@@ -398,7 +398,7 @@ mod tests {
     }
 
     #[test]
-    fn lone_carriage_return_ends_comment_as_line_break_does() {
+    fn lone_carriage_return_ends_comment() {
         assert_eq!(words("[a # c\r]"), words("[\n    a # c\n]"));
         assert_eq!(words("[a # c\r\r\nb]"), words("[\n    a # c\n    b\n]"));
         assert_eq!(words("[a # c\rb]"), words("[\n    a # c\rb\n]"));
