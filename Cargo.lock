@@ -175,6 +175,7 @@ version = "0.0.0"
 dependencies = [
  "jsonc-parser",
  "nuten-format",
+ "nuten-parser",
  "nuten-syntax",
 ]
 

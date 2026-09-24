@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn empty_file_is_null_at_start() {
-        for format in [Format::Json, Format::Jsonc] {
+        for format in [Format::Json, Format::Jsonc, Format::Nuon] {
             let value = read("", format).unwrap();
             assert_eq!(value.kind, ValueKind::Null, "{format:?}");
             assert_eq!(value.range, TextRange::empty(0.into()), "{format:?}");

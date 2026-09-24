@@ -4,6 +4,7 @@
 //! The settings are then taken from that.
 
 mod json;
+mod nuon;
 mod settings;
 #[cfg(test)]
 mod test_support;
@@ -12,6 +13,7 @@ pub mod value;
 use std::fmt;
 
 pub use nuten_format::{Config, IndentStyle, LineEnding};
+use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
 use crate::value::Value;
@@ -22,6 +24,8 @@ pub enum Format {
     Json,
     /// JSON with comments and trailing commas, as VS Code reads it.
     Jsonc,
+    /// Nushell Object Notation, as `from nuon` reads it.
+    Nuon,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +38,12 @@ pub struct ConfigError {
 pub enum ConfigErrorKind {
     /// Text the JSON parser rejects, with what it says.
     Json(String),
+    /// NUON with a syntax error.
+    Nuon(ParseErrorKind),
+    /// A NUON value of a form nuten does not read, though nu may.
+    Unreadable,
+    /// A second value in a NUON file.
+    ExtraValue,
     DuplicateKey(String),
     /// A file holding something other than a record; `found` names what.
     NotRecord {
@@ -61,6 +71,13 @@ impl fmt::Display for ConfigErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ConfigErrorKind::Json(message) => f.write_str(message),
+            ConfigErrorKind::Nuon(kind) => fmt::Display::fmt(kind, f),
+            ConfigErrorKind::Unreadable => f.write_str(
+                "value nuten does not read; it reads decimal integers, `true`, `false`, `null`, \
+                 words of letters, digits, `_`, and `-` that start with a letter, \
+                 strings without escapes, lists, and records",
+            ),
+            ConfigErrorKind::ExtraValue => f.write_str("value after the first; NUON holds one"),
             ConfigErrorKind::DuplicateKey(key) => write!(f, "duplicate key `{key}`"),
             ConfigErrorKind::NotRecord {
                 found,
@@ -106,6 +123,7 @@ pub fn read(text: &str, format: Format) -> Result<Value, Vec<ConfigError>> {
     match format {
         Format::Json => json::read(text, json::Dialect::Json),
         Format::Jsonc => json::read(text, json::Dialect::Jsonc),
+        Format::Nuon => nuon::read(text),
     }
 }
 
