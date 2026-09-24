@@ -42,7 +42,9 @@ impl<'a> Formatter<'a> {
         body: Option<&Block>,
     ) -> Vec<Element<'a>> {
         match element {
-            NodeOrToken::Node(Node::Block(block)) if Some(block) == body => {
+            NodeOrToken::Node(Node::Block(block))
+                if Some(block) == body && !self.kept.keeps(&ast::untyped(element)) =>
+            {
                 let BlockLayout {
                     mut head,
                     mut rest,

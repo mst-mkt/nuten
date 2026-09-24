@@ -8,6 +8,7 @@ mod container;
 mod control;
 mod def;
 mod interpolation;
+mod kept;
 mod match_;
 mod module;
 mod parenthesized;
@@ -25,7 +26,7 @@ use nuten_syntax::{
     ast::{self, AstNode, Node},
 };
 
-use self::parenthesized::breaks_by_width;
+use self::{kept::Kept, parenthesized::breaks_by_width};
 
 /// A child of a container: neither whitespace nor a line break.
 struct Child {
@@ -98,6 +99,7 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
         src,
         groups: GroupIds::default(),
         laid_out_ahead: HashMap::new(),
+        kept: Kept::of(src, root),
     };
     let statements: Vec<_> = children(root.children_with_tokens()).collect();
     let mut out = formatter.statements(&statements, true);
@@ -111,7 +113,7 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
 
 /// What every rule reads while a file is formatted.
 /// The source the elements borrow their text from, and the group ids given out so far.
-/// Also the items of expressions laid out ahead.
+/// Also the items of expressions laid out ahead, and what `# nuten-ignore` keeps as written.
 struct Formatter<'a> {
     src: &'a str,
     groups: GroupIds,
@@ -119,6 +121,7 @@ struct Formatter<'a> {
     /// They stay until the expression takes them.
     /// Laying them out again would double the work at each level of nested `( )`.
     laid_out_ahead: HashMap<SyntaxNode, Vec<Vec<Element<'a>>>>,
+    kept: Kept,
 }
 
 impl<'a> Formatter<'a> {
@@ -148,12 +151,12 @@ impl<'a> Formatter<'a> {
             _ => Some(empty_line()),
         };
         let item = match element {
-            NodeOrToken::Node(child) => {
+            NodeOrToken::Node(_) => {
                 let after_semicolon = prev == Some(SyntaxKind::Semicolon) && *newlines == 0;
                 after_semicolon
                     .then(space)
                     .into_iter()
-                    .chain(self.node(child))
+                    .chain(self.element(element))
                     .collect()
             },
             NodeOrToken::Token(child) => match child.kind() {
@@ -282,6 +285,9 @@ impl<'a> Formatter<'a> {
 
     fn element(&mut self, element: &ast::Element) -> Vec<Element<'a>> {
         match element {
+            NodeOrToken::Node(node) if self.kept.keeps(&ast::untyped(element)) => {
+                vec![self.source(node.syntax().text_range())]
+            },
             NodeOrToken::Node(node) => self.node(node),
             NodeOrToken::Token(token) => vec![self.token(token)],
         }

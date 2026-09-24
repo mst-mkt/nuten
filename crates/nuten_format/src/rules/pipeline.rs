@@ -6,15 +6,15 @@ use nuten_doc::{
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
-    ast::{AstNode, Node, Pipeline},
+    ast::{self, AstNode, Node, Pipeline},
 };
 
-use super::{Child, Formatter, children, headed_by_attribute, separator};
+use super::{Child, Formatter, children, headed_by_attribute, kept::Kept, separator};
 
 impl<'a> Formatter<'a> {
     pub(super) fn pipeline(&mut self, pipeline: &Pipeline) -> Vec<Element<'a>> {
         let id = self.groups.fresh();
-        let parts = parts(pipeline.syntax());
+        let parts = parts(pipeline.syntax(), &self.kept);
         let expand = parts.iter().any(|part| part.child.newlines > 0);
         let (segments, tail) = segments(&parts, follows_semicolon(pipeline.syntax()), |part| {
             part.child
@@ -40,7 +40,8 @@ impl<'a> Formatter<'a> {
     }
 
     fn assigned(&mut self, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
-        let assigned = assignment_of(pipeline).map(|assignment| assigned_children(&assignment));
+        let assigned =
+            assignment_of(pipeline, &self.kept).map(|assignment| assigned_children(&assignment));
         let Some((items, Some(first))) = assigned else {
             return Vec::new();
         };
@@ -196,16 +197,17 @@ impl Part {
     }
 }
 
-/// An `Assignment` or a `Let` is laid flat.
+/// An `Assignment` or a `Let` is laid flat, unless what holds it is kept as written.
 /// The pipes of the first statement the operator takes then format as those of `pipeline`.
 /// The statements below it are left to `assigned`.
-fn parts(pipeline: &SyntaxNode) -> Vec<Part> {
-    flatten(pipeline, 0, false)
+fn parts(pipeline: &SyntaxNode, kept: &Kept) -> Vec<Part> {
+    flatten(pipeline, 0, false, kept)
 }
 
-fn assignment_of(pipeline: &SyntaxNode) -> Option<SyntaxNode> {
+fn assignment_of(pipeline: &SyntaxNode, kept: &Kept) -> Option<SyntaxNode> {
     pipeline
         .children()
+        .filter(|element| !kept.keeps(&element.clone().into()))
         .filter_map(|element| element.first_child())
         .find(is_assignment)
 }
@@ -220,7 +222,7 @@ fn assigned_children(assignment: &SyntaxNode) -> (Vec<Child>, Option<usize>) {
     (items, first)
 }
 
-fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
+fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, kept: &Kept) -> Vec<Part> {
     children(pipeline.children_with_tokens())
         .enumerate()
         .flat_map(|(index, child)| {
@@ -236,10 +238,11 @@ fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
             let assignment = child
                 .element
                 .as_node()
+                .filter(|_| !kept.keeps(&ast::untyped(&child.element)))
                 .and_then(|node| node.syntax().first_child())
                 .filter(is_assignment);
             match assignment {
-                Some(assignment) => flatten_assignment(&assignment, child.newlines, joined),
+                Some(assignment) => flatten_assignment(&assignment, child.newlines, joined, kept),
                 None => vec![Part {
                     joined: joined && child.element.as_node().is_some(),
                     child,
@@ -249,7 +252,12 @@ fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
         .collect()
 }
 
-fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool) -> Vec<Part> {
+fn flatten_assignment(
+    assignment: &SyntaxNode,
+    newlines: u32,
+    joined: bool,
+    kept: &Kept,
+) -> Vec<Part> {
     let (items, first) = assigned_children(assignment);
     let end = first.map_or(items.len(), |first| first + 1);
     items
@@ -267,8 +275,10 @@ fn flatten_assignment(assignment: &SyntaxNode, newlines: u32, joined: bool) -> V
                 newlines: before + child.newlines,
             };
             match &child.element {
-                NodeOrToken::Node(Node::Pipeline(pipeline)) => {
-                    flatten(pipeline.syntax(), child.newlines, true)
+                NodeOrToken::Node(Node::Pipeline(pipeline))
+                    if !kept.keeps(&ast::untyped(&child.element)) =>
+                {
+                    flatten(pipeline.syntax(), child.newlines, true, kept)
                 },
                 _ => vec![Part {
                     joined: joined && !child.is_comment(),

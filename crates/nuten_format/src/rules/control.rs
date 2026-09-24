@@ -1,7 +1,7 @@
 use nuten_doc::{Element, expand_parent, group};
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
-    ast::{Block, Node},
+    ast::{self, Block, Node},
 };
 
 use super::{Child, Formatter, block::holds_at_most_one_statement, children, line_break_or_space};
@@ -17,7 +17,9 @@ impl<'a> Formatter<'a> {
             &items,
             |_, item| Some(line_break_or_space(item)),
             |this, element| match element {
-                NodeOrToken::Node(Node::Block(block)) if bodies.contains(&block) => {
+                NodeOrToken::Node(Node::Block(block))
+                    if bodies.contains(&block) && !this.kept.keeps(&ast::untyped(element)) =>
+                {
                     let layout = this.block_layout(block);
                     layout.head.into_iter().chain(layout.rest).collect()
                 },

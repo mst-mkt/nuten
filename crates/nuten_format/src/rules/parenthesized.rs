@@ -3,6 +3,8 @@
 //! A call there stays on its line, though nu would take a line break before any argument.
 //! The tree does not tell how many words its name takes, such as the two of `str replace`.
 
+use std::iter;
+
 use nuten_doc::{Element, breaks_groups, group, soft_line_break_or_space};
 use nuten_parser::operator_precedence;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
@@ -50,8 +52,11 @@ impl<'a> Formatter<'a> {
 
     /// Whether `element`, an element of a pipeline, holds an expression that breaks at operators.
     /// Its items stay laid out for `parenthesized_expression` to take.
+    /// False when the expression or what holds it is kept, since nothing would take its items.
     pub(super) fn breaks_at_operators(&mut self, element: &SyntaxNode) -> bool {
-        let Some(expression) = held_expression(element).filter(breaks_by_width) else {
+        let Some(expression) = held_expression(element).filter(|expression| {
+            breaks_by_width(expression) && !self.kept_up_to(expression, element)
+        }) else {
             return false;
         };
         let items: Vec<_> = children(expression.children_with_tokens()).collect();
@@ -59,6 +64,15 @@ impl<'a> Formatter<'a> {
         let breaks = broken_at(&items, &laid_out).is_some();
         self.laid_out_ahead.insert(expression, laid_out);
         breaks
+    }
+
+    /// Whether `expression`, or what holds it up to `element`, is kept as written.
+    fn kept_up_to(&self, expression: &SyntaxNode, element: &SyntaxNode) -> bool {
+        expression
+            .ancestors()
+            .take_while(|node| node != element)
+            .chain(iter::once(element.clone()))
+            .any(|node| self.kept.keeps(&node.into()))
     }
 
     /// Each of `items` but a comment as the formatter lays it out.
