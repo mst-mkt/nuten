@@ -45,3 +45,5 @@ for x in [1] {...$x,  a: 1}
 try {...$x} catch {...$x, a: 1}
 while -h  $a  {1}
 while if true {true} else {false} {1}
+while { 1; 2 } { 1 }
+let y = if { 1; 2 } { 3 }

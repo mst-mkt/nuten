@@ -19,8 +19,6 @@ pub(super) struct BlockLayout<'a> {
     /// A comment the `}` follows on its line ends at a lone `\r`.
     /// As a line suffix it would move past the `}`.
     expand: bool,
-    /// Whether it holds at most one statement and nothing else.
-    pub(super) one_statement: bool,
 }
 
 impl<'a> Formatter<'a> {
@@ -29,7 +27,6 @@ impl<'a> Formatter<'a> {
             mut head,
             mut rest,
             expand,
-            ..
         } = self.block_layout(block);
         if expand {
             rest.push(expand_parent());
@@ -67,19 +64,11 @@ impl<'a> Formatter<'a> {
         }
         let close = self.token(&block.close());
         let body: Vec<_> = children(block.statements()).collect();
-        let one_statement = matches!(
-            body.as_slice(),
-            [] | [Child {
-                element: NodeOrToken::Node(_),
-                ..
-            }]
-        );
         let Some(first) = body.first() else {
             return BlockLayout {
                 head,
                 rest: vec![close],
                 expand: false,
-                one_statement,
             };
         };
         let expand = body.iter().any(Child::is_comment)
@@ -105,7 +94,6 @@ impl<'a> Formatter<'a> {
             head,
             rest: vec![indent(inner), soft_line_break_or_space(), close],
             expand,
-            one_statement,
         }
     }
 
@@ -130,6 +118,18 @@ impl<'a> Formatter<'a> {
             })
             .collect()
     }
+}
+
+/// Whether `block` holds at most one statement and nothing else.
+pub(super) fn holds_at_most_one_statement(block: &Block) -> bool {
+    let body: Vec<_> = children(block.statements()).collect();
+    matches!(
+        body.as_slice(),
+        [] | [Child {
+            element: NodeOrToken::Node(_),
+            ..
+        }]
+    )
 }
 
 /// Whether the parameters stay as they are.

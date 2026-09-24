@@ -1,46 +1,55 @@
 use nuten_doc::{Element, expand_parent, group};
-use nuten_syntax::{NodeOrToken, SyntaxKind, SyntaxNode, ast::Node};
+use nuten_syntax::{
+    NodeOrToken, SyntaxKind, SyntaxNode,
+    ast::{Block, Node},
+};
 
-use super::{Child, Formatter, children, line_break_or_space, separator};
+use super::{Child, Formatter, block::holds_at_most_one_statement, children, line_break_or_space};
 
 impl<'a> Formatter<'a> {
     pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(keyword.children_with_tokens()).collect();
-        let mut expand =
-            !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try) || is_statement(keyword);
-        let mut out = Vec::new();
-        for (index, item) in items.iter().enumerate() {
-            if let Some(comment) = item.as_comment() {
-                out.extend(self.comment(comment, item.newlines, false));
-                continue;
-            }
-            let prev = items[..index].last().map(Child::kind);
-            out.extend(separator(prev, Some(line_break_or_space(item))));
-            // A body comes right before an `else` or a `catch`.
-            // The last item but a comment is a body, or what the last `else` takes.
-            let branch = items[index + 1..]
+        let bodies = body_blocks(&items);
+        let expand = !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try)
+            || is_statement(keyword)
+            || bodies.iter().any(|body| !holds_at_most_one_statement(body));
+        let out = self.spaced_children_by(
+            &items,
+            |_, item| Some(line_break_or_space(item)),
+            |this, element| match element {
+                NodeOrToken::Node(Node::Block(block)) if bodies.contains(&block) => {
+                    let layout = this.block_layout(block);
+                    layout.head.into_iter().chain(layout.rest).collect()
+                },
+                element => this.element(element),
+            },
+        );
+        vec![group(out.into_iter().chain(expand.then(expand_parent)))]
+    }
+}
+
+/// The blocks among `items` that are bodies.
+/// A body comes right before an `else` or a `catch`.
+/// The last item but a comment is a body, or what the last `else` takes.
+fn body_blocks(items: &[Child]) -> Vec<&Block> {
+    items
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| {
+            items[index + 1..]
                 .iter()
                 .find(|next| !next.is_comment())
                 .is_none_or(|next| {
                     next.element.as_token().is_some_and(|next| {
                         next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
                     })
-                });
-            match &item.element {
-                NodeOrToken::Node(Node::Block(block)) if branch => {
-                    let layout = self.block_layout(block);
-                    expand |= !layout.one_statement;
-                    out.extend(layout.head);
-                    out.extend(layout.rest);
-                },
-                element => out.extend(self.element(element)),
-            }
-        }
-        if expand {
-            out.push(expand_parent());
-        }
-        vec![group(out)]
-    }
+                })
+        })
+        .filter_map(|(_, item)| match &item.element {
+            NodeOrToken::Node(Node::Block(block)) => Some(block),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Whether `node`, an `If` or a `Try`, is a statement.
