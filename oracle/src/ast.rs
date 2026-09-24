@@ -117,12 +117,18 @@ fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
     JsonValue::Array(items.into())
 }
 
-/// With each `\r\n` in a string as `\n`.
+/// With each `\n` in a string without the `\r`s before it.
 /// The printer writes line endings everywhere, inside strings too.
+/// With `\n` line endings it drops those `\r`s.
 fn with_lf(value: JsonValue<'_>) -> JsonValue<'_> {
     match value {
         JsonValue::String(text) if text.contains("\r\n") => {
-            JsonValue::String(text.replace("\r\n", "\n").into())
+            let text = text
+                .split('\n')
+                .map(|line| line.trim_end_matches('\r'))
+                .collect::<Vec<_>>()
+                .join("\n");
+            JsonValue::String(text.into())
         },
         JsonValue::Object(object) => {
             let map: Map<_, _> = object
@@ -447,6 +453,10 @@ mod tests {
                 r#"{"a": ["x\r\ny"], "flat": [{"content": "x\r\ny", "shape": "shape_string"}]}"#,
                 r#"{"a": ["x\ny"], "flat": [{"content": "x\ny", "shape": "shape_string"}]}"#
             ),
+            Ok(None)
+        );
+        assert_eq!(
+            difference(r#"{"a": "x\r\r\ny"}"#, r#"{"a": "x\ny"}"#),
             Ok(None)
         );
         assert!(

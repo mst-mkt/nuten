@@ -17,6 +17,7 @@ use crate::{Config, ParseError, format_parsed};
 pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
     /// Line endings inside a token do not count, since the printer rewrites them.
+    /// Nor do the `\r`s before them, which it trims with `\n` line endings.
     /// Nor do `Comma` tokens, which separate items as whitespace does in lists, records and types.
     /// So a `,` the formatter prints in a type without one in the source goes unseen here.
     /// Only the nu oracle tells whether it went where nu reads it as a separator.
@@ -27,6 +28,7 @@ pub enum Invariant {
     /// Each stands on its own line or at the end of a line, as it was.
     /// Between statements or the arms of a `match`, a blank line follows it or not, as it was.
     /// Spaces and tabs at the end of a comment do not count, since the printer trims them.
+    /// Nor do `\r`s there, which it trims with `\n` line endings.
     /// Nor do blank lines at the end of the file, a block, the arms, or a subexpression.
     /// The formatter drops them.
     /// Nor do `Comma` tokens, which it may drop too.
@@ -121,7 +123,12 @@ fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
             .filter_map(SyntaxElement::into_token)
             .filter(|token| !token.kind().is_trivia() && token.kind() != SyntaxKind::Comma);
         for token in tokens {
-            let text = token.text().replace("\r\n", "\n");
+            let text = token
+                .text()
+                .split('\n')
+                .map(|line| line.trim_end_matches('\r'))
+                .collect::<Vec<_>>()
+                .join("\n");
             match leaves.last_mut() {
                 Some((_, last)) if token.kind() == SyntaxKind::ShortFlag => last.push_str(&text),
                 _ => leaves.push((token.kind(), text)),
@@ -170,7 +177,7 @@ fn comments(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
 /// A comment and where it stands: on its own line or not, before a blank line or not.
 #[derive(Debug, PartialEq, Eq)]
 struct Comment {
-    /// Without the spaces and tabs at its end.
+    /// Without the spaces, tabs, and `\r`s at its end.
     text: String,
     own_line: bool,
     /// False inside a statement and at the end of the file, a block, or a subexpression.
@@ -233,7 +240,7 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
                     .find(|&kind| kind != SyntaxKind::Newline)
                     .is_some_and(|kind| !matches!(kind, SyntaxKind::RBrace | SyntaxKind::RParen));
             Comment {
-                text: token.text().trim_end_matches([' ', '\t']).to_string(),
+                text: token.text().trim_end_matches([' ', '\t', '\r']).to_string(),
                 own_line,
                 blank_line_after,
             }
@@ -373,6 +380,15 @@ mod tests {
     #[test]
     fn line_endings_inside_a_token_do_not_count() {
         assert_eq!(formatter_violations("'a\r\nb'\r\n", "'a\nb'\n"), []);
+        assert_eq!(formatter_violations("'a\r\r\nb'\n", "'a\nb'\n"), []);
+    }
+
+    #[test]
+    fn lone_carriage_return_inside_token_counts() {
+        assert_eq!(
+            invariant_names(&formatter_violations("'a\rb'\n", "'ab'\n")),
+            [Invariant::Tokens.name()]
+        );
     }
 
     #[test]
@@ -424,6 +440,7 @@ mod tests {
     #[test]
     fn trailing_whitespace_and_blank_lines_at_the_end_do_not_count() {
         assert_eq!(formatter_violations("ls # c  \n", "ls # c\n"), []);
+        assert_eq!(formatter_violations("ls # c \r\r\n", "ls # c\n"), []);
         assert_eq!(formatter_violations("# c\n\n\n", "# c\n"), []);
         assert_eq!(formatter_violations("# a\n\n\n# b\n", "# a\n\n# b\n"), []);
         assert_eq!(

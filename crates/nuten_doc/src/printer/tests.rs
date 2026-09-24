@@ -139,6 +139,37 @@ fn only_the_last_line_of_a_text_is_trimmed() {
 }
 
 #[test]
+fn carriage_returns_before_printed_line_break_go_only_with_lf() {
+    let doc = vec![text("a \r\r"), hard_line_break(), text("b\r \r")];
+    assert_eq!(print(&doc, &WIDE), "a\nb\r \r");
+    assert_eq!(print(&doc, &CRLF), "a \r\r\r\nb\r \r");
+}
+
+#[test]
+fn carriage_returns_before_line_break_inside_text_go_only_with_lf() {
+    let doc = vec![text("a\r\r\nb \r\nc")];
+    assert_eq!(print(&doc, &WIDE), "a\nb \nc");
+    assert_eq!(print(&doc, &CRLF), "a\r\r\nb \r\nc");
+    let doc = vec![text("a"), indent(vec![hard_line_break(), text("\r\r\nb")])];
+    assert_eq!(print(&doc, &WIDE), "a\n\nb");
+    assert_eq!(print(&doc, &CRLF), "a\r\n  \r\r\nb");
+}
+
+#[test]
+fn first_line_of_text_is_measured_without_carriage_returns_of_its_line_break() {
+    let doc = vec![
+        group(vec![text("a"), soft_line_break_or_space(), text("b")]),
+        text("x\r\r\ny"),
+    ];
+    assert_eq!(print(&doc, &narrow(4)), "a bx\ny");
+    let crlf = PrinterOptions {
+        line_ending: LineEnding::CrLf,
+        ..narrow(4)
+    };
+    assert_eq!(print(&doc, &crlf), "a\r\nbx\r\r\ny");
+}
+
+#[test]
 fn line_of_spaces_alone_goes() {
     let doc = vec![
         text("a"),

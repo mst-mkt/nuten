@@ -67,7 +67,7 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
 
 #[cfg(test)]
 mod tests {
-    use super::{Config, ParseErrorKind, format, invariants};
+    use super::{Config, LineEnding, ParseErrorKind, format, invariants};
 
     #[test]
     fn file_with_errors_is_rejected() {
@@ -89,6 +89,22 @@ mod tests {
     fn output_ends_with_one_line_break() {
         for src in ["ls", "ls\n", "ls \n\n", "ls\r\n", "\n\nls\n\n\n"] {
             assert_eq!(format(src, &Config::default()).unwrap(), "ls\n", "{src:?}");
+        }
+    }
+
+    #[test]
+    fn carriage_returns_before_line_break_stay_with_crlf() {
+        let crlf = Config {
+            line_ending: LineEnding::CrLf,
+            ..Config::default()
+        };
+        for (src, expected) in [
+            ("ls # d\r\r\r\n", "ls # d\r\r\r\n"),
+            ("echo 'a\r\r\nb'\r\n", "echo 'a\r\r\nb'\r\n"),
+        ] {
+            assert_eq!(format(src, &crlf).unwrap(), expected, "{src:?}");
+            let checked = invariants::check(src, &crlf);
+            assert_eq!(checked.violations, [], "{src:?}");
         }
     }
 

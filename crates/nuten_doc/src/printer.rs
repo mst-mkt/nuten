@@ -33,10 +33,31 @@ impl LineEnding {
             LineEnding::CrLf => "\r\n",
         }
     }
+
+    /// What the printer trims from the end of a line before a break of its own.
+    /// With `\n` line endings, a `\r` left there would be read again as part of the break.
+    const fn trimmed_before_break(self) -> &'static [char] {
+        match self {
+            LineEnding::Lf => &[' ', '\t', '\r'],
+            LineEnding::CrLf => &[' ', '\t'],
+        }
+    }
+
+    /// `line` without what belongs to the `\n` that follows it in a text.
+    /// The `\r` of a `\r\n` does.
+    /// With `\n` line endings, so do all the `\r`s before it.
+    /// They would be read again as part of the break.
+    fn without_break(self, line: &str) -> &str {
+        match self {
+            LineEnding::Lf => line.trim_end_matches('\r'),
+            LineEnding::CrLf => line.strip_suffix('\r').unwrap_or(line),
+        }
+    }
 }
 
 /// Spaces and tabs before a line break of the printer's go, even those of a text.
-/// The lines inside a text stay as they are.
+/// With `\n` line endings, so do `\r`s before any line break, a text's own included.
+/// The lines inside a text stay as they are otherwise.
 /// Their line breaks come out as the configured line ending.
 /// The output never starts with a line break.
 pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
@@ -281,7 +302,7 @@ impl<'a> Printer<'a> {
                         text,
                     },
                     Measure::Break,
-                ) => return columns(first_line(text)) <= remaining,
+                ) => return columns(self.first_line(text)) <= remaining,
                 (
                     Element::Text {
                         width: TextWidth::Width(width),
@@ -359,7 +380,7 @@ impl<'a> Printer<'a> {
     fn push_text(&mut self, text: &str, width: TextWidth) {
         // The printer trims only before breaks of its own.
         // An indent here would stay at the end of the line.
-        let empty_first_line = width == TextWidth::Multiline && first_line(text).is_empty();
+        let empty_first_line = width == TextWidth::Multiline && self.first_line(text).is_empty();
         if let Some(indent) = self.pending_indent.take().filter(|_| !empty_first_line) {
             self.out.extend(iter::repeat_n('\t', indent.tabs as usize));
             self.out.extend(iter::repeat_n(' ', indent.spaces as usize));
@@ -370,12 +391,12 @@ impl<'a> Printer<'a> {
                 self.column = self.column.saturating_add(width);
             },
             TextWidth::Multiline => {
-                let ending = self.options.line_ending.as_str();
+                let line_ending = self.options.line_ending;
                 let mut lines = text.split('\n');
                 let last = lines.next_back().unwrap_or_default();
                 for line in lines {
-                    self.out.push_str(without_cr(line));
-                    self.out.push_str(ending);
+                    self.out.push_str(line_ending.without_break(line));
+                    self.out.push_str(line_ending.as_str());
                 }
                 self.out.push_str(last);
                 self.column = columns(last);
@@ -383,12 +404,22 @@ impl<'a> Printer<'a> {
         }
     }
 
+    fn first_line<'t>(&self, text: &'t str) -> &'t str {
+        text.split_once('\n').map_or(text, |(first, _)| {
+            self.options.line_ending.without_break(first)
+        })
+    }
+
     /// Ends the line, dropping the spaces and tabs before the break.
+    /// With `\n` line endings, it drops the `\r`s there too.
     /// Prints `breaks` line breaks, less those the output ends with already.
     /// A text's own line breaks count among those.
     /// Prints nothing at the start of the output, which counts as an empty line.
     fn push_line_breaks(&mut self, indent: Indentation, breaks: u32) {
-        let trimmed = self.out.trim_end_matches([' ', '\t']).len();
+        let trimmed = self
+            .out
+            .trim_end_matches(self.options.line_ending.trimmed_before_break())
+            .len();
         self.out.truncate(trimmed);
         let ending = self.options.line_ending.as_str();
         let mut existing = if self.out.is_empty() { breaks } else { 0 };
@@ -421,15 +452,6 @@ fn measured<'a>(
     measure: Measure,
 ) -> impl Iterator<Item = (Measure, &'a Element<'a>)> {
     elements.iter().rev().map(move |element| (measure, element))
-}
-
-fn first_line(text: &str) -> &str {
-    without_cr(text.split_once('\n').map_or(text, |(first, _)| first))
-}
-
-/// `line` came before a `\n`; the `\r` of a `\r\n` is part of the break.
-fn without_cr(line: &str) -> &str {
-    line.strip_suffix('\r').unwrap_or(line)
 }
 
 #[cfg(test)]
