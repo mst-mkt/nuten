@@ -17,12 +17,22 @@ use crate::report_at;
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Reported;
 
-/// The config of each of `files`, from the config file nearest the file.
+/// The config of each of `files`: from `given`, or else from the config file nearest the file.
 /// Reports every problem to stderr.
 /// A file whose config file cannot be looked for gets an error.
 /// Fails as a whole when any config file is wrong, unreadable, or cannot be told to exist.
 /// Formatting with another config then would override the author's.
-pub(crate) fn nearest(files: &[PathBuf]) -> Result<Vec<Result<Config, Reported>>, Reported> {
+pub(crate) fn of_files(
+    files: &[PathBuf],
+    given: Option<&Path>,
+) -> Result<Vec<Result<Config, Reported>>, Reported> {
+    match given {
+        Some(given) => load(given).map(|config| vec![Ok(config); files.len()]),
+        None => nearest(files),
+    }
+}
+
+fn nearest(files: &[PathBuf]) -> Result<Vec<Result<Config, Reported>>, Reported> {
     let starts: Vec<_> = files.iter().map(|file| search_start(file)).collect();
     // Both maps are collected in full before `settled`, so that every problem is reported.
     let found: HashMap<&Path, Result<Option<PathBuf>, Reported>> =
@@ -80,7 +90,17 @@ fn search_start(file: &Path) -> Result<PathBuf, Reported> {
 /// The settings in the config file `path`, in the format its extension names.
 /// Reports every problem to stderr.
 fn load(path: &Path) -> Result<Config, Reported> {
-    let format = Format::of_path(path).expect("a config file found has a config name");
+    let Some(format) = Format::of_path(path) else {
+        let extensions: Vec<_> = Format::ALL
+            .iter()
+            .map(|format| format!("`.{}`", format.extension()))
+            .collect();
+        return Err(report(format!(
+            "{}: config file needs one of the extensions {}",
+            path.display(),
+            extensions.join(", ")
+        )));
+    };
     let text =
         read_regular_file(path).map_err(|error| report(format!("{}: {error}", path.display())))?;
     nuten_config::load(&text, format).map_err(|errors| {

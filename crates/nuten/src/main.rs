@@ -5,6 +5,7 @@
 //! The other files are still formatted then.
 //! It formats nothing and exits with 2 when a config file is wrong or cannot be read.
 //! It does the same when it cannot tell whether a config file exists.
+//! The same goes for a file `--config` names without a config extension.
 //! Exit code 1 is kept for a future check mode.
 //! `nuten schema` exits with 2 when stdout cannot be written, unless its reader has closed it.
 //! Any command exits with 2 when the arguments are invalid.
@@ -40,7 +41,11 @@ enum Command {
 }
 
 #[derive(Args)]
+#[usage(args_override_self = false)]
 struct Format {
+    /// Config file for all files, instead of the one nearest each file
+    #[usage(short = 'c', long)]
+    config: Option<PathBuf>,
     /// Files to format in place
     #[usage(required)]
     files: Vec<PathBuf>,
@@ -49,8 +54,9 @@ struct Format {
 fn main() -> ExitCode {
     match Nuten::parse().command {
         Command::Format(Format {
+            config,
             files,
-        }) => format_files(&files),
+        }) => format_files(&files, config.as_deref()),
         Command::Schema => print_schema(),
     }
 }
@@ -67,9 +73,9 @@ fn print_schema() -> ExitCode {
     }
 }
 
-/// Formats each of `files` with the config file nearest it.
-fn format_files(files: &[PathBuf]) -> ExitCode {
-    let Ok(configs) = config::nearest(files) else {
+/// Formats each of `files` with the config file `config_file`, or else with the one nearest it.
+fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
+    let Ok(configs) = config::of_files(files, config_file) else {
         return ExitCode::from(2);
     };
     // Not `any`: the files after a failure are still to be formatted.
