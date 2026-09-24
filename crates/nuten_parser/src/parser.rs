@@ -774,7 +774,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "bump_bracketed at another token")]
-    fn bump_bracketed_emits_only_token_bracketed_looked_at() {
+    fn bump_bracketed_panics_at_another_token() {
         let mut p = parser("[a] [b]");
         let first = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump();
@@ -791,7 +791,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "bump_relexed at another token")]
-    fn bump_relexed_emits_only_token_relexed_looked_at() {
+    fn bump_relexed_panics_at_another_token() {
         let mut p = parser("$a.b $c.d");
         let first = p.relexed(Mode::CellPath).unwrap();
         p.bump();
@@ -807,7 +807,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_relexed_counts_errors_among_pieces_as_its_own() {
+    fn bump_relexed_counts_errors_among_pieces() {
         let mut p = parser("$a?");
         let relexed = p.relexed(Mode::CellPath).unwrap();
         p.bump_relexed(SyntaxKind::CellPath, relexed, |p| {
@@ -854,7 +854,7 @@ mod tests {
     }
 
     #[test]
-    fn split_takes_only_lexed_piece_of_one_item() {
+    fn split_takes_only_single_item_lexed_pieces() {
         let word = |start, end| Piece::Token(SyntaxKind::Word, range(start, end));
         for (src, pieces) in [
             ("a#b", [word(0, 1), Piece::Lexed(range(1, 3))]),
@@ -874,12 +874,12 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "pieces that do not cover the token")]
-    fn split_panics_on_pieces_that_do_not_cover_token() {
+    fn split_panics_on_partly_covered_token() {
         parser("ab").split(&[Piece::Lexed(range(0, 1))]);
     }
 
     #[test]
-    fn item_at_takes_only_one_item_with_no_error() {
+    fn item_at_takes_only_one_error_free_item() {
         let p = parser("a b \"c");
         assert_eq!(p.item_at(range(0, 1)).unwrap().peek_text(), Some("a"));
         for piece in [range(0, 3), range(1, 2), range(4, 6)] {
@@ -903,7 +903,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_relexed_to_emits_tokens_of_lexing_again() {
+    fn bump_relexed_to_emits_relexed_tokens() {
         let mut p = parser("a<b c");
         p.bump_relexed_to(TextSize::new(3), Mode::Signature, bump_all);
         assert_eq!(p.peek_text(), Some("c"));
@@ -912,7 +912,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_relexed_to_emits_skipped_tokens_before_relexed_ones_as_they_are() {
+    fn bump_relexed_to_keeps_skipped_tokens() {
         let src = "\na";
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Paren);
         let mut p = Parser::new(src, lexed, Mode::Paren.skips_newline(), Names::of(src), 0);
@@ -933,7 +933,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_relexed_to_drops_lexing_errors_of_tokens_it_replaces() {
+    fn bump_relexed_to_drops_replaced_errors() {
         let mut p = parser("a) b)");
         p.bump_relexed_to(TextSize::new(2), Mode::Signature, bump_all);
         p.bump();
@@ -966,7 +966,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_bracketed_or_word_drops_items_that_report_an_error() {
+    fn bump_bracketed_or_word_drops_items_reporting_error() {
         let mut p = parser(" [a]");
         let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump_bracketed_or_word(SyntaxKind::List, bracketed, |p| {
@@ -990,7 +990,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_bracketed_keeps_a_word_holding_a_comment_with_no_whitespace_before_it() {
+    fn bump_bracketed_keeps_word_with_glued_comment() {
         for src in ["[a,#c]", "[a;#c\n]", "[a #c\n,#d]", "[#c\n]"] {
             let mut p = parser(src);
             let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
@@ -1007,7 +1007,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_bracketed_expands_a_word_holding_a_comment_after_whitespace() {
+    fn bump_bracketed_expands_word_without_glued_comment() {
         for src in ["[a #c\n]", "[a\n#c\n]", "[ #c\n]"] {
             let mut p = parser(src);
             let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
@@ -1021,7 +1021,7 @@ mod tests {
     }
 
     #[test]
-    fn bump_bracketed_or_word_keeps_the_node_over_an_error_inside_a_nested_node() {
+    fn bump_bracketed_or_word_keeps_node_over_nested_error() {
         let mut p = parser("[[a]]");
         let outer = p.bracketed(&SQUARE, Mode::List).unwrap();
         p.bump_bracketed_or_word(SyntaxKind::List, outer, |p| {

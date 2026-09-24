@@ -471,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    fn lexer_invariants_hold_for_all_short_inputs() {
+    fn every_short_input_satisfies_lexer_invariants() {
         for src in short_inputs() {
             let violations = lexer_violations(&src);
             assert!(violations.is_empty(), "{src:?}: {violations:?}");
@@ -540,7 +540,7 @@ mod tests {
     }
 
     #[test]
-    fn nothing_else_is_asked_where_the_tokens_do_not_cover_the_source() {
+    fn coverage_violation_skips_other_checks() {
         // The `Newline` holds `"ls"`, so asking the shape here would give a second violation.
         // `well_formed` would take the first byte of the empty token as well.
         let lexed = Lexed {
@@ -554,7 +554,7 @@ mod tests {
     }
 
     #[test]
-    fn token_nu_reads_as_one_is_not_split() {
+    fn nu_token_is_not_split() {
         assert_eq!(
             token_splits("  ", &[token(Whitespace, 0, 1), token(Whitespace, 1, 2)]),
             Some(violation(
@@ -569,7 +569,7 @@ mod tests {
     }
 
     #[test]
-    fn text_of_token_fits_its_kind() {
+    fn token_text_fits_its_kind() {
         assert_eq!(
             token_shape("ls", &[token(Newline, 0, 2)], Mode::Block),
             Some(violation(
@@ -627,7 +627,7 @@ mod tests {
     }
 
     #[test]
-    fn invariants_hold_for_all_short_inputs() {
+    fn every_short_input_satisfies_invariants() {
         for src in short_inputs() {
             let violations = violations(&src, &parse(&src));
             assert!(violations.is_empty(), "{src:?}: {violations:?}");
@@ -653,7 +653,7 @@ mod tests {
     }
 
     #[test]
-    fn node_has_token_that_is_not_trivia_at_each_end() {
+    fn node_starts_and_ends_with_non_trivia() {
         for (parsed, detail) in [
             (one_node(Pipeline, &[], vec![]), "Pipeline at 0..0 is empty"),
             (
@@ -674,7 +674,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_node_is_reported_rather_than_its_parent() {
+    fn empty_node_is_reported_not_parent() {
         for (call_at, detail) in [(0, "Call at 0..0 is empty"), (1, "Call at 2..2 is empty")] {
             let mut builder = GreenNodeBuilder::new();
             builder.start_node(Root.to_raw());

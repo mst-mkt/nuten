@@ -222,7 +222,7 @@ mod tests {
     use crate::{ParseErrorKind, parse};
 
     #[test]
-    fn member_nu_reads_as_string_or_non_negative_int_is_member() {
+    fn string_or_non_negative_int_is_member() {
         for text in [
             "a",
             "0",
@@ -259,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn member_nu_reads_as_no_string_is_rejected() {
+    fn non_string_member_is_rejected() {
         for text in ["a(b)", "(a)", "$'(a)'", "r#'(a)'#", "'a'b", "\"a\"b"] {
             assert_eq!(
                 member(text),
@@ -270,7 +270,7 @@ mod tests {
     }
 
     #[test]
-    fn double_quoted_member_with_backslash_is_not_checked() {
+    fn backslash_in_double_quoted_member_is_unchecked() {
         for text in ["\"a\\n\"", "\"a\\q\""] {
             assert_eq!(member(text), None, "{text:?}");
         }
@@ -285,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn word_nu_rejects_where_nuten_does_not_check_it_stays_whole_without_error() {
+    fn unchecked_word_nu_rejects_stays_whole_without_error() {
         for src in [
             "let $x.a = 1",
             "let (x).a = 1",
@@ -306,21 +306,21 @@ mod tests {
     /// A `#` after a vertical tab or a form feed starts a comment that runs to the end of the word.
     /// Lexed again as a path, it runs only to the next `.`, which leaves a `)` unmatched.
     #[test]
-    fn path_holding_token_with_lexing_error_stays_whole() {
+    fn path_with_lexing_error_stays_whole() {
         for src in ["$\u{b}#.)[", "$\u{c}#.)", "$\u{b}#..)"] {
             assert_eq!(cell_paths(src), 0, "{src:?}");
         }
     }
 
     #[test]
-    fn cell_path_error_inside_block_leaves_block_whole() {
+    fn path_error_leaves_enclosing_block_whole() {
         let src = "if true { $x? }";
         assert_eq!(cell_paths(src), 0);
         assert!(parse(src).errors().is_empty());
     }
 
     #[test]
-    fn cell_paths_nested_too_deep_stay_word() {
+    fn paths_nested_too_deep_stay_word() {
         let src = format!("{}ls{}", "(".repeat(130), ").a".repeat(130));
         assert_eq!(cell_paths(&src), 128);
     }

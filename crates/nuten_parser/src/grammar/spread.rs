@@ -86,7 +86,7 @@ mod tests {
     use super::{Target, is_spread};
 
     #[test]
-    fn spread_is_three_dots_then_value_that_target_takes() {
+    fn spread_is_three_dots_then_value_target_takes() {
         for (text, target) in [
             ("...$x", Target::List),
             ("...(f)", Target::List),

@@ -394,7 +394,7 @@ mod tests {
     }
 
     #[test]
-    fn every_name_after_percent_is_a_command() {
+    fn every_name_after_percent_is_command() {
         assert!(EXTERNAL_AFTER_PERCENT.iter().all(|name| is_command(name)));
     }
 
@@ -428,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    fn row_conditions_are_what_nu_declares() {
+    fn row_condition_commands_are_what_nu_declares() {
         let Some(names) = asked(ROW_CONDITIONS_OF_NU) else {
             return;
         };
@@ -441,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn keywords_taking_any_argument_are_what_nu_declares() {
+    fn any_argument_keywords_are_what_nu_declares() {
         let Some(names) = asked(ANY_ARGUMENT_OF_NU) else {
             return;
         };
@@ -454,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    fn keywords_read_before_assignment_are_what_nu_dispatches_on_first() {
+    fn keywords_read_before_assignment_are_what_nu_dispatches_first() {
         let (Some(names), Some(before)) = (asked(NAMES_OF_NU), asked(BEFORE_ASSIGNMENT_OF_NU))
         else {
             return;

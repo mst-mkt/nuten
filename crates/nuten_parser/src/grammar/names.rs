@@ -852,7 +852,7 @@ mod tests {
     }
 
     #[test]
-    fn call_of_def_takes_arguments_as_its_signature_tells() {
+    fn def_call_takes_arguments_signature_declares() {
         use Takes::{List, Word};
         for src in [
             "def f [x: list, y: string] {}\nf [a] [b]",
@@ -870,7 +870,7 @@ mod tests {
     }
 
     #[test]
-    fn command_that_takes_arguments_it_does_not_declare_takes_nothing_nuten_reads() {
+    fn extern_and_wrapped_def_leave_arguments_unread() {
         for src in [
             "extern f [x: list]\nf [a]",
             "def --wrapped f [...x] {}\nf [a]",
@@ -880,17 +880,17 @@ mod tests {
     }
 
     #[test]
-    fn command_nu_has_of_longer_name_may_take_place_of_one_block_defines() {
+    fn builtin_of_longer_name_replaces_def() {
         assert_eq!(defined_takes("def str [x] {}\nstr join [a]"), None);
     }
 
     #[test]
-    fn def_named_after_command_nu_has_takes_nothing_nuten_reads() {
+    fn def_named_after_builtin_leaves_arguments_unread() {
         assert_eq!(defined_takes("def ls [x] {}\nls [a]"), None);
     }
 
     #[test]
-    fn command_import_brings_after_call_does_not_take_place_of_one_block_defines() {
+    fn module_import_after_call_leaves_command_defined() {
         let src = "def f [...x] {}\nf g [a]\nmodule m { export def \"f g\" [] {} }\nuse m *";
         assert_eq!(
             defined_takes_on(src, 1),
@@ -899,7 +899,7 @@ mod tests {
     }
 
     #[test]
-    fn command_import_brings_of_same_name_takes_place_of_one_block_defines() {
+    fn module_import_replaces_earlier_def() {
         let module = "module n { export def f [x: string] {} }";
         for src in [
             format!("{module}\ndef f [x: list] {{}}\nuse n f\nf [a]"),
@@ -911,7 +911,7 @@ mod tests {
     }
 
     #[test]
-    fn command_import_in_inner_block_brings_takes_place_of_one_outer_block_defines() {
+    fn inner_module_import_replaces_outer_def() {
         let outer = "module n { export def f [x: string] {} }\ndef f [x: list] {}";
         assert_eq!(defined_takes_nested(outer, "use n f\nf [a]"), None);
         assert_eq!(
@@ -921,13 +921,13 @@ mod tests {
     }
 
     #[test]
-    fn def_after_import_of_same_name_takes_place_of_it() {
+    fn def_replaces_earlier_module_import() {
         let src = "module n { export def f [x: string] {} }\nuse n f\ndef f [x: list] {}\nf [a]";
         assert_eq!(defined_takes(src), Some(vec![None, Some(Takes::List)]));
     }
 
     #[test]
-    fn command_import_brings_of_longer_name_takes_place_of_one_block_defines() {
+    fn module_import_of_longer_name_replaces_def() {
         let src = "module m { export def \"f g\" [] {} }\nuse m *\ndef f [x] {}\nf g [a]";
         assert_eq!(defined_takes(src), None);
         let src = "module m { export def \"f h\" [] {} }\nuse m *\ndef f [x] {}\nf g [a]";
@@ -938,17 +938,17 @@ mod tests {
     }
 
     #[test]
-    fn call_nuten_cannot_tell_command_of_takes_nothing_nuten_reads() {
+    fn unknowable_command_leaves_arguments_unread() {
         assert_eq!(defined_takes("def f [x] {}\nuse m.nu *\nf [a]"), None);
     }
 
     #[test]
-    fn call_of_command_no_block_defines_takes_nothing_nuten_reads() {
+    fn undefined_command_leaves_arguments_unread() {
         assert_eq!(defined_takes("nosuch [a]"), None);
     }
 
     #[test]
-    fn def_with_signature_nuten_cannot_read_declares_nothing_it_reads() {
+    fn unreadable_signature_leaves_arguments_unread() {
         for def in [
             "def f [x: nosuch] {}",
             "def f [x = [1]] {}",
@@ -1030,12 +1030,12 @@ mod tests {
     }
 
     #[test]
-    fn def_in_outer_block_defines_command_in_inner_block() {
+    fn inner_call_runs_outer_def() {
         assert_eq!(callee_nested("def f [] {}", "f"), Callee::Defined);
     }
 
     #[test]
-    fn import_in_inner_block_makes_outer_command_unknowable() {
+    fn inner_import_makes_outer_def_unknowable() {
         assert_eq!(
             callee_nested("def f [] {}", "use m.nu *\nf"),
             Callee::Unknowable
@@ -1043,7 +1043,7 @@ mod tests {
     }
 
     #[test]
-    fn inner_def_takes_place_of_outer_one_of_same_name() {
+    fn inner_def_replaces_outer_unknowable_command() {
         assert_eq!(
             callee_nested("def f [] {}\nuse m.nu *", "def f [] {}\nf"),
             Callee::Defined
@@ -1066,13 +1066,13 @@ mod tests {
     }
 
     #[test]
-    fn call_before_def_in_same_block_runs_it() {
+    fn def_after_other_statement_defines_command() {
         assert_eq!(callee("f\ndef f [] {}\nf"), Callee::Defined);
         assert_eq!(callee("print a; def f [] {}\nf"), Callee::Defined);
     }
 
     #[test]
-    fn quoted_name_defines_command_of_what_quotes_hold() {
+    fn quoted_name_defines_unquoted_command() {
         for src in [
             "def \"f g\" [] {}\nf g",
             "def 'f g' [] {}\nf g",
@@ -1083,7 +1083,7 @@ mod tests {
     }
 
     #[test]
-    fn call_runs_command_only_with_every_word_of_its_name() {
+    fn only_whole_name_runs_command() {
         assert_eq!(callee("def \"f g\" [] {}\nf"), Callee::Undefined);
         assert_eq!(callee("def \"f g\" [] {}\nf h"), Callee::Undefined);
         assert_eq!(callee("def \"f g\" [] {}\nf g h"), Callee::Defined);
@@ -1097,7 +1097,7 @@ mod tests {
     }
 
     #[test]
-    fn def_in_pipeline_of_several_commands_defines_nothing() {
+    fn def_in_pipeline_defines_nothing() {
         for src in [
             "ls | def f [] {}\nf",
             "def f [] {} | ignore\nf",
@@ -1112,7 +1112,7 @@ mod tests {
     }
 
     #[test]
-    fn line_break_that_is_whitespace_neither_ends_nor_starts_statement() {
+    fn skipped_line_break_separates_no_statements() {
         let src = "\ndef f [] {};\nf";
         assert_eq!(callee_lexed_in(src, 2, Mode::Paren), Callee::Defined);
         let src = "ls\ndef f [] {};\nf";
@@ -1148,7 +1148,7 @@ mod tests {
     }
 
     #[test]
-    fn name_nu_reads_as_keyword_whatever_file_defines_defines_nothing() {
+    fn name_read_as_keyword_defines_nothing() {
         for src in [
             "def \"for x\" [] {}\nfor x",
             "def \"where x\" [] {}\nwhere x",
@@ -1160,7 +1160,7 @@ mod tests {
     }
 
     #[test]
-    fn name_after_keyword_nu_looks_up_defines_command() {
+    fn keyword_name_nu_looks_up_defines_command() {
         for src in [
             "def \"if x\" [] {}\nif x",
             "def \"return x\" [] {}\nreturn x",
@@ -1210,7 +1210,7 @@ mod tests {
     }
 
     #[test]
-    fn import_before_call_makes_command_no_block_defines_unknowable() {
+    fn earlier_import_makes_undefined_command_unknowable() {
         for keyword in ["use", "export use", "source", "source-env", "overlay use"] {
             let src = format!("{keyword} m.nu *\nls");
             assert_eq!(callee(&src), Callee::Unknowable, "{src:?}");
@@ -1230,24 +1230,24 @@ mod tests {
     }
 
     #[test]
-    fn import_after_call_leaves_command_no_block_defines_undefined() {
+    fn import_after_call_leaves_command_undefined() {
         assert_eq!(callee_on("ls\nuse m.nu *", 0), Callee::Undefined);
     }
 
     #[test]
-    fn import_inside_block_leaves_call_outside_it_undefined() {
+    fn inner_import_leaves_outer_call_undefined() {
         assert_eq!(callee("do { use m.nu * }\nls"), Callee::Undefined);
     }
 
     #[test]
-    fn import_in_outer_block_makes_command_in_inner_block_unknowable() {
+    fn outer_import_makes_inner_call_unknowable() {
         assert_eq!(callee_nested("use m.nu *", "ls"), Callee::Unknowable);
     }
 
     const MODULE: &str = "module m { export def f [] {}; export def g [] {}; def h [] {} }";
 
     #[test]
-    fn import_of_module_block_declares_brings_commands_it_names() {
+    fn module_import_brings_commands_it_names() {
         for (import, call) in [
             ("use m f", "f"),
             ("use m", "m f"),
@@ -1265,7 +1265,7 @@ mod tests {
     }
 
     #[test]
-    fn import_of_module_block_declares_brings_no_command_it_leaves_out() {
+    fn module_import_brings_no_command_it_omits() {
         for (import, call) in [
             ("use m f", "g"),
             ("use m", "f"),
@@ -1278,7 +1278,7 @@ mod tests {
     }
 
     #[test]
-    fn import_of_main_brings_command_of_module_name() {
+    fn module_import_renames_main_to_module() {
         let module = "module m { export def main [] {}; export def f [] {} }";
         for import in ["use m", "use m *"] {
             let src = format!("{module}\n{import}\nm");
@@ -1287,7 +1287,7 @@ mod tests {
     }
 
     #[test]
-    fn import_nuten_cannot_read_from_module_block_declares_makes_command_unknowable() {
+    fn unreadable_module_import_makes_command_unknowable() {
         for (module, import) in [
             (MODULE, "use m main"),
             (MODULE, "use m nosuch"),
@@ -1311,7 +1311,7 @@ mod tests {
     }
 
     #[test]
-    fn statement_that_exports_no_command_leaves_module_readable() {
+    fn statement_exporting_no_command_leaves_module_readable() {
         let module = "module m {
             export const c = 1
             export-env { $env.A = 1 }
@@ -1322,13 +1322,13 @@ mod tests {
     }
 
     #[test]
-    fn alias_module_block_exports_is_command_import_brings() {
+    fn module_import_brings_exported_alias() {
         let src = "module m { export alias f = ls }\nuse m f\nf";
         assert_eq!(callee(src), Callee::Defined);
     }
 
     #[test]
-    fn module_exported_or_of_quoted_name_is_one_import_finds() {
+    fn module_import_finds_exported_or_quoted_module() {
         for module in [
             "export module m { export def f [] {} }",
             "module \"m\" { export def f [] {} }",
@@ -1339,7 +1339,7 @@ mod tests {
     }
 
     #[test]
-    fn module_declared_after_import_is_none_it_finds() {
+    fn module_import_finds_no_later_module() {
         assert_eq!(
             callee("use m f\nmodule m { export def f [] {} }\nf"),
             Callee::Unknowable
@@ -1355,7 +1355,7 @@ mod tests {
     }
 
     #[test]
-    fn import_in_pipeline_brings_nothing_nuten_reads() {
+    fn module_import_in_pipeline_makes_command_unknowable() {
         assert_eq!(
             callee(&format!("{MODULE}\nuse m f | ignore\nf")),
             Callee::Unknowable
@@ -1363,19 +1363,19 @@ mod tests {
     }
 
     #[test]
-    fn last_module_of_name_declared_before_import_is_one_it_finds() {
+    fn module_import_finds_last_earlier_module() {
         let src = "module m { export def f [] {} }\nmodule m { export def g [] {} }\nuse m *";
         assert_eq!(callee(&format!("{src}\ng")), Callee::Defined);
         assert_eq!(callee(&format!("{src}\nf")), Callee::Undefined);
     }
 
     #[test]
-    fn module_outer_block_declares_is_found_from_inner_block() {
+    fn inner_module_import_finds_outer_module() {
         assert_eq!(callee_nested(MODULE, "use m f\nf"), Callee::Defined);
     }
 
     #[test]
-    fn module_inner_block_declares_takes_place_of_outer_one() {
+    fn inner_module_replaces_outer_module() {
         assert_eq!(
             callee_nested(MODULE, "module m { export def k [] {} }\nuse m *\nf"),
             Callee::Undefined
@@ -1383,7 +1383,7 @@ mod tests {
     }
 
     #[test]
-    fn module_inner_block_declares_is_none_outer_block_finds() {
+    fn module_import_finds_no_inner_module() {
         assert_eq!(
             callee("do { module m { export def f [] {} } }\nuse m f\nf"),
             Callee::Unknowable
@@ -1391,7 +1391,7 @@ mod tests {
     }
 
     #[test]
-    fn import_nuten_cannot_read_before_call_makes_command_imported_from_module_unknowable() {
+    fn earlier_import_makes_module_command_unknowable() {
         for imports in ["use other.nu *\nuse m f", "use m f\nuse other.nu *"] {
             let src = format!("{MODULE}\n{imports}\nf");
             assert_eq!(callee(&src), Callee::Unknowable, "{src:?}");
@@ -1399,7 +1399,7 @@ mod tests {
     }
 
     #[test]
-    fn hidden_name_makes_command_imported_from_module_unknowable() {
+    fn hidden_name_makes_module_command_unknowable() {
         assert_eq!(
             callee(&format!("{MODULE}\nuse m f\nhide f\nf")),
             Callee::Unknowable
@@ -1407,19 +1407,19 @@ mod tests {
     }
 
     #[test]
-    fn import_that_line_break_does_not_end_brings_nothing_nuten_reads() {
+    fn skipped_line_break_makes_module_command_unknowable() {
         let src = format!("{MODULE}\nuse m f\nf");
         assert_eq!(callee_lexed_in(&src, 2, Mode::Paren), Callee::Unknowable);
     }
 
     #[test]
-    fn import_before_call_with_more_items_than_name_makes_command_unknowable() {
+    fn earlier_import_makes_longer_name_unknowable() {
         assert_eq!(callee("use m.nu *\ndef f [] {}\nf g"), Callee::Unknowable);
         assert_eq!(callee("def f [] {}\nf g"), Callee::Defined);
     }
 
     #[test]
-    fn call_runs_command_of_longest_name_it_spells() {
+    fn call_runs_longest_name_it_spells() {
         assert_eq!(
             callee("def f [] {}\nuse m.nu *\ndef \"f g\" [] {}\nf g"),
             Callee::Defined
@@ -1479,13 +1479,13 @@ mod tests {
     }
 
     #[test]
-    fn alias_names_leave_out_what_heads_no_statement() {
+    fn alias_names_omit_comments_and_strings() {
         assert!(alias_names("# alias a = ^a").is_empty());
         assert!(alias_names("print \"alias b = ^b\"").is_empty());
     }
 
     #[test]
-    fn alias_names_leave_out_statement_that_names_nothing() {
+    fn alias_names_omit_statement_naming_nothing() {
         assert!(alias_names("alias").is_empty());
         assert!(alias_names("export").is_empty());
         assert!(alias_names("export alias").is_empty());

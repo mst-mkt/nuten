@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn binary_like_word_has_prefix_brackets_and_no_pipe_redirection_or_assignment_among_items() {
+    fn binary_like_is_prefixed_brackets_without_pipe_redirection_or_assignment() {
         for text in [
             "0x[ff]",
             "0x[]",
@@ -182,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn binary_nu_cannot_decode_is_reported_over_whole_word() {
+    fn undecodable_binary_error_covers_whole_word() {
         for src in ["0x[+ff]", "0x[\"ff\"]", "0x[zz;]"] {
             let parsed = parse(src);
             let errors: Vec<_> = parsed
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn binary_nu_decodes_holding_semicolon_stays_word() {
+    fn decodable_binary_holding_semicolon_stays_word() {
         let parsed = parse("0x[ff;00]");
         assert!(
             !parsed

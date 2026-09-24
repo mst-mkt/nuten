@@ -213,7 +213,7 @@ mod tests {
     use super::signature_brackets;
 
     #[test]
-    fn signature_brackets_pair_opener_with_its_own_closer() {
+    fn signature_brackets_match_and_wrap_item() {
         for (item, expected) in [
             ("[]", Some(('[', ']'))),
             ("()", Some(('(', ')'))),

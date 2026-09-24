@@ -492,7 +492,7 @@ mod tests {
     }
 
     #[test]
-    fn items_that_start_a_value_are_math_expression_like() {
+    fn value_starts_are_math_expression_like() {
         for text in [
             "true", "false", "null", "not", "r#'a'#", "(ls)", "{a: 1}", "[1]", "$env", "\"a\"",
             "'a'", "--flag", "1", "1_000", "1.5", "1e5", "inf", "0x10", "0o7", "0b1_0",
@@ -502,7 +502,7 @@ mod tests {
     }
 
     #[test]
-    fn items_that_head_a_call_are_not_math_expression_like() {
+    fn call_heads_are_not_math_expression_like() {
         for text in ["ls", "rm", "nu-highlight", "1abc", "0x", "0xZZ", "_", ""] {
             assert!(!is_math_expression_like(text), "{text:?}");
         }
@@ -557,7 +557,7 @@ mod tests {
         } } | flatten | str join "\n""#;
 
     #[test]
-    fn operators_are_the_spellings_nu_joins_terms_with() {
+    fn every_nu_operator_is_operator() {
         for text in OPERATORS {
             assert!(is_operator(text), "{text:?}");
         }
@@ -596,7 +596,7 @@ mod tests {
     }
 
     #[test]
-    fn spellings_nu_takes_only_to_reject_are_no_operator() {
+    fn rejected_spellings_are_no_operator() {
         for text in [
             "^", "pow", "is", "===", "contains", "%", "&", "<<", ">>", "bits-and", "bits-or",
             "bits-xor", "bits-shl", "bits-shr",
@@ -606,7 +606,7 @@ mod tests {
     }
 
     #[test]
-    fn spellings_nu_takes_only_to_reject_say_what_to_write_instead() {
+    fn rejected_spellings_suggest_what_to_write() {
         for (text, instead) in [
             ("^", "`**` to raise to a power, or `bit-xor` to xor bits"),
             ("pow", "`**` to raise to a power, or `bit-xor` to xor bits"),
@@ -632,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    fn spellings_nu_never_takes_for_an_operator_have_nothing_to_write_instead() {
+    fn other_spellings_suggest_nothing() {
         for text in [
             "1", "$a", "ls", "not", "+", "and", "bit-and", "mod", "", "||", "&&", "2>", "2>&1",
             "o>|", "out>|",
@@ -656,46 +656,46 @@ mod tests {
     }
 
     #[test]
-    fn not_is_no_operator_that_joins_two_terms() {
+    fn not_is_no_binary_operator() {
         assert!(!is_operator("not"));
     }
 
     #[test]
-    fn items_past_the_first_take_an_operator() {
+    fn items_past_first_take_operator() {
         assert!(takes_operator(&["1", "2"]));
         assert!(takes_operator(&["1", "+", "2"]));
     }
 
     #[test]
-    fn not_is_an_operator_even_as_the_only_item() {
+    fn not_takes_operator_even_alone() {
         assert!(takes_operator(&["not"]));
         assert!(takes_operator(&["not", "$a"]));
         assert!(takes_operator(&["not", "not", "$a"]));
     }
 
     #[test]
-    fn fewer_than_two_items_without_a_not_take_no_operator() {
+    fn lone_value_or_nothing_takes_no_operator() {
         for items in [["1"].as_slice(), &[]] {
             assert!(!takes_operator(items), "{items:?}");
         }
     }
 
     #[test]
-    fn values_left_out_of_the_port_stay_heads() {
+    fn units_dates_and_keywords_stay_heads() {
         for text in ["1kb", "1sec", "2024-01-01", "if", "match"] {
             assert!(!is_math_expression_like(text), "{text:?}");
         }
     }
 
     #[test]
-    fn range_with_variable_or_subexpression_as_value_stays_head() {
+    fn range_with_variable_or_subexpression_stays_head() {
         for text in ["1..$x", "1..(2)", "..$x", "1..2..$x"] {
             assert!(!is_math_expression_like(text), "{text:?}");
         }
     }
 
     #[test]
-    fn binary_nu_decodes_or_reports_is_math_expression_like() {
+    fn binary_like_is_math_expression_like() {
         for text in ["0x[ff]", "0o[777]", "0x[zz]"] {
             assert!(is_math_expression_like(text), "{text:?}");
         }
@@ -703,7 +703,7 @@ mod tests {
     }
 
     #[test]
-    fn range_of_numbers_alone_is_math_expression_like() {
+    fn number_range_is_math_expression_like() {
         for text in ["1..3", "..5", "1..", "0x10..=1e3", "1..2..<10", "1..."] {
             assert!(is_math_expression_like(text), "{text:?}");
         }

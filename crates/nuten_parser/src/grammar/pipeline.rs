@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn pipe_at_eof_depends_on_a_final_line_break() {
+    fn pipe_at_eof_depends_on_line_breaks() {
         assert_eq!(errors("ls |"), [ParseErrorKind::PipeAtEof]);
         assert_eq!(errors(";|"), [ParseErrorKind::PipeAtEof]);
         assert_eq!(errors("ls | # c"), [ParseErrorKind::PipeAtEof]);
@@ -301,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn pipe_at_eof_is_reported_at_the_last_pipe() {
+    fn pipe_at_eof_covers_last_pipe() {
         let parsed = parse("ls | | # c");
         assert_eq!(parsed.errors().len(), 1);
         assert_eq!(&"ls | | # c"[parsed.errors()[0].range], "|");

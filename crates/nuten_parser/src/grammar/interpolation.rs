@@ -120,7 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn paren_after_odd_number_of_backslashes_is_text_in_double_quotes() {
+    fn odd_backslashes_escape_paren_only_in_double_quotes() {
         assert_eq!(parens_of(r#"$"\(a)""#), Vec::<&str>::new());
         assert_eq!(parens_of(r#"$"\\(a)""#), ["(a)"]);
         assert_eq!(parens_of(r#"$"\\\(a)""#), Vec::<&str>::new());
@@ -128,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn parens_nest_and_quotes_inside_hide_parens() {
+    fn parens_nest_and_quotes_hide_parens() {
         assert_eq!(parens_of(r#"$"((a) b)""#), ["((a) b)"]);
         assert_eq!(parens_of(r#"$"(')' + ")")""#), [r#"(')' + ")")"#]);
         assert_eq!(parens_of(r#"$"("\")" + `)`)""#), [r#"("\")" + `)`)"#]);

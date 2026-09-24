@@ -41,7 +41,7 @@ mod tests {
     use super::is_variable_name;
 
     #[test]
-    fn variable_names_are_what_nu_takes_after_dollar() {
+    fn names_are_what_nu_takes_after_dollar() {
         for name in ["a", "in", "a_b", "1", "a:b", "a]", "a)", "a}", "$", "日本"] {
             assert!(is_variable_name(name), "{name:?}");
         }

@@ -185,7 +185,7 @@ mod tests {
     use super::{LexErrorKind, ParseErrorKind};
 
     #[test]
-    fn error_kinds_print_a_message() {
+    fn error_kinds_print_message() {
         assert_eq!(
             ParseErrorKind::Lex(LexErrorKind::Unclosed).to_string(),
             "unclosed quote or bracket"

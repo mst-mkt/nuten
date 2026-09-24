@@ -1707,7 +1707,7 @@ mod tests {
     }
 
     #[test]
-    fn positional_arguments_take_parameters_in_order_then_rest() {
+    fn positional_arguments_take_parameters_then_rest() {
         // `append` takes a row, then any number more.
         assert_eq!(
             parameters(&["append", "[a]", "[b]", "[c]"]),
@@ -1721,7 +1721,7 @@ mod tests {
     }
 
     #[test]
-    fn name_of_several_words_takes_no_parameter() {
+    fn name_words_take_no_parameter() {
         assert_eq!(
             parameters(&["http", "post", "u", "[a]"]),
             [None, None, Some(WORD), Some(LIST)]
@@ -1729,7 +1729,7 @@ mod tests {
     }
 
     #[test]
-    fn longer_name_of_command_with_no_list_parameter_takes_place_of_shorter_one() {
+    fn longer_command_name_replaces_shorter() {
         assert_eq!(
             parameters(&["ansi", "gradient", "[a]"]),
             [None, None, Some(WORD)]
@@ -1738,7 +1738,7 @@ mod tests {
     }
 
     #[test]
-    fn every_item_after_head_of_command_not_here_takes_word() {
+    fn items_after_unlisted_head_take_word() {
         assert_eq!(parameters(&["ls", "[a]"]), [None, Some(WORD)]);
         assert_eq!(
             parameters(&["str", "join", "[a]"]),
@@ -1767,7 +1767,7 @@ mod tests {
     }
 
     #[test]
-    fn flag_takes_item_after_it_as_its_value() {
+    fn flag_takes_next_item_as_value() {
         assert_eq!(
             parameters(&["glob", "--exclude", "[a]", "*"]),
             [None, None, Some(LIST_OF), Some(WORD)]
@@ -1791,7 +1791,7 @@ mod tests {
     }
 
     #[test]
-    fn value_joined_to_flag_by_equals_sign_leaves_next_item_positional() {
+    fn equals_joined_value_leaves_next_item_positional() {
         assert_eq!(
             parameters(&["glob", "--exclude=[a]", "[b]"]),
             [None, None, Some(WORD)]
@@ -1799,7 +1799,7 @@ mod tests {
     }
 
     #[test]
-    fn short_flag_that_takes_value_before_last_one_stops_flags() {
+    fn valued_flag_mid_cluster_stops_flags() {
         // Nu reports `-eD` and reads no value after it.
         assert_eq!(
             parameters(&["glob", "-eD", "[a]"]),
@@ -1828,7 +1828,7 @@ mod tests {
     }
 
     #[test]
-    fn negative_number_is_positional_where_parameter_takes_number() {
+    fn negative_number_fills_only_number_parameter() {
         // `matrix set-col` takes an index, then a list.
         assert_eq!(
             parameters(&["matrix", "set-col", "-1", "[a]"]),
@@ -1855,7 +1855,7 @@ mod tests {
     }
 
     #[test]
-    fn spread_into_command_with_no_rest_fills_nothing() {
+    fn spread_without_rest_fills_nothing() {
         // `ansi` takes one optional value and no rest.
         // Nu rejects the spread.
         assert_eq!(
@@ -1890,7 +1890,7 @@ mod tests {
     }
 
     #[test]
-    fn type_that_takes_text_or_nothing_takes_word() {
+    fn type_takes_word_where_nu_reads_none() {
         for ty in [
             "string",
             "path",
@@ -1905,7 +1905,7 @@ mod tests {
     }
 
     #[test]
-    fn list_type_before_text_type_of_oneof_takes_word() {
+    fn oneof_list_before_text_takes_word() {
         // Nu reads the `[ ]` as text where the list has an error it does not report.
         assert_eq!(param_of_type("oneof<list<any>, string>"), Some(WORD));
     }
@@ -1918,7 +1918,7 @@ mod tests {
     }
 
     #[test]
-    fn type_whose_first_type_is_closure_takes_closure() {
+    fn type_starting_with_closure_takes_closure() {
         for ty in [
             "closure",
             "oneof<closure, string>",
@@ -1931,7 +1931,7 @@ mod tests {
     }
 
     #[test]
-    fn type_nuten_does_not_know_takes_nothing_it_reads() {
+    fn unknown_type_takes_nothing() {
         for ty in ["nosuch", "oneof<>", "oneof<nosuch, string>"] {
             assert_eq!(param_of_type(ty), None, "{ty:?}");
         }
@@ -1942,7 +1942,7 @@ mod tests {
     }
 
     #[test]
-    fn declared_parameters_take_arguments_as_their_types_tell() {
+    fn arguments_take_declared_parameter_types() {
         use Item::{Colon, Eq, Word};
         let signature = declared(&[
             Word("a"),
@@ -1982,7 +1982,7 @@ mod tests {
     }
 
     #[test]
-    fn default_with_no_type_gives_type_of_its_value() {
+    fn untyped_default_gives_type_of_value() {
         use Item::{Eq, Value, Word};
         let number = declared(&[Word("b"), Eq, Word("1"), Word("...r")]).unwrap();
         assert_eq!(number.arguments(&["-1", "[a]"]), [Some(NUMBER), Some(LIST)]);
@@ -1997,7 +1997,7 @@ mod tests {
     }
 
     #[test]
-    fn signature_nuten_cannot_read_declares_nothing() {
+    fn unreadable_signature_declares_nothing() {
         use Item::{Colon, Eq, Other, Word};
         for items in [
             vec![Word("a"), Other],

@@ -9,7 +9,7 @@ use nuten_parser::{Parsed, invariants, parse};
 use rowan::WalkEvent;
 
 #[test]
-fn ok_inputs_parse_without_errors() {
+fn ok_inputs_have_no_errors() {
     insta::glob!("../test_data", "ok/**/*.nu", |path| {
         let parsed = check_input(path);
         assert!(parsed.errors().is_empty(), "errors in {}", path.display());
@@ -17,7 +17,7 @@ fn ok_inputs_parse_without_errors() {
 }
 
 #[test]
-fn err_inputs_parse_with_errors() {
+fn err_inputs_have_errors() {
     insta::glob!("../test_data", "err/**/*.nu", |path| {
         let parsed = check_input(path);
         assert!(

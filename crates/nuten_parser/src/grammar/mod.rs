@@ -378,7 +378,7 @@ mod tests {
     use crate::parse;
 
     #[test]
-    fn brackets_nested_too_deep_stay_a_word() {
+    fn brackets_nested_too_deep_stay_word() {
         let src = format!("{}{}", "[".repeat(130), "]".repeat(130));
         let tree = parse(&src).syntax();
         let lists = tree
@@ -395,7 +395,7 @@ mod tests {
     }
 
     #[test]
-    fn records_nested_too_deep_stay_a_word() {
+    fn records_nested_too_deep_stay_word() {
         let src = format!("{}1{}", "{a: ".repeat(130), "}".repeat(130));
         let tree = parse(&src).syntax();
         let records = tree
@@ -468,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn keywords_nested_in_conditions_too_deep_stay_as_written() {
+    fn conditions_nested_too_deep_stay_as_written() {
         let src = format!("{}true{}", "if 1 + ".repeat(10_000), " {}".repeat(10_000));
         let (tree, ifs) = parsed_with(&src, SyntaxKind::If);
         assert_eq!(ifs, 128);
@@ -480,7 +480,7 @@ mod tests {
     }
 
     #[test]
-    fn blocks_nested_too_deep_stay_a_word() {
+    fn blocks_nested_too_deep_stay_word() {
         let src = format!("{}ls{}", "{".repeat(130), "}".repeat(130));
         let tree = parse(&src).syntax();
         let blocks = tree

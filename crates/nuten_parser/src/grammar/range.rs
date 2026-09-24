@@ -274,7 +274,7 @@ mod tests {
     }
 
     #[test]
-    fn operators_are_none_where_nu_reads_no_range() {
+    fn non_range_has_no_operators() {
         for text in [
             "1",
             "...3",
@@ -290,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn values_are_what_nu_takes_between_operators() {
+    fn values_are_where_nu_takes_them() {
         for (text, expected) in [
             ("1..2", (Some(0..1), None, Some(3..4))),
             ("..2", (None, None, Some(2..3))),
@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn range_without_first_and_last_value_or_with_empty_second_has_no_values() {
+    fn bare_operators_or_empty_second_have_no_values() {
         for text in ["..", "..=", "1....3", "..<"] {
             let values = operators(text).and_then(|operators| operators.values(text));
             assert!(values.is_none(), "{text:?}");
@@ -318,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    fn only_range_with_more_past_last_operator_that_no_value_takes_leaves_tail() {
+    fn only_untaken_text_past_last_operator_leaves_tail() {
         for (text, tail) in [
             ("1...", true),
             ("1..2...", true),

@@ -117,7 +117,7 @@ fn empty_input_makes_no_tokens() {
 }
 
 #[test]
-fn each_trivia_lexes_as_one_token() {
+fn each_trivia_is_one_token() {
     assert_eq!(lexed(" \t"), [(Whitespace, " \t")]);
     assert_eq!(lexed("\n"), [(Newline, "\n")]);
     assert_eq!(lexed("#"), [(Comment, "#")]);
@@ -155,7 +155,7 @@ fn pipes_pair_greedily() {
 }
 
 #[test]
-fn comment_tokens_start_only_at_token_start() {
+fn comment_starts_only_at_token_start() {
     assert_eq!(lexed("foo#bar"), [(Word, "foo#bar")]);
     assert_eq!(
         lexed("foo #bar"),
@@ -181,7 +181,7 @@ fn block_mode_has_no_special_bytes() {
 }
 
 #[test]
-fn non_ascii_bytes_belong_to_words() {
+fn non_ascii_chars_never_split_tokens() {
     assert_eq!(
         lexed("日本 語\t✓"),
         [
@@ -258,14 +258,14 @@ fn hash_after_latin1_whitespace_byte_starts_comment() {
 }
 
 #[test]
-fn raw_string_closes_at_the_first_closer() {
+fn raw_string_closes_at_first_closer() {
     assert_eq!(kind_of("r##'a '# b'##"), RawString);
     assert_eq!(split("r#'a'# r#'b'#"), ["r#'a'#", "r#'b'#"]);
     assert_eq!(kind_of("r#'#"), RawString);
 }
 
 #[test]
-fn pipe_joins_a_redirection() {
+fn pipe_joins_redirection() {
     assert_eq!(split("e>|cat"), ["e>|", "cat"]);
     assert_eq!(split("o+e>|cat"), ["o+e>|", "cat"]);
     assert_eq!(split("e>>|cat"), ["e>>", "|", "cat"]);
@@ -314,7 +314,7 @@ fn operators_get_their_kinds() {
 }
 
 #[test]
-fn unclosed_item_runs_to_the_end() {
+fn unclosed_item_runs_to_end() {
     assert_eq!(
         lexed(r#"a "b c"#),
         [(Word, "a"), (Whitespace, " "), (Error, r#""b c"#)]
@@ -325,7 +325,7 @@ fn unclosed_item_runs_to_the_end() {
 }
 
 #[test]
-fn error_ends_the_item_where_found() {
+fn error_ends_item_where_found() {
     assert_eq!(lexed("a}b"), [(Error, "a}"), (Word, "b")]);
     assert_eq!(lexed("a)b"), [(Error, "a)"), (Word, "b")]);
     assert_eq!(lexed("[a)b]"), [(Error, "[a)"), (Word, "b]")]);
@@ -334,13 +334,13 @@ fn error_ends_the_item_where_found() {
 }
 
 #[test]
-fn final_backslash_splits_off_only_from_the_outermost_string() {
+fn final_backslash_splits_only_from_outermost_string() {
     assert_eq!(lexed(r#""a\"#), [(Error, r#""a"#), (Word, r"\")]);
     assert_eq!(lexed(r#"$"("\"#), [(Error, r#"$"("\"#)]);
 }
 
 #[test]
-fn unclosed_points_at_the_innermost_opener() {
+fn unclosed_points_at_innermost_opener() {
     for (src, opener) in [
         (r#""a b"#, "\""),
         ("'a", "'"),
@@ -357,7 +357,7 @@ fn unclosed_points_at_the_innermost_opener() {
 }
 
 #[test]
-fn unclosed_interpolation_points_at_the_outermost_paren() {
+fn unclosed_interpolation_points_at_outermost_paren() {
     for (src, paren) in [
         ("$'(a", 2),
         (r#"$"(a" b"#, 2),
@@ -376,7 +376,7 @@ fn unclosed_interpolation_points_at_the_outermost_paren() {
 }
 
 #[test]
-fn unmatched_closer_points_at_the_closer() {
+fn unmatched_closer_points_at_closer() {
     for (src, closer) in [
         ("a}b", "}"),
         ("a)b", ")"),
@@ -441,7 +441,7 @@ const NU_ERRORS: &[(&str, LexErrorKind)] = &[
 ];
 
 #[test]
-fn splits_match_nu() {
+fn block_splits_match_nu() {
     for &(src, expected) in NU_SPLITS {
         assert_eq!(split(src), expected, "{src:?}");
     }
@@ -778,7 +778,7 @@ fn record_pattern_splits_match_nu() {
 }
 
 #[test]
-fn angle_brackets_nest_in_a_var_type() {
+fn angle_brackets_nest_only_in_var_type() {
     for (src, error) in [
         ("a<b", (Unclosed, "<")),
         ("a<b<c>", (Unclosed, "<")),
@@ -825,7 +825,7 @@ fn colon_is_token_in_record_and_brace_modes() {
 }
 
 #[test]
-fn special_bytes_are_tokens_at_the_start_of_an_item() {
+fn special_bytes_are_tokens_at_item_start() {
     assert_eq!(
         lexed_in(",a,,b ,", Mode::List),
         [
@@ -841,7 +841,7 @@ fn special_bytes_are_tokens_at_the_start_of_an_item() {
 }
 
 #[test]
-fn items_ending_at_a_special_byte_keep_their_kinds() {
+fn items_before_special_byte_keep_kinds() {
     for (src, kind) in [
         (r#""a",b"#, SyntaxKind::String),
         (r#"$"(a,b)",b"#, InterpString),
@@ -857,7 +857,7 @@ fn items_ending_at_a_special_byte_keep_their_kinds() {
 }
 
 #[test]
-fn errors_match_nu() {
+fn block_errors_match_nu() {
     for &(src, _) in NU_SPLITS {
         let kinds: Vec<_> = lex_all(src).errors.iter().map(|error| error.kind).collect();
         let expected = NU_ERRORS
@@ -891,7 +891,7 @@ fn range_cuts_through_tokens() {
 }
 
 #[test]
-fn bytes_before_the_range_are_ignored() {
+fn bytes_before_range_are_ignored() {
     assert_eq!(
         lexed_ranges(r#"$"(" x"#, range(1, 6)),
         [
@@ -911,13 +911,13 @@ fn bytes_before_the_range_are_ignored() {
 
 #[test]
 #[should_panic(expected = "range splits a char")]
-fn range_must_be_on_char_boundaries() {
+fn range_off_char_boundary_panics() {
     lex("日", range(0, 1), Mode::Block);
 }
 
 #[test]
 #[should_panic(expected = "range is outside src")]
-fn range_must_be_within_src() {
+fn range_outside_src_panics() {
     lex("ab", range(1, 3), Mode::Block);
 }
 
@@ -982,7 +982,7 @@ mod nu_differences {
     }
 
     #[test]
-    fn unclosed_opener_includes_its_prefix() {
+    fn unclosed_opener_includes_prefix() {
         for (src, opener) in [
             (r#"$"a"#, r#"$""#),
             ("x$'a", "$'"),
@@ -994,7 +994,7 @@ mod nu_differences {
     }
 
     #[test]
-    fn missing_raw_quote_points_at_the_prefix() {
+    fn missing_raw_quote_points_at_prefix() {
         assert_eq!(error_of("r#x"), (MissingRawQuote, "r#"));
         assert_eq!(error_of("xr##"), (MissingRawQuote, "r##"));
     }
