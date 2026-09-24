@@ -1,3 +1,5 @@
+let alpha = 1; let beta = 2; let gamma = 3; let delta = 4; let epsilon = 5; let zeta = 6
+let eta = 7; let theta = 8; let iota = 9; let kappa = 10; let lambda = 11; let mu = 12
 let mixed = ($alpha * $beta + $gamma * $delta + $epsilon * $zeta + $eta * $theta + $iota * $kappa * $lambda * $mu)
 let condition = (($alpha | into string) == "repositories" and ($beta | into string) == "url" and ($gamma | into string) == "https://example.com")
 let last = ($alpha > 0 and ([$beta $gamma $delta $epsilon $zeta $eta $theta $iota $kappa $lambda $mu] | length) > 0)
