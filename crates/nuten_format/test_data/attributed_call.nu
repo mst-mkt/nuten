@@ -68,3 +68,23 @@ a@b
 (ls
 
 | y)
+@e "x" {f} # c
+
+| a
+ls |
+@e x # c
+
+| a
+do {
+@e x # c
+
+| a
+}
+@e x
+
+| # d
+a
+@e x # c
+
+| # d
+a

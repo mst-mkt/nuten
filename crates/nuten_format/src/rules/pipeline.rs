@@ -49,18 +49,20 @@ impl<'a> Formatter<'a> {
 
     fn segment(&mut self, segment: &Segment<'_>, id: GroupId) -> Vec<Element<'a>> {
         let pipe = segment.pipe.map(|pipe| {
-            // A pipe with a comment after it stays at the end of its line.
-            // So does one before an attribute, which nu reads as one only after a line break.
-            let plain = if pipe.keeps_blank_line_after_attribute() {
-                empty_line()
-            } else if segment.keeps_pipe_at_line_end() {
-                space()
+            let gap = if pipe.keeps_blank_line_after_attribute() {
+                // Not through `separator`, which leaves only a line break after a comment.
+                Some(empty_line())
             } else {
-                soft_line_break_or_space()
+                // A pipe with a comment after it stays at the end of its line.
+                // So does one before an attribute, which nu reads as one only after a line break.
+                let plain = if segment.keeps_pipe_at_line_end() {
+                    space()
+                } else {
+                    soft_line_break_or_space()
+                };
+                separator(segment.prev, Some(plain))
             };
-            separator(segment.prev, Some(plain))
-                .into_iter()
-                .chain(self.element(&pipe.child.element))
+            gap.into_iter().chain(self.element(&pipe.child.element))
         });
         let end = segment.aligned_end();
         let aligned = segment.items[..end]
@@ -164,7 +166,7 @@ impl Part {
                 .is_some_and(|node| headed_by_attribute(node.syntax()))
     }
 
-    /// Whether it keeps the blank line before it, which comes right after an attribute.
+    /// Whether it keeps the blank line before it, which comes right after an attribute's line.
     /// Nu goes on past a blank line to a line-start `|` only there.
     /// Without the blank line, nu would take that `|` into the attribute.
     fn keeps_blank_line_after_attribute(&self) -> bool {
