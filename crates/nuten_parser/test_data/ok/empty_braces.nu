@@ -17,5 +17,18 @@ module m {   }
 export-env {  }
 ls | where {  }
 do {   }
+do { # c
+}
+ls | collect {  }
+interleave {  } {  }
+[1] | each while {  }
 {a: 1} | merge {  }
+print {  }
+print {  }.a
+ls | rename --block {  }
+def h [c: closure, r: record] {}
+h {   } {   }
+def k [c: oneof<closure, string>] {}
+k {  }
+def q [] {  } { ls }
 ^echo {   }

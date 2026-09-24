@@ -3,7 +3,7 @@ use std::iter;
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    Callee, SQUARE, Shape, at_call_item,
+    CURLY, Callee, SQUARE, Shape, argument_braced, at_call_item,
     binary::is_binary_like,
     builtin, call_items, declaration, ends_element, is_file_redirection, item,
     keyword::{keyword, keyword_as_term},
@@ -342,7 +342,8 @@ pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
 }
 
 /// What nu takes each item of the call ahead as, the head first.
-/// Empty where it runs a command nuten does not know the signature of, or cannot tell which.
+/// Empty where it runs a command the file defines with a signature nuten cannot read.
+/// Empty too where nuten cannot tell which command it runs.
 /// A `%` before the head looks up a command nu has, whatever the file defines.
 fn call_parameters(p: &Parser<'_>, shape: Shape) -> Vec<Option<Param>> {
     if shape != Shape::KnownArgument {
@@ -366,13 +367,19 @@ fn call_parameters(p: &Parser<'_>, shape: Shape) -> Vec<Option<Param>> {
     }
 }
 
-/// The argument ahead, with a `[ ]` read as `param` takes it.
+/// The argument ahead, with a `[ ]` or an empty `{ }` read as `param` takes it.
 fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
     if let Some(param) = param
         && param.takes != Takes::Word
         && let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
     {
         listed(p, bracketed, param);
+    } else if let Some(param) = param
+        && let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace)
+    {
+        // `value` would read such a word through `braced` too.
+        // A word the brackets enclose is no range, cell path, binary, or variable.
+        argument_braced(p, bracketed, shape, param);
     } else {
         item(p, shape);
     }

@@ -88,6 +88,12 @@ pub(super) fn is_parser_keyword(name: &str) -> bool {
     )
 }
 
+/// Whether a name whose first words are `head` and `next` starts with a parser keyword.
+/// Every keyword of two words but `plugin use` starts with one that is a keyword alone.
+pub(super) fn starts_with_parser_keyword(head: &str, next: Option<&str>) -> bool {
+    is_parser_keyword(head) || (head == "plugin" && next == Some("use"))
+}
+
 /// A name of a variable stands where these take their first argument, never a value.
 pub(super) fn takes_variable_name(head: &str) -> bool {
     matches!(head, "let" | "mut" | "const")
@@ -341,7 +347,8 @@ const COMMANDS: &[&str] = &[
 mod tests {
     use super::{
         ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, is_parser_keyword,
-        reads_before_assignment, resolves_after_percent, takes_any_argument, takes_row_condition,
+        reads_before_assignment, resolves_after_percent, starts_with_parser_keyword,
+        takes_any_argument, takes_row_condition,
     };
     use crate::test_support::asked;
 
@@ -474,5 +481,19 @@ mod tests {
             .filter(|name| is_parser_keyword(name))
             .collect();
         assert_eq!(rejected, keywords);
+    }
+
+    #[test]
+    fn every_parser_keyword_starts_with_parser_keyword() {
+        let Some(keywords) = asked(KEYWORD_NAMES_OF_NU) else {
+            return;
+        };
+        for keyword in &keywords {
+            let (head, next) = match keyword.split_once(' ') {
+                Some((head, next)) => (head, Some(next)),
+                None => (keyword.as_str(), None),
+            };
+            assert!(starts_with_parser_keyword(head, next), "{keyword:?}");
+        }
     }
 }

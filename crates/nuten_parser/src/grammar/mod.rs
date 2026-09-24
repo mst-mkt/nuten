@@ -268,6 +268,17 @@ fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     }
 }
 
+/// The `{ }` ahead as nu reads it where `param` takes it, as `braced` reads it for `shape`.
+/// An empty one is the exception: a `Block` or a `Record`, as `param` tells.
+/// `bracketed` is what it holds in brace mode.
+fn argument_braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape, param: Param) {
+    match record_sign(bracketed.inner().remaining_tokens()) {
+        Some(RecordSign::Empty) if param.closure => block(p, bracketed.lexed_in(Mode::Block)),
+        Some(RecordSign::Empty) => record(p, bracketed.lexed_in(Mode::Record), RecordSign::Empty),
+        _ => braced(p, bracketed, shape),
+    }
+}
+
 /// How many words the keyword ahead takes up: one, or two with an `export` before it.
 fn keyword_words(p: &Parser<'_>) -> usize {
     1 + usize::from(p.peek_text() == Some("export"))

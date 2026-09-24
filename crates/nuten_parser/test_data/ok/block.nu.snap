@@ -173,11 +173,21 @@ Root@0..461
       Call@165..184
         Word@165..169 "echo"
         Whitespace@169..170 " "
-        Word@170..173 "{ }"
+        Record@170..173
+          LBrace@170..171 "{"
+          Whitespace@171..172 " "
+          RBrace@172..173 "}"
         Whitespace@173..174 " "
-        Word@174..176 "{}"
+        Record@174..176
+          LBrace@174..175 "{"
+          RBrace@175..176 "}"
         Whitespace@176..177 " "
-        Word@177..184 "{ # c\n}"
+        Record@177..184
+          LBrace@177..178 "{"
+          Whitespace@178..179 " "
+          Comment@179..182 "# c"
+          Newline@182..183 "\n"
+          RBrace@183..184 "}"
   Newline@184..185 "\n"
   Pipeline@185..222
     PipelineElement@185..222

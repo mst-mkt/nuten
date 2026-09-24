@@ -1,13 +1,18 @@
-//! The parameters of the commands nu 0.115.1 has, as far as they tell how nu reads a `[ ]`.
+//! The parameters of the commands nu 0.115.1 has.
+//! Only as far as they tell how nu reads a `[ ]` or an empty `{ }`.
 //!
 //! Only a command with a parameter that takes a `[ ]` as a list is here.
-//! Every other one takes it as text or rejects it, so it stays a word wherever it stands.
+//! So is one with a parameter that takes an empty `{ }` as a closure.
+//! Every other one takes a `[ ]` as text or rejects it, so it stays a word wherever it stands.
+//! Nu reads an empty `{ }` there as a record wherever it stands.
 //! A command nu reads a keyword syntax of is left out too, since its own rule reads it.
+//! Where nuten does not read that syntax, what the command takes is unknown here.
 //! None of these takes arguments it does not declare.
 
 use std::iter;
 
 use super::{
+    builtin::starts_with_parser_keyword,
     number::is_number,
     spread::{Target, is_spread},
 };
@@ -31,19 +36,25 @@ pub(crate) struct Param {
     pub(super) takes: Takes,
     /// Whether it takes a negative number, which an item like `-1` then stands for.
     negative: bool,
+    /// Whether nu reads an empty `{ }` as a closure, as for a `closure` or a `block`.
+    /// It reads one as a record otherwise, and reports an error if the type takes none.
+    /// A `oneof` reads it by its first type, since reading a record reports no error there.
+    pub(super) closure: bool,
 }
 
-const fn param(takes: Takes, negative: bool) -> Param {
+const fn param(takes: Takes, negative: bool, closure: bool) -> Param {
     Param {
         takes,
         negative,
+        closure,
     }
 }
 
-const LIST: Param = param(Takes::List, false);
-const LIST_OF: Param = param(Takes::ListOf, false);
-const WORD: Param = param(Takes::Word, false);
-const NUMBER: Param = param(Takes::Word, true);
+const LIST: Param = param(Takes::List, false, false);
+const LIST_OF: Param = param(Takes::ListOf, false, false);
+const WORD: Param = param(Takes::Word, false, false);
+const NUMBER: Param = param(Takes::Word, true, false);
+const CLOSURE: Param = param(Takes::Word, false, true);
 
 /// A flag, with what it takes after it if anything.
 #[derive(Debug)]
@@ -110,18 +121,33 @@ const fn command(name: &'static [&'static str], signature: Option<Signature<'sta
 
 /// What nu takes each of `items` as, the head first, where it runs a command nu has.
 /// `None` for an item that is no parameter, such as a word of the name or a flag.
-/// Also for every item when the command is none here.
+/// Every item after the name is a `WORD` when the command has no signature here.
+/// So is every item after the head when the command is none here, since its name is unknown.
+/// A `WORD` reads a word of the name or a flag as it is, since neither is a `[ ]` nor a `{ }`.
+/// Every item is `None` for a keyword nu reads a syntax of.
 /// Nu runs the command of the longest name the items spell.
 pub(super) fn parameters(items: &[&str]) -> Vec<Option<Param>> {
-    let Some(command) = longest_spelled(items) else {
+    if spells_keyword(items) {
         return vec![None; items.len()];
+    }
+    let (words, signature) = match longest_spelled(items) {
+        Some(command) => (command.name.len(), command.signature.as_ref()),
+        None => (1, None),
     };
-    let words = command.name.len();
-    let arguments = command.signature.as_ref().map_or_else(
-        || vec![None; items.len() - words],
+    let arguments = signature.map_or_else(
+        || vec![Some(WORD); items.len().saturating_sub(words)],
         |signature| arguments(signature, &items[words..]),
     );
-    iter::repeat_n(None, words).chain(arguments).collect()
+    iter::repeat_n(None, words.min(items.len()))
+        .chain(arguments)
+        .collect()
+}
+
+/// Whether `items` start with a keyword nu reads a syntax of.
+fn spells_keyword(items: &[&str]) -> bool {
+    items
+        .split_first()
+        .is_some_and(|(head, rest)| starts_with_parser_keyword(head, rest.first().copied()))
 }
 
 /// The command of the longest name `items` start with.
@@ -413,16 +439,18 @@ fn short_name(text: &str) -> Option<char> {
 /// `None` for a type nuten does not know, or one nu rejects.
 fn param_of_type(text: &str) -> Option<Param> {
     let text = text.split('@').next()?;
-    let members = match text
+    let names = match text
         .strip_prefix("oneof<")
         .and_then(|rest| rest.strip_suffix('>'))
     {
-        Some(members) => split_members(members)
-            .into_iter()
-            .map(reads)
-            .collect::<Option<Vec<_>>>()?,
-        None => vec![reads(text)?],
+        Some(members) => split_members(members),
+        None => vec![text],
     };
+    let members = names
+        .iter()
+        .copied()
+        .map(reads)
+        .collect::<Option<Vec<_>>>()?;
     // Nu takes the first type that reads the `[ ]` with no error.
     // A list with an error nuten cannot see, as a variable that is not defined, falls to text.
     // So a `[ ]` stays a word where a type that takes text comes later.
@@ -435,7 +463,9 @@ fn param_of_type(text: &str) -> Option<Param> {
         Some(Reads::ListOf) if !falls_to_text => Takes::ListOf,
         _ => Takes::Word,
     };
-    Some(param(takes, members.contains(&Reads::Number)))
+    // Nu rejects `closure(...)` in a signature, so only `closure` itself counts.
+    let closure = names.first().is_some_and(|name| name.trim() == "closure");
+    Some(param(takes, members.contains(&Reads::Number), closure))
 }
 
 /// How nu's `parse_value` reads a `[ ]` where it takes one type.
@@ -517,7 +547,7 @@ const COMMANDS: &[Command] = &[
     command(
         &["attr", "example"],
         Some(Signature {
-            required: &[WORD, WORD],
+            required: &[WORD, CLOSURE],
             optional: &[],
             rest: None,
             flags: &[flag("result", None, Some(LIST))],
@@ -543,6 +573,24 @@ const COMMANDS: &[Command] = &[
                 flag("unicode", Some('u'), None),
                 flag("integer", Some('i'), None),
             ],
+        }),
+    ),
+    command(
+        &["chunk-by"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
+    command(
+        &["collect"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[flag("keep-env", None, None)],
         }),
     ),
     command(
@@ -576,6 +624,22 @@ const COMMANDS: &[Command] = &[
         }),
     ),
     command(
+        &["debug", "profile"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[
+                flag("spans", Some('s'), None),
+                flag("expand-source", Some('e'), None),
+                flag("values", Some('v'), None),
+                flag("lines", Some('l'), None),
+                flag("duration-values", Some('d'), None),
+                flag("max-depth", Some('m'), Some(NUMBER)),
+            ],
+        }),
+    ),
+    command(
         &["default"],
         Some(Signature {
             required: &[LIST],
@@ -596,7 +660,7 @@ const COMMANDS: &[Command] = &[
     command(
         &["do"],
         Some(Signature {
-            required: &[WORD],
+            required: &[CLOSURE],
             optional: &[],
             rest: Some(LIST),
             flags: &[
@@ -616,11 +680,50 @@ const COMMANDS: &[Command] = &[
         }),
     ),
     command(
+        &["each"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[
+                flag("keep-empty", Some('k'), None),
+                flag("flatten", Some('f'), None),
+            ],
+        }),
+    ),
+    command(
+        &["each", "while"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
+    command(
         &["echo"],
         Some(Signature {
             required: &[],
             optional: &[],
             rest: Some(LIST),
+            flags: &[],
+        }),
+    ),
+    command(
+        &["explain"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
+    command(
+        &["filter"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
             flags: &[],
         }),
     ),
@@ -673,7 +776,7 @@ const COMMANDS: &[Command] = &[
     command(
         &["generate"],
         Some(Signature {
-            required: &[WORD],
+            required: &[CLOSURE],
             optional: &[LIST],
             rest: None,
             flags: &[],
@@ -901,12 +1004,39 @@ const COMMANDS: &[Command] = &[
         }),
     ),
     command(
+        &["interleave"],
+        Some(Signature {
+            required: &[],
+            optional: &[],
+            rest: Some(CLOSURE),
+            flags: &[flag("buffer-size", Some('b'), Some(NUMBER))],
+        }),
+    ),
+    command(
         &["intersect"],
         Some(Signature {
             required: &[LIST],
             optional: &[],
             rest: None,
             flags: &[],
+        }),
+    ),
+    command(
+        &["items"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
+    command(
+        &["job", "spawn"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[flag("description", Some('d'), Some(WORD))],
         }),
     ),
     command(
@@ -935,6 +1065,15 @@ const COMMANDS: &[Command] = &[
         }),
     ),
     command(
+        &["matrix", "map"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
+    command(
         &["matrix", "multiply"],
         Some(Signature {
             required: &[LIST],
@@ -949,7 +1088,7 @@ const COMMANDS: &[Command] = &[
     command(
         &["matrix", "reduce"],
         Some(Signature {
-            required: &[WORD],
+            required: &[CLOSURE],
             optional: &[],
             rest: None,
             flags: &[flag("fold", Some('f'), Some(LIST))],
@@ -1009,18 +1148,38 @@ const COMMANDS: &[Command] = &[
             flags: &[],
         }),
     ),
-    command(&["metadata", "access"], None),
+    command(
+        &["metadata", "access"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
     command(
         &["metadata", "set"],
         Some(Signature {
             required: &[],
-            optional: &[WORD],
+            optional: &[CLOSURE],
             rest: None,
             flags: &[
                 flag("datasource-filepath", Some('f'), Some(WORD)),
                 flag("path-columns", Some('p'), Some(LIST_OF)),
                 flag("content-type", Some('c'), Some(WORD)),
                 flag("table-width-priority-columns", Some('w'), Some(LIST_OF)),
+            ],
+        }),
+    ),
+    command(
+        &["par-each"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[
+                flag("threads", Some('t'), Some(NUMBER)),
+                flag("keep-order", Some('k'), None),
             ],
         }),
     ),
@@ -1058,10 +1217,22 @@ const COMMANDS: &[Command] = &[
     command(
         &["reduce"],
         Some(Signature {
-            required: &[WORD],
+            required: &[CLOSURE],
             optional: &[],
             rest: None,
             flags: &[flag("fold", Some('f'), Some(LIST))],
+        }),
+    ),
+    command(
+        &["rename"],
+        Some(Signature {
+            required: &[],
+            optional: &[],
+            rest: Some(WORD),
+            flags: &[
+                flag("column", Some('c'), Some(WORD)),
+                flag("block", Some('b'), Some(CLOSURE)),
+            ],
         }),
     ),
     command(
@@ -1070,6 +1241,24 @@ const COMMANDS: &[Command] = &[
             required: &[WORD],
             optional: &[],
             rest: Some(LIST),
+            flags: &[],
+        }),
+    ),
+    command(
+        &["skip", "until"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
+    command(
+        &["skip", "while"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
             flags: &[],
         }),
     ),
@@ -1116,6 +1305,42 @@ const COMMANDS: &[Command] = &[
                 flag("list", Some('l'), None),
                 flag("icons", Some('o'), None),
             ],
+        }),
+    ),
+    command(
+        &["take", "until"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[flag("include", Some('i'), Some(NUMBER))],
+        }),
+    ),
+    command(
+        &["take", "while"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[flag("include", Some('i'), Some(NUMBER))],
+        }),
+    ),
+    command(
+        &["tee"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[flag("stderr", Some('e'), None)],
+        }),
+    ),
+    command(
+        &["timeit"],
+        Some(Signature {
+            required: &[CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[flag("output", Some('o'), None)],
         }),
     ),
     command(
@@ -1234,7 +1459,7 @@ const COMMANDS: &[Command] = &[
     command(
         &["update", "cells"],
         Some(Signature {
-            required: &[WORD],
+            required: &[CLOSURE],
             optional: &[],
             rest: None,
             flags: &[flag("columns", Some('c'), Some(LIST))],
@@ -1271,9 +1496,24 @@ const COMMANDS: &[Command] = &[
         }),
     ),
     command(
+        &["watch"],
+        Some(Signature {
+            required: &[WORD],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("debounce", Some('d'), Some(WORD)),
+                flag("glob", Some('g'), Some(WORD)),
+                flag("recursive", Some('r'), Some(WORD)),
+                flag("quiet", Some('q'), None),
+                flag("verbose", Some('v'), None),
+            ],
+        }),
+    ),
+    command(
         &["with-env"],
         Some(Signature {
-            required: &[LIST, WORD],
+            required: &[LIST, CLOSURE],
             optional: &[],
             rest: None,
             flags: &[],
@@ -1293,15 +1533,18 @@ const COMMANDS: &[Command] = &[
 #[cfg(test)]
 mod tests {
     use super::{
-        COMMANDS, Command, Declared, Item, LIST, LIST_OF, NUMBER, Param, Takes, WORD,
+        CLOSURE, COMMANDS, Command, Declared, Item, LIST, LIST_OF, NUMBER, Param, Takes, WORD,
         param_of_type, parameters,
     };
     use crate::test_support::asked;
 
     /// Each command nu has with a parameter that takes a `[ ]` as a list, in the table's lines.
+    /// Each with a parameter that takes an empty `{ }` as a closure too.
+    /// A keyword nu reads a syntax of is left out, as nu's refusal to `def` one tells.
     /// Then each name that extends one of theirs, alone on its line.
     /// A type reads a `[ ]` as nu's `parse_value` does.
     /// A `oneof` reads it as its first type that takes one.
+    /// A type takes an empty `{ }` as a closure where its first type is a closure or a block.
     const COMMANDS_OF_NU: &str = r#"
         def split-top [text: string] {
             $text | split chars | reduce --fold {parts: [], depth: 0, cur: ''} {|ch, acc|
@@ -1349,6 +1592,9 @@ mod tests {
                 $shape in [int number float]
             }
         }
+        def closes [shape: string] {
+            (members $shape | first) =~ '^(closure|block)'
+        }
         def code [shape: string] {
             let reads = members $shape | each {|m| reads $m } | where $it != 'none'
             let falls_to_text = 'text' in ($reads | skip 1)
@@ -1356,7 +1602,9 @@ mod tests {
                 'L' | 'O' if not $falls_to_text => $reads.0,
                 _ => 'W',
             }
-            $takes + (if (negative $shape) { '-' } else { '' })
+            let negative = if (negative $shape) { '-' } else { '' }
+            let closure = if (closes $shape) { 'C' } else { '' }
+            $takes + $negative + $closure
         }
         def codes [params: table] {
             $params | each {|p| code $p.syntax_shape } | str join ','
@@ -1368,12 +1616,19 @@ mod tests {
                 $"($f.parameter_name)($short)($value)"
             } | str join ','
         }
-        let lines = scope commands | where type == built-in | each {|c|
+        let parser_keywords = help commands | get name | where {|n|
+            let error = ast $"def \"($n)\" [] {}" --json | get error | from json | default {}
+            ($error | columns | get -o 0) == "NameIsKeyword"
+        }
+        let commands = scope commands
+            | where type in [built-in keyword] and name not-in $parser_keywords
+        let lines = $commands | each {|c|
             let params = $c.signatures | values | first | where parameter_type not-in [input output]
             let positional = $params | where parameter_type in [positional rest]
             let valued = $params | where parameter_type in [positional rest named]
             let lists = $valued | any {|p| (code $p.syntax_shape) =~ '^[LO]' }
-            if $lists and not ($positional | any {|p| multispan $p.syntax_shape }) {
+            let closures = $valued | any {|p| closes $p.syntax_shape }
+            if ($lists or $closures) and not ($positional | any {|p| multispan $p.syntax_shape }) {
                 let positional = $params | where parameter_type == positional
                 let required = codes ($positional | where not is_optional)
                 let optional = codes ($positional | where is_optional)
@@ -1396,7 +1651,8 @@ mod tests {
             Takes::Word => "W",
         };
         let negative = if param.negative { "-" } else { "" };
-        format!("{takes}{negative}")
+        let closure = if param.closure { "C" } else { "" };
+        format!("{takes}{negative}{closure}")
     }
 
     /// The line `COMMANDS_OF_NU` gives the same command.
@@ -1474,15 +1730,40 @@ mod tests {
 
     #[test]
     fn longer_name_of_command_with_no_list_parameter_takes_place_of_shorter_one() {
-        assert_eq!(parameters(&["ansi", "gradient", "[a]"]), [None; 3]);
+        assert_eq!(
+            parameters(&["ansi", "gradient", "[a]"]),
+            [None, None, Some(WORD)]
+        );
         assert_eq!(parameters(&["ansi", "[a]"]), [None, Some(LIST)]);
     }
 
     #[test]
-    fn command_not_here_takes_nothing() {
-        assert_eq!(parameters(&["ls", "[a]"]), [None; 2]);
-        assert_eq!(parameters(&["str", "join", "[a]"]), [None; 3]);
+    fn every_item_after_head_of_command_not_here_takes_word() {
+        assert_eq!(parameters(&["ls", "[a]"]), [None, Some(WORD)]);
+        assert_eq!(
+            parameters(&["str", "join", "[a]"]),
+            [None, Some(WORD), Some(WORD)]
+        );
+        assert_eq!(parameters(&["ls"]), [None]);
         assert_eq!(parameters(&[]), []);
+    }
+
+    #[test]
+    fn every_item_of_parser_keyword_takes_nothing() {
+        assert_eq!(parameters(&["def", "q", "[]", "{}", "{}"]), [None; 5]);
+        assert_eq!(parameters(&["plugin", "use", "{}"]), [None; 3]);
+        // Nu runs the command `overlay list`, but its first word leaves it unknown here.
+        assert_eq!(parameters(&["overlay", "list", "{}"]), [None; 3]);
+    }
+
+    #[test]
+    fn closure_parameter_takes_closure() {
+        assert_eq!(parameters(&["each", "{}"]), [None, Some(CLOSURE)]);
+        // `rename` takes a closure only as the value of `--block`.
+        assert_eq!(
+            parameters(&["rename", "--block", "{}", "{}"]),
+            [None, None, Some(CLOSURE), Some(WORD)]
+        );
     }
 
     #[test]
@@ -1564,12 +1845,12 @@ mod tests {
         // `do` takes a closure, then any number of arguments.
         assert_eq!(
             parameters(&["do", "{}", "...$x", "[a]"]),
-            [None, Some(WORD), None, Some(LIST)]
+            [None, Some(CLOSURE), None, Some(LIST)]
         );
         // A spread before the closure fills nothing.
         assert_eq!(
             parameters(&["do", "...$x", "[a]"]),
-            [None, None, Some(WORD)]
+            [None, None, Some(CLOSURE)]
         );
     }
 
@@ -1634,6 +1915,19 @@ mod tests {
         for ty in ["int", "float", "number", "oneof<int, list<any>>"] {
             assert!(param_of_type(ty).unwrap().negative, "{ty:?}");
         }
+    }
+
+    #[test]
+    fn type_whose_first_type_is_closure_takes_closure() {
+        for ty in [
+            "closure",
+            "oneof<closure, string>",
+            "oneof< closure , list<any>>",
+        ] {
+            assert!(param_of_type(ty).unwrap().closure, "{ty:?}");
+        }
+        // Nu reads a record first, then rejects it by its type.
+        assert!(!param_of_type("oneof<string, closure>").unwrap().closure);
     }
 
     #[test]

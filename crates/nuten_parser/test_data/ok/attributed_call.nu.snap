@@ -20,7 +20,9 @@ Root@0..354
       Call@23..30
         Word@23..27 "each"
         Whitespace@27..28 " "
-        Word@28..30 "{}"
+        Block@28..30
+          LBrace@28..29 "{"
+          RBrace@29..30 "}"
   Newline@30..31 "\n"
   Pipeline@31..64
     PipelineElement@31..33

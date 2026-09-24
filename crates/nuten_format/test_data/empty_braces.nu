@@ -27,4 +27,13 @@ module m {   }
 export-env {  }
 ls | where {  }
 do {   }
+do { # c
+}
+ls | collect {  }
+{a: 1} | merge {  }
+print {  }
+ls | rename --block {  }
+def h [c: closure, r: record] {}
+h {   } {   }
+def q [] {  } { ls }
 ^echo {   }
