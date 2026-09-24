@@ -1,0 +1,81 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/as_argument.nu
+---
+Root@0..63
+  Pipeline@0..17
+    PipelineElement@0..17
+      Call@0..17
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        CellPath@6..10
+          Word@6..8 "$x"
+          Dot@8..9 "."
+          Word@9..10 "a"
+        Whitespace@10..11 " "
+        CellPath@11..17
+          Subexpression@11..15
+            LParen@11..12 "("
+            Pipeline@12..14
+              PipelineElement@12..14
+                Call@12..14
+                  Word@12..14 "ls"
+            RParen@14..15 ")"
+          Dot@15..16 "."
+          Word@16..17 "b"
+  Newline@17..18 "\n"
+  Pipeline@18..35
+    PipelineElement@18..35
+      ExternalCall@18..35
+        Word@18..23 "^echo"
+        Whitespace@23..24 " "
+        CellPath@24..28
+          Word@24..26 "$x"
+          Dot@26..27 "."
+          Word@27..28 "a"
+        Whitespace@28..29 " "
+        CellPath@29..35
+          Subexpression@29..33
+            LParen@29..30 "("
+            Pipeline@30..32
+              PipelineElement@30..32
+                Call@30..32
+                  Word@30..32 "ls"
+            RParen@32..33 ")"
+          Dot@33..34 "."
+          Word@34..35 "b"
+  Newline@35..36 "\n"
+  Pipeline@36..46
+    PipelineElement@36..46
+      Call@36..38
+        Word@36..38 "ls"
+      Whitespace@38..39 " "
+      Redirection@39..46
+        OutGt@39..41 "o>"
+        Whitespace@41..42 " "
+        CellPath@42..46
+          Word@42..44 "$x"
+          Dot@44..45 "."
+          Word@45..46 "a"
+  Newline@46..47 "\n"
+  Pipeline@47..62
+    PipelineElement@47..62
+      Call@47..62
+        Word@47..50 "foo"
+        Whitespace@50..51 " "
+        CellPath@51..55
+          Word@51..53 "$x"
+          Dot@53..54 "."
+          Word@54..55 "a"
+        Whitespace@55..56 " "
+        CellPath@56..62
+          Subexpression@56..60
+            LParen@56..57 "("
+            Pipeline@57..59
+              PipelineElement@57..59
+                Call@57..59
+                  Word@57..59 "ls"
+            RParen@59..60 ")"
+          Dot@60..61 "."
+          Word@61..62 "a"
+  Newline@62..63 "\n"

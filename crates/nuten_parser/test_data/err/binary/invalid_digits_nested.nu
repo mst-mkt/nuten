@@ -1,0 +1,3 @@
+[0x[f g] {a: 0x["ff"]}]
+if true { } else 0x[zz]
+0x[zz] | into int

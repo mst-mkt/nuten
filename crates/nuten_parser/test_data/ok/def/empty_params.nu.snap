@@ -1,0 +1,26 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/empty_params.nu
+---
+Root@0..16
+  Pipeline@0..15
+    PipelineElement@0..15
+      Def@0..15
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "f"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Whitespace@8..9 " "
+        Block@9..15
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          Pipeline@11..13
+            PipelineElement@11..13
+              Call@11..13
+                Word@11..13 "ls"
+          Whitespace@13..14 " "
+          RBrace@14..15 "}"
+  Newline@15..16 "\n"

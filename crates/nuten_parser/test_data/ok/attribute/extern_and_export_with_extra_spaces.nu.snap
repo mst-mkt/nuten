@@ -1,0 +1,69 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/extern_and_export_with_extra_spaces.nu
+---
+Root@0..120
+  Pipeline@0..36
+    PipelineElement@0..36
+      AttributeBlock@0..36
+        Attribute@0..19
+          Word@0..9 "@complete"
+          Whitespace@9..11 "  "
+          Word@11..19 "external"
+        Newline@19..20 "\n"
+        Def@20..36
+          Word@20..26 "extern"
+          Whitespace@26..28 "  "
+          Word@28..29 "e"
+          Whitespace@29..31 "  "
+          Signature@31..36
+            LBracket@31..32 "["
+            Param@32..35
+              Word@32..35 "--x"
+            RBracket@35..36 "]"
+  Newline@36..37 "\n"
+  Pipeline@37..72
+    PipelineElement@37..72
+      AttributeBlock@37..72
+        Attribute@37..49
+          Word@37..46 "@category"
+          Whitespace@46..48 "  "
+          Word@48..49 "x"
+        Newline@49..50 "\n"
+        Def@50..72
+          Word@50..56 "export"
+          Whitespace@56..58 "  "
+          Word@58..61 "def"
+          Whitespace@61..63 "  "
+          Word@63..64 "g"
+          Whitespace@64..66 "  "
+          Signature@66..68
+            LBracket@66..67 "["
+            RBracket@67..68 "]"
+          Whitespace@68..70 "  "
+          Block@70..72
+            LBrace@70..71 "{"
+            RBrace@71..72 "}"
+  Newline@72..73 "\n"
+  Pipeline@73..119
+    PipelineElement@73..119
+      AttributeBlock@73..119
+        Attribute@73..85
+          Word@73..82 "@category"
+          Whitespace@82..84 "  "
+          Word@84..85 "x"
+        Semicolon@85..86 ";"
+        Attribute@86..97
+          Word@86..97 "@deprecated"
+        Newline@97..98 "\n"
+        Def@98..119
+          Word@98..104 "export"
+          Whitespace@104..106 "  "
+          Word@106..112 "extern"
+          Whitespace@112..114 "  "
+          Word@114..115 "h"
+          Whitespace@115..117 "  "
+          Signature@117..119
+            LBracket@117..118 "["
+            RBracket@118..119 "]"
+  Newline@119..120 "\n"

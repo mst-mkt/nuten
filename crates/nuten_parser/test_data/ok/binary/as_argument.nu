@@ -1,0 +1,2 @@
+echo 0x[ff]
+^echo 0x[ff]

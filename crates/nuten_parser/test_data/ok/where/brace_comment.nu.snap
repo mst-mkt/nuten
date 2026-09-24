@@ -1,0 +1,17 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/where/brace_comment.nu
+---
+Root@0..14
+  Pipeline@0..13
+    PipelineElement@0..13
+      Where@0..13
+        Word@0..5 "where"
+        Whitespace@5..6 " "
+        Block@6..13
+          LBrace@6..7 "{"
+          Whitespace@7..8 " "
+          Comment@8..11 "# c"
+          Newline@11..12 "\n"
+          RBrace@12..13 "}"
+  Newline@13..14 "\n"

@@ -1,0 +1,45 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/multiline_record_pattern.nu
+---
+Root@0..43
+  Pipeline@0..42
+    PipelineElement@0..42
+      Match@0..42
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..42
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..40
+            RecordPattern@11..35
+              LBrace@11..12 "{"
+              RecordField@12..23
+                Word@12..13 "a"
+                Whitespace@13..14 " "
+                Comment@14..17 "# c"
+                Newline@17..18 "\n"
+                Whitespace@18..20 "  "
+                Colon@20..21 ":"
+                Whitespace@21..22 " "
+                Word@22..23 "1"
+              Newline@23..24 "\n"
+              Whitespace@24..26 "  "
+              RecordField@26..32
+                Word@26..27 "b"
+                Colon@27..28 ":"
+                Newline@28..29 "\n"
+                Whitespace@29..31 "  "
+                Word@31..32 "2"
+              Comma@32..33 ","
+              Newline@33..34 "\n"
+              RBrace@34..35 "}"
+            Whitespace@35..36 " "
+            FatArrow@36..38 "=>"
+            Whitespace@38..39 " "
+            Word@39..40 "a"
+          Whitespace@40..41 " "
+          RBrace@41..42 "}"
+  Newline@42..43 "\n"

@@ -1,0 +1,52 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/assignment/crlf_pipe_ending_value.nu
+---
+Root@0..39
+  Pipeline@0..9
+    PipelineElement@0..9
+      Assignment@0..9
+        Word@0..2 "$x"
+        Whitespace@2..3 " "
+        Assign@3..4 "="
+        Whitespace@4..5 " "
+        Pipeline@5..9
+          PipelineElement@5..7
+            Call@5..7
+              Word@5..7 "ls"
+          Whitespace@7..8 " "
+          Error@8..9
+            Pipe@8..9 "|"
+  Newline@9..11 "\r\n"
+  Newline@11..13 "\r\n"
+  Pipeline@13..34
+    PipelineElement@13..34
+      Let@13..34
+        Word@13..16 "let"
+        Whitespace@16..17 " "
+        Word@17..18 "x"
+        Whitespace@18..19 " "
+        Assign@19..20 "="
+        Whitespace@20..21 " "
+        Pipeline@21..34
+          PipelineElement@21..34
+            Call@21..34
+              Word@21..24 "use"
+              Whitespace@24..25 " "
+              Word@25..27 "-h"
+              Whitespace@27..28 " "
+              Assign@28..29 "="
+              Whitespace@29..30 " "
+              Word@30..32 "ls"
+              Whitespace@32..33 " "
+              Error@33..34
+                Pipe@33..34 "|"
+  Newline@34..35 "\n"
+  Newline@35..36 "\n"
+  Pipeline@36..38
+    PipelineElement@36..38
+      Call@36..38
+        Word@36..38 "ls"
+  Newline@38..39 "\n"
+error 8..9 "|": PipeEndsAssignment
+error 33..34 "|": PipeEndsAssignment

@@ -1,0 +1,21 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/redirection/shell_redirection_as_target.nu
+---
+Root@0..17
+  Pipeline@0..16
+    PipelineElement@0..16
+      Call@0..2
+        Word@0..2 "ls"
+      Whitespace@2..3 " "
+      Redirection@3..5
+        Error@3..5
+          OutGt@3..5 "o>"
+      Whitespace@5..6 " "
+      Error@6..8
+        Word@6..8 "2>"
+      Whitespace@8..9 " "
+      Word@9..16 "err.log"
+  Newline@16..17 "\n"
+error 3..5 "o>": MissingRedirectionTarget
+error 6..8 "2>": ShellErrRedirect

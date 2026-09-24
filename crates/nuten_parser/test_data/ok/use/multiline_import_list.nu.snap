@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/use/multiline_import_list.nu
+---
+Root@0..36
+  Pipeline@0..16
+    PipelineElement@0..16
+      Use@0..16
+        Word@0..3 "use"
+        Whitespace@3..4 " "
+        Word@4..8 "m.nu"
+        Whitespace@8..9 " "
+        List@9..16
+          LBracket@9..10 "["
+          Newline@10..11 "\n"
+          Word@11..12 "a"
+          Newline@12..13 "\n"
+          Word@13..14 "b"
+          Newline@14..15 "\n"
+          RBracket@15..16 "]"
+  Newline@16..17 "\n"
+  Pipeline@17..35
+    PipelineElement@17..35
+      Use@17..35
+        Word@17..20 "use"
+        Whitespace@20..21 " "
+        Word@21..25 "m.nu"
+        Whitespace@25..26 " "
+        List@26..35
+          LBracket@26..27 "["
+          Whitespace@27..28 " "
+          Comment@28..31 "# c"
+          Newline@31..32 "\n"
+          Word@32..33 "a"
+          Newline@33..34 "\n"
+          RBracket@34..35 "]"
+  Newline@35..36 "\n"

@@ -1,0 +1,21 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/trailing_comment.nu
+---
+Root@0..14
+  Pipeline@0..9
+    PipelineElement@0..9
+      If@0..9
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Word@3..5 "$a"
+        Whitespace@5..6 " "
+        Block@6..9
+          LBrace@6..7 "{"
+          Pipeline@7..8
+            PipelineElement@7..8
+              Word@7..8 "1"
+          RBrace@8..9 "}"
+  Whitespace@9..10 " "
+  Comment@10..13 "# c"
+  Newline@13..14 "\n"

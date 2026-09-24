@@ -1,0 +1,43 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/defined_oneof_parameter.nu
+---
+Root@0..67
+  Pipeline@0..47
+    PipelineElement@0..47
+      Def@0..47
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..14 "text-first"
+        Whitespace@14..15 " "
+        Signature@15..44
+          LBracket@15..16 "["
+          Param@16..43
+            Word@16..17 "x"
+            Colon@17..18 ":"
+            Whitespace@18..19 " "
+            Type@19..43
+              Word@19..24 "oneof"
+              LAngle@24..25 "<"
+              Type@25..34
+                Word@25..29 "list"
+                LAngle@29..30 "<"
+                Word@30..33 "any"
+                RAngle@33..34 ">"
+              Comma@34..35 ","
+              Whitespace@35..36 " "
+              Word@36..42 "string"
+              RAngle@42..43 ">"
+          RBracket@43..44 "]"
+        Whitespace@44..45 " "
+        Block@45..47
+          LBrace@45..46 "{"
+          RBrace@46..47 "}"
+  Newline@47..48 "\n"
+  Pipeline@48..66
+    PipelineElement@48..66
+      Call@48..66
+        Word@48..58 "text-first"
+        Whitespace@58..59 " "
+        Word@59..66 "[1,  2]"
+  Newline@66..67 "\n"

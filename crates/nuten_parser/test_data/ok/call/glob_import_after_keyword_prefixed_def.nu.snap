@@ -1,0 +1,45 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/glob_import_after_keyword_prefixed_def.nu
+---
+Root@0..51
+  Pipeline@0..24
+    PipelineElement@0..24
+      Def@0..24
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        String@4..13 "\"while x\""
+        Whitespace@13..14 " "
+        Signature@14..17
+          LBracket@14..15 "["
+          Param@15..16
+            Word@15..16 "y"
+          RBracket@16..17 "]"
+        Whitespace@17..18 " "
+        Block@18..24
+          LBrace@18..19 "{"
+          Whitespace@19..20 " "
+          Pipeline@20..22
+            PipelineElement@20..22
+              Word@20..22 "$y"
+          Whitespace@22..23 " "
+          RBrace@23..24 "}"
+  Newline@24..25 "\n"
+  Pipeline@25..35
+    PipelineElement@25..35
+      Use@25..35
+        Word@25..28 "use"
+        Whitespace@28..29 " "
+        Word@29..33 "m.nu"
+        Whitespace@33..34 " "
+        Word@34..35 "*"
+  Newline@35..36 "\n"
+  Pipeline@36..50
+    PipelineElement@36..50
+      Call@36..50
+        Word@36..41 "while"
+        Whitespace@41..42 " "
+        Word@42..43 "x"
+        Whitespace@43..44 " "
+        Word@44..50 "{  1 }"
+  Newline@50..51 "\n"

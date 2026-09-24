@@ -1,0 +1,71 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/extra_commas_in_io_list.nu
+---
+Root@0..81
+  Pipeline@0..30
+    PipelineElement@0..30
+      Def@0..30
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "p"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        Word@10..23 "[int, -> int]"
+        Whitespace@23..24 " "
+        Block@24..30
+          LBrace@24..25 "{"
+          Whitespace@25..26 " "
+          Pipeline@26..28
+            PipelineElement@26..28
+              Call@26..28
+                Word@26..28 "ls"
+          Whitespace@28..29 " "
+          RBrace@29..30 "}"
+  Newline@30..31 "\n"
+  Pipeline@31..80
+    PipelineElement@31..80
+      Def@31..80
+        Word@31..34 "def"
+        Whitespace@34..35 " "
+        Word@35..36 "r"
+        Whitespace@36..37 " "
+        Signature@37..39
+          LBracket@37..38 "["
+          RBracket@38..39 "]"
+        Colon@39..40 ":"
+        Whitespace@40..41 " "
+        IoTypes@41..73
+          LBracket@41..42 "["
+          IoType@42..52
+            Word@42..45 "int"
+            Whitespace@45..46 " "
+            Word@46..48 "->"
+            Whitespace@48..49 " "
+            Word@49..52 "int"
+          Comma@52..53 ","
+          Comma@53..54 ","
+          Whitespace@54..55 " "
+          IoType@55..71
+            Word@55..61 "string"
+            Whitespace@61..62 " "
+            Word@62..64 "->"
+            Whitespace@64..65 " "
+            Word@65..71 "string"
+          Comma@71..72 ","
+          RBracket@72..73 "]"
+        Whitespace@73..74 " "
+        Block@74..80
+          LBrace@74..75 "{"
+          Whitespace@75..76 " "
+          Pipeline@76..78
+            PipelineElement@76..78
+              Call@76..78
+                Word@76..78 "ls"
+          Whitespace@78..79 " "
+          RBrace@79..80 "}"
+  Newline@80..81 "\n"

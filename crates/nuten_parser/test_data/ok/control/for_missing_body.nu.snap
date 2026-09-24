@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/for_missing_body.nu
+---
+Root@0..29
+  Pipeline@0..12
+    PipelineElement@0..12
+      Call@0..12
+        Word@0..3 "for"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Word@6..8 "in"
+        Whitespace@8..9 " "
+        Word@9..12 "[1]"
+  Newline@12..13 "\n"
+  Pipeline@13..28
+    PipelineElement@13..28
+      Call@13..28
+        Word@13..16 "for"
+        Whitespace@16..17 " "
+        Word@17..18 "x"
+        Whitespace@18..19 " "
+        Word@19..21 "in"
+        Whitespace@21..22 " "
+        Block@22..28
+          LBrace@22..23 "{"
+          Whitespace@23..24 " "
+          Pipeline@24..26
+            PipelineElement@24..26
+              Call@24..26
+                Word@24..26 "ls"
+          Whitespace@26..27 " "
+          RBrace@27..28 "}"
+  Newline@28..29 "\n"

@@ -1,0 +1,75 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/prefix_def_and_multiword_import.nu
+---
+Root@0..105
+  Pipeline@0..20
+    PipelineElement@0..20
+      Def@0..20
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..10 "prefix"
+        Whitespace@10..11 " "
+        Signature@11..17
+          LBracket@11..12 "["
+          Param@12..16
+            Word@12..16 "...x"
+          RBracket@16..17 "]"
+        Whitespace@17..18 " "
+        Block@18..20
+          LBrace@18..19 "{"
+          RBrace@19..20 "}"
+  Newline@20..21 "\n"
+  Pipeline@21..42
+    PipelineElement@21..42
+      Call@21..42
+        Word@21..27 "prefix"
+        Whitespace@27..28 " "
+        Word@28..34 "longer"
+        Whitespace@34..35 " "
+        List@35..42
+          LBracket@35..36 "["
+          Word@36..37 "1"
+          Comma@37..38 ","
+          Whitespace@38..40 "  "
+          Word@40..41 "2"
+          RBracket@41..42 "]"
+  Newline@42..43 "\n"
+  Pipeline@43..92
+    PipelineElement@43..92
+      Module@43..92
+        Word@43..49 "module"
+        Whitespace@49..50 " "
+        Word@50..55 "later"
+        Whitespace@55..56 " "
+        Block@56..92
+          LBrace@56..57 "{"
+          Whitespace@57..58 " "
+          Pipeline@58..90
+            PipelineElement@58..90
+              Def@58..90
+                Word@58..64 "export"
+                Whitespace@64..65 " "
+                Word@65..68 "def"
+                Whitespace@68..69 " "
+                String@69..84 "\"prefix longer\""
+                Whitespace@84..85 " "
+                Signature@85..87
+                  LBracket@85..86 "["
+                  RBracket@86..87 "]"
+                Whitespace@87..88 " "
+                Block@88..90
+                  LBrace@88..89 "{"
+                  RBrace@89..90 "}"
+          Whitespace@90..91 " "
+          RBrace@91..92 "}"
+  Newline@92..93 "\n"
+  Pipeline@93..104
+    PipelineElement@93..104
+      Use@93..104
+        Word@93..96 "use"
+        Whitespace@96..97 " "
+        Word@97..102 "later"
+        Whitespace@102..103 " "
+        Word@103..104 "*"
+  Newline@104..105 "\n"

@@ -1,0 +1,24 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/if/extra_block.nu
+---
+Root@0..16
+  Pipeline@0..15
+    PipelineElement@0..15
+      If@0..15
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        MathExpression@3..11
+          Word@3..7 "true"
+          Whitespace@7..8 " "
+          Error@8..11
+            Word@8..11 "{1}"
+        Whitespace@11..12 " "
+        Block@12..15
+          LBrace@12..13 "{"
+          Pipeline@13..14
+            PipelineElement@13..14
+              Word@13..14 "2"
+          RBrace@14..15 "}"
+  Newline@15..16 "\n"
+error 8..11 "{1}": MissingOperator

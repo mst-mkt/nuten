@@ -1,0 +1,127 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/spread/in_list.nu
+---
+Root@0..142
+  Pipeline@0..83
+    PipelineElement@0..83
+      List@0..83
+        LBracket@0..1 "["
+        Spread@1..6
+          SpreadOperator@1..4 "..."
+          Word@4..6 "$x"
+        Whitespace@6..7 " "
+        Spread@7..14
+          SpreadOperator@7..10 "..."
+          CellPath@10..14
+            Word@10..12 "$x"
+            Dot@12..13 "."
+            Word@13..14 "a"
+        Whitespace@14..15 " "
+        Spread@15..23
+          SpreadOperator@15..18 "..."
+          Range@18..23
+            Word@18..20 "$x"
+            RangeOperator@20..22 ".."
+            Word@22..23 "3"
+        Whitespace@23..24 " "
+        Spread@24..31
+          SpreadOperator@24..27 "..."
+          Subexpression@27..31
+            LParen@27..28 "("
+            Pipeline@28..30
+              PipelineElement@28..30
+                Call@28..30
+                  Word@28..30 "ls"
+            RParen@30..31 ")"
+        Whitespace@31..32 " "
+        Spread@32..44
+          SpreadOperator@32..35 "..."
+          CellPath@35..44
+            Subexpression@35..39
+              LParen@35..36 "("
+              Pipeline@36..38
+                PipelineElement@36..38
+                  Call@36..38
+                    Word@36..38 "ls"
+              RParen@38..39 ")"
+            Dot@39..40 "."
+            Word@40..44 "name"
+        Whitespace@44..45 " "
+        Spread@45..53
+          SpreadOperator@45..48 "..."
+          List@48..53
+            LBracket@48..49 "["
+            Word@49..50 "1"
+            Whitespace@50..51 " "
+            Word@51..52 "2"
+            RBracket@52..53 "]"
+        Whitespace@53..54 " "
+        Spread@54..67
+          SpreadOperator@54..57 "..."
+          Table@57..67
+            LBracket@57..58 "["
+            List@58..61
+              LBracket@58..59 "["
+              Word@59..60 "a"
+              RBracket@60..61 "]"
+            Semicolon@61..62 ";"
+            Whitespace@62..63 " "
+            List@63..66
+              LBracket@63..64 "["
+              Word@64..65 "1"
+              RBracket@65..66 "]"
+            RBracket@66..67 "]"
+        Whitespace@67..68 " "
+        Spread@68..75
+          SpreadOperator@68..71 "..."
+          Interpolation@71..75
+            InterpText@71..75 "$\"a\""
+        Whitespace@75..76 " "
+        Spread@76..82
+          SpreadOperator@76..79 "..."
+          CellPath@79..82
+            Word@79..80 "$"
+            Dot@80..81 "."
+            Word@81..82 "a"
+        RBracket@82..83 "]"
+  Newline@83..84 "\n"
+  Pipeline@84..97
+    PipelineElement@84..97
+      List@84..97
+        LBracket@84..85 "["
+        Word@85..86 "1"
+        Comma@86..87 ","
+        Whitespace@87..88 " "
+        Spread@88..93
+          SpreadOperator@88..91 "..."
+          Word@91..93 "$x"
+        Comma@93..94 ","
+        Whitespace@94..95 " "
+        Word@95..96 "2"
+        RBracket@96..97 "]"
+  Newline@97..98 "\n"
+  Pipeline@98..128
+    PipelineElement@98..128
+      List@98..128
+        LBracket@98..99 "["
+        Word@99..108 "...{a: 1}"
+        Whitespace@108..109 " "
+        Word@109..113 "...a"
+        Whitespace@113..114 " "
+        Word@114..117 "..."
+        Whitespace@117..118 " "
+        Word@118..120 "$x"
+        Whitespace@120..121 " "
+        Word@121..127 "....$x"
+        RBracket@127..128 "]"
+  Newline@128..129 "\n"
+  Pipeline@129..141
+    PipelineElement@129..141
+      List@129..141
+        LBracket@129..130 "["
+        Spread@130..140
+          SpreadOperator@130..133 "..."
+          Word@133..140 "[1 2].0"
+        RBracket@140..141 "]"
+  Newline@141..142 "\n"

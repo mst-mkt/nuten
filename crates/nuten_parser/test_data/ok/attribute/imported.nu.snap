@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/imported.nu
+---
+Root@0..44
+  Pipeline@0..17
+    PipelineElement@0..17
+      Use@0..17
+        Word@0..3 "use"
+        Whitespace@3..4 " "
+        Word@4..15 "std/testing"
+        Whitespace@15..16 " "
+        Word@16..17 "*"
+  Newline@17..18 "\n"
+  Pipeline@18..43
+    PipelineElement@18..43
+      AttributeBlock@18..43
+        Attribute@18..31
+          Word@18..23 "@test"
+          Whitespace@23..24 " "
+          Word@24..31 "{a:  1}"
+        Newline@31..32 "\n"
+        Def@32..43
+          Word@32..35 "def"
+          Whitespace@35..36 " "
+          Word@36..37 "t"
+          Whitespace@37..38 " "
+          Signature@38..40
+            LBracket@38..39 "["
+            RBracket@39..40 "]"
+          Whitespace@40..41 " "
+          Block@41..43
+            LBrace@41..42 "{"
+            RBrace@42..43 "}"
+  Newline@43..44 "\n"

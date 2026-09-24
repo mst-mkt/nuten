@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/missing_else_body.nu
+---
+Root@0..37
+  Pipeline@0..16
+    PipelineElement@0..16
+      Call@0..16
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Word@3..7 "true"
+        Whitespace@7..8 " "
+        Block@8..11
+          LBrace@8..9 "{"
+          Pipeline@9..10
+            PipelineElement@9..10
+              Word@9..10 "1"
+          RBrace@10..11 "}"
+        Whitespace@11..12 " "
+        Word@12..16 "else"
+  Newline@16..17 "\n"
+  Pipeline@17..36
+    PipelineElement@17..36
+      If@17..36
+        Word@17..19 "if"
+        Whitespace@19..20 " "
+        Word@20..24 "true"
+        Whitespace@24..25 " "
+        Block@25..28
+          LBrace@25..26 "{"
+          Pipeline@26..27
+            PipelineElement@26..27
+              Word@26..27 "1"
+          RBrace@27..28 "}"
+        Whitespace@28..29 " "
+        Word@29..33 "else"
+        Whitespace@33..34 " "
+        Word@34..36 "if"
+  Newline@36..37 "\n"

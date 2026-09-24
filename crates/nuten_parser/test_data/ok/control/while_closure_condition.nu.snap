@@ -1,0 +1,30 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/while_closure_condition.nu
+---
+Root@0..26
+  Pipeline@0..25
+    PipelineElement@0..25
+      While@0..25
+        Word@0..5 "while"
+        Whitespace@5..6 " "
+        Block@6..15
+          LBrace@6..7 "{"
+          ClosureParams@7..9
+            PipePipe@7..9 "||"
+          Whitespace@9..10 " "
+          Pipeline@10..14
+            PipelineElement@10..14
+              Word@10..14 "true"
+          RBrace@14..15 "}"
+        Whitespace@15..16 " "
+        Block@16..25
+          LBrace@16..17 "{"
+          Whitespace@17..18 " "
+          Pipeline@18..23
+            PipelineElement@18..23
+              Call@18..23
+                Word@18..23 "break"
+          Whitespace@23..24 " "
+          RBrace@24..25 "}"
+  Newline@25..26 "\n"

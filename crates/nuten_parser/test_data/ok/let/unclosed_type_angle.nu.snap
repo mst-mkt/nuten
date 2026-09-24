@@ -1,0 +1,70 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/unclosed_type_angle.nu
+---
+Root@0..62
+  Pipeline@0..14
+    PipelineElement@0..14
+      Let@0..14
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Word@6..10 ":a<b"
+        Whitespace@10..11 " "
+        Assign@11..12 "="
+        Whitespace@12..13 " "
+        Pipeline@13..14
+          PipelineElement@13..14
+            Word@13..14 "1"
+  Newline@14..15 "\n"
+  Pipeline@15..28
+    PipelineElement@15..28
+      Let@15..28
+        Word@15..18 "let"
+        Whitespace@18..19 " "
+        Word@19..20 "x"
+        Whitespace@20..21 " "
+        Word@21..24 "a<b"
+        Whitespace@24..25 " "
+        Assign@25..26 "="
+        Whitespace@26..27 " "
+        Pipeline@27..28
+          PipelineElement@27..28
+            Word@27..28 "1"
+  Newline@28..29 "\n"
+  Pipeline@29..47
+    PipelineElement@29..30
+      Call@29..30
+        Word@29..30 "a"
+    Whitespace@30..31 " "
+    Pipe@31..32 "|"
+    Whitespace@32..33 " "
+    PipelineElement@33..47
+      Assignment@33..47
+        Call@33..43
+          Word@33..36 "let"
+          Whitespace@36..37 " "
+          Word@37..39 "x:"
+          Whitespace@39..40 " "
+          Word@40..43 "a<b"
+        Whitespace@43..44 " "
+        Assign@44..45 "="
+        Whitespace@45..46 " "
+        Pipeline@46..47
+          PipelineElement@46..47
+            Word@46..47 "1"
+  Newline@47..48 "\n"
+  Pipeline@48..61
+    PipelineElement@48..61
+      Let@48..61
+        Word@48..51 "let"
+        Whitespace@51..52 " "
+        Word@52..57 "x:a<b"
+        Whitespace@57..58 " "
+        Assign@58..59 "="
+        Whitespace@59..60 " "
+        Pipeline@60..61
+          PipelineElement@60..61
+            Word@60..61 "1"
+  Newline@61..62 "\n"

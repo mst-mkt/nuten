@@ -1,0 +1,20 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/text_after_type.nu
+---
+Root@0..17
+  Pipeline@0..16
+    PipelineElement@0..16
+      Let@0..16
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..6 "x:"
+        Whitespace@6..7 " "
+        Word@7..12 "a<b>c"
+        Whitespace@12..13 " "
+        Assign@13..14 "="
+        Whitespace@14..15 " "
+        Pipeline@15..16
+          PipelineElement@15..16
+            Word@15..16 "1"
+  Newline@16..17 "\n"

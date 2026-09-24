@@ -1,0 +1,79 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/exported.nu
+---
+Root@0..103
+  Pipeline@0..30
+    PipelineElement@0..30
+      Alias@0..30
+        Word@0..6 "export"
+        Whitespace@6..7 " "
+        Word@7..12 "alias"
+        Whitespace@12..13 " "
+        Word@13..15 "ll"
+        Whitespace@15..16 " "
+        Assign@16..17 "="
+        Whitespace@17..18 " "
+        Call@18..30
+          Word@18..20 "ls"
+          Whitespace@20..21 " "
+          Word@21..23 "-l"
+          Whitespace@23..24 " "
+          Pipe@24..25 "|"
+          Whitespace@25..26 " "
+          Word@26..30 "sort"
+  Newline@30..31 "\n"
+  Pipeline@31..68
+    PipelineElement@31..68
+      Alias@31..68
+        Word@31..37 "export"
+        Whitespace@37..38 " "
+        Word@38..43 "alias"
+        Whitespace@43..44 " "
+        Word@44..45 "x"
+        Whitespace@45..46 " "
+        Assign@46..47 "="
+        Whitespace@47..48 " "
+        If@48..68
+          Word@48..50 "if"
+          Whitespace@50..51 " "
+          Word@51..55 "true"
+          Whitespace@55..56 " "
+          Block@56..59
+            LBrace@56..57 "{"
+            Pipeline@57..58
+              PipelineElement@57..58
+                Word@57..58 "1"
+            RBrace@58..59 "}"
+          Whitespace@59..60 " "
+          Word@60..64 "else"
+          Whitespace@64..65 " "
+          Block@65..68
+            LBrace@65..66 "{"
+            Pipeline@66..67
+              PipelineElement@66..67
+                Word@66..67 "2"
+            RBrace@67..68 "}"
+  Newline@68..69 "\n"
+  Pipeline@69..87
+    PipelineElement@69..87
+      Call@69..87
+        Word@69..75 "export"
+        Whitespace@75..76 " "
+        Word@76..81 "alias"
+        Whitespace@81..82 " "
+        Word@82..83 "y"
+        Whitespace@83..84 " "
+        Assign@84..85 "="
+        Whitespace@85..86 " "
+        Word@86..87 "1"
+  Newline@87..88 "\n"
+  Pipeline@88..102
+    PipelineElement@88..102
+      Call@88..102
+        Word@88..94 "export"
+        Whitespace@94..95 " "
+        Word@95..100 "alias"
+        Whitespace@100..101 " "
+        Word@101..102 "z"
+  Newline@102..103 "\n"

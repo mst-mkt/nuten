@@ -1,0 +1,55 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/else_record.nu
+---
+Root@0..52
+  Pipeline@0..21
+    PipelineElement@0..21
+      If@0..21
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Word@3..5 "$a"
+        Whitespace@5..6 " "
+        Block@6..9
+          LBrace@6..7 "{"
+          Pipeline@7..8
+            PipelineElement@7..8
+              Word@7..8 "1"
+          RBrace@8..9 "}"
+        Whitespace@9..10 " "
+        Word@10..14 "else"
+        Whitespace@14..15 " "
+        Record@15..21
+          LBrace@15..16 "{"
+          RecordField@16..20
+            Word@16..17 "a"
+            Colon@17..18 ":"
+            Whitespace@18..19 " "
+            Word@19..20 "1"
+          RBrace@20..21 "}"
+  Newline@21..22 "\n"
+  Pipeline@22..51
+    PipelineElement@22..51
+      If@22..51
+        Word@22..24 "if"
+        Whitespace@24..25 " "
+        Word@25..29 "true"
+        Whitespace@29..30 " "
+        Block@30..32
+          LBrace@30..31 "{"
+          RBrace@31..32 "}"
+        Whitespace@32..33 " "
+        Word@33..37 "else"
+        Whitespace@37..38 " "
+        Block@38..51
+          LBrace@38..39 "{"
+          Pipeline@39..50
+            PipelineElement@39..50
+              Call@39..50
+                Word@39..45 "...$x,"
+                Whitespace@45..46 " "
+                Word@46..48 "a:"
+                Whitespace@48..49 " "
+                Word@49..50 "1"
+          RBrace@50..51 "}"
+  Newline@51..52 "\n"

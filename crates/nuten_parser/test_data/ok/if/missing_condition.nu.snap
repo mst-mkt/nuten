@@ -1,0 +1,17 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/missing_condition.nu
+---
+Root@0..7
+  Pipeline@0..6
+    PipelineElement@0..6
+      Call@0..6
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Block@3..6
+          LBrace@3..4 "{"
+          Pipeline@4..5
+            PipelineElement@4..5
+              Word@4..5 "1"
+          RBrace@5..6 "}"
+  Newline@6..7 "\n"

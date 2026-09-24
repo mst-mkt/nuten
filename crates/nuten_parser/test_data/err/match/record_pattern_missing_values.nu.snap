@@ -1,0 +1,36 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/match/record_pattern_missing_values.nu
+---
+Root@0..42
+  Pipeline@0..41
+    PipelineElement@0..41
+      Match@0..41
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..41
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..24
+            Error@11..19
+              Word@11..19 "{a: b:c}"
+            Whitespace@19..20 " "
+            FatArrow@20..22 "=>"
+            Whitespace@22..23 " "
+            Word@23..24 "1"
+          Comma@24..25 ","
+          Whitespace@25..26 " "
+          MatchArm@26..39
+            Error@26..34
+              Word@26..34 "{a:,#c\n}"
+            Whitespace@34..35 " "
+            FatArrow@35..37 "=>"
+            Whitespace@37..38 " "
+            Word@38..39 "2"
+          Whitespace@39..40 " "
+          RBrace@40..41 "}"
+  Newline@41..42 "\n"
+error 11..19 "{a: b:c}": RecordPatternKey
+error 26..34 "{a:,#c\n}": RecordPatternKey

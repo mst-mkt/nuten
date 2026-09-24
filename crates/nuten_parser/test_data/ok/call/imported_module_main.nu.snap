@@ -1,0 +1,106 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/imported_module_main.nu
+---
+Root@0..114
+  Pipeline@0..77
+    PipelineElement@0..77
+      Module@0..77
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "n"
+        Whitespace@8..9 " "
+        Block@9..77
+          LBrace@9..10 "{"
+          Newline@10..11 "\n"
+          Whitespace@11..13 "  "
+          Pipeline@13..39
+            PipelineElement@13..39
+              Def@13..39
+                Word@13..19 "export"
+                Whitespace@19..20 " "
+                Word@20..23 "def"
+                Whitespace@23..24 " "
+                Word@24..28 "main"
+                Whitespace@28..29 " "
+                Signature@29..32
+                  LBracket@29..30 "["
+                  Param@30..31
+                    Word@30..31 "x"
+                  RBracket@31..32 "]"
+                Whitespace@32..33 " "
+                Block@33..39
+                  LBrace@33..34 "{"
+                  Whitespace@34..35 " "
+                  Pipeline@35..37
+                    PipelineElement@35..37
+                      Word@35..37 "$x"
+                  Whitespace@37..38 " "
+                  RBrace@38..39 "}"
+          Newline@39..40 "\n"
+          Whitespace@40..42 "  "
+          Pipeline@42..75
+            PipelineElement@42..75
+              Def@42..75
+                Word@42..48 "export"
+                Whitespace@48..49 " "
+                Word@49..52 "def"
+                Whitespace@52..53 " "
+                String@53..64 "\"two words\""
+                Whitespace@64..65 " "
+                Signature@65..68
+                  LBracket@65..66 "["
+                  Param@66..67
+                    Word@66..67 "x"
+                  RBracket@67..68 "]"
+                Whitespace@68..69 " "
+                Block@69..75
+                  LBrace@69..70 "{"
+                  Whitespace@70..71 " "
+                  Pipeline@71..73
+                    PipelineElement@71..73
+                      Word@71..73 "$x"
+                  Whitespace@73..74 " "
+                  RBrace@74..75 "}"
+          Newline@75..76 "\n"
+          RBrace@76..77 "}"
+  Newline@77..78 "\n"
+  Pipeline@78..83
+    PipelineElement@78..83
+      Use@78..83
+        Word@78..81 "use"
+        Whitespace@81..82 " "
+        Word@82..83 "n"
+  Newline@83..84 "\n"
+  Pipeline@84..93
+    PipelineElement@84..93
+      Call@84..93
+        Word@84..85 "n"
+        Whitespace@85..86 " "
+        Record@86..93
+          LBrace@86..87 "{"
+          RecordField@87..92
+            Word@87..88 "a"
+            Colon@88..89 ":"
+            Whitespace@89..91 "  "
+            Word@91..92 "1"
+          RBrace@92..93 "}"
+  Newline@93..94 "\n"
+  Pipeline@94..113
+    PipelineElement@94..113
+      Call@94..113
+        Word@94..95 "n"
+        Whitespace@95..96 " "
+        Word@96..99 "two"
+        Whitespace@99..100 " "
+        Word@100..105 "words"
+        Whitespace@105..106 " "
+        Record@106..113
+          LBrace@106..107 "{"
+          RecordField@107..112
+            Word@107..108 "a"
+            Colon@108..109 ":"
+            Whitespace@109..111 "  "
+            Word@111..112 "1"
+          RBrace@112..113 "}"
+  Newline@113..114 "\n"

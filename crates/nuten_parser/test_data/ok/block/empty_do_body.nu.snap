@@ -1,0 +1,27 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/empty_do_body.nu
+---
+Root@0..20
+  Pipeline@0..8
+    PipelineElement@0..8
+      Call@0..8
+        Word@0..2 "do"
+        Whitespace@2..3 " "
+        Block@3..8
+          LBrace@3..4 "{"
+          Whitespace@4..7 "   "
+          RBrace@7..8 "}"
+  Newline@8..9 "\n"
+  Pipeline@9..19
+    PipelineElement@9..19
+      Call@9..19
+        Word@9..11 "do"
+        Whitespace@11..12 " "
+        Block@12..19
+          LBrace@12..13 "{"
+          Whitespace@13..14 " "
+          Comment@14..17 "# c"
+          Newline@17..18 "\n"
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"

@@ -1,0 +1,38 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/pipe_and_semicolon_in_params.nu
+---
+Root@0..25
+  Pipeline@0..24
+    PipelineElement@0..24
+      Def@0..24
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "m"
+        Whitespace@5..6 " "
+        Signature@6..17
+          LBracket@6..7 "["
+          Param@7..10
+            Word@7..8 "x"
+            Whitespace@8..9 " "
+            Pipe@9..10 "|"
+          Whitespace@10..11 " "
+          Param@11..14
+            Word@11..12 "y"
+            Whitespace@12..13 " "
+            Semicolon@13..14 ";"
+          Whitespace@14..15 " "
+          Param@15..16
+            Word@15..16 "z"
+          RBracket@16..17 "]"
+        Whitespace@17..18 " "
+        Block@18..24
+          LBrace@18..19 "{"
+          Whitespace@19..20 " "
+          Pipeline@20..22
+            PipelineElement@20..22
+              Call@20..22
+                Word@20..22 "ls"
+          Whitespace@22..23 " "
+          RBrace@23..24 "}"
+  Newline@24..25 "\n"

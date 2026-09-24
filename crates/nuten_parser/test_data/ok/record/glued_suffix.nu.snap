@@ -1,0 +1,24 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/glued_suffix.nu
+---
+Root@0..19
+  Pipeline@0..18
+    PipelineElement@0..18
+      List@0..18
+        LBracket@0..1 "["
+        CellPath@1..9
+          Record@1..7
+            LBrace@1..2 "{"
+            RecordField@2..6
+              Word@2..3 "a"
+              Colon@3..4 ":"
+              Whitespace@4..5 " "
+              Word@5..6 "1"
+            RBrace@6..7 "}"
+          Dot@7..8 "."
+          Word@8..9 "a"
+        Whitespace@9..10 " "
+        Word@10..17 "{a: 1}b"
+        RBracket@17..18 "]"
+  Newline@18..19 "\n"

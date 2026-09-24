@@ -1,0 +1,16 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/pipeline/leading_pipe.nu
+---
+Root@0..8
+  Pipeline@0..4
+    Pipe@0..1 "|"
+    Whitespace@1..2 " "
+    PipelineElement@2..4
+      Call@2..4
+        Word@2..4 "ls"
+  Newline@4..5 "\n"
+  Newline@5..6 "\n"
+  Pipeline@6..7
+    Pipe@6..7 "|"
+  Newline@7..8 "\n"

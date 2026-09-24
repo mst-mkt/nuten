@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/try_as_let_value.nu
+---
+Root@0..30
+  Pipeline@0..29
+    PipelineElement@0..29
+      Let@0..29
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Assign@6..7 "="
+        Whitespace@7..8 " "
+        Pipeline@8..29
+          PipelineElement@8..29
+            Try@8..29
+              Word@8..11 "try"
+              Whitespace@11..12 " "
+              Block@12..17
+                LBrace@12..13 "{"
+                Whitespace@13..14 " "
+                Pipeline@14..15
+                  PipelineElement@14..15
+                    Word@14..15 "1"
+                Whitespace@15..16 " "
+                RBrace@16..17 "}"
+              Whitespace@17..18 " "
+              Word@18..23 "catch"
+              Whitespace@23..24 " "
+              Block@24..29
+                LBrace@24..25 "{"
+                Whitespace@25..26 " "
+                Pipeline@26..27
+                  PipelineElement@26..27
+                    Word@26..27 "2"
+                Whitespace@27..28 " "
+                RBrace@28..29 "}"
+  Newline@29..30 "\n"

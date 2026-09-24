@@ -1,0 +1,57 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/binary/invalid_digits_nested.nu
+---
+Root@0..66
+  Pipeline@0..23
+    PipelineElement@0..23
+      List@0..23
+        LBracket@0..1 "["
+        Error@1..8
+          Word@1..8 "0x[f g]"
+        Whitespace@8..9 " "
+        Record@9..22
+          LBrace@9..10 "{"
+          RecordField@10..21
+            Word@10..11 "a"
+            Colon@11..12 ":"
+            Whitespace@12..13 " "
+            Error@13..21
+              Word@13..21 "0x[\"ff\"]"
+          RBrace@21..22 "}"
+        RBracket@22..23 "]"
+  Newline@23..24 "\n"
+  Pipeline@24..47
+    PipelineElement@24..47
+      If@24..47
+        Word@24..26 "if"
+        Whitespace@26..27 " "
+        Word@27..31 "true"
+        Whitespace@31..32 " "
+        Block@32..35
+          LBrace@32..33 "{"
+          Whitespace@33..34 " "
+          RBrace@34..35 "}"
+        Whitespace@35..36 " "
+        Word@36..40 "else"
+        Whitespace@40..41 " "
+        Error@41..47
+          Word@41..47 "0x[zz]"
+  Newline@47..48 "\n"
+  Pipeline@48..65
+    PipelineElement@48..54
+      Error@48..54
+        Word@48..54 "0x[zz]"
+    Whitespace@54..55 " "
+    Pipe@55..56 "|"
+    Whitespace@56..57 " "
+    PipelineElement@57..65
+      Call@57..65
+        Word@57..61 "into"
+        Whitespace@61..62 " "
+        Word@62..65 "int"
+  Newline@65..66 "\n"
+error 1..8 "0x[f g]": BinaryDigits
+error 13..21 "0x[\"ff\"]": BinaryDigits
+error 41..47 "0x[zz]": BinaryDigits
+error 48..54 "0x[zz]": BinaryDigits

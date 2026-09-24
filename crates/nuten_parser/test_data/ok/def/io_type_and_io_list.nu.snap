@@ -1,0 +1,164 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/io_type_and_io_list.nu
+---
+Root@0..181
+  Pipeline@0..35
+    PipelineElement@0..35
+      Def@0..35
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "i"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        IoTypes@10..27
+          IoType@10..27
+            Word@10..17 "nothing"
+            Whitespace@17..18 " "
+            Word@18..20 "->"
+            Whitespace@20..21 " "
+            Word@21..27 "string"
+        Whitespace@27..28 " "
+        Block@28..35
+          LBrace@28..29 "{"
+          Whitespace@29..30 " "
+          Pipeline@30..33
+            PipelineElement@30..33
+              String@30..33 "\"a\""
+          Whitespace@33..34 " "
+          RBrace@34..35 "}"
+  Newline@35..36 "\n"
+  Pipeline@36..63
+    PipelineElement@36..63
+      Def@36..63
+        Word@36..39 "def"
+        Whitespace@39..40 " "
+        Word@40..41 "j"
+        Whitespace@41..42 " "
+        Signature@42..44
+          LBracket@42..43 "["
+          RBracket@43..44 "]"
+        Whitespace@44..45 " "
+        Colon@45..46 ":"
+        Whitespace@46..47 " "
+        IoTypes@47..57
+          IoType@47..57
+            Word@47..50 "int"
+            Whitespace@50..51 " "
+            Word@51..53 "->"
+            Whitespace@53..54 " "
+            Word@54..57 "int"
+        Whitespace@57..58 " "
+        Block@58..63
+          LBrace@58..59 "{"
+          Whitespace@59..60 " "
+          Pipeline@60..61
+            PipelineElement@60..61
+              Word@60..61 "1"
+          Whitespace@61..62 " "
+          RBrace@62..63 "}"
+  Newline@63..64 "\n"
+  Pipeline@64..113
+    PipelineElement@64..113
+      Def@64..113
+        Word@64..67 "def"
+        Whitespace@67..68 " "
+        Word@68..69 "k"
+        Whitespace@69..70 " "
+        Signature@70..72
+          LBracket@70..71 "["
+          RBracket@71..72 "]"
+        Colon@72..73 ":"
+        Whitespace@73..74 " "
+        IoTypes@74..105
+          LBracket@74..75 "["
+          IoType@75..88
+            Word@75..78 "int"
+            Whitespace@78..79 " "
+            Word@79..81 "->"
+            Whitespace@81..82 " "
+            Word@82..88 "string"
+          Comma@88..89 ","
+          Whitespace@89..90 " "
+          IoType@90..104
+            Word@90..97 "nothing"
+            Whitespace@97..98 " "
+            Word@98..100 "->"
+            Whitespace@100..101 " "
+            Word@101..104 "int"
+          RBracket@104..105 "]"
+        Whitespace@105..106 " "
+        Block@106..113
+          LBrace@106..107 "{"
+          Whitespace@107..108 " "
+          Pipeline@108..111
+            PipelineElement@108..111
+              String@108..111 "\"a\""
+          Whitespace@111..112 " "
+          RBrace@112..113 "}"
+  Newline@113..114 "\n"
+  Pipeline@114..153
+    PipelineElement@114..153
+      Def@114..153
+        Word@114..117 "def"
+        Whitespace@117..118 " "
+        Word@118..120 "tp"
+        Whitespace@120..121 " "
+        Signature@121..123
+          LBracket@121..122 "["
+          RBracket@122..123 "]"
+        Colon@123..124 ":"
+        Whitespace@124..125 " "
+        IoTypes@125..146
+          IoType@125..146
+            Type@125..139
+              Word@125..131 "record"
+              LAngle@131..132 "<"
+              TypeField@132..138
+                Word@132..133 "a"
+                Colon@133..134 ":"
+                Whitespace@134..135 " "
+                Word@135..138 "int"
+              RAngle@138..139 ">"
+            Whitespace@139..140 " "
+            Word@140..142 "->"
+            Whitespace@142..143 " "
+            Word@143..146 "int"
+        Whitespace@146..147 " "
+        Block@147..153
+          LBrace@147..148 "{"
+          Whitespace@148..149 " "
+          Pipeline@149..151
+            PipelineElement@149..151
+              Call@149..151
+                Word@149..151 "ls"
+          Whitespace@151..152 " "
+          RBrace@152..153 "}"
+  Newline@153..154 "\n"
+  Pipeline@154..180
+    PipelineElement@154..180
+      Def@154..180
+        Word@154..160 "extern"
+        Whitespace@160..161 " "
+        Word@161..162 "i"
+        Whitespace@162..163 " "
+        Signature@163..165
+          LBracket@163..164 "["
+          RBracket@164..165 "]"
+        Whitespace@165..166 " "
+        Colon@166..167 ":"
+        Whitespace@167..168 " "
+        IoTypes@168..180
+          LBracket@168..169 "["
+          IoType@169..179
+            Word@169..172 "int"
+            Whitespace@172..173 " "
+            Word@173..175 "->"
+            Whitespace@175..176 " "
+            Word@176..179 "int"
+          RBracket@179..180 "]"
+  Newline@180..181 "\n"

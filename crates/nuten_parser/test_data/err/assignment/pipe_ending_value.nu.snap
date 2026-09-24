@@ -1,0 +1,65 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/assignment/pipe_ending_value.nu
+---
+Root@0..45
+  Pipeline@0..9
+    PipelineElement@0..9
+      Assignment@0..9
+        Word@0..2 "$x"
+        Whitespace@2..3 " "
+        Assign@3..4 "="
+        Whitespace@4..5 " "
+        Pipeline@5..9
+          PipelineElement@5..7
+            Call@5..7
+              Word@5..7 "ls"
+          Whitespace@7..8 " "
+          Error@8..9
+            Pipe@8..9 "|"
+  Newline@9..10 "\n"
+  Newline@10..11 "\n"
+  Pipeline@11..20
+    PipelineElement@11..20
+      Assignment@11..20
+        Word@11..13 "$x"
+        Whitespace@13..14 " "
+        Assign@14..15 "="
+        Whitespace@15..16 " "
+        Pipeline@16..20
+          PipelineElement@16..18
+            Call@16..18
+              Word@16..18 "ls"
+          Whitespace@18..19 " "
+          Error@19..20
+            Pipe@19..20 "|"
+  Newline@20..21 "\n"
+  Comment@21..24 "# c"
+  Newline@24..25 "\n"
+  Newline@25..26 "\n"
+  Pipeline@26..38
+    PipelineElement@26..38
+      Let@26..38
+        Word@26..29 "let"
+        Whitespace@29..30 " "
+        Word@30..31 "x"
+        Whitespace@31..32 " "
+        Assign@32..33 "="
+        Whitespace@33..34 " "
+        Pipeline@34..38
+          PipelineElement@34..36
+            Call@34..36
+              Word@34..36 "ls"
+          Whitespace@36..37 " "
+          Error@37..38
+            Pipe@37..38 "|"
+  Whitespace@38..39 " "
+  Comment@39..42 "# c"
+  Newline@42..43 "\n"
+  Error@43..44
+    Semicolon@43..44 ";"
+  Newline@44..45 "\n"
+error 8..9 "|": PipeEndsAssignment
+error 19..20 "|": PipeEndsAssignment
+error 37..38 "|": PipeEndsAssignment
+error 43..44 ";": SemicolonAfterPipe

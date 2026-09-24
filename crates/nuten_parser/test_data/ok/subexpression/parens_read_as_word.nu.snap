@@ -1,0 +1,66 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/subexpression/parens_read_as_word.nu
+---
+Root@0..60
+  Pipeline@0..4
+    PipelineElement@0..4
+      Word@0..4 "(#c)"
+  Newline@4..5 "\n"
+  Pipeline@5..18
+    PipelineElement@5..18
+      Let@5..18
+        Word@5..8 "let"
+        Whitespace@8..9 " "
+        Word@9..14 "( x )"
+        Whitespace@14..15 " "
+        Assign@15..16 "="
+        Whitespace@16..17 " "
+        Pipeline@17..18
+          PipelineElement@17..18
+            Word@17..18 "1"
+  Newline@18..19 "\n"
+  Pipeline@19..40
+    PipelineElement@19..40
+      For@19..40
+        Word@19..22 "for"
+        Whitespace@22..23 " "
+        Word@23..26 "(x)"
+        Whitespace@26..27 " "
+        Word@27..29 "in"
+        Whitespace@29..30 " "
+        List@30..33
+          LBracket@30..31 "["
+          Word@31..32 "1"
+          RBracket@32..33 "]"
+        Whitespace@33..34 " "
+        Block@34..40
+          LBrace@34..35 "{"
+          Whitespace@35..36 " "
+          Pipeline@36..38
+            PipelineElement@36..38
+              Call@36..38
+                Word@36..38 "ls"
+          Whitespace@38..39 " "
+          RBrace@39..40 "}"
+  Newline@40..41 "\n"
+  Pipeline@41..59
+    PipelineElement@41..43
+      Call@41..43
+        Word@41..43 "ls"
+    Whitespace@43..44 " "
+    Pipe@44..45 "|"
+    Whitespace@45..46 " "
+    PipelineElement@46..59
+      Assignment@46..59
+        Call@46..55
+          Word@46..49 "let"
+          Whitespace@49..50 " "
+          Word@50..55 "( x )"
+        Whitespace@55..56 " "
+        Assign@56..57 "="
+        Whitespace@57..58 " "
+        Pipeline@58..59
+          PipelineElement@58..59
+            Word@58..59 "1"
+  Newline@59..60 "\n"

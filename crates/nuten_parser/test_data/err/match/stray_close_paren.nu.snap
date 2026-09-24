@@ -1,0 +1,18 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/match/stray_close_paren.nu
+---
+Root@0..22
+  Pipeline@0..21
+    PipelineElement@0..21
+      Call@0..21
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        Error@9..19 "{ 1 => a )"
+        Whitespace@19..20 " "
+        Error@20..21 "}"
+  Newline@21..22 "\n"
+error 18..19 ")": Lex(UnmatchedCloser)
+error 20..21 "}": Lex(UnmatchedCloser)

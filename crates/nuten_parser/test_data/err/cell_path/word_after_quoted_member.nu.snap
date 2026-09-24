@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/cell_path/word_after_quoted_member.nu
+---
+Root@0..16
+  Pipeline@0..7
+    PipelineElement@0..7
+      CellPath@0..7
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        Error@3..7
+          Word@3..7 "'a'b"
+  Newline@7..8 "\n"
+  Pipeline@8..15
+    PipelineElement@8..15
+      CellPath@8..15
+        Word@8..10 "$x"
+        Dot@10..11 "."
+        Error@11..15
+          Word@11..15 "\"a\"b"
+  Newline@15..16 "\n"
+error 3..7 "'a'b": CellPathMember
+error 11..15 "\"a\"b": CellPathMember

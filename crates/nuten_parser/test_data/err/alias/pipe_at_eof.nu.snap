@@ -1,0 +1,20 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/alias/pipe_at_eof.nu
+---
+Root@0..14
+  Pipeline@0..14
+    PipelineElement@0..14
+      Alias@0..14
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..7 "d"
+        Whitespace@7..8 " "
+        Assign@8..9 "="
+        Whitespace@9..10 " "
+        Call@10..14
+          Word@10..12 "ls"
+          Whitespace@12..13 " "
+          Error@13..14
+            Pipe@13..14 "|"
+error 13..14 "|": PipeAtEof

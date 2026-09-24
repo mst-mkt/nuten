@@ -1,0 +1,57 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/broken_before_pipe.nu
+---
+Root@0..68
+  Pipeline@0..31
+    PipelineElement@0..31
+      AttributeBlock@0..31
+        Attribute@0..19
+          Word@0..13 "@search-terms"
+          Whitespace@13..14 " "
+          Word@14..15 "a"
+          Newline@15..16 "\n"
+          Pipe@16..17 "|"
+          Whitespace@17..18 " "
+          Word@18..19 "b"
+        Newline@19..20 "\n"
+        Def@20..31
+          Word@20..23 "def"
+          Whitespace@23..24 " "
+          Word@24..25 "g"
+          Whitespace@25..26 " "
+          Signature@26..28
+            LBracket@26..27 "["
+            RBracket@27..28 "]"
+          Whitespace@28..29 " "
+          Block@29..31
+            LBrace@29..30 "{"
+            RBrace@30..31 "}"
+  Newline@31..32 "\n"
+  Pipeline@32..67
+    PipelineElement@32..67
+      AttributeBlock@32..67
+        Attribute@32..55
+          Word@32..45 "@search-terms"
+          Whitespace@45..46 " "
+          Word@46..47 "a"
+          Newline@47..48 "\n"
+          Comment@48..51 "# c"
+          Newline@51..52 "\n"
+          Pipe@52..53 "|"
+          Whitespace@53..54 " "
+          Word@54..55 "b"
+        Newline@55..56 "\n"
+        Def@56..67
+          Word@56..59 "def"
+          Whitespace@59..60 " "
+          Word@60..61 "h"
+          Whitespace@61..62 " "
+          Signature@62..64
+            LBracket@62..63 "["
+            RBracket@63..64 "]"
+          Whitespace@64..65 " "
+          Block@65..67
+            LBrace@65..66 "{"
+            RBrace@66..67 "}"
+  Newline@67..68 "\n"

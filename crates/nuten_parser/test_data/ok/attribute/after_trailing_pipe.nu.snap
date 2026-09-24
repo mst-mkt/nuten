@@ -1,0 +1,76 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/after_trailing_pipe.nu
+---
+Root@0..64
+  Pipeline@0..23
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    Comment@5..8 "# c"
+    Newline@8..9 "\n"
+    PipelineElement@9..23
+      Call@9..23
+        Word@9..11 "@a"
+        Whitespace@11..12 " "
+        Word@12..13 "x"
+        Newline@13..14 "\n"
+        Word@14..17 "foo"
+        Whitespace@17..18 " "
+        Word@18..23 "{a:1}"
+  Newline@23..24 "\n"
+  Pipeline@24..41
+    PipelineElement@24..41
+      Let@24..41
+        Word@24..27 "let"
+        Whitespace@27..28 " "
+        Word@28..29 "y"
+        Whitespace@29..30 " "
+        Assign@30..31 "="
+        Whitespace@31..32 " "
+        Pipeline@32..41
+          PipelineElement@32..34
+            Call@32..34
+              Word@32..34 "ls"
+          Whitespace@34..35 " "
+          Pipe@35..36 "|"
+          Newline@36..37 "\n"
+          PipelineElement@37..41
+            Call@37..41
+              Word@37..39 "@a"
+              Whitespace@39..40 " "
+              Word@40..41 "x"
+  Semicolon@41..42 ";"
+  Whitespace@42..43 " "
+  Pipeline@43..46
+    PipelineElement@43..46
+      Call@43..46
+        Word@43..46 "foo"
+  Newline@46..47 "\n"
+  Pipeline@47..63
+    PipelineElement@47..63
+      Subexpression@47..63
+        LParen@47..48 "("
+        Pipeline@48..57
+          PipelineElement@48..50
+            Call@48..50
+              Word@48..50 "ls"
+          Whitespace@50..51 " "
+          Pipe@51..52 "|"
+          Newline@52..53 "\n"
+          PipelineElement@53..57
+            Call@53..57
+              Word@53..55 "@a"
+              Whitespace@55..56 " "
+              Word@56..57 "x"
+        Semicolon@57..58 ";"
+        Whitespace@58..59 " "
+        Pipeline@59..62
+          PipelineElement@59..62
+            Call@59..62
+              Word@59..62 "foo"
+        RParen@62..63 ")"
+  Newline@63..64 "\n"

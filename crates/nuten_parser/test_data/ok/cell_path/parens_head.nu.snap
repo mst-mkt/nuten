@@ -1,0 +1,91 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/parens_head.nu
+---
+Root@0..61
+  Pipeline@0..9
+    PipelineElement@0..9
+      CellPath@0..9
+        Subexpression@0..4
+          LParen@0..1 "("
+          Pipeline@1..3
+            PipelineElement@1..3
+              Call@1..3
+                Word@1..3 "ls"
+          RParen@3..4 ")"
+        Dot@4..5 "."
+        Word@5..9 "name"
+  Newline@9..10 "\n"
+  Pipeline@10..28
+    PipelineElement@10..28
+      CellPath@10..28
+        Subexpression@10..22
+          LParen@10..11 "("
+          Pipeline@11..21
+            PipelineElement@11..13
+              Call@11..13
+                Word@11..13 "ls"
+            Whitespace@13..14 " "
+            Pipe@14..15 "|"
+            Whitespace@15..16 " "
+            PipelineElement@16..21
+              Call@16..21
+                Word@16..19 "get"
+                Whitespace@19..20 " "
+                Word@20..21 "0"
+          RParen@21..22 ")"
+        Dot@22..23 "."
+        Word@23..27 "name"
+        Question@27..28 "?"
+  Newline@28..29 "\n"
+  Pipeline@29..40
+    PipelineElement@29..40
+      CellPath@29..40
+        Subexpression@29..35
+          LParen@29..30 "("
+          Newline@30..31 "\n"
+          Pipeline@31..33
+            PipelineElement@31..33
+              Call@31..33
+                Word@31..33 "ls"
+          Newline@33..34 "\n"
+          RParen@34..35 ")"
+        Dot@35..36 "."
+        Word@36..40 "name"
+  Newline@40..41 "\n"
+  Pipeline@41..51
+    PipelineElement@41..51
+      CellPath@41..51
+        Subexpression@41..49
+          LParen@41..42 "("
+          Pipeline@42..48
+            PipelineElement@42..48
+              CellPath@42..48
+                Subexpression@42..46
+                  LParen@42..43 "("
+                  Pipeline@43..45
+                    PipelineElement@43..45
+                      Call@43..45
+                        Word@43..45 "ls"
+                  RParen@45..46 ")"
+                Dot@46..47 "."
+                Word@47..48 "a"
+          RParen@48..49 ")"
+        Dot@49..50 "."
+        Word@50..51 "b"
+  Newline@51..52 "\n"
+  Pipeline@52..60
+    PipelineElement@52..60
+      CellPath@52..60
+        Subexpression@52..58
+          LParen@52..53 "("
+          Pipeline@53..57
+            PipelineElement@53..57
+              Range@53..57
+                Word@53..54 "1"
+                RangeOperator@54..56 ".."
+                Word@56..57 "2"
+          RParen@57..58 ")"
+        Dot@58..59 "."
+        Word@59..60 "0"
+  Newline@60..61 "\n"

@@ -1,0 +1,90 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/literal_after_operator.nu
+---
+Root@0..112
+  Pipeline@0..20
+    PipelineElement@0..20
+      Alias@0..20
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..7 "a"
+        Whitespace@7..8 " "
+        Assign@8..9 "="
+        Whitespace@9..10 " "
+        Call@10..20
+          Word@10..12 "ls"
+          Whitespace@12..13 " "
+          Pipe@13..14 "|"
+          Whitespace@14..15 " "
+          Word@15..20 "[a,b]"
+  Newline@20..21 "\n"
+  Pipeline@21..42
+    PipelineElement@21..42
+      Alias@21..42
+        Word@21..26 "alias"
+        Whitespace@26..27 " "
+        Word@27..28 "b"
+        Whitespace@28..29 " "
+        Assign@29..30 "="
+        Whitespace@30..31 " "
+        ExternalCall@31..42
+          Word@31..34 "^ls"
+          Whitespace@34..35 " "
+          Pipe@35..36 "|"
+          Whitespace@36..37 " "
+          Word@37..42 "{a:1}"
+  Newline@42..43 "\n"
+  Pipeline@43..65
+    PipelineElement@43..65
+      Alias@43..65
+        Word@43..48 "alias"
+        Whitespace@48..49 " "
+        Word@49..50 "c"
+        Whitespace@50..51 " "
+        Assign@51..52 "="
+        Whitespace@52..53 " "
+        ExternalCall@53..65
+          Word@53..56 "^ls"
+          Whitespace@56..57 " "
+          PipePipe@57..59 "||"
+          Whitespace@59..60 " "
+          List@60..65
+            LBracket@60..61 "["
+            Word@61..62 "a"
+            Comma@62..63 ","
+            Word@63..64 "b"
+            RBracket@64..65 "]"
+  Newline@65..66 "\n"
+  Pipeline@66..87
+    PipelineElement@66..87
+      Alias@66..87
+        Word@66..71 "alias"
+        Whitespace@71..72 " "
+        Word@72..73 "d"
+        Whitespace@73..74 " "
+        Assign@74..75 "="
+        Whitespace@75..76 " "
+        Call@76..87
+          Word@76..78 "ls"
+          Whitespace@78..79 " "
+          OutGt@79..81 "o>"
+          Whitespace@81..82 " "
+          Word@82..87 "[a,b]"
+  Newline@87..88 "\n"
+  Pipeline@88..111
+    PipelineElement@88..111
+      Alias@88..111
+        Word@88..93 "alias"
+        Whitespace@93..94 " "
+        Word@94..95 "e"
+        Whitespace@95..96 " "
+        Assign@96..97 "="
+        Whitespace@97..98 " "
+        ExternalCall@98..111
+          Word@98..101 "^ls"
+          Whitespace@101..102 " "
+          ErrGtPipe@102..105 "e>|"
+          Whitespace@105..106 " "
+          Word@106..111 "{a:1}"
+  Newline@111..112 "\n"

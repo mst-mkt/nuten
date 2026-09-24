@@ -1,0 +1,95 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/if_as_operand.nu
+---
+Root@0..103
+  Pipeline@0..26
+    PipelineElement@0..26
+      MathExpression@0..26
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Operator@2..3 "+"
+        Whitespace@3..4 " "
+        If@4..26
+          Word@4..6 "if"
+          Whitespace@6..7 " "
+          Word@7..9 "$a"
+          Whitespace@9..10 " "
+          Block@10..15
+            LBrace@10..11 "{"
+            Whitespace@11..12 " "
+            Pipeline@12..13
+              PipelineElement@12..13
+                Word@12..13 "1"
+            Whitespace@13..14 " "
+            RBrace@14..15 "}"
+          Whitespace@15..16 " "
+          Word@16..20 "else"
+          Whitespace@20..21 " "
+          Block@21..26
+            LBrace@21..22 "{"
+            Whitespace@22..23 " "
+            Pipeline@23..24
+              PipelineElement@23..24
+                Word@23..24 "2"
+            Whitespace@24..25 " "
+            RBrace@25..26 "}"
+  Newline@26..27 "\n"
+  Pipeline@27..54
+    PipelineElement@27..54
+      MathExpression@27..54
+        Word@27..28 "1"
+        Whitespace@28..29 " "
+        Operator@29..30 "+"
+        Whitespace@30..31 " "
+        Word@31..33 "if"
+        Whitespace@33..34 " "
+        Word@34..38 "true"
+        Whitespace@38..39 " "
+        Word@39..42 "{1}"
+        Whitespace@42..43 " "
+        Word@43..47 "else"
+        Whitespace@47..48 " "
+        Word@48..51 "{2}"
+        Whitespace@51..52 " "
+        Word@52..54 "--"
+  Newline@54..55 "\n"
+  Pipeline@55..70
+    PipelineElement@55..70
+      MathExpression@55..70
+        Word@55..56 "1"
+        Whitespace@56..57 " "
+        Operator@57..58 "+"
+        Whitespace@58..59 " "
+        Word@59..61 "if"
+        Whitespace@61..62 " "
+        Word@62..66 "true"
+        Whitespace@66..67 " "
+        Word@67..70 "$in"
+  Newline@70..71 "\n"
+  Pipeline@71..80
+    PipelineElement@71..80
+      MathExpression@71..80
+        Word@71..72 "1"
+        Whitespace@72..73 " "
+        Operator@73..74 "+"
+        Whitespace@74..75 " "
+        Word@75..77 "if"
+        Whitespace@77..78 " "
+        Word@78..80 "$a"
+  Newline@80..81 "\n"
+  Pipeline@81..102
+    PipelineElement@81..102
+      MathExpression@81..102
+        Word@81..82 "1"
+        Whitespace@82..83 " "
+        Operator@83..84 "+"
+        Whitespace@84..85 " "
+        Word@85..87 "if"
+        Whitespace@87..88 " "
+        Word@88..90 "$a"
+        Whitespace@90..91 " "
+        Word@91..96 "{ 1 }"
+        Whitespace@96..97 " "
+        Word@97..102 "extra"
+  Newline@102..103 "\n"

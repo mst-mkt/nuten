@@ -1,0 +1,48 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/bars_after_blank_line_or_comment.nu
+---
+Root@0..33
+  Pipeline@0..14
+    PipelineElement@0..14
+      Call@0..14
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Block@5..14
+          LBrace@5..6 "{"
+          Newline@6..7 "\n"
+          Newline@7..8 "\n"
+          Pipeline@8..13
+            Pipe@8..9 "|"
+            PipelineElement@9..10
+              Call@9..10
+                Word@9..10 "x"
+            Pipe@10..11 "|"
+            Whitespace@11..12 " "
+            PipelineElement@12..13
+              Call@12..13
+                Word@12..13 "x"
+          RBrace@13..14 "}"
+  Newline@14..15 "\n"
+  Pipeline@15..32
+    PipelineElement@15..32
+      Call@15..32
+        Word@15..19 "echo"
+        Whitespace@19..20 " "
+        Block@20..32
+          LBrace@20..21 "{"
+          Whitespace@21..22 " "
+          Comment@22..25 "# c"
+          Newline@25..26 "\n"
+          Pipeline@26..31
+            Pipe@26..27 "|"
+            PipelineElement@27..28
+              Call@27..28
+                Word@27..28 "x"
+            Pipe@28..29 "|"
+            Whitespace@29..30 " "
+            PipelineElement@30..31
+              Call@30..31
+                Word@30..31 "x"
+          RBrace@31..32 "}"
+  Newline@32..33 "\n"

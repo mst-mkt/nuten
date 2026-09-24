@@ -1,0 +1,44 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/nested.nu
+---
+Root@0..33
+  Pipeline@0..32
+    PipelineElement@0..22
+      Record@0..22
+        LBrace@0..1 "{"
+        RecordField@1..10
+          Word@1..2 "a"
+          Colon@2..3 ":"
+          Whitespace@3..4 " "
+          List@4..10
+            LBracket@4..5 "["
+            Word@5..6 "1"
+            Comma@6..7 ","
+            Whitespace@7..8 " "
+            Word@8..9 "2"
+            RBracket@9..10 "]"
+        Comma@10..11 ","
+        Whitespace@11..12 " "
+        RecordField@12..21
+          Word@12..13 "b"
+          Colon@13..14 ":"
+          Whitespace@14..15 " "
+          Record@15..21
+            LBrace@15..16 "{"
+            RecordField@16..20
+              Word@16..17 "c"
+              Colon@17..18 ":"
+              Whitespace@18..19 " "
+              Word@19..20 "3"
+            RBrace@20..21 "}"
+        RBrace@21..22 "}"
+    Whitespace@22..23 " "
+    Pipe@23..24 "|"
+    Whitespace@24..25 " "
+    PipelineElement@25..32
+      Call@25..32
+        Word@25..27 "to"
+        Whitespace@27..28 " "
+        Word@28..32 "json"
+  Newline@32..33 "\n"

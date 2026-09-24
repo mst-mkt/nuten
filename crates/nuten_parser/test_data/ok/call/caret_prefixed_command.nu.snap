@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/caret_prefixed_command.nu
+---
+Root@0..50
+  Pipeline@0..15
+    PipelineElement@0..7
+      ExternalCall@0..7
+        Word@0..3 "^ls"
+        Whitespace@3..4 " "
+        Word@4..7 "-la"
+    Whitespace@7..8 " "
+    Pipe@8..9 "|"
+    Whitespace@9..10 " "
+    PipelineElement@10..15
+      Call@10..15
+        Word@10..15 "lines"
+  Newline@15..16 "\n"
+  Pipeline@16..29
+    PipelineElement@16..29
+      ExternalCall@16..29
+        Word@16..22 "^\"git\""
+        Whitespace@22..23 " "
+        Word@23..29 "status"
+  Newline@29..30 "\n"
+  Pipeline@30..37
+    PipelineElement@30..37
+      Call@30..37
+        Word@30..34 "echo"
+        Whitespace@34..35 " "
+        Word@35..37 "^a"
+  Newline@37..38 "\n"
+  Pipeline@38..49
+    PipelineElement@38..49
+      ExternalCall@38..49
+        Word@38..41 "^ls"
+        Whitespace@41..42 " "
+        Word@42..49 "{a:  1}"
+  Newline@49..50 "\n"

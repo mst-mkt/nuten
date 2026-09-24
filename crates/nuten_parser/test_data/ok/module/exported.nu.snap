@@ -1,0 +1,56 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/exported.nu
+---
+Root@0..82
+  Pipeline@0..43
+    PipelineElement@0..43
+      Module@0..43
+        Word@0..6 "export"
+        Whitespace@6..8 "  "
+        Word@8..14 "module"
+        Whitespace@14..16 "  "
+        Word@16..17 "n"
+        Whitespace@17..19 "  "
+        Block@19..43
+          LBrace@19..20 "{"
+          Whitespace@20..22 "  "
+          Pipeline@22..40
+            PipelineElement@22..40
+              Let@22..40
+                Word@22..28 "export"
+                Whitespace@28..29 " "
+                Word@29..34 "const"
+                Whitespace@34..35 " "
+                Word@35..36 "x"
+                Whitespace@36..37 " "
+                Assign@37..38 "="
+                Whitespace@38..39 " "
+                Pipeline@39..40
+                  PipelineElement@39..40
+                    Word@39..40 "1"
+          Whitespace@40..42 "  "
+          RBrace@42..43 "}"
+  Newline@43..44 "\n"
+  Pipeline@44..62
+    PipelineElement@44..62
+      Call@44..62
+        Word@44..50 "export"
+        Whitespace@50..51 " "
+        Word@51..57 "module"
+        Whitespace@57..58 " "
+        Word@58..62 "o.nu"
+  Newline@62..63 "\n"
+  Pipeline@63..81
+    PipelineElement@63..81
+      Module@63..81
+        Word@63..69 "export"
+        Whitespace@69..70 " "
+        Word@70..76 "module"
+        Whitespace@76..77 " "
+        Word@77..78 "p"
+        Whitespace@78..79 " "
+        Block@79..81
+          LBrace@79..80 "{"
+          RBrace@80..81 "}"
+  Newline@81..82 "\n"

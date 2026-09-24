@@ -1,0 +1,26 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/extra_block_after_body.nu
+---
+Root@0..19
+  Pipeline@0..18
+    PipelineElement@0..18
+      Call@0..18
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "q"
+        Whitespace@5..6 " "
+        Word@6..8 "[]"
+        Whitespace@8..9 " "
+        Word@9..11 "{}"
+        Whitespace@11..12 " "
+        Block@12..18
+          LBrace@12..13 "{"
+          Whitespace@13..14 " "
+          Pipeline@14..16
+            PipelineElement@14..16
+              Call@14..16
+                Word@14..16 "ls"
+          Whitespace@16..17 " "
+          RBrace@17..18 "}"
+  Newline@18..19 "\n"

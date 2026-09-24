@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/cell_path/parens_in_member.nu
+---
+Root@0..35
+  Pipeline@0..7
+    PipelineElement@0..7
+      CellPath@0..7
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        Error@3..7
+          Word@3..7 "a(b)"
+  Newline@7..8 "\n"
+  Pipeline@8..14
+    PipelineElement@8..14
+      CellPath@8..14
+        Word@8..10 "$x"
+        Dot@10..11 "."
+        Error@11..14
+          Word@11..14 "(a)"
+  Newline@14..15 "\n"
+  Pipeline@15..24
+    PipelineElement@15..24
+      CellPath@15..24
+        Word@15..17 "$x"
+        Dot@17..18 "."
+        Error@18..24
+          InterpString@18..24 "$'(a)'"
+  Newline@24..25 "\n"
+  Pipeline@25..34
+    PipelineElement@25..34
+      CellPath@25..34
+        Word@25..27 "$x"
+        Dot@27..28 "."
+        Error@28..34
+          Word@28..34 "(\"..\")"
+  Newline@34..35 "\n"
+error 3..7 "a(b)": CellPathMember
+error 11..14 "(a)": CellPathMember
+error 18..24 "$'(a)'": CellPathMember
+error 28..34 "(\"..\")": CellPathMember

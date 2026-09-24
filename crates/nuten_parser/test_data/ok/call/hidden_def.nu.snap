@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/hidden_def.nu
+---
+Root@0..49
+  Pipeline@0..21
+    PipelineElement@0..21
+      Def@0..21
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..10 "hidden"
+        Whitespace@10..11 " "
+        Signature@11..14
+          LBracket@11..12 "["
+          Param@12..13
+            Word@12..13 "x"
+          RBracket@13..14 "]"
+        Whitespace@14..15 " "
+        Block@15..21
+          LBrace@15..16 "{"
+          Whitespace@16..17 " "
+          Pipeline@17..19
+            PipelineElement@17..19
+              Word@17..19 "$x"
+          Whitespace@19..20 " "
+          RBrace@20..21 "}"
+  Newline@21..22 "\n"
+  Pipeline@22..33
+    PipelineElement@22..33
+      Call@22..33
+        Word@22..26 "hide"
+        Whitespace@26..27 " "
+        Word@27..33 "hidden"
+  Newline@33..34 "\n"
+  Pipeline@34..48
+    PipelineElement@34..48
+      Call@34..48
+        Word@34..40 "hidden"
+        Whitespace@40..41 " "
+        Word@41..48 "{a:  1}"
+  Newline@48..49 "\n"

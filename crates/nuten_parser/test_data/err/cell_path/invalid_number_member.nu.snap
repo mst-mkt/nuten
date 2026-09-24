@@ -1,0 +1,60 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/cell_path/invalid_number_member.nu
+---
+Root@0..57
+  Pipeline@0..5
+    PipelineElement@0..5
+      CellPath@0..5
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        Error@3..5
+          Word@3..5 "-1"
+  Newline@5..6 "\n"
+  Pipeline@6..14
+    PipelineElement@6..14
+      CellPath@6..14
+        Word@6..8 "$x"
+        Dot@8..9 "."
+        Error@9..12
+          Word@9..12 "-_1"
+        Dot@12..13 "."
+        Word@13..14 "a"
+  Newline@14..15 "\n"
+  Pipeline@15..36
+    PipelineElement@15..36
+      CellPath@15..36
+        Word@15..17 "$x"
+        Dot@17..18 "."
+        Error@18..36
+          Word@18..36 "0xffffffffffffffff"
+  Newline@36..37 "\n"
+  Pipeline@37..48
+    PipelineElement@37..48
+      CellPath@37..48
+        Word@37..39 "$x"
+        Dot@39..40 "."
+        Word@40..41 "a"
+        Question@41..42 "?"
+        Dot@42..43 "."
+        Error@43..45
+          Word@43..45 "-1"
+        Question@45..46 "?"
+        Dot@46..47 "."
+        Word@47..48 "b"
+  Newline@48..49 "\n"
+  Pipeline@49..56
+    PipelineElement@49..56
+      CellPath@49..56
+        Word@49..51 "$x"
+        Dot@51..52 "."
+        Error@52..54
+          Word@52..54 "-1"
+        Dot@54..55 "."
+        Question@55..56 "?"
+  Newline@56..57 "\n"
+error 3..5 "-1": NegativeCellPathIndex
+error 9..12 "-_1": NegativeCellPathIndex
+error 18..36 "0xffffffffffffffff": NegativeCellPathIndex
+error 43..45 "-1": NegativeCellPathIndex
+error 52..54 "-1": NegativeCellPathIndex

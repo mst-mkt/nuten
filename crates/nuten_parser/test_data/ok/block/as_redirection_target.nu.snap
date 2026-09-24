@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/as_redirection_target.nu
+---
+Root@0..20
+  Pipeline@0..19
+    PipelineElement@0..19
+      ExternalCall@0..10
+        Word@0..5 "^echo"
+        Whitespace@5..6 " "
+        Word@6..10 "{ls}"
+      Whitespace@10..11 " "
+      Redirection@11..19
+        OutGt@11..13 "o>"
+        Whitespace@13..14 " "
+        Block@14..19
+          LBrace@14..15 "{"
+          Pipeline@15..18
+            PipelineElement@15..18
+              Call@15..18
+                Word@15..18 "pwd"
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"

@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/missing_equals.nu
+---
+Root@0..24
+  Pipeline@0..8
+    PipelineElement@0..8
+      Call@0..8
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..8 "ag"
+  Newline@8..9 "\n"
+  Pipeline@9..23
+    PipelineElement@9..23
+      Call@9..23
+        Word@9..14 "alias"
+        Whitespace@14..15 " "
+        Word@15..17 "ah"
+        Whitespace@17..18 " "
+        Assign@18..20 "+="
+        Whitespace@20..21 " "
+        Word@21..23 "ls"
+  Newline@23..24 "\n"

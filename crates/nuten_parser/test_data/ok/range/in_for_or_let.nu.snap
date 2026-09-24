@@ -1,0 +1,59 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/in_for_or_let.nu
+---
+Root@0..54
+  Pipeline@0..19
+    PipelineElement@0..19
+      For@0..19
+        Word@0..3 "for"
+        Whitespace@3..4 " "
+        Word@4..5 "i"
+        Whitespace@5..6 " "
+        Word@6..8 "in"
+        Whitespace@8..9 " "
+        Range@9..15
+          Word@9..11 "$x"
+          RangeOperator@11..13 ".."
+          Word@13..15 "$y"
+        Whitespace@15..16 " "
+        Block@16..19
+          LBrace@16..17 "{"
+          Whitespace@17..18 " "
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"
+  Pipeline@20..34
+    PipelineElement@20..34
+      Let@20..34
+        Word@20..23 "let"
+        Whitespace@23..24 " "
+        Word@24..25 "r"
+        Whitespace@25..26 " "
+        Assign@26..27 "="
+        Whitespace@27..28 " "
+        Pipeline@28..34
+          PipelineElement@28..34
+            Range@28..34
+              Word@28..30 "$x"
+              RangeOperator@30..32 ".."
+              Word@32..34 "$y"
+  Newline@34..35 "\n"
+  Pipeline@35..53
+    PipelineElement@35..53
+      For@35..53
+        Word@35..38 "for"
+        Whitespace@38..39 " "
+        Word@39..40 "i"
+        Whitespace@40..41 " "
+        Word@41..43 "in"
+        Whitespace@43..44 " "
+        Range@44..49
+          Word@44..45 "1"
+          RangeOperator@45..47 ".."
+          Word@47..49 "$n"
+        Whitespace@49..50 " "
+        Block@50..53
+          LBrace@50..51 "{"
+          Whitespace@51..52 " "
+          RBrace@52..53 "}"
+  Newline@53..54 "\n"

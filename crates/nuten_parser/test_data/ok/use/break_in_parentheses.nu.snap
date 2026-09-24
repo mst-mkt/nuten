@@ -1,0 +1,45 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/use/break_in_parentheses.nu
+---
+Root@0..41
+  Pipeline@0..16
+    PipelineElement@0..16
+      Subexpression@0..16
+        LParen@0..1 "("
+        Pipeline@1..15
+          PipelineElement@1..15
+            Use@1..15
+              Word@1..4 "use"
+              Whitespace@4..5 " "
+              Word@5..9 "m.nu"
+              Newline@9..10 "\n"
+              List@10..15
+                LBracket@10..11 "["
+                Word@11..12 "a"
+                Comma@12..13 ","
+                Word@13..14 "b"
+                RBracket@14..15 "]"
+        RParen@15..16 ")"
+  Newline@16..17 "\n"
+  Pipeline@17..40
+    PipelineElement@17..40
+      Subexpression@17..40
+        LParen@17..18 "("
+        Pipeline@18..39
+          PipelineElement@18..39
+            Use@18..39
+              Word@18..24 "export"
+              Newline@24..25 "\n"
+              Word@25..28 "use"
+              Whitespace@28..29 " "
+              Word@29..33 "m.nu"
+              Whitespace@33..34 " "
+              List@34..39
+                LBracket@34..35 "["
+                Word@35..36 "a"
+                Comma@36..37 ","
+                Word@37..38 "b"
+                RBracket@38..39 "]"
+        RParen@39..40 ")"
+  Newline@40..41 "\n"

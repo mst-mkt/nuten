@@ -1,0 +1,75 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/redirection/repeated_stream.nu
+---
+Root@0..90
+  Pipeline@0..20
+    PipelineElement@0..20
+      Call@0..2
+        Word@0..2 "ls"
+      Whitespace@2..3 " "
+      Redirection@3..11
+        OutGt@3..5 "o>"
+        Whitespace@5..6 " "
+        Word@6..11 "a.txt"
+      Whitespace@11..12 " "
+      Redirection@12..20
+        Error@12..14
+          OutGt@12..14 "o>"
+        Whitespace@14..15 " "
+        Word@15..20 "b.txt"
+  Newline@20..21 "\n"
+  Pipeline@21..43
+    PipelineElement@21..43
+      Call@21..23
+        Word@21..23 "ls"
+      Whitespace@23..24 " "
+      Redirection@24..34
+        OutErrGt@24..28 "o+e>"
+        Whitespace@28..29 " "
+        Word@29..34 "a.txt"
+      Whitespace@34..35 " "
+      Redirection@35..43
+        Error@35..37
+          ErrGt@35..37 "e>"
+        Whitespace@37..38 " "
+        Word@38..43 "b.txt"
+  Newline@43..44 "\n"
+  Pipeline@44..65
+    PipelineElement@44..55
+      Call@44..46
+        Word@44..46 "ls"
+      Whitespace@46..47 " "
+      Redirection@47..55
+        ErrGt@47..49 "e>"
+        Whitespace@49..50 " "
+        Word@50..55 "a.txt"
+    Whitespace@55..56 " "
+    Error@56..59
+      ErrGtPipe@56..59 "e>|"
+    Whitespace@59..60 " "
+    PipelineElement@60..65
+      Call@60..65
+        Word@60..65 "lines"
+  Newline@65..66 "\n"
+  Pipeline@66..89
+    PipelineElement@66..77
+      Call@66..68
+        Word@66..68 "ls"
+      Whitespace@68..69 " "
+      Redirection@69..77
+        OutGt@69..71 "o>"
+        Whitespace@71..72 " "
+        Word@72..77 "a.txt"
+    Whitespace@77..78 " "
+    Error@78..83
+      OutErrGtPipe@78..83 "o+e>|"
+    Whitespace@83..84 " "
+    PipelineElement@84..89
+      Call@84..89
+        Word@84..89 "lines"
+  Newline@89..90 "\n"
+error 12..14 "o>": MultipleRedirections
+error 35..37 "e>": MultipleRedirections
+error 56..59 "e>|": MultipleRedirections
+error 78..83 "o+e>|": MultipleRedirections

@@ -1,0 +1,49 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/variable/bare_dollar_pattern_or_value.nu
+---
+Root@0..44
+  Pipeline@0..15
+    PipelineElement@0..15
+      For@0..15
+        Word@0..3 "for"
+        Whitespace@3..4 " "
+        Word@4..5 "$"
+        Whitespace@5..6 " "
+        Word@6..8 "in"
+        Whitespace@8..9 " "
+        List@9..11
+          LBracket@9..10 "["
+          RBracket@10..11 "]"
+        Whitespace@11..12 " "
+        Block@12..15
+          LBrace@12..13 "{"
+          Whitespace@13..14 " "
+          RBrace@14..15 "}"
+  Newline@15..16 "\n"
+  Pipeline@16..34
+    PipelineElement@16..34
+      Match@16..34
+        Word@16..21 "match"
+        Whitespace@21..22 " "
+        Word@22..23 "1"
+        Whitespace@23..24 " "
+        MatchArms@24..34
+          LBrace@24..25 "{"
+          Whitespace@25..26 " "
+          MatchArm@26..32
+            Word@26..27 "$"
+            Whitespace@27..28 " "
+            FatArrow@28..30 "=>"
+            Whitespace@30..31 " "
+            Word@31..32 "1"
+          Whitespace@32..33 " "
+          RBrace@33..34 "}"
+  Newline@34..35 "\n"
+  Pipeline@35..43
+    PipelineElement@35..43
+      Call@35..43
+        Word@35..40 "FOO=$"
+        Whitespace@40..41 " "
+        Word@41..43 "ls"
+  Newline@43..44 "\n"

@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/io_type_with_completer.nu
+---
+Root@0..36
+  Pipeline@0..35
+    PipelineElement@0..35
+      Def@0..35
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "k"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        IoTypes@10..28
+          IoType@10..28
+            Word@10..13 "int"
+            Whitespace@13..14 " "
+            Word@14..16 "->"
+            Whitespace@16..17 " "
+            Word@17..28 "list<int>@c"
+        Whitespace@28..29 " "
+        Block@29..35
+          LBrace@29..30 "{"
+          Whitespace@30..31 " "
+          Pipeline@31..33
+            PipelineElement@31..33
+              Call@31..33
+                Word@31..33 "ls"
+          Whitespace@33..34 " "
+          RBrace@34..35 "}"
+  Newline@35..36 "\n"

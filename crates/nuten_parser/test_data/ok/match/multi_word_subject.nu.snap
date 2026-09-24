@@ -1,0 +1,26 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/multi_word_subject.nu
+---
+Root@0..21
+  Pipeline@0..20
+    PipelineElement@0..20
+      Match@0..20
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..7 "a"
+        Whitespace@7..8 " "
+        Word@8..9 "b"
+        Whitespace@9..10 " "
+        MatchArms@10..20
+          LBrace@10..11 "{"
+          Whitespace@11..12 " "
+          MatchArm@12..18
+            Word@12..13 "_"
+            Whitespace@13..14 " "
+            FatArrow@14..16 "=>"
+            Whitespace@16..17 " "
+            Word@17..18 "1"
+          Whitespace@18..19 " "
+          RBrace@19..20 "}"
+  Newline@20..21 "\n"

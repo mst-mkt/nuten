@@ -1,0 +1,54 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/variable/in_and_declared_variables.nu
+---
+Root@0..55
+  Pipeline@0..3
+    PipelineElement@0..3
+      Word@0..3 "$in"
+  Newline@3..4 "\n"
+  Pipeline@4..13
+    PipelineElement@4..13
+      Let@4..13
+        Word@4..7 "let"
+        Whitespace@7..8 " "
+        Word@8..9 "x"
+        Whitespace@9..10 " "
+        Assign@10..11 "="
+        Whitespace@11..12 " "
+        Pipeline@12..13
+          PipelineElement@12..13
+            Word@12..13 "1"
+  Semicolon@13..14 ";"
+  Whitespace@14..15 " "
+  Pipeline@15..17
+    PipelineElement@15..17
+      Word@15..17 "$x"
+  Newline@17..18 "\n"
+  Pipeline@18..38
+    PipelineElement@18..38
+      Let@18..38
+        Word@18..24 "export"
+        Whitespace@24..25 " "
+        Word@25..30 "const"
+        Whitespace@30..31 " "
+        Word@31..34 "$x?"
+        Whitespace@34..35 " "
+        Assign@35..36 "="
+        Whitespace@36..37 " "
+        Pipeline@37..38
+          PipelineElement@37..38
+            Word@37..38 "1"
+  Newline@38..39 "\n"
+  Pipeline@39..54
+    PipelineElement@39..54
+      Call@39..54
+        Word@39..43 "echo"
+        Whitespace@43..44 " "
+        Word@44..49 "const"
+        Whitespace@49..50 " "
+        CellPath@50..54
+          Word@50..52 "$x"
+          Dot@52..53 "."
+          Word@53..54 "a"
+  Newline@54..55 "\n"

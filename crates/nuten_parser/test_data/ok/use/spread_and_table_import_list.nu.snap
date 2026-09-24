@@ -1,0 +1,43 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/use/spread_and_table_import_list.nu
+---
+Root@0..39
+  Pipeline@0..18
+    PipelineElement@0..18
+      Use@0..18
+        Word@0..3 "use"
+        Whitespace@3..4 " "
+        Word@4..8 "m.nu"
+        Whitespace@8..9 " "
+        Spread@9..18
+          SpreadOperator@9..12 "..."
+          List@12..18
+            LBracket@12..13 "["
+            Word@13..14 "a"
+            Comma@14..15 ","
+            Whitespace@15..16 " "
+            Word@16..17 "b"
+            RBracket@17..18 "]"
+  Newline@18..19 "\n"
+  Pipeline@19..38
+    PipelineElement@19..38
+      Use@19..38
+        Word@19..22 "use"
+        Whitespace@22..23 " "
+        Word@23..27 "m.nu"
+        Whitespace@27..28 " "
+        Table@28..38
+          LBracket@28..29 "["
+          List@29..32
+            LBracket@29..30 "["
+            Word@30..31 "a"
+            RBracket@31..32 "]"
+          Semicolon@32..33 ";"
+          Whitespace@33..34 " "
+          List@34..37
+            LBracket@34..35 "["
+            Word@35..36 "b"
+            RBracket@36..37 "]"
+          RBracket@37..38 "]"
+  Newline@38..39 "\n"

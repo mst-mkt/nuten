@@ -1,0 +1,5 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/file/empty.nu
+---
+Root@0..0

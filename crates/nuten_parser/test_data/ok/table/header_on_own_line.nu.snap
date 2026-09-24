@@ -1,0 +1,29 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/table/header_on_own_line.nu
+---
+Root@0..21
+  Pipeline@0..20
+    PipelineElement@0..20
+      Table@0..20
+        LBracket@0..1 "["
+        Newline@1..2 "\n"
+        Whitespace@2..4 "  "
+        List@4..9
+          LBracket@4..5 "["
+          Word@5..6 "a"
+          Whitespace@6..7 " "
+          Word@7..8 "b"
+          RBracket@8..9 "]"
+        Semicolon@9..10 ";"
+        Newline@10..11 "\n"
+        Whitespace@11..13 "  "
+        List@13..18
+          LBracket@13..14 "["
+          Word@14..15 "1"
+          Whitespace@15..16 " "
+          Word@16..17 "2"
+          RBracket@17..18 "]"
+        Newline@18..19 "\n"
+        RBracket@19..20 "]"
+  Newline@20..21 "\n"

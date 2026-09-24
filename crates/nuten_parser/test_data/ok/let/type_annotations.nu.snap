@@ -1,0 +1,136 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/type_annotations.nu
+---
+Root@0..151
+  Pipeline@0..14
+    PipelineElement@0..14
+      Let@0..14
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..6 "x:"
+        Whitespace@6..7 " "
+        Word@7..10 "int"
+        Whitespace@10..11 " "
+        Assign@11..12 "="
+        Whitespace@12..13 " "
+        Pipeline@13..14
+          PipelineElement@13..14
+            Word@13..14 "1"
+  Newline@14..15 "\n"
+  Pipeline@15..45
+    PipelineElement@15..45
+      Let@15..45
+        Word@15..18 "let"
+        Whitespace@18..19 " "
+        Word@19..21 "x:"
+        Whitespace@21..22 " "
+        Type@22..36
+          Word@22..28 "record"
+          LAngle@28..29 "<"
+          TypeField@29..35
+            Word@29..30 "a"
+            Colon@30..31 ":"
+            Whitespace@31..32 " "
+            Word@32..35 "int"
+          RAngle@35..36 ">"
+        Whitespace@36..37 " "
+        Assign@37..38 "="
+        Whitespace@38..39 " "
+        Pipeline@39..45
+          PipelineElement@39..45
+            Record@39..45
+              LBrace@39..40 "{"
+              RecordField@40..44
+                Word@40..41 "a"
+                Colon@41..42 ":"
+                Whitespace@42..43 " "
+                Word@43..44 "1"
+              RBrace@44..45 "}"
+  Newline@45..46 "\n"
+  Pipeline@46..89
+    PipelineElement@46..89
+      Let@46..89
+        Word@46..49 "mut"
+        Whitespace@49..50 " "
+        Word@50..52 "x:"
+        Whitespace@52..53 " "
+        Type@53..84
+          Word@53..57 "list"
+          LAngle@57..58 "<"
+          Type@58..83
+            Word@58..64 "record"
+            LAngle@64..65 "<"
+            TypeField@65..71
+              Word@65..66 "a"
+              Colon@66..67 ":"
+              Whitespace@67..68 " "
+              Word@68..71 "int"
+            Comma@71..72 ","
+            Whitespace@72..73 " "
+            TypeField@73..82
+              Word@73..74 "b"
+              Colon@74..75 ":"
+              Whitespace@75..76 " "
+              Word@76..82 "string"
+            RAngle@82..83 ">"
+          RAngle@83..84 ">"
+        Whitespace@84..85 " "
+        Assign@85..86 "="
+        Whitespace@86..87 " "
+        Pipeline@87..89
+          PipelineElement@87..89
+            List@87..89
+              LBracket@87..88 "["
+              RBracket@88..89 "]"
+  Newline@89..90 "\n"
+  Pipeline@90..116
+    PipelineElement@90..116
+      Let@90..116
+        Word@90..95 "const"
+        Whitespace@95..96 " "
+        Word@96..98 "x:"
+        Whitespace@98..99 " "
+        Type@99..111
+          Word@99..104 "table"
+          LAngle@104..105 "<"
+          TypeField@105..110
+            Word@105..106 "a"
+            Colon@106..107 ":"
+            Word@107..110 "int"
+          RAngle@110..111 ">"
+        Whitespace@111..112 " "
+        Assign@112..113 "="
+        Whitespace@113..114 " "
+        Pipeline@114..116
+          PipelineElement@114..116
+            List@114..116
+              LBracket@114..115 "["
+              RBracket@115..116 "]"
+  Newline@116..117 "\n"
+  Pipeline@117..150
+    PipelineElement@117..150
+      Let@117..150
+        Word@117..123 "export"
+        Whitespace@123..124 " "
+        Word@124..129 "const"
+        Whitespace@129..130 " "
+        Word@130..132 "x:"
+        Whitespace@132..133 " "
+        Type@133..145
+          Word@133..138 "table"
+          LAngle@138..139 "<"
+          TypeField@139..144
+            Word@139..140 "a"
+            Colon@140..141 ":"
+            Word@141..144 "int"
+          RAngle@144..145 ">"
+        Whitespace@145..146 " "
+        Assign@146..147 "="
+        Whitespace@147..148 " "
+        Pipeline@148..150
+          PipelineElement@148..150
+            List@148..150
+              LBracket@148..149 "["
+              RBracket@149..150 "]"
+  Newline@150..151 "\n"

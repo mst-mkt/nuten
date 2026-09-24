@@ -1,0 +1,49 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/as_argument.nu
+---
+Root@0..54
+  Pipeline@0..20
+    PipelineElement@0..20
+      Call@0..20
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        Range@6..12
+          Word@6..8 "$x"
+          RangeOperator@8..10 ".."
+          Word@10..12 "$y"
+        Whitespace@12..13 " "
+        Range@13..20
+          Subexpression@13..16
+            LParen@13..14 "("
+            Pipeline@14..15
+              PipelineElement@14..15
+                Word@14..15 "1"
+            RParen@15..16 ")"
+          RangeOperator@16..18 ".."
+          Word@18..20 "$n"
+  Newline@20..21 "\n"
+  Pipeline@21..32
+    PipelineElement@21..32
+      ExternalCall@21..32
+        Word@21..25 "^seq"
+        Whitespace@25..26 " "
+        Range@26..32
+          Word@26..28 "$x"
+          RangeOperator@28..30 ".."
+          Word@30..32 "$y"
+  Newline@32..33 "\n"
+  Pipeline@33..42
+    PipelineElement@33..42
+      Call@33..42
+        Word@33..37 "echo"
+        Whitespace@37..38 " "
+        Word@38..42 "1..3"
+  Newline@42..43 "\n"
+  Pipeline@43..53
+    PipelineElement@43..53
+      ExternalCall@43..53
+        Word@43..47 "^seq"
+        Whitespace@47..48 " "
+        Word@48..53 "1..$n"
+  Newline@53..54 "\n"

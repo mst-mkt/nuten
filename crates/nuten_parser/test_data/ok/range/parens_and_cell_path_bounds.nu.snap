@@ -1,0 +1,76 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/parens_and_cell_path_bounds.nu
+---
+Root@0..53
+  Pipeline@0..8
+    PipelineElement@0..8
+      Range@0..8
+        Subexpression@0..3
+          LParen@0..1 "("
+          Pipeline@1..2
+            PipelineElement@1..2
+              Word@1..2 "1"
+          RParen@2..3 ")"
+        RangeOperator@3..5 ".."
+        Subexpression@5..8
+          LParen@5..6 "("
+          Pipeline@6..7
+            PipelineElement@6..7
+              Word@6..7 "2"
+          RParen@7..8 ")"
+  Newline@8..9 "\n"
+  Pipeline@9..29
+    PipelineElement@9..29
+      Range@9..29
+        CellPath@9..13
+          Word@9..11 "$x"
+          Dot@11..12 "."
+          Word@12..13 "a"
+        RangeOperator@13..16 "..="
+        Subexpression@16..29
+          LParen@16..17 "("
+          Pipeline@17..28
+            PipelineElement@17..19
+              Call@17..19
+                Word@17..19 "ls"
+            Whitespace@19..20 " "
+            Pipe@20..21 "|"
+            Whitespace@21..22 " "
+            PipelineElement@22..28
+              Call@22..28
+                Word@22..28 "length"
+          RParen@28..29 ")"
+  Newline@29..30 "\n"
+  Pipeline@30..44
+    PipelineElement@30..44
+      Range@30..44
+        CellPath@30..37
+          Subexpression@30..34
+            LParen@30..31 "("
+            Pipeline@31..33
+              PipelineElement@31..33
+                Call@31..33
+                  Word@31..33 "ls"
+            RParen@33..34 ")"
+          Dot@34..35 "."
+          Word@35..36 "a"
+          Question@36..37 "?"
+        RangeOperator@37..40 "..<"
+        CellPath@40..44
+          Word@40..42 "$y"
+          Dot@42..43 "."
+          Word@43..44 "b"
+  Newline@44..45 "\n"
+  Pipeline@45..52
+    PipelineElement@45..52
+      Subexpression@45..52
+        LParen@45..46 "("
+        Pipeline@46..51
+          PipelineElement@46..51
+            Range@46..51
+              Word@46..47 "1"
+              RangeOperator@47..50 "..<"
+              Word@50..51 "2"
+        RParen@51..52 ")"
+  Newline@52..53 "\n"

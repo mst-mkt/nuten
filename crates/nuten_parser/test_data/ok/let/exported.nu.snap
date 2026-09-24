@@ -1,0 +1,68 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/exported.nu
+---
+Root@0..79
+  Pipeline@0..18
+    PipelineElement@0..18
+      Let@0..18
+        Word@0..6 "export"
+        Whitespace@6..7 " "
+        Word@7..12 "const"
+        Whitespace@12..13 " "
+        Word@13..14 "x"
+        Whitespace@14..15 " "
+        Assign@15..16 "="
+        Whitespace@16..17 " "
+        Pipeline@17..18
+          PipelineElement@17..18
+            Word@17..18 "1"
+  Newline@18..19 "\n"
+  Pipeline@19..39
+    PipelineElement@19..39
+      Subexpression@19..39
+        LParen@19..20 "("
+        Pipeline@20..38
+          PipelineElement@20..38
+            Let@20..38
+              Word@20..26 "export"
+              Newline@26..27 "\n"
+              Word@27..32 "const"
+              Whitespace@32..33 " "
+              Word@33..34 "x"
+              Whitespace@34..35 " "
+              Assign@35..36 "="
+              Whitespace@36..37 " "
+              Pipeline@37..38
+                PipelineElement@37..38
+                  Word@37..38 "1"
+        RParen@38..39 ")"
+  Newline@39..40 "\n"
+  Pipeline@40..61
+    PipelineElement@40..57
+      Call@40..57
+        Word@40..46 "export"
+        Whitespace@46..47 " "
+        Word@47..52 "const"
+        Whitespace@52..53 " "
+        Word@53..57 "(ls)"
+    Whitespace@57..58 " "
+    Pipe@58..59 "|"
+    Whitespace@59..60 " "
+    PipelineElement@60..61
+      Call@60..61
+        Word@60..61 "a"
+  Newline@61..62 "\n"
+  Pipeline@62..78
+    PipelineElement@62..78
+      Call@62..78
+        Word@62..68 "export"
+        Whitespace@68..69 " "
+        Word@69..72 "let"
+        Whitespace@72..73 " "
+        Word@73..74 "x"
+        Whitespace@74..75 " "
+        Assign@75..76 "="
+        Whitespace@76..77 " "
+        Word@77..78 "1"
+  Newline@78..79 "\n"

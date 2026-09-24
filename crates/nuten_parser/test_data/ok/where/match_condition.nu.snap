@@ -1,0 +1,30 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/where/match_condition.nu
+---
+Root@0..32
+  Pipeline@0..31
+    PipelineElement@0..31
+      Where@0..31
+        Word@0..5 "where"
+        Whitespace@5..6 " "
+        MathExpression@6..31
+          Word@6..7 "1"
+          Whitespace@7..8 " "
+          Operator@8..10 "=="
+          Whitespace@10..11 " "
+          Match@11..31
+            Word@11..16 "match"
+            Whitespace@16..17 " "
+            Word@17..19 "$x"
+            Whitespace@19..20 " "
+            MatchArms@20..31
+              LBrace@20..21 "{"
+              MatchArm@21..30
+                Word@21..22 "_"
+                Whitespace@22..23 " "
+                FatArrow@23..25 "=>"
+                Whitespace@25..26 " "
+                Word@26..30 "true"
+              RBrace@30..31 "}"
+  Newline@31..32 "\n"

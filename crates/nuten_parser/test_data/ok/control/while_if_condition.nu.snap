@@ -1,0 +1,38 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/while_if_condition.nu
+---
+Root@0..38
+  Pipeline@0..37
+    PipelineElement@0..37
+      While@0..37
+        Word@0..5 "while"
+        Whitespace@5..6 " "
+        If@6..33
+          Word@6..8 "if"
+          Whitespace@8..9 " "
+          Word@9..13 "true"
+          Whitespace@13..14 " "
+          Block@14..20
+            LBrace@14..15 "{"
+            Pipeline@15..19
+              PipelineElement@15..19
+                Word@15..19 "true"
+            RBrace@19..20 "}"
+          Whitespace@20..21 " "
+          Word@21..25 "else"
+          Whitespace@25..26 " "
+          Block@26..33
+            LBrace@26..27 "{"
+            Pipeline@27..32
+              PipelineElement@27..32
+                Word@27..32 "false"
+            RBrace@32..33 "}"
+        Whitespace@33..34 " "
+        Block@34..37
+          LBrace@34..35 "{"
+          Pipeline@35..36
+            PipelineElement@35..36
+              Word@35..36 "1"
+          RBrace@36..37 "}"
+  Newline@37..38 "\n"

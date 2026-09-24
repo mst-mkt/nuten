@@ -1,0 +1,18 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/minus_signs.nu
+---
+Root@0..9
+  Pipeline@0..6
+    PipelineElement@0..6
+      MathExpression@0..6
+        Word@0..2 "-1"
+        Whitespace@2..3 " "
+        Operator@3..4 "-"
+        Whitespace@4..5 " "
+        Word@5..6 "2"
+  Newline@6..7 "\n"
+  Pipeline@7..8
+    PipelineElement@7..8
+      Word@7..8 "-"
+  Newline@8..9 "\n"

@@ -1,0 +1,88 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/spread.nu
+---
+Root@0..71
+  Pipeline@0..41
+    PipelineElement@0..41
+      List@0..41
+        LBracket@0..1 "["
+        Record@1..14
+          LBrace@1..2 "{"
+          Spread@2..7
+            SpreadOperator@2..5 "..."
+            Word@5..7 "$x"
+          Comma@7..8 ","
+          Whitespace@8..9 " "
+          RecordField@9..13
+            Word@9..10 "a"
+            Colon@10..11 ":"
+            Whitespace@11..12 " "
+            Word@12..13 "1"
+          RBrace@13..14 "}"
+        Whitespace@14..15 " "
+        Record@15..28
+          LBrace@15..16 "{"
+          RecordField@16..20
+            Word@16..17 "a"
+            Colon@17..18 ":"
+            Whitespace@18..19 " "
+            Word@19..20 "1"
+          Whitespace@20..21 " "
+          Spread@21..27
+            SpreadOperator@21..24 "..."
+            Subexpression@24..27
+              LParen@24..25 "("
+              Pipeline@25..26
+                PipelineElement@25..26
+                  Call@25..26
+                    Word@25..26 "f"
+              RParen@26..27 ")"
+          RBrace@27..28 "}"
+        Whitespace@28..29 " "
+        Record@29..40
+          LBrace@29..30 "{"
+          Spread@30..39
+            SpreadOperator@30..33 "..."
+            Record@33..39
+              LBrace@33..34 "{"
+              RecordField@34..38
+                Word@34..35 "a"
+                Colon@35..36 ":"
+                Whitespace@36..37 " "
+                Word@37..38 "1"
+              RBrace@38..39 "}"
+          RBrace@39..40 "}"
+        RBracket@40..41 "]"
+  Newline@41..42 "\n"
+  Pipeline@42..70
+    PipelineElement@42..70
+      List@42..70
+        LBracket@42..43 "["
+        Block@43..51
+          LBrace@43..44 "{"
+          Pipeline@44..50
+            PipelineElement@44..50
+              Call@44..50
+                Word@44..50 "...[1]"
+          RBrace@50..51 "}"
+        Whitespace@51..52 " "
+        Block@52..60
+          LBrace@52..53 "{"
+          Pipeline@53..59
+            PipelineElement@53..59
+              Call@53..59
+                Word@53..59 "....$x"
+          RBrace@59..60 "}"
+        Whitespace@60..61 " "
+        Block@61..69
+          LBrace@61..62 "{"
+          Pipeline@62..68
+            PipelineElement@62..68
+              Call@62..68
+                Word@62..65 "..."
+                Whitespace@65..66 " "
+                Word@66..68 "$x"
+          RBrace@68..69 "}"
+        RBracket@69..70 "]"
+  Newline@70..71 "\n"

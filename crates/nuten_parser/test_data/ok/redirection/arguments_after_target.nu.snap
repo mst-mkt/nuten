@@ -1,0 +1,19 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/redirection/arguments_after_target.nu
+---
+Root@0..28
+  Pipeline@0..27
+    PipelineElement@0..27
+      ExternalCall@0..7
+        Word@0..5 "^echo"
+        Whitespace@5..6 " "
+        Word@6..7 "a"
+      Whitespace@7..8 " "
+      Redirection@8..25
+        OutErrGtGt@8..17 "out+err>>"
+        Whitespace@17..18 " "
+        Word@18..25 "out.txt"
+      Whitespace@25..26 " "
+      Word@26..27 "b"
+  Newline@27..28 "\n"

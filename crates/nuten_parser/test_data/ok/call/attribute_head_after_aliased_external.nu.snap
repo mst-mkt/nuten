@@ -1,0 +1,72 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/attribute_head_after_aliased_external.nu
+---
+Root@0..93
+  Pipeline@0..8
+    PipelineElement@0..8
+      Call@0..8
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        Word@6..8 "hi"
+  Semicolon@8..9 ";"
+  Pipeline@9..25
+    PipelineElement@9..25
+      Alias@9..25
+        Word@9..14 "alias"
+        Whitespace@14..15 " "
+        String@15..19 "\"ls\""
+        Whitespace@19..20 " "
+        Assign@20..21 "="
+        Whitespace@21..22 " "
+        ExternalCall@22..25
+          Word@22..25 "^ls"
+  Newline@25..26 "\n"
+  Pipeline@26..36
+    PipelineElement@26..36
+      Call@26..36
+        Word@26..28 "ls"
+        Whitespace@28..29 " "
+        Word@29..36 "{a:  1}"
+  Newline@36..37 "\n"
+  Pipeline@37..54
+    PipelineElement@37..39
+      Call@37..39
+        Word@37..39 "ls"
+    Whitespace@39..40 " "
+    Pipe@40..41 "|"
+    Whitespace@41..42 " "
+    PipelineElement@42..54
+      Call@42..54
+        Word@42..46 "@foo"
+        Whitespace@46..47 " "
+        Word@47..54 "{a:  1}"
+  Newline@54..55 "\n"
+  Pipeline@55..57
+    PipelineElement@55..57
+      Call@55..57
+        Word@55..57 "ls"
+  Semicolon@57..58 ";"
+  Whitespace@58..59 " "
+  Pipeline@59..73
+    Pipe@59..60 "|"
+    Whitespace@60..61 " "
+    PipelineElement@61..73
+      Call@61..73
+        Word@61..65 "@foo"
+        Whitespace@65..66 " "
+        Word@66..73 "{a:  1}"
+  Newline@73..74 "\n"
+  Pipeline@74..92
+    PipelineElement@74..76
+      Call@74..76
+        Word@74..76 "ls"
+    Whitespace@76..77 " "
+    Pipe@77..78 "|"
+    Whitespace@78..79 " "
+    PipelineElement@79..92
+      Call@79..92
+        Word@79..84 "const"
+        Whitespace@84..85 " "
+        Word@85..92 "{a:  1}"
+  Newline@92..93 "\n"

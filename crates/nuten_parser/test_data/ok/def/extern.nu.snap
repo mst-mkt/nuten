@@ -1,0 +1,34 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/extern.nu
+---
+Root@0..55
+  Pipeline@0..11
+    PipelineElement@0..11
+      Def@0..11
+        Word@0..6 "extern"
+        Whitespace@6..7 " "
+        Word@7..8 "h"
+        Whitespace@8..9 " "
+        Signature@9..11
+          LBracket@9..10 "["
+          RBracket@10..11 "]"
+  Newline@11..12 "\n"
+  Pipeline@12..54
+    PipelineElement@12..54
+      Def@12..54
+        Word@12..18 "export"
+        Whitespace@18..19 " "
+        Word@19..25 "extern"
+        Whitespace@25..26 " "
+        String@26..36 "\"git push\""
+        Whitespace@36..37 " "
+        Signature@37..54
+          LBracket@37..38 "["
+          Param@38..53
+            Word@38..45 "remote?"
+            Colon@45..46 ":"
+            Whitespace@46..47 " "
+            Word@47..53 "string"
+          RBracket@53..54 "]"
+  Newline@54..55 "\n"

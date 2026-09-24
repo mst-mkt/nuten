@@ -1,0 +1,46 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/pipeline/shell_and_or.nu
+---
+Root@0..44
+  Pipeline@0..16
+    PipelineElement@0..16
+      Call@0..16
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Word@5..6 "a"
+        Whitespace@6..7 " "
+        Error@7..9
+          PipePipe@7..9 "||"
+        Whitespace@9..10 " "
+        Word@10..14 "echo"
+        Whitespace@14..15 " "
+        Word@15..16 "b"
+  Newline@16..17 "\n"
+  Pipeline@17..33
+    PipelineElement@17..33
+      Call@17..33
+        Word@17..21 "echo"
+        Whitespace@21..22 " "
+        Word@22..23 "a"
+        Whitespace@23..24 " "
+        Error@24..26
+          Word@24..26 "&&"
+        Whitespace@26..27 " "
+        Word@27..31 "echo"
+        Whitespace@31..32 " "
+        Word@32..33 "b"
+  Newline@33..34 "\n"
+  Pipeline@34..43
+    PipelineElement@34..43
+      Call@34..43
+        Error@34..36
+          PipePipe@34..36 "||"
+        Whitespace@36..37 " "
+        Word@37..41 "echo"
+        Whitespace@41..42 " "
+        Word@42..43 "a"
+  Newline@43..44 "\n"
+error 7..9 "||": ShellOrOr
+error 24..26 "&&": ShellAndAnd
+error 34..36 "||": ShellOrOr

@@ -1,0 +1,34 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/parenthesized.nu
+---
+Root@0..33
+  Pipeline@0..32
+    PipelineElement@0..32
+      Subexpression@0..32
+        LParen@0..1 "("
+        Pipeline@1..31
+          PipelineElement@1..31
+            AttributeBlock@1..31
+              Attribute@1..18
+                Word@1..14 "@search-terms"
+                Whitespace@14..15 " "
+                Word@15..16 "a"
+                Newline@16..17 "\n"
+                Word@17..18 "b"
+              Semicolon@18..19 ";"
+              Whitespace@19..20 " "
+              Def@20..31
+                Word@20..23 "def"
+                Whitespace@23..24 " "
+                Word@24..25 "i"
+                Whitespace@25..26 " "
+                Signature@26..28
+                  LBracket@26..27 "["
+                  RBracket@27..28 "]"
+                Whitespace@28..29 " "
+                Block@29..31
+                  LBrace@29..30 "{"
+                  RBrace@30..31 "}"
+        RParen@31..32 ")"
+  Newline@32..33 "\n"

@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/commented_paren_params.nu
+---
+Root@0..45
+  Pipeline@0..44
+    PipelineElement@0..44
+      Def@0..44
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "n"
+        Whitespace@5..6 " "
+        Signature@6..35
+          LParen@6..7 "("
+          Newline@7..8 "\n"
+          Whitespace@8..10 "  "
+          Comment@10..19 "# leading"
+          Newline@19..20 "\n"
+          Whitespace@20..22 "  "
+          Param@22..23
+            Word@22..23 "x"
+          Whitespace@23..24 " "
+          Comment@24..33 "# about x"
+          Newline@33..34 "\n"
+          RParen@34..35 ")"
+        Whitespace@35..36 " "
+        Block@36..44
+          LBrace@36..37 "{"
+          Newline@37..38 "\n"
+          Whitespace@38..40 "  "
+          Pipeline@40..42
+            PipelineElement@40..42
+              Call@40..42
+                Word@40..42 "ls"
+          Newline@42..43 "\n"
+          RBrace@43..44 "}"
+  Newline@44..45 "\n"

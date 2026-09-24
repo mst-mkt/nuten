@@ -1,0 +1,4 @@
+ls |
+# comment
+
+; pwd

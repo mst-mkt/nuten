@@ -1,0 +1,44 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/expression/invalid_operator.nu
+---
+Root@0..25
+  Pipeline@0..5
+    PipelineElement@0..5
+      MathExpression@0..5
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Error@2..3
+          Word@2..3 "^"
+        Whitespace@3..4 " "
+        Error@4..5
+          Word@4..5 "2"
+  Newline@5..6 "\n"
+  Pipeline@6..11
+    PipelineElement@6..11
+      MathExpression@6..11
+        Word@6..7 "1"
+        Whitespace@7..8 " "
+        Error@8..9
+          Word@8..9 "%"
+        Whitespace@9..10 " "
+        Error@10..11
+          Word@10..11 "2"
+  Newline@11..12 "\n"
+  Pipeline@12..24
+    PipelineElement@12..24
+      MathExpression@12..24
+        Word@12..13 "1"
+        Whitespace@13..14 " "
+        Error@14..22
+          Word@14..22 "bits-and"
+        Whitespace@22..23 " "
+        Error@23..24
+          Word@23..24 "2"
+  Newline@24..25 "\n"
+error 2..3 "^": UnknownOperator { spelling: "^", instead: "`**` to raise to a power, or `bit-xor` to xor bits" }
+error 4..5 "2": MissingOperator
+error 8..9 "%": UnknownOperator { spelling: "%", instead: "`mod`" }
+error 10..11 "2": MissingOperator
+error 14..22 "bits-and": UnknownOperator { spelling: "bits-and", instead: "`bit-and`" }
+error 23..24 "2": MissingOperator

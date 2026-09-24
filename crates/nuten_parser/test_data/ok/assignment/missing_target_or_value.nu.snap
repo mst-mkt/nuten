@@ -1,0 +1,22 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/assignment/missing_target_or_value.nu
+---
+Root@0..8
+  Pipeline@0..3
+    PipelineElement@0..3
+      Assignment@0..3
+        Assign@0..1 "="
+        Whitespace@1..2 " "
+        Pipeline@2..3
+          PipelineElement@2..3
+            Word@2..3 "1"
+  Newline@3..4 "\n"
+  Pipeline@4..7
+    PipelineElement@4..7
+      Assignment@4..7
+        Call@4..5
+          Word@4..5 "x"
+        Whitespace@5..6 " "
+        Assign@6..7 "="
+  Newline@7..8 "\n"

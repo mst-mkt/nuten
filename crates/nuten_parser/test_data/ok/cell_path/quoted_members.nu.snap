@@ -1,0 +1,29 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/quoted_members.nu
+---
+Root@0..43
+  Pipeline@0..18
+    PipelineElement@0..18
+      CellPath@0..18
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        String@3..8 "\"a b\""
+        Dot@8..9 "."
+        String@9..12 "'c'"
+        Dot@12..13 "."
+        String@13..18 "`d e`"
+  Newline@18..19 "\n"
+  Pipeline@19..33
+    PipelineElement@19..33
+      CellPath@19..33
+        Word@19..21 "$x"
+        Dot@21..22 "."
+        Word@22..28 "r#'a'#"
+        Dot@28..29 "."
+        Word@29..33 "$'b'"
+  Newline@33..34 "\n"
+  Pipeline@34..42
+    PipelineElement@34..42
+      Word@34..42 "$x.\"a\\n\""
+  Newline@42..43 "\n"

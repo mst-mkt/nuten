@@ -1,0 +1,28 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/where/closure_condition.nu
+---
+Root@0..19
+  Pipeline@0..18
+    PipelineElement@0..18
+      Where@0..18
+        Word@0..5 "where"
+        Whitespace@5..6 " "
+        Block@6..18
+          LBrace@6..7 "{"
+          ClosureParams@7..10
+            Pipe@7..8 "|"
+            Param@8..9
+              Word@8..9 "x"
+            Pipe@9..10 "|"
+          Whitespace@10..11 " "
+          Pipeline@11..17
+            PipelineElement@11..17
+              MathExpression@11..17
+                Word@11..13 "$x"
+                Whitespace@13..14 " "
+                Operator@14..15 ">"
+                Whitespace@15..16 " "
+                Word@16..17 "1"
+          RBrace@17..18 "}"
+  Newline@18..19 "\n"

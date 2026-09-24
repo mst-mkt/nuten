@@ -1,0 +1,51 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/colon_in_key_or_value.nu
+---
+Root@0..41
+  Pipeline@0..40
+    PipelineElement@0..40
+      List@0..40
+        LBracket@0..1 "["
+        Record@1..9
+          LBrace@1..2 "{"
+          RecordField@2..8
+            Word@2..3 "a"
+            Colon@3..4 ":"
+            Whitespace@4..5 " "
+            Word@5..8 "b:c"
+          RBrace@8..9 "}"
+        Whitespace@9..10 " "
+        Record@10..20
+          LBrace@10..11 "{"
+          RecordField@11..15
+            Word@11..12 "a"
+            Colon@12..13 ":"
+            Whitespace@13..14 " "
+            Word@14..15 "b"
+          Whitespace@15..16 " "
+          RecordField@16..19
+            Colon@16..17 ":"
+            Whitespace@17..18 " "
+            Word@18..19 "c"
+          RBrace@19..20 "}"
+        Whitespace@20..21 " "
+        Record@21..31
+          LBrace@21..22 "{"
+          RecordField@22..30
+            String@22..27 "\"a:b\""
+            Colon@27..28 ":"
+            Whitespace@28..29 " "
+            Word@29..30 "1"
+          RBrace@30..31 "}"
+        Whitespace@31..32 " "
+        Record@32..39
+          LBrace@32..33 "{"
+          RecordField@33..38
+            Word@33..34 "a"
+            Colon@34..35 ":"
+            Whitespace@35..36 " "
+            Word@36..38 ":b"
+          RBrace@38..39 "}"
+        RBracket@39..40 "]"
+  Newline@40..41 "\n"

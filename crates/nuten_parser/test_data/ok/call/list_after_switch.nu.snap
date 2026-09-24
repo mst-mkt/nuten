@@ -1,0 +1,43 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/list_after_switch.nu
+---
+Root@0..43
+  Pipeline@0..23
+    PipelineElement@0..23
+      Call@0..23
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        Word@6..8 "-n"
+        Whitespace@8..9 " "
+        List@9..16
+          LBracket@9..10 "["
+          Word@10..11 "a"
+          Comma@11..12 ","
+          Whitespace@12..14 "  "
+          Word@14..15 "b"
+          RBracket@15..16 "]"
+        Whitespace@16..17 " "
+        List@17..23
+          LBracket@17..18 "["
+          Word@18..19 "c"
+          Whitespace@19..21 "  "
+          Word@21..22 "d"
+          RBracket@22..23 "]"
+  Newline@23..24 "\n"
+  Pipeline@24..42
+    PipelineElement@24..42
+      Call@24..42
+        Word@24..29 "print"
+        Whitespace@29..30 " "
+        Word@30..32 "--"
+        Whitespace@32..33 " "
+        Word@33..35 "-n"
+        Whitespace@35..36 " "
+        List@36..42
+          LBracket@36..37 "["
+          Word@37..38 "a"
+          Whitespace@38..40 "  "
+          Word@40..41 "b"
+          RBracket@41..42 "]"
+  Newline@42..43 "\n"

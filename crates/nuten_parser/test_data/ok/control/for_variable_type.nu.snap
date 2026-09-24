@@ -1,0 +1,163 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/for_variable_type.nu
+---
+Root@0..173
+  Pipeline@0..30
+    PipelineElement@0..30
+      For@0..30
+        Word@0..3 "for"
+        Whitespace@3..4 " "
+        Word@4..6 "x:"
+        Whitespace@6..7 " "
+        Word@7..10 "int"
+        Whitespace@10..11 " "
+        Word@11..13 "in"
+        Whitespace@13..14 " "
+        List@14..17
+          LBracket@14..15 "["
+          Word@15..16 "1"
+          RBracket@16..17 "]"
+        Whitespace@17..18 " "
+        Block@18..30
+          LBrace@18..19 "{"
+          Whitespace@19..20 " "
+          Pipeline@20..28
+            PipelineElement@20..28
+              Call@20..28
+                Word@20..25 "print"
+                Whitespace@25..26 " "
+                Word@26..28 "$x"
+          Whitespace@28..29 " "
+          RBrace@29..30 "}"
+  Newline@30..31 "\n"
+  Pipeline@31..77
+    PipelineElement@31..77
+      For@31..77
+        Word@31..34 "for"
+        Whitespace@34..35 " "
+        Word@35..37 "x:"
+        Whitespace@37..38 " "
+        Type@38..52
+          Word@38..44 "record"
+          LAngle@44..45 "<"
+          TypeField@45..51
+            Word@45..46 "a"
+            Colon@46..47 ":"
+            Whitespace@47..48 " "
+            Word@48..51 "int"
+          RAngle@51..52 ">"
+        Whitespace@52..53 " "
+        Word@53..55 "in"
+        Whitespace@55..56 " "
+        List@56..64
+          LBracket@56..57 "["
+          Record@57..63
+            LBrace@57..58 "{"
+            RecordField@58..62
+              Word@58..59 "a"
+              Colon@59..60 ":"
+              Whitespace@60..61 " "
+              Word@61..62 "1"
+            RBrace@62..63 "}"
+          RBracket@63..64 "]"
+        Whitespace@64..65 " "
+        Block@65..77
+          LBrace@65..66 "{"
+          Whitespace@66..67 " "
+          Pipeline@67..75
+            PipelineElement@67..75
+              Call@67..75
+                Word@67..72 "print"
+                Whitespace@72..73 " "
+                Word@73..75 "$x"
+          Whitespace@75..76 " "
+          RBrace@76..77 "}"
+  Newline@77..78 "\n"
+  Pipeline@78..104
+    PipelineElement@78..104
+      For@78..104
+        Word@78..81 "for"
+        Whitespace@81..82 " "
+        Word@82..84 "x:"
+        Whitespace@84..85 " "
+        Word@85..90 "[int]"
+        Whitespace@90..91 " "
+        Word@91..93 "in"
+        Whitespace@93..94 " "
+        List@94..97
+          LBracket@94..95 "["
+          Word@95..96 "1"
+          RBracket@96..97 "]"
+        Whitespace@97..98 " "
+        Block@98..104
+          LBrace@98..99 "{"
+          Whitespace@99..100 " "
+          Pipeline@100..102
+            PipelineElement@100..102
+              Call@100..102
+                Word@100..102 "ls"
+          Whitespace@102..103 " "
+          RBrace@103..104 "}"
+  Newline@104..105 "\n"
+  Pipeline@105..132
+    PipelineElement@105..132
+      For@105..132
+        Word@105..108 "for"
+        Whitespace@108..109 " "
+        Word@109..111 "x:"
+        Whitespace@111..112 " "
+        Word@112..115 "int"
+        Whitespace@115..116 " "
+        Word@116..118 "in"
+        Whitespace@118..119 " "
+        Word@119..121 "in"
+        Whitespace@121..122 " "
+        List@122..125
+          LBracket@122..123 "["
+          Word@123..124 "1"
+          RBracket@124..125 "]"
+        Whitespace@125..126 " "
+        Block@126..132
+          LBrace@126..127 "{"
+          Whitespace@127..128 " "
+          Pipeline@128..130
+            PipelineElement@128..130
+              Call@128..130
+                Word@128..130 "ls"
+          Whitespace@130..131 " "
+          RBrace@131..132 "}"
+  Newline@132..133 "\n"
+  Pipeline@133..172
+    PipelineElement@133..172
+      For@133..172
+        Word@133..136 "for"
+        Whitespace@136..137 " "
+        Word@137..139 "x:"
+        Whitespace@139..140 " "
+        Type@140..158
+          Word@140..145 "oneof"
+          LAngle@145..146 "<"
+          Word@146..149 "int"
+          Comma@149..150 ","
+          Whitespace@150..151 " "
+          Word@151..157 "string"
+          RAngle@157..158 ">"
+        Whitespace@158..159 " "
+        Word@159..161 "in"
+        Whitespace@161..162 " "
+        List@162..165
+          LBracket@162..163 "["
+          Word@163..164 "1"
+          RBracket@164..165 "]"
+        Whitespace@165..166 " "
+        Block@166..172
+          LBrace@166..167 "{"
+          Whitespace@167..168 " "
+          Pipeline@168..170
+            PipelineElement@168..170
+              Call@168..170
+                Word@168..170 "ls"
+          Whitespace@170..171 " "
+          RBrace@171..172 "}"
+  Newline@172..173 "\n"

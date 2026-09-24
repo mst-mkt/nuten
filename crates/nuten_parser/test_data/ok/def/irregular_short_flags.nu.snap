@@ -1,0 +1,76 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/irregular_short_flags.nu
+---
+Root@0..94
+  Pipeline@0..38
+    PipelineElement@0..38
+      Def@0..38
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "o"
+        Whitespace@5..6 " "
+        Signature@6..31
+          LBracket@6..7 "["
+          Param@7..18
+            Word@7..18 "--a(-b)(-c)"
+          Whitespace@18..19 " "
+          Param@19..30
+            Word@19..25 "--d(f)"
+            Whitespace@25..26 " "
+            ShortFlag@26..30 "(-e)"
+          RBracket@30..31 "]"
+        Whitespace@31..32 " "
+        Block@32..38
+          LBrace@32..33 "{"
+          Whitespace@33..34 " "
+          Pipeline@34..36
+            PipelineElement@34..36
+              Call@34..36
+                Word@34..36 "ls"
+          Whitespace@36..37 " "
+          RBrace@37..38 "}"
+  Newline@38..39 "\n"
+  Pipeline@39..93
+    PipelineElement@39..93
+      Def@39..93
+        Word@39..42 "def"
+        Whitespace@42..43 " "
+        Word@43..44 "q"
+        Whitespace@44..45 " "
+        Signature@45..86
+          LBracket@45..46 "["
+          Param@46..56
+            Word@46..49 "--a"
+            Whitespace@49..50 " "
+            Eq@50..51 "="
+            Whitespace@51..52 " "
+            Word@52..56 "(-b)"
+          Whitespace@56..57 " "
+          Param@57..66
+            Word@57..60 "--c"
+            Colon@60..61 ":"
+            Whitespace@61..62 " "
+            Word@62..66 "(-d)"
+          Whitespace@66..67 " "
+          Param@67..76
+            Word@67..70 "--e"
+            Whitespace@70..71 " "
+            Word@71..76 "(-fg)"
+          Whitespace@76..77 " "
+          Param@77..85
+            Word@77..80 "--h"
+            Whitespace@80..81 " "
+            ShortFlag@81..85 "(-i)"
+          RBracket@85..86 "]"
+        Whitespace@86..87 " "
+        Block@87..93
+          LBrace@87..88 "{"
+          Whitespace@88..89 " "
+          Pipeline@89..91
+            PipelineElement@89..91
+              Call@89..91
+                Word@89..91 "ls"
+          Whitespace@91..92 " "
+          RBrace@92..93 "}"
+  Newline@93..94 "\n"

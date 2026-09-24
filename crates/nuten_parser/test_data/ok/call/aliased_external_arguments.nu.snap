@@ -1,0 +1,57 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/aliased_external_arguments.nu
+---
+Root@0..89
+  Pipeline@0..18
+    PipelineElement@0..18
+      Alias@0..18
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..10 "open"
+        Whitespace@10..11 " "
+        Assign@11..12 "="
+        Whitespace@12..13 " "
+        ExternalCall@13..18
+          Word@13..18 "^open"
+  Newline@18..19 "\n"
+  Pipeline@19..44
+    PipelineElement@19..44
+      Alias@19..44
+        Word@19..25 "export"
+        Whitespace@25..26 " "
+        Word@26..31 "alias"
+        Whitespace@31..32 " "
+        Word@32..36 "each"
+        Whitespace@36..37 " "
+        Assign@37..38 "="
+        Whitespace@38..39 " "
+        ExternalCall@39..44
+          Word@39..44 "^each"
+  Newline@44..45 "\n"
+  Pipeline@45..68
+    PipelineElement@45..68
+      Call@45..68
+        Word@45..49 "open"
+        Whitespace@49..50 " "
+        Word@50..52 "-a"
+        Whitespace@52..53 " "
+        Word@53..68 "{Google Chrome}"
+  Newline@68..69 "\n"
+  Pipeline@69..88
+    PipelineElement@69..88
+      Call@69..88
+        Word@69..71 "do"
+        Whitespace@71..72 " "
+        Block@72..88
+          LBrace@72..73 "{"
+          Whitespace@73..74 " "
+          Pipeline@74..86
+            PipelineElement@74..86
+              Call@74..86
+                Word@74..78 "each"
+                Whitespace@78..79 " "
+                Word@79..86 "{a:  1}"
+          Whitespace@86..87 " "
+          RBrace@87..88 "}"
+  Newline@88..89 "\n"

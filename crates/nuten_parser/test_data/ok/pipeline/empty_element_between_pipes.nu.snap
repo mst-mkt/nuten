@@ -1,0 +1,18 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/pipeline/empty_element_between_pipes.nu
+---
+Root@0..13
+  Pipeline@0..12
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    Pipe@5..6 "|"
+    Whitespace@6..7 " "
+    PipelineElement@7..12
+      Call@7..12
+        Word@7..12 "first"
+  Newline@12..13 "\n"

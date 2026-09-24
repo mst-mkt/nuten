@@ -1,0 +1,17 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/attribute/pipe_at_eof.nu
+---
+Root@0..17
+  Pipeline@0..17
+    PipelineElement@0..17
+      Attribute@0..17
+        Error@0..13
+          Word@0..13 "@search-terms"
+        Whitespace@13..14 " "
+        Word@14..15 "a"
+        Whitespace@15..16 " "
+        Error@16..17
+          Pipe@16..17 "|"
+error 0..13 "@search-terms": AttributeWithoutDefinition
+error 16..17 "|": PipeAtEof

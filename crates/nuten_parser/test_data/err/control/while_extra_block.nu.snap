@@ -1,0 +1,24 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/control/while_extra_block.nu
+---
+Root@0..19
+  Pipeline@0..18
+    PipelineElement@0..18
+      While@0..18
+        Word@0..5 "while"
+        Whitespace@5..6 " "
+        MathExpression@6..14
+          Word@6..10 "true"
+          Whitespace@10..11 " "
+          Error@11..14
+            Word@11..14 "{1}"
+        Whitespace@14..15 " "
+        Block@15..18
+          LBrace@15..16 "{"
+          Pipeline@16..17
+            PipelineElement@16..17
+              Word@16..17 "2"
+          RBrace@17..18 "}"
+  Newline@18..19 "\n"
+error 11..14 "{1}": MissingOperator

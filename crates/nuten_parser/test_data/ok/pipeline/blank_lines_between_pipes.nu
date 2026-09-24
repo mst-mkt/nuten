@@ -1,0 +1,8 @@
+ls |
+
+| length
+
+ls |
+
+
+| length

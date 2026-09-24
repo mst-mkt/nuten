@@ -1,0 +1,70 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/multiline_type.nu
+---
+Root@0..62
+  Pipeline@0..36
+    PipelineElement@0..36
+      Subexpression@0..36
+        LParen@0..1 "("
+        Pipeline@1..35
+          PipelineElement@1..35
+            Let@1..35
+              Word@1..4 "let"
+              Whitespace@4..5 " "
+              Word@5..7 "x:"
+              Whitespace@7..8 " "
+              Type@8..26
+                Word@8..14 "record"
+                LAngle@14..15 "<"
+                Newline@15..16 "\n"
+                Whitespace@16..18 "  "
+                TypeField@18..24
+                  Word@18..19 "a"
+                  Colon@19..20 ":"
+                  Whitespace@20..21 " "
+                  Word@21..24 "int"
+                Newline@24..25 "\n"
+                RAngle@25..26 ">"
+              Whitespace@26..27 " "
+              Assign@27..28 "="
+              Whitespace@28..29 " "
+              Pipeline@29..35
+                PipelineElement@29..35
+                  Record@29..35
+                    LBrace@29..30 "{"
+                    RecordField@30..34
+                      Word@30..31 "a"
+                      Colon@31..32 ":"
+                      Whitespace@32..33 " "
+                      Word@33..34 "1"
+                    RBrace@34..35 "}"
+        RParen@35..36 ")"
+  Newline@36..37 "\n"
+  Pipeline@37..61
+    PipelineElement@37..61
+      Subexpression@37..61
+        LParen@37..38 "("
+        Pipeline@38..60
+          PipelineElement@38..60
+            Let@38..60
+              Word@38..41 "let"
+              Whitespace@41..42 " "
+              Word@42..44 "x:"
+              Newline@44..45 "\n"
+              Type@45..54
+                Word@45..49 "list"
+                LAngle@49..50 "<"
+                Word@50..53 "int"
+                RAngle@53..54 ">"
+              Whitespace@54..55 " "
+              Assign@55..56 "="
+              Whitespace@56..57 " "
+              Pipeline@57..60
+                PipelineElement@57..60
+                  List@57..60
+                    LBracket@57..58 "["
+                    Word@58..59 "1"
+                    RBracket@59..60 "]"
+        RParen@60..61 ")"
+  Newline@61..62 "\n"

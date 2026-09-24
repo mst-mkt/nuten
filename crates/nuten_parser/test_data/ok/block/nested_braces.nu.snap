@@ -1,0 +1,51 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/nested_braces.nu
+---
+Root@0..36
+  Pipeline@0..35
+    PipelineElement@0..35
+      Call@0..35
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Block@5..13
+          LBrace@5..6 "{"
+          Pipeline@6..12
+            PipelineElement@6..12
+              Record@6..12
+                LBrace@6..7 "{"
+                RecordField@7..11
+                  Word@7..8 "a"
+                  Colon@8..9 ":"
+                  Whitespace@9..10 " "
+                  Word@10..11 "1"
+                RBrace@11..12 "}"
+          RBrace@12..13 "}"
+        Whitespace@13..14 " "
+        Block@14..21
+          LBrace@14..15 "{"
+          Pipeline@15..20
+            PipelineElement@15..20
+              List@15..20
+                LBracket@15..16 "["
+                Word@16..17 "1"
+                Whitespace@17..18 " "
+                Word@18..19 "2"
+                RBracket@19..20 "]"
+          RBrace@20..21 "}"
+        Whitespace@21..22 " "
+        Block@22..28
+          LBrace@22..23 "{"
+          Pipeline@23..27
+            PipelineElement@23..27
+              Block@23..27
+                LBrace@23..24 "{"
+                Pipeline@24..26
+                  PipelineElement@24..26
+                    Call@24..26
+                      Word@24..26 "ls"
+                RBrace@26..27 "}"
+          RBrace@27..28 "}"
+        Whitespace@28..29 " "
+        Word@29..35 "{ls}.a"
+  Newline@35..36 "\n"

@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/closure_like_block.nu
+---
+Root@0..53
+  Pipeline@0..26
+    PipelineElement@0..26
+      Module@0..26
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "t"
+        Whitespace@8..9 " "
+        Word@9..26 "{|x| def u [] {}}"
+  Newline@26..27 "\n"
+  Pipeline@27..52
+    PipelineElement@27..52
+      Module@27..52
+        Word@27..33 "module"
+        Whitespace@33..34 " "
+        Word@34..35 "z"
+        Whitespace@35..36 " "
+        Word@36..52 "{|| def u [] {}}"
+  Newline@52..53 "\n"

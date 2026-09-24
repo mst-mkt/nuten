@@ -1,0 +1,29 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/loop_body.nu
+---
+Root@0..23
+  Pipeline@0..14
+    PipelineElement@0..14
+      Loop@0..14
+        Word@0..4 "loop"
+        Whitespace@4..5 " "
+        Block@5..14
+          LBrace@5..6 "{"
+          Whitespace@6..7 " "
+          Pipeline@7..12
+            PipelineElement@7..12
+              Call@7..12
+                Word@7..12 "break"
+          Whitespace@12..13 " "
+          RBrace@13..14 "}"
+  Newline@14..15 "\n"
+  Pipeline@15..22
+    PipelineElement@15..22
+      Loop@15..22
+        Word@15..19 "loop"
+        Whitespace@19..20 " "
+        Block@20..22
+          LBrace@20..21 "{"
+          RBrace@21..22 "}"
+  Newline@22..23 "\n"

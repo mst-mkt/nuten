@@ -1,0 +1,82 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/closure/shell_operators_in_params.nu
+---
+Root@0..152
+  Pipeline@0..109
+    PipelineElement@0..109
+      Call@0..109
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Word@5..11 "{|x||}"
+        Whitespace@11..12 " "
+        Word@12..19 "{|a ||}"
+        Whitespace@19..20 " "
+        Word@20..32 "{|x && y| 1}"
+        Whitespace@32..33 " "
+        Word@33..42 "{|; x| 1}"
+        Whitespace@42..43 " "
+        Word@43..56 "{|x o>| y| 1}"
+        Whitespace@56..57 " "
+        Word@57..65 "{|2>| x}"
+        Whitespace@65..66 " "
+        Word@66..78 "{|a || b| 1}"
+        Whitespace@78..79 " "
+        Word@79..93 "{|x 2>&1 y| 1}"
+        Whitespace@93..94 " "
+        Word@94..109 "{|x out>| y| 1}"
+  Newline@109..110 "\n"
+  Pipeline@110..151
+    PipelineElement@110..151
+      Call@110..151
+        Word@110..112 "do"
+        Whitespace@112..113 " "
+        Block@113..124
+          LBrace@113..114 "{"
+          ClosureParams@114..120
+            Pipe@114..115 "|"
+            OutGt@115..117 "o>"
+            Whitespace@117..118 " "
+            Param@118..119
+              Word@118..119 "x"
+            Pipe@119..120 "|"
+          Whitespace@120..121 " "
+          Pipeline@121..123
+            PipelineElement@121..123
+              Word@121..123 "$x"
+          RBrace@123..124 "}"
+        Whitespace@124..125 " "
+        Block@125..138
+          LBrace@125..126 "{"
+          ClosureParams@126..134
+            Pipe@126..127 "|"
+            Param@127..131
+              Word@127..128 "x"
+              Whitespace@128..129 " "
+              OutGt@129..131 "o>"
+            Whitespace@131..132 " "
+            Param@132..133
+              Word@132..133 "y"
+            Pipe@133..134 "|"
+          Whitespace@134..135 " "
+          Pipeline@135..137
+            PipelineElement@135..137
+              Word@135..137 "$x"
+          RBrace@137..138 "}"
+        Whitespace@138..139 " "
+        Block@139..151
+          LBrace@139..140 "{"
+          ClosureParams@140..147
+            Pipe@140..141 "|"
+            Param@141..145
+              Word@141..142 "x"
+              Whitespace@142..143 " "
+              ErrGt@143..145 "e>"
+            Whitespace@145..146 " "
+            Pipe@146..147 "|"
+          Whitespace@147..148 " "
+          Pipeline@148..150
+            PipelineElement@148..150
+              Word@148..150 "$x"
+          RBrace@150..151 "}"
+  Newline@151..152 "\n"

@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/type_with_completer.nu
+---
+Root@0..34
+  Pipeline@0..33
+    PipelineElement@0..33
+      Def@0..33
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..6 "tf"
+        Whitespace@6..7 " "
+        Signature@7..26
+          LBracket@7..8 "["
+          Param@8..25
+            Word@8..9 "x"
+            Colon@9..10 ":"
+            Whitespace@10..11 " "
+            Word@11..25 "list<int>@\"ls\""
+          RBracket@25..26 "]"
+        Whitespace@26..27 " "
+        Block@27..33
+          LBrace@27..28 "{"
+          Whitespace@28..29 " "
+          Pipeline@29..31
+            PipelineElement@29..31
+              Call@29..31
+                Word@29..31 "ls"
+          Whitespace@31..32 " "
+          RBrace@32..33 "}"
+  Newline@33..34 "\n"

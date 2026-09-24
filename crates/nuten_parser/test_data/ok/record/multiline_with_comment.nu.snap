@@ -1,0 +1,33 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/multiline_with_comment.nu
+---
+Root@0..37
+  Pipeline@0..36
+    PipelineElement@0..36
+      List@0..36
+        LBracket@0..1 "["
+        Record@1..35
+          LBrace@1..2 "{"
+          Newline@2..3 "\n"
+          Whitespace@3..7 "    "
+          RecordField@7..11
+            Word@7..8 "a"
+            Colon@8..9 ":"
+            Whitespace@9..10 " "
+            Word@10..11 "1"
+          Whitespace@11..12 " "
+          Comment@12..15 "# c"
+          Newline@15..16 "\n"
+          Newline@16..17 "\n"
+          Whitespace@17..21 "    "
+          RecordField@21..33
+            Word@21..22 "b"
+            Colon@22..23 ":"
+            Newline@23..24 "\n"
+            Whitespace@24..32 "        "
+            Word@32..33 "2"
+          Newline@33..34 "\n"
+          RBrace@34..35 "}"
+        RBracket@35..36 "]"
+  Newline@36..37 "\n"

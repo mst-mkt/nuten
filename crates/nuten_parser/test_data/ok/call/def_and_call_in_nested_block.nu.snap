@@ -1,0 +1,157 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/def_and_call_in_nested_block.nu
+---
+Root@0..164
+  Pipeline@0..64
+    PipelineElement@0..64
+      Module@0..64
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..9 "mm"
+        Whitespace@9..10 " "
+        Block@10..64
+          LBrace@10..11 "{"
+          Whitespace@11..12 " "
+          Pipeline@12..29
+            PipelineElement@12..29
+              Def@12..29
+                Word@12..15 "def"
+                Whitespace@15..16 " "
+                Word@16..18 "m4"
+                Whitespace@18..19 " "
+                Signature@19..22
+                  LBracket@19..20 "["
+                  Param@20..21
+                    Word@20..21 "x"
+                  RBracket@21..22 "]"
+                Whitespace@22..23 " "
+                Block@23..29
+                  LBrace@23..24 "{"
+                  Whitespace@24..25 " "
+                  Pipeline@25..27
+                    PipelineElement@25..27
+                      Word@25..27 "$x"
+                  Whitespace@27..28 " "
+                  RBrace@28..29 "}"
+          Semicolon@29..30 ";"
+          Whitespace@30..31 " "
+          Pipeline@31..62
+            PipelineElement@31..62
+              Def@31..62
+                Word@31..37 "export"
+                Whitespace@37..38 " "
+                Word@38..41 "def"
+                Whitespace@41..42 " "
+                Word@42..44 "m5"
+                Whitespace@44..45 " "
+                Signature@45..47
+                  LBracket@45..46 "["
+                  RBracket@46..47 "]"
+                Whitespace@47..48 " "
+                Block@48..62
+                  LBrace@48..49 "{"
+                  Whitespace@49..50 " "
+                  Pipeline@50..60
+                    PipelineElement@50..60
+                      Call@50..60
+                        Word@50..52 "m4"
+                        Whitespace@52..53 " "
+                        Record@53..60
+                          LBrace@53..54 "{"
+                          RecordField@54..59
+                            Word@54..55 "a"
+                            Colon@55..56 ":"
+                            Whitespace@56..58 "  "
+                            Word@58..59 "1"
+                          RBrace@59..60 "}"
+                  Whitespace@60..61 " "
+                  RBrace@61..62 "}"
+          Whitespace@62..63 " "
+          RBrace@63..64 "}"
+  Newline@64..65 "\n"
+  Pipeline@65..123
+    PipelineElement@65..123
+      Def@65..123
+        Word@65..68 "def"
+        Whitespace@68..69 " "
+        Word@69..78 "enclosing"
+        Whitespace@78..79 " "
+        Signature@79..81
+          LBracket@79..80 "["
+          RBracket@80..81 "]"
+        Whitespace@81..82 " "
+        Block@82..123
+          LBrace@82..83 "{"
+          Whitespace@83..84 " "
+          Pipeline@84..98
+            PipelineElement@84..98
+              Call@84..98
+                Word@84..90 "nested"
+                Whitespace@90..91 " "
+                Record@91..98
+                  LBrace@91..92 "{"
+                  RecordField@92..97
+                    Word@92..93 "a"
+                    Colon@93..94 ":"
+                    Whitespace@94..96 "  "
+                    Word@96..97 "1"
+                  RBrace@97..98 "}"
+          Semicolon@98..99 ";"
+          Whitespace@99..100 " "
+          Pipeline@100..121
+            PipelineElement@100..121
+              Def@100..121
+                Word@100..103 "def"
+                Whitespace@103..104 " "
+                Word@104..110 "nested"
+                Whitespace@110..111 " "
+                Signature@111..114
+                  LBracket@111..112 "["
+                  Param@112..113
+                    Word@112..113 "x"
+                  RBracket@113..114 "]"
+                Whitespace@114..115 " "
+                Block@115..121
+                  LBrace@115..116 "{"
+                  Whitespace@116..117 " "
+                  Pipeline@117..119
+                    PipelineElement@117..119
+                      Word@117..119 "$x"
+                  Whitespace@119..120 " "
+                  RBrace@120..121 "}"
+          Whitespace@121..122 " "
+          RBrace@122..123 "}"
+  Newline@123..124 "\n"
+  Pipeline@124..163
+    PipelineElement@124..163
+      Def@124..163
+        Word@124..127 "def"
+        Whitespace@127..128 " "
+        Word@128..137 "recursive"
+        Whitespace@137..138 " "
+        Signature@138..141
+          LBracket@138..139 "["
+          Param@139..140
+            Word@139..140 "x"
+          RBracket@140..141 "]"
+        Whitespace@141..142 " "
+        Block@142..163
+          LBrace@142..143 "{"
+          Whitespace@143..144 " "
+          Pipeline@144..161
+            PipelineElement@144..161
+              Call@144..161
+                Word@144..153 "recursive"
+                Whitespace@153..154 " "
+                Record@154..161
+                  LBrace@154..155 "{"
+                  RecordField@155..160
+                    Word@155..156 "a"
+                    Colon@156..157 ":"
+                    Whitespace@157..159 "  "
+                    Word@159..160 "1"
+                  RBrace@160..161 "}"
+          Whitespace@161..162 " "
+          RBrace@162..163 "}"
+  Newline@163..164 "\n"

@@ -1,0 +1,62 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/text_after_paren_params.nu
+---
+Root@0..55
+  Pipeline@0..19
+    PipelineElement@0..19
+      Def@0..19
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "r"
+        Whitespace@5..6 " "
+        Word@6..12 "(x)(y)"
+        Whitespace@12..13 " "
+        Block@13..19
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          Pipeline@15..17
+            PipelineElement@15..17
+              Call@15..17
+                Word@15..17 "ls"
+          Whitespace@17..18 " "
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"
+  Pipeline@20..37
+    PipelineElement@20..37
+      Call@20..37
+        Word@20..23 "def"
+        Whitespace@23..24 " "
+        Word@24..25 "s"
+        Whitespace@25..26 " "
+        Word@26..30 "(x)y"
+        Whitespace@30..31 " "
+        Block@31..37
+          LBrace@31..32 "{"
+          Whitespace@32..33 " "
+          Pipeline@33..35
+            PipelineElement@33..35
+              Call@33..35
+                Word@33..35 "ls"
+          Whitespace@35..36 " "
+          RBrace@36..37 "}"
+  Newline@37..38 "\n"
+  Pipeline@38..54
+    PipelineElement@38..54
+      Call@38..54
+        Word@38..41 "def"
+        Whitespace@41..42 " "
+        Word@42..43 "u"
+        Whitespace@43..44 " "
+        Word@44..47 "()]"
+        Whitespace@47..48 " "
+        Block@48..54
+          LBrace@48..49 "{"
+          Whitespace@49..50 " "
+          Pipeline@50..52
+            PipelineElement@50..52
+              Call@50..52
+                Word@50..52 "ls"
+          Whitespace@52..53 " "
+          RBrace@53..54 "}"
+  Newline@54..55 "\n"

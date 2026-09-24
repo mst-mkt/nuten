@@ -1,0 +1,32 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/multi_token_value.nu
+---
+Root@0..71
+  Pipeline@0..21
+    PipelineElement@0..21
+      Match@0..21
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        Word@9..21 "{ 1 => a b }"
+  Newline@21..22 "\n"
+  Pipeline@22..45
+    PipelineElement@22..45
+      Match@22..45
+        Word@22..27 "match"
+        Whitespace@27..28 " "
+        Word@28..30 "$x"
+        Whitespace@30..31 " "
+        Word@31..45 "{ 1 => a | b }"
+  Newline@45..46 "\n"
+  Pipeline@46..70
+    PipelineElement@46..70
+      Match@46..70
+        Word@46..51 "match"
+        Whitespace@51..52 " "
+        Word@52..54 "$x"
+        Whitespace@54..55 " "
+        Word@55..70 "{ 1 => a || b }"
+  Newline@70..71 "\n"

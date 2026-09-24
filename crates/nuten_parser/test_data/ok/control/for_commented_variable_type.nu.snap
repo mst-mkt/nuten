@@ -1,0 +1,45 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/for_commented_variable_type.nu
+---
+Root@0..39
+  Pipeline@0..38
+    PipelineElement@0..38
+      Subexpression@0..38
+        LParen@0..1 "("
+        Pipeline@1..37
+          PipelineElement@1..37
+            For@1..37
+              Word@1..4 "for"
+              Whitespace@4..5 " "
+              Word@5..7 "x:"
+              Whitespace@7..8 " "
+              Comment@8..11 "# c"
+              Newline@11..12 "\n"
+              Type@12..21
+                Word@12..16 "list"
+                LAngle@16..17 "<"
+                Word@17..20 "int"
+                RAngle@20..21 ">"
+              Whitespace@21..22 " "
+              Word@22..24 "in"
+              Whitespace@24..25 " "
+              List@25..30
+                LBracket@25..26 "["
+                List@26..29
+                  LBracket@26..27 "["
+                  Word@27..28 "1"
+                  RBracket@28..29 "]"
+                RBracket@29..30 "]"
+              Whitespace@30..31 " "
+              Block@31..37
+                LBrace@31..32 "{"
+                Whitespace@32..33 " "
+                Pipeline@33..35
+                  PipelineElement@33..35
+                    Call@33..35
+                      Word@33..35 "ls"
+                Whitespace@35..36 " "
+                RBrace@36..37 "}"
+        RParen@37..38 ")"
+  Newline@38..39 "\n"

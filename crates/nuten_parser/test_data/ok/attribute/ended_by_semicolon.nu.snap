@@ -1,0 +1,53 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/ended_by_semicolon.nu
+---
+Root@0..47
+  Pipeline@0..26
+    PipelineElement@0..20
+      Call@0..20
+        Word@0..2 "@a"
+        Whitespace@2..3 " "
+        Word@3..4 "x"
+        Semicolon@4..5 ";"
+        Whitespace@5..7 "  "
+        Word@7..9 "@b"
+        Whitespace@9..10 " "
+        Word@10..16 "[1  2]"
+        Semicolon@16..17 ";"
+        Whitespace@17..18 " "
+        Word@18..20 "ls"
+    Whitespace@20..22 "  "
+    Pipe@22..23 "|"
+    Whitespace@23..25 "  "
+    PipelineElement@25..26
+      Call@25..26
+        Word@25..26 "y"
+  Newline@26..27 "\n"
+  Pipeline@27..36
+    PipelineElement@27..33
+      Call@27..33
+        Word@27..29 "@a"
+        Whitespace@29..31 "  "
+        Word@31..32 "x"
+        Semicolon@32..33 ";"
+    Pipe@33..34 "|"
+    Whitespace@34..35 " "
+    PipelineElement@35..36
+      Call@35..36
+        Word@35..36 "y"
+  Newline@36..37 "\n"
+  Pipeline@37..46
+    PipelineElement@37..42
+      Call@37..42
+        Word@37..39 "@a"
+        Whitespace@39..40 " "
+        Word@40..41 "x"
+        Semicolon@41..42 ";"
+    Newline@42..43 "\n"
+    Pipe@43..44 "|"
+    Whitespace@44..45 " "
+    PipelineElement@45..46
+      Call@45..46
+        Word@45..46 "y"
+  Newline@46..47 "\n"

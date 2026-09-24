@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/arrow_in_string.nu
+---
+Root@0..46
+  Pipeline@0..45
+    PipelineElement@0..45
+      Match@0..45
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..45
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..20
+            String@11..15 "\"=>\""
+            Whitespace@15..16 " "
+            FatArrow@16..18 "=>"
+            Whitespace@18..19 " "
+            Word@19..20 "a"
+          Comma@20..21 ","
+          Whitespace@21..22 " "
+          MatchArm@22..43
+            Word@22..24 "$y"
+            Whitespace@24..25 " "
+            Word@25..27 "if"
+            Whitespace@27..28 " "
+            MathExpression@28..38
+              Word@28..30 "$y"
+              Whitespace@30..31 " "
+              Operator@31..33 "=="
+              Whitespace@33..34 " "
+              String@34..38 "\"=>\""
+            Whitespace@38..39 " "
+            FatArrow@39..41 "=>"
+            Whitespace@41..42 " "
+            Word@42..43 "b"
+          Whitespace@43..44 " "
+          RBrace@44..45 "}"
+  Newline@45..46 "\n"

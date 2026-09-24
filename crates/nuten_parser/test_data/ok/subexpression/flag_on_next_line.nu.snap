@@ -1,0 +1,30 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/subexpression/flag_on_next_line.nu
+---
+Root@0..17
+  Pipeline@0..7
+    PipelineElement@0..7
+      Subexpression@0..7
+        LParen@0..1 "("
+        Pipeline@1..6
+          PipelineElement@1..6
+            Call@1..6
+              Word@1..3 "ls"
+              Newline@3..4 "\n"
+              Word@4..6 "-a"
+        RParen@6..7 ")"
+  Newline@7..8 "\n"
+  Pipeline@8..16
+    PipelineElement@8..16
+      Subexpression@8..16
+        LParen@8..9 "("
+        Pipeline@9..15
+          PipelineElement@9..15
+            Call@9..15
+              Word@9..11 "ls"
+              Newline@11..12 "\n"
+              Newline@12..13 "\n"
+              Word@13..15 "-a"
+        RParen@15..16 ")"
+  Newline@16..17 "\n"

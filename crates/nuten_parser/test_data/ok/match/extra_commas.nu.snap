@@ -1,0 +1,78 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/extra_commas.nu
+---
+Root@0..88
+  Pipeline@0..28
+    PipelineElement@0..28
+      Match@0..28
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..28
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..17
+            Word@11..12 "1"
+            Whitespace@12..13 " "
+            FatArrow@13..15 "=>"
+            Whitespace@15..16 " "
+            Word@16..17 "a"
+          Comma@17..18 ","
+          Comma@18..19 ","
+          Whitespace@19..20 " "
+          MatchArm@20..26
+            Word@20..21 "_"
+            Whitespace@21..22 " "
+            FatArrow@22..24 "=>"
+            Whitespace@24..25 " "
+            Word@25..26 "b"
+          Whitespace@26..27 " "
+          RBrace@27..28 "}"
+  Newline@28..29 "\n"
+  Pipeline@29..50
+    PipelineElement@29..50
+      Match@29..50
+        Word@29..34 "match"
+        Whitespace@34..35 " "
+        Word@35..37 "$x"
+        Whitespace@37..38 " "
+        MatchArms@38..50
+          LBrace@38..39 "{"
+          Whitespace@39..40 " "
+          Comma@40..41 ","
+          Whitespace@41..42 " "
+          MatchArm@42..48
+            Word@42..43 "1"
+            Whitespace@43..44 " "
+            FatArrow@44..46 "=>"
+            Whitespace@46..47 " "
+            Word@47..48 "a"
+          Whitespace@48..49 " "
+          RBrace@49..50 "}"
+  Newline@50..51 "\n"
+  Pipeline@51..66
+    PipelineElement@51..66
+      Match@51..66
+        Word@51..56 "match"
+        Whitespace@56..57 " "
+        Word@57..59 "$x"
+        Whitespace@59..60 " "
+        MatchArms@60..66
+          LBrace@60..61 "{"
+          Whitespace@61..62 " "
+          Comma@62..63 ","
+          Comma@63..64 ","
+          Whitespace@64..65 " "
+          RBrace@65..66 "}"
+  Newline@66..67 "\n"
+  Pipeline@67..87
+    PipelineElement@67..87
+      Match@67..87
+        Word@67..72 "match"
+        Whitespace@72..73 " "
+        Word@73..75 "$x"
+        Whitespace@75..76 " "
+        Word@76..87 "{ 1, => a }"
+  Newline@87..88 "\n"

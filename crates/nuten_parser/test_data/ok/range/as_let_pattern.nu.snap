@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/as_let_pattern.nu
+---
+Root@0..29
+  Pipeline@0..13
+    PipelineElement@0..13
+      Let@0..13
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..9 "$x..3"
+        Whitespace@9..10 " "
+        Assign@10..11 "="
+        Whitespace@11..12 " "
+        Pipeline@12..13
+          PipelineElement@12..13
+            Word@12..13 "1"
+  Newline@13..14 "\n"
+  Pipeline@14..28
+    PipelineElement@14..28
+      Let@14..28
+        Word@14..17 "let"
+        Whitespace@17..18 " "
+        Word@18..24 "(1)..3"
+        Whitespace@24..25 " "
+        Assign@25..26 "="
+        Whitespace@26..27 " "
+        Pipeline@27..28
+          PipelineElement@27..28
+            Word@27..28 "1"
+  Newline@28..29 "\n"

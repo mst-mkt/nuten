@@ -1,0 +1,50 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/as_redirection_target.nu
+---
+Root@0..43
+  Pipeline@0..19
+    PipelineElement@0..19
+      Call@0..2
+        Word@0..2 "ls"
+      Whitespace@2..3 " "
+      Redirection@3..12
+        OutGt@3..5 "o>"
+        Whitespace@5..6 " "
+        Record@6..12
+          LBrace@6..7 "{"
+          RecordField@7..11
+            Word@7..8 "a"
+            Colon@8..9 ":"
+            Whitespace@9..10 " "
+            Word@10..11 "1"
+          RBrace@11..12 "}"
+      Whitespace@12..13 " "
+      Record@13..19
+        LBrace@13..14 "{"
+        RecordField@14..18
+          Word@14..15 "b"
+          Colon@15..16 ":"
+          Whitespace@16..17 " "
+          Word@17..18 "2"
+        RBrace@18..19 "}"
+  Newline@19..20 "\n"
+  Pipeline@20..42
+    PipelineElement@20..42
+      ExternalCall@20..25
+        Word@20..25 "^echo"
+      Whitespace@25..26 " "
+      Redirection@26..35
+        OutGt@26..28 "o>"
+        Whitespace@28..29 " "
+        Record@29..35
+          LBrace@29..30 "{"
+          RecordField@30..34
+            Word@30..31 "a"
+            Colon@31..32 ":"
+            Whitespace@32..33 " "
+            Word@33..34 "1"
+          RBrace@34..35 "}"
+      Whitespace@35..36 " "
+      Word@36..42 "{b: 2}"
+  Newline@42..43 "\n"

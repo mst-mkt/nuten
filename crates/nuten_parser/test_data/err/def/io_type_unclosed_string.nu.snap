@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/def/io_type_unclosed_string.nu
+---
+Root@0..23
+  Pipeline@0..23
+    PipelineElement@0..23
+      Def@0..23
+        Word@0..6 "extern"
+        Whitespace@6..7 " "
+        Word@7..8 "e"
+        Whitespace@8..9 " "
+        Signature@9..11
+          LBracket@9..10 "["
+          RBracket@10..11 "]"
+        Colon@11..12 ":"
+        Whitespace@12..13 " "
+        Word@13..16 "int"
+        Whitespace@16..17 " "
+        Word@17..19 "->"
+        Whitespace@19..20 " "
+        Error@20..23 "\"a\n"
+error 20..21 "\"": Lex(Unclosed)

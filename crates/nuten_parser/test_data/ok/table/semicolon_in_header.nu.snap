@@ -1,0 +1,20 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/table/semicolon_in_header.nu
+---
+Root@0..16
+  Pipeline@0..15
+    PipelineElement@0..15
+      Table@0..15
+        LBracket@0..1 "["
+        Word@1..7 "[a b;]"
+        Semicolon@7..8 ";"
+        Whitespace@8..9 " "
+        List@9..14
+          LBracket@9..10 "["
+          Word@10..11 "1"
+          Whitespace@11..12 " "
+          Word@12..13 "2"
+          RBracket@13..14 "]"
+        RBracket@14..15 "]"
+  Newline@15..16 "\n"

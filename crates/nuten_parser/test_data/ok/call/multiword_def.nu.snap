@@ -1,0 +1,50 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/multiword_def.nu
+---
+Root@0..57
+  Pipeline@0..26
+    PipelineElement@0..26
+      Def@0..26
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        String@4..15 "\"two words\""
+        Whitespace@15..16 " "
+        Signature@16..19
+          LBracket@16..17 "["
+          Param@17..18
+            Word@17..18 "x"
+          RBracket@18..19 "]"
+        Whitespace@19..20 " "
+        Block@20..26
+          LBrace@20..21 "{"
+          Whitespace@21..22 " "
+          Pipeline@22..24
+            PipelineElement@22..24
+              Word@22..24 "$x"
+          Whitespace@24..25 " "
+          RBrace@25..26 "}"
+  Newline@26..27 "\n"
+  Pipeline@27..44
+    PipelineElement@27..44
+      Call@27..44
+        Word@27..30 "two"
+        Whitespace@30..31 " "
+        Word@31..36 "words"
+        Whitespace@36..37 " "
+        Record@37..44
+          LBrace@37..38 "{"
+          RecordField@38..43
+            Word@38..39 "a"
+            Colon@39..40 ":"
+            Whitespace@40..42 "  "
+            Word@42..43 "1"
+          RBrace@43..44 "}"
+  Newline@44..45 "\n"
+  Pipeline@45..56
+    PipelineElement@45..56
+      Call@45..56
+        Word@45..48 "two"
+        Whitespace@48..49 " "
+        Word@49..56 "{a:  1}"
+  Newline@56..57 "\n"

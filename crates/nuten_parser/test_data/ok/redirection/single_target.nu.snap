@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/redirection/single_target.nu
+---
+Root@0..54
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..2
+        Word@0..2 "ls"
+      Whitespace@2..3 " "
+      Redirection@3..13
+        OutGt@3..5 "o>"
+        Whitespace@5..6 " "
+        Word@6..13 "out.txt"
+  Newline@13..14 "\n"
+  Pipeline@14..30
+    PipelineElement@14..30
+      Call@14..16
+        Word@14..16 "ls"
+      Whitespace@16..17 " "
+      Redirection@17..30
+        ErrGtGt@17..22 "err>>"
+        Whitespace@22..23 " "
+        Word@23..30 "err.log"
+  Newline@30..31 "\n"
+  Pipeline@31..53
+    PipelineElement@31..53
+      Call@31..33
+        Word@31..33 "ls"
+      Whitespace@33..34 " "
+      Redirection@34..53
+        OutErrGt@34..38 "o+e>"
+        Whitespace@38..39 " "
+        String@39..53 "\"all logs.txt\""
+  Newline@53..54 "\n"

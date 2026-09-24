@@ -1,0 +1,11 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/attribute/stray_close_paren.nu
+---
+Root@0..7
+  Pipeline@0..6
+    PipelineElement@0..6
+      Attribute@0..6
+        Error@0..6 "@test)"
+  Newline@6..7 "\n"
+error 5..6 ")": Lex(UnmatchedCloser)

@@ -1,0 +1,70 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/block_or_record_ambiguity.nu
+---
+Root@0..95
+  Pipeline@0..94
+    PipelineElement@0..94
+      List@0..94
+        LBracket@0..1 "["
+        Block@1..9
+          LBrace@1..2 "{"
+          ClosureParams@2..5
+            Pipe@2..3 "|"
+            Param@3..4
+              Word@3..4 "x"
+            Pipe@4..5 "|"
+          Whitespace@5..6 " "
+          Pipeline@6..8
+            PipelineElement@6..8
+              Word@6..8 "$x"
+          RBrace@8..9 "}"
+        Whitespace@9..10 " "
+        Record@10..12
+          LBrace@10..11 "{"
+          RBrace@11..12 "}"
+        Whitespace@12..13 " "
+        Record@13..16
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          RBrace@15..16 "}"
+        Whitespace@16..17 " "
+        Block@17..22
+          LBrace@17..18 "{"
+          Pipeline@18..21
+            PipelineElement@18..21
+              Call@18..21
+                Word@18..19 "a"
+                Whitespace@19..20 " "
+                Word@20..21 "b"
+          RBrace@21..22 "}"
+        Whitespace@22..23 " "
+        Word@23..31 "{a,b: 1}"
+        Whitespace@31..32 " "
+        Block@32..38
+          LBrace@32..33 "{"
+          Pipeline@33..37
+            PipelineElement@33..37
+              Call@33..37
+                Word@33..37 "...x"
+          RBrace@37..38 "}"
+        Whitespace@38..39 " "
+        Record@39..46
+          LBrace@39..40 "{"
+          Comma@40..41 ","
+          RecordField@41..45
+            Word@41..42 "a"
+            Colon@42..43 ":"
+            Whitespace@43..44 " "
+            Word@44..45 "1"
+          RBrace@45..46 "}"
+        Whitespace@46..47 " "
+        Word@47..53 "{,: 1}"
+        Whitespace@53..54 " "
+        Word@54..66 "{...$x,a: 1}"
+        Whitespace@66..67 " "
+        Word@67..79 "{...$x ,: 1}"
+        Whitespace@79..80 " "
+        Word@80..93 "{,...$x,a: 1}"
+        RBracket@93..94 "]"
+  Newline@94..95 "\n"

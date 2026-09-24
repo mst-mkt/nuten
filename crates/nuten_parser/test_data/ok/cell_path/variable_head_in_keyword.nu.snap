@@ -1,0 +1,71 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/variable_head_in_keyword.nu
+---
+Root@0..68
+  Pipeline@0..21
+    PipelineElement@0..21
+      If@0..21
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        CellPath@3..7
+          Word@3..5 "$x"
+          Dot@5..6 "."
+          Word@6..7 "a"
+        Whitespace@7..8 " "
+        Block@8..11
+          LBrace@8..9 "{"
+          Whitespace@9..10 " "
+          RBrace@10..11 "}"
+        Whitespace@11..12 " "
+        Word@12..16 "else"
+        Whitespace@16..17 " "
+        CellPath@17..21
+          Word@17..19 "$x"
+          Dot@19..20 "."
+          Word@20..21 "b"
+  Newline@21..22 "\n"
+  Pipeline@22..46
+    PipelineElement@22..46
+      Match@22..46
+        Word@22..27 "match"
+        Whitespace@27..28 " "
+        CellPath@28..32
+          Word@28..30 "$x"
+          Dot@30..31 "."
+          Word@31..32 "a"
+        Whitespace@32..33 " "
+        MatchArms@33..46
+          LBrace@33..34 "{"
+          Whitespace@34..35 " "
+          MatchArm@35..44
+            Word@35..36 "_"
+            Whitespace@36..37 " "
+            FatArrow@37..39 "=>"
+            Whitespace@39..40 " "
+            CellPath@40..44
+              Word@40..42 "$x"
+              Dot@42..43 "."
+              Word@43..44 "b"
+          Whitespace@44..45 " "
+          RBrace@45..46 "}"
+  Newline@46..47 "\n"
+  Pipeline@47..67
+    PipelineElement@47..67
+      If@47..67
+        Word@47..49 "if"
+        Whitespace@49..50 " "
+        Word@50..54 "true"
+        Whitespace@54..55 " "
+        Block@55..58
+          LBrace@55..56 "{"
+          Whitespace@56..57 " "
+          RBrace@57..58 "}"
+        Whitespace@58..59 " "
+        Word@59..63 "else"
+        Whitespace@63..64 " "
+        CellPath@64..67
+          Word@64..65 "$"
+          Dot@65..66 "."
+          Word@66..67 "a"
+  Newline@67..68 "\n"

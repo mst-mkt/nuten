@@ -1,0 +1,50 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/variable/bare_dollar.nu
+---
+Root@0..32
+  Pipeline@0..1
+    PipelineElement@0..1
+      Error@0..1
+        Word@0..1 "$"
+  Newline@1..2 "\n"
+  Pipeline@2..9
+    PipelineElement@2..9
+      Call@2..9
+        Word@2..7 "print"
+        Whitespace@7..8 " "
+        Error@8..9
+          Word@8..9 "$"
+  Newline@9..10 "\n"
+  Pipeline@10..17
+    PipelineElement@10..17
+      ExternalCall@10..17
+        Word@10..15 "^echo"
+        Whitespace@15..16 " "
+        Error@16..17
+          Word@16..17 "$"
+  Newline@17..18 "\n"
+  Pipeline@18..25
+    PipelineElement@18..25
+      Call@18..20
+        Word@18..20 "ls"
+      Whitespace@20..21 " "
+      Redirection@21..25
+        OutGt@21..23 "o>"
+        Whitespace@23..24 " "
+        Error@24..25
+          Word@24..25 "$"
+  Newline@25..26 "\n"
+  Pipeline@26..31
+    PipelineElement@26..31
+      Call@26..31
+        Word@26..29 "foo"
+        Whitespace@29..30 " "
+        Error@30..31
+          Word@30..31 "$"
+  Newline@31..32 "\n"
+error 0..1 "$": MissingVariableName
+error 8..9 "$": MissingVariableName
+error 16..17 "$": MissingVariableName
+error 24..25 "$": MissingVariableName
+error 30..31 "$": MissingVariableName

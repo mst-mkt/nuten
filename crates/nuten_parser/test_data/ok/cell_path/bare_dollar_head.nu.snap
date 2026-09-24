@@ -1,0 +1,29 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/bare_dollar_head.nu
+---
+Root@0..15
+  Pipeline@0..4
+    PipelineElement@0..4
+      CellPath@0..4
+        Word@0..1 "$"
+        Dot@1..2 "."
+        Word@2..3 "a"
+        Question@3..4 "?"
+  Newline@4..5 "\n"
+  Pipeline@5..7
+    PipelineElement@5..7
+      CellPath@5..7
+        Word@5..6 "$"
+        Dot@6..7 "."
+  Newline@7..8 "\n"
+  Pipeline@8..14
+    PipelineElement@8..14
+      CellPath@8..14
+        Word@8..9 "$"
+        Dot@9..10 "."
+        Word@10..11 "?"
+        Dot@11..12 "."
+        Word@12..13 "b"
+        Bang@13..14 "!"
+  Newline@14..15 "\n"

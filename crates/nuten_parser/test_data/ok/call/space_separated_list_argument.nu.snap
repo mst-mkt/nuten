@@ -1,0 +1,59 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/space_separated_list_argument.nu
+---
+Root@0..91
+  Pipeline@0..15
+    PipelineElement@0..15
+      Call@0..15
+        Word@0..3 "str"
+        Whitespace@3..4 " "
+        Word@4..8 "join"
+        Whitespace@8..9 " "
+        Word@9..15 "[a  b]"
+  Newline@15..16 "\n"
+  Pipeline@16..32
+    PipelineElement@16..19
+      List@16..19
+        LBracket@16..17 "["
+        Word@17..18 "1"
+        RBracket@18..19 "]"
+    Whitespace@19..20 " "
+    Pipe@20..21 "|"
+    Whitespace@21..22 " "
+    PipelineElement@22..32
+      Call@22..32
+        Word@22..25 "zip"
+        Whitespace@25..26 " "
+        List@26..32
+          LBracket@26..27 "["
+          Word@27..28 "1"
+          Whitespace@28..30 "  "
+          Word@30..31 "2"
+          RBracket@31..32 "]"
+  Newline@32..33 "\n"
+  Pipeline@33..69
+    PipelineElement@33..69
+      Call@33..69
+        Word@33..37 "http"
+        Whitespace@37..38 " "
+        Word@38..42 "post"
+        Whitespace@42..43 " "
+        Word@43..62 "https://example.com"
+        Whitespace@62..63 " "
+        List@63..69
+          LBracket@63..64 "["
+          Word@64..65 "a"
+          Whitespace@65..67 "  "
+          Word@67..68 "b"
+          RBracket@68..69 "]"
+  Newline@69..70 "\n"
+  Pipeline@70..90
+    PipelineElement@70..90
+      Call@70..90
+        Word@70..74 "ansi"
+        Whitespace@74..75 " "
+        Word@75..83 "gradient"
+        Whitespace@83..84 " "
+        Word@84..90 "[a  b]"
+  Newline@90..91 "\n"

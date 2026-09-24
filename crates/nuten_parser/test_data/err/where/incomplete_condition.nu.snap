@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/where/incomplete_condition.nu
+---
+Root@0..25
+  Pipeline@0..9
+    PipelineElement@0..9
+      Where@0..9
+        Word@0..5 "where"
+        Whitespace@5..6 " "
+        MathExpression@6..9
+          Error@6..9
+            Word@6..9 "not"
+  Newline@9..10 "\n"
+  Pipeline@10..24
+    PipelineElement@10..24
+      Where@10..24
+        Word@10..15 "where"
+        Whitespace@15..16 " "
+        MathExpression@16..24
+          Word@16..17 "a"
+          Whitespace@17..18 " "
+          Operator@18..20 "=="
+          Whitespace@20..21 " "
+          Word@21..22 "1"
+          Whitespace@22..23 " "
+          Error@23..24
+            Word@23..24 "+"
+  Newline@24..25 "\n"
+error 6..9 "not": MissingTerm
+error 23..24 "+": MissingTerm

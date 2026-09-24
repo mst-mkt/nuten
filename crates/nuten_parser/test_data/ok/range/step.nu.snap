@@ -1,0 +1,40 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/step.nu
+---
+Root@0..38
+  Pipeline@0..9
+    PipelineElement@0..9
+      Range@0..9
+        Word@0..2 "$x"
+        RangeOperator@2..4 ".."
+        Word@4..5 "2"
+        RangeOperator@5..7 ".."
+        Word@7..9 "$y"
+  Newline@9..10 "\n"
+  Pipeline@10..17
+    PipelineElement@10..17
+      Range@10..17
+        Word@10..12 "$x"
+        RangeOperator@12..14 ".."
+        Word@14..15 "2"
+        RangeOperator@15..17 ".."
+  Newline@17..18 "\n"
+  Pipeline@18..28
+    PipelineElement@18..28
+      Range@18..28
+        Word@18..20 "$x"
+        RangeOperator@20..22 ".."
+        Word@22..24 "$y"
+        RangeOperator@24..26 ".."
+        Word@26..28 "$z"
+  Newline@28..29 "\n"
+  Pipeline@29..37
+    PipelineElement@29..37
+      Range@29..37
+        Word@29..30 "1"
+        RangeOperator@30..32 ".."
+        Word@32..33 "2"
+        RangeOperator@33..35 ".."
+        Word@35..37 "10"
+  Newline@37..38 "\n"

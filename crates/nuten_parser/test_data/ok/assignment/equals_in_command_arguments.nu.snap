@@ -1,0 +1,62 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/assignment/equals_in_command_arguments.nu
+---
+Root@0..42
+  Pipeline@0..10
+    PipelineElement@0..10
+      Assignment@0..10
+        Call@0..6
+          Word@0..4 "echo"
+          Whitespace@4..5 " "
+          Word@5..6 "x"
+        Whitespace@6..7 " "
+        Assign@7..8 "="
+        Whitespace@8..9 " "
+        Pipeline@9..10
+          PipelineElement@9..10
+            Call@9..10
+              Word@9..10 "y"
+  Newline@10..11 "\n"
+  Pipeline@11..31
+    PipelineElement@11..31
+      Assignment@11..31
+        ExternalCall@11..22
+          Word@11..15 "^cmd"
+          Whitespace@15..16 " "
+          Word@16..22 "{a: 1}"
+        Whitespace@22..23 " "
+        Assign@23..24 "="
+        Whitespace@24..25 " "
+        Pipeline@25..31
+          PipelineElement@25..31
+            Record@25..31
+              LBrace@25..26 "{"
+              RecordField@26..30
+                Word@26..27 "a"
+                Colon@27..28 ":"
+                Whitespace@28..29 " "
+                Word@29..30 "1"
+              RBrace@30..31 "}"
+  Newline@31..32 "\n"
+  Pipeline@32..41
+    PipelineElement@32..41
+      Assignment@32..41
+        Call@32..33
+          Word@32..33 "x"
+        Whitespace@33..34 " "
+        Assign@34..35 "="
+        Whitespace@35..36 " "
+        Pipeline@36..41
+          PipelineElement@36..41
+            Assignment@36..41
+              Call@36..37
+                Word@36..37 "y"
+              Whitespace@37..38 " "
+              Assign@38..39 "="
+              Whitespace@39..40 " "
+              Pipeline@40..41
+                PipelineElement@40..41
+                  Call@40..41
+                    Word@40..41 "z"
+  Newline@41..42 "\n"

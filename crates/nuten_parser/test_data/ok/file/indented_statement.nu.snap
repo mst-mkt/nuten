@@ -1,0 +1,20 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/file/indented_statement.nu
+---
+Root@0..16
+  Whitespace@0..2 "  "
+  Pipeline@2..8
+    PipelineElement@2..8
+      Call@2..8
+        Word@2..6 "echo"
+        Whitespace@6..7 " "
+        Word@7..8 "a"
+  Newline@8..9 "\n"
+  Pipeline@9..15
+    PipelineElement@9..15
+      Call@9..15
+        Word@9..13 "echo"
+        Whitespace@13..14 " "
+        Word@14..15 "b"
+  Newline@15..16 "\n"

@@ -1,0 +1,33 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/range/bare_word_end.nu
+---
+Root@0..16
+  Pipeline@0..5
+    PipelineElement@0..5
+      CellPath@0..5
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        Word@3..4 "."
+        Error@4..5
+          Word@4..5 "a"
+  Newline@5..6 "\n"
+  Pipeline@6..15
+    PipelineElement@6..15
+      CellPath@6..15
+        Subexpression@6..10
+          LParen@6..7 "("
+          Pipeline@7..9
+            PipelineElement@7..9
+              Call@7..9
+                Word@7..9 "ls"
+          RParen@9..10 ")"
+        Dot@10..11 "."
+        Word@11..12 "a"
+        Dot@12..13 "."
+        Word@13..14 "."
+        Error@14..15
+          Word@14..15 "b"
+  Newline@15..16 "\n"
+error 4..5 "a": CellPathSeparator { expected: "`.`, `?`, or `!`" }
+error 14..15 "b": CellPathSeparator { expected: "`.`, `?`, or `!`" }

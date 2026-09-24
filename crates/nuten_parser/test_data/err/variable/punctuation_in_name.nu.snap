@@ -1,0 +1,81 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/variable/punctuation_in_name.nu
+---
+Root@0..85
+  Pipeline@0..4
+    PipelineElement@0..4
+      Error@0..4
+        Word@0..4 "$a-b"
+  Newline@4..5 "\n"
+  Pipeline@5..68
+    PipelineElement@5..68
+      Call@5..68
+        Word@5..10 "print"
+        Whitespace@10..11 " "
+        Error@11..15
+          Word@11..15 "$a+b"
+        Whitespace@15..16 " "
+        Error@16..21
+          Word@16..21 "$a(b)"
+        Whitespace@21..22 " "
+        Error@22..27
+          Word@22..27 "$a[0]"
+        Whitespace@27..28 " "
+        Error@28..33
+          Word@28..33 "$a{b}"
+        Whitespace@33..34 " "
+        Error@34..38
+          Word@34..38 "$a=b"
+        Whitespace@38..39 " "
+        Error@39..43
+          Word@39..43 "$a<b"
+        Whitespace@43..44 " "
+        Error@44..48
+          Word@44..48 "$a&b"
+        Whitespace@48..49 " "
+        Error@49..53
+          Word@49..53 "$a*b"
+        Whitespace@53..54 " "
+        Error@54..58
+          Word@54..58 "$a/b"
+        Whitespace@58..59 " "
+        Error@59..63
+          Word@59..63 "$a%b"
+        Whitespace@63..64 " "
+        Error@64..68
+          Word@64..68 "$a^b"
+  Newline@68..69 "\n"
+  Pipeline@69..75
+    PipelineElement@69..75
+      CellPath@69..75
+        Error@69..73
+          Word@69..73 "$a-b"
+        Dot@73..74 "."
+        Word@74..75 "c"
+  Newline@75..76 "\n"
+  Pipeline@76..81
+    PipelineElement@76..81
+      Error@76..81
+        Word@76..81 "$x+=1"
+  Newline@81..82 "\n"
+  Pipeline@82..84
+    PipelineElement@82..84
+      Error@82..84
+        Word@82..84 "$-"
+  Newline@84..85 "\n"
+error 0..4 "$a-b": InvalidVariableName
+error 11..15 "$a+b": InvalidVariableName
+error 16..21 "$a(b)": InvalidVariableName
+error 22..27 "$a[0]": InvalidVariableName
+error 28..33 "$a{b}": InvalidVariableName
+error 34..38 "$a=b": InvalidVariableName
+error 39..43 "$a<b": InvalidVariableName
+error 44..48 "$a&b": InvalidVariableName
+error 49..53 "$a*b": InvalidVariableName
+error 54..58 "$a/b": InvalidVariableName
+error 59..63 "$a%b": InvalidVariableName
+error 64..68 "$a^b": InvalidVariableName
+error 69..73 "$a-b": InvalidVariableName
+error 76..81 "$x+=1": InvalidVariableName
+error 82..84 "$-": InvalidVariableName

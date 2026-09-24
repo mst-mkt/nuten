@@ -1,0 +1,47 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/command_value.nu
+---
+Root@0..72
+  Pipeline@0..16
+    PipelineElement@0..16
+      Alias@0..16
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..8 "ll"
+        Whitespace@8..9 " "
+        Assign@9..10 "="
+        Whitespace@10..11 " "
+        Call@11..16
+          Word@11..13 "ls"
+          Whitespace@13..14 " "
+          Word@14..16 "-l"
+  Newline@16..17 "\n"
+  Pipeline@17..41
+    PipelineElement@17..41
+      Alias@17..41
+        Word@17..22 "alias"
+        Whitespace@22..25 "   "
+        Word@25..27 "la"
+        Whitespace@27..30 "   "
+        Assign@30..31 "="
+        Whitespace@31..34 "   "
+        Call@34..41
+          Word@34..36 "ls"
+          Whitespace@36..39 "   "
+          Word@39..41 "-a"
+  Newline@41..42 "\n"
+  Pipeline@42..71
+    PipelineElement@42..71
+      Alias@42..71
+        Word@42..47 "alias"
+        Whitespace@47..48 " "
+        String@48..57 "\"cargo b\""
+        Whitespace@57..58 "\t"
+        Assign@58..59 "="
+        Whitespace@59..60 " "
+        Call@60..71
+          Word@60..65 "cargo"
+          Whitespace@65..66 " "
+          Word@66..71 "build"
+  Newline@71..72 "\n"

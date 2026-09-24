@@ -1,0 +1,40 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/comment_holding_delimiters.nu
+---
+Root@0..45
+  Pipeline@0..10
+    PipelineElement@0..10
+      List@0..10
+        LBracket@0..1 "["
+        List@1..9
+          LBracket@1..2 "["
+          Word@2..3 "a"
+          Whitespace@3..4 " "
+          Comment@4..6 "#;"
+          Newline@6..7 "\n"
+          Word@7..8 "b"
+          RBracket@8..9 "]"
+        RBracket@9..10 "]"
+  Newline@10..11 "\n"
+  Pipeline@11..26
+    PipelineElement@11..26
+      Call@11..26
+        Word@11..15 "echo"
+        Whitespace@15..16 " "
+        List@16..26
+          LBracket@16..17 "["
+          Word@17..23 "[#(\n)]"
+          Whitespace@23..24 " "
+          Word@24..25 "c"
+          RBracket@25..26 "]"
+  Newline@26..27 "\n"
+  Pipeline@27..44
+    PipelineElement@27..44
+      Call@27..44
+        Word@27..31 "echo"
+        Whitespace@31..32 " "
+        Word@32..37 "[#][]"
+        Whitespace@37..38 " "
+        Word@38..44 "[],#[]"
+  Newline@44..45 "\n"

@@ -1,0 +1,20 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/return_closure.nu
+---
+Root@0..14
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..13
+        Word@0..6 "return"
+        Whitespace@6..7 " "
+        Block@7..13
+          LBrace@7..8 "{"
+          ClosureParams@8..10
+            PipePipe@8..10 "||"
+          Whitespace@10..11 " "
+          Pipeline@11..12
+            PipelineElement@11..12
+              Word@11..12 "1"
+          RBrace@12..13 "}"
+  Newline@13..14 "\n"

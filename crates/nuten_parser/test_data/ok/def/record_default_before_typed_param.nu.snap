@@ -1,0 +1,46 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/record_default_before_typed_param.nu
+---
+Root@0..44
+  Pipeline@0..43
+    PipelineElement@0..43
+      Def@0..43
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "l"
+        Whitespace@5..6 " "
+        Signature@6..36
+          LBracket@6..7 "["
+          Param@7..17
+            Word@7..8 "x"
+            Whitespace@8..9 " "
+            Eq@9..10 "="
+            Whitespace@10..11 " "
+            Word@11..17 "{a: 1}"
+          Whitespace@17..18 " "
+          Param@18..35
+            Word@18..19 "y"
+            Colon@19..20 ":"
+            Whitespace@20..21 " "
+            Type@21..35
+              Word@21..27 "record"
+              LAngle@27..28 "<"
+              TypeField@28..34
+                Word@28..29 "a"
+                Colon@29..30 ":"
+                Whitespace@30..31 " "
+                Word@31..34 "int"
+              RAngle@34..35 ">"
+          RBracket@35..36 "]"
+        Whitespace@36..37 " "
+        Block@37..43
+          LBrace@37..38 "{"
+          Whitespace@38..39 " "
+          Pipeline@39..41
+            PipelineElement@39..41
+              Call@39..41
+                Word@39..41 "ls"
+          Whitespace@41..42 " "
+          RBrace@42..43 "}"
+  Newline@43..44 "\n"

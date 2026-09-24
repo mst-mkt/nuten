@@ -1,0 +1,38 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/table/crlf_rows_with_comment.nu
+---
+Root@0..37
+  Pipeline@0..35
+    PipelineElement@0..35
+      Table@0..35
+        LBracket@0..1 "["
+        List@1..6
+          LBracket@1..2 "["
+          Word@2..3 "a"
+          Whitespace@3..4 " "
+          Word@4..5 "b"
+          RBracket@5..6 "]"
+        Semicolon@6..7 ";"
+        Newline@7..9 "\r\n"
+        Whitespace@9..11 "  "
+        List@11..16
+          LBracket@11..12 "["
+          Word@12..13 "1"
+          Whitespace@13..14 " "
+          Word@14..15 "2"
+          RBracket@15..16 "]"
+        Newline@16..18 "\r\n"
+        Whitespace@18..20 "  "
+        Comment@20..23 "# c"
+        Newline@23..25 "\r\n"
+        Whitespace@25..27 "  "
+        List@27..32
+          LBracket@27..28 "["
+          Word@28..29 "3"
+          Whitespace@29..30 " "
+          Word@30..31 "4"
+          RBracket@31..32 "]"
+        Newline@32..34 "\r\n"
+        RBracket@34..35 "]"
+  Newline@35..37 "\r\n"

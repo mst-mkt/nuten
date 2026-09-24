@@ -1,0 +1,44 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/optional_and_strict_members.nu
+---
+Root@0..31
+  Pipeline@0..5
+    PipelineElement@0..5
+      CellPath@0..5
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        Word@3..4 "a"
+        Question@4..5 "?"
+  Newline@5..6 "\n"
+  Pipeline@6..11
+    PipelineElement@6..11
+      CellPath@6..11
+        Word@6..8 "$x"
+        Dot@8..9 "."
+        Word@9..10 "a"
+        Bang@10..11 "!"
+  Newline@11..12 "\n"
+  Pipeline@12..22
+    PipelineElement@12..22
+      CellPath@12..22
+        Word@12..14 "$x"
+        Dot@14..15 "."
+        Word@15..16 "a"
+        Question@16..17 "?"
+        Bang@17..18 "!"
+        Dot@18..19 "."
+        Word@19..20 "b"
+        Bang@20..21 "!"
+        Question@21..22 "?"
+  Newline@22..23 "\n"
+  Pipeline@23..30
+    PipelineElement@23..30
+      CellPath@23..30
+        Word@23..25 "$x"
+        Dot@25..26 "."
+        Word@26..27 "a"
+        Bang@27..28 "!"
+        Dot@28..29 "."
+        Word@29..30 "b"
+  Newline@30..31 "\n"

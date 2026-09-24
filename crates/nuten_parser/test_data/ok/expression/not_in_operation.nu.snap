@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/not_in_operation.nu
+---
+Root@0..41
+  Pipeline@0..14
+    PipelineElement@0..14
+      MathExpression@0..14
+        Operator@0..3 "not"
+        Whitespace@3..4 " "
+        Operator@4..7 "not"
+        Whitespace@7..8 " "
+        Operator@8..11 "not"
+        Whitespace@11..12 " "
+        Word@12..14 "$a"
+  Newline@14..15 "\n"
+  Pipeline@15..26
+    PipelineElement@15..26
+      MathExpression@15..26
+        Word@15..16 "1"
+        Whitespace@16..17 " "
+        Operator@17..18 "+"
+        Whitespace@18..19 " "
+        Operator@19..22 "not"
+        Whitespace@22..23 " "
+        List@23..26
+          LBracket@23..24 "["
+          Word@24..25 "2"
+          RBracket@25..26 "]"
+  Newline@26..27 "\n"
+  Pipeline@27..40
+    PipelineElement@27..40
+      MathExpression@27..40
+        Operator@27..30 "not"
+        Whitespace@30..31 " "
+        Word@31..33 "$a"
+        Whitespace@33..34 " "
+        Operator@34..37 "and"
+        Whitespace@37..38 " "
+        Word@38..40 "$b"
+  Newline@40..41 "\n"

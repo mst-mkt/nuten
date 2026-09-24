@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/parenthesized/comment_in_operation.nu
+---
+Root@0..27
+  Pipeline@0..11
+    PipelineElement@0..11
+      Subexpression@0..11
+        LParen@0..1 "("
+        Pipeline@1..10
+          PipelineElement@1..10
+            MathExpression@1..10
+              Word@1..2 "1"
+              Whitespace@2..3 " "
+              Comment@3..6 "# c"
+              Newline@6..7 "\n"
+              Operator@7..8 "+"
+              Whitespace@8..9 " "
+              Word@9..10 "2"
+        RParen@10..11 ")"
+  Newline@11..12 "\n"
+  Pipeline@12..26
+    PipelineElement@12..26
+      Subexpression@12..26
+        LParen@12..13 "("
+        Pipeline@13..25
+          PipelineElement@13..25
+            MathExpression@13..25
+              Operator@13..16 "not"
+              Whitespace@16..17 " "
+              Comment@17..20 "# c"
+              Newline@20..21 "\n"
+              Word@21..25 "true"
+        RParen@25..26 ")"
+  Newline@26..27 "\n"

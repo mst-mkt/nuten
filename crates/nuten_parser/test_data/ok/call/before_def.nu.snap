@@ -1,0 +1,79 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/before_def.nu
+---
+Root@0..78
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..13
+        Word@0..5 "later"
+        Whitespace@5..6 " "
+        List@6..13
+          LBracket@6..7 "["
+          Word@7..8 "1"
+          Comma@8..9 ","
+          Whitespace@9..11 "  "
+          Word@11..12 "2"
+          RBracket@12..13 "]"
+  Newline@13..14 "\n"
+  Pipeline@14..40
+    PipelineElement@14..40
+      Def@14..40
+        Word@14..17 "def"
+        Whitespace@17..18 " "
+        Word@18..23 "later"
+        Whitespace@23..24 " "
+        Signature@24..33
+          LBracket@24..25 "["
+          Param@25..32
+            Word@25..26 "x"
+            Colon@26..27 ":"
+            Whitespace@27..28 " "
+            Word@28..32 "list"
+          RBracket@32..33 "]"
+        Whitespace@33..34 " "
+        Block@34..40
+          LBrace@34..35 "{"
+          Whitespace@35..36 " "
+          Pipeline@36..38
+            PipelineElement@36..38
+              Word@36..38 "$x"
+          Whitespace@38..39 " "
+          RBrace@39..40 "}"
+  Newline@40..41 "\n"
+  Pipeline@41..55
+    PipelineElement@41..55
+      Call@41..55
+        Word@41..47 "before"
+        Whitespace@47..48 " "
+        Record@48..55
+          LBrace@48..49 "{"
+          RecordField@49..54
+            Word@49..50 "a"
+            Colon@50..51 ":"
+            Whitespace@51..53 "  "
+            Word@53..54 "1"
+          RBrace@54..55 "}"
+  Newline@55..56 "\n"
+  Pipeline@56..77
+    PipelineElement@56..77
+      Def@56..77
+        Word@56..59 "def"
+        Whitespace@59..60 " "
+        Word@60..66 "before"
+        Whitespace@66..67 " "
+        Signature@67..70
+          LBracket@67..68 "["
+          Param@68..69
+            Word@68..69 "x"
+          RBracket@69..70 "]"
+        Whitespace@70..71 " "
+        Block@71..77
+          LBrace@71..72 "{"
+          Whitespace@72..73 " "
+          Pipeline@73..75
+            PipelineElement@73..75
+              Word@73..75 "$x"
+          Whitespace@75..76 " "
+          RBrace@76..77 "}"
+  Newline@77..78 "\n"

@@ -1,0 +1,67 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/spread/as_external_argument.nu
+---
+Root@0..84
+  Pipeline@0..13
+    PipelineElement@0..13
+      ExternalCall@0..13
+        Word@0..5 "^echo"
+        Whitespace@5..6 " "
+        List@6..13
+          LBracket@6..7 "["
+          Spread@7..12
+            SpreadOperator@7..10 "..."
+            Word@10..12 "$x"
+          RBracket@12..13 "]"
+  Newline@13..14 "\n"
+  Pipeline@14..66
+    PipelineElement@14..66
+      ExternalCall@14..66
+        Word@14..19 "^echo"
+        Whitespace@19..20 " "
+        Spread@20..25
+          SpreadOperator@20..23 "..."
+          Word@23..25 "$x"
+        Whitespace@25..26 " "
+        Spread@26..33
+          SpreadOperator@26..29 "..."
+          Subexpression@29..33
+            LParen@29..30 "("
+            Pipeline@30..32
+              PipelineElement@30..32
+                Call@30..32
+                  Word@30..32 "ls"
+            RParen@32..33 ")"
+        Whitespace@33..34 " "
+        Spread@34..42
+          SpreadOperator@34..37 "..."
+          List@37..42
+            LBracket@37..38 "["
+            Word@38..39 "1"
+            Whitespace@39..40 " "
+            Word@40..41 "2"
+            RBracket@41..42 "]"
+        Whitespace@42..43 " "
+        Word@43..52 "...{a: 1}"
+        Whitespace@52..53 " "
+        Spread@53..61
+          SpreadOperator@53..56 "..."
+          Word@56..61 "[1].0"
+        Whitespace@61..62 " "
+        Word@62..66 "...a"
+  Newline@66..67 "\n"
+  Pipeline@67..83
+    PipelineElement@67..83
+      ExternalCall@67..72
+        Word@67..72 "^echo"
+      Whitespace@72..73 " "
+      Redirection@73..77
+        OutGt@73..75 "o>"
+        Whitespace@75..76 " "
+        Word@76..77 "f"
+      Whitespace@77..78 " "
+      Spread@78..83
+        SpreadOperator@78..81 "..."
+        Word@81..83 "$x"
+  Newline@83..84 "\n"

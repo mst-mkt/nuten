@@ -1,0 +1,52 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/commented_block.nu
+---
+Root@0..59
+  Pipeline@0..58
+    PipelineElement@0..58
+      Module@0..58
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "o"
+        Whitespace@8..9 " "
+        Block@9..58
+          LBrace@9..10 "{"
+          Newline@10..11 "\n"
+          Whitespace@11..15 "    "
+          Comment@15..18 "# c"
+          Newline@18..19 "\n"
+          Whitespace@19..23 "    "
+          Pipeline@23..34
+            PipelineElement@23..34
+              Let@23..34
+                Word@23..28 "const"
+                Whitespace@28..29 " "
+                Word@29..30 "x"
+                Whitespace@30..31 " "
+                Assign@31..32 "="
+                Whitespace@32..33 " "
+                Pipeline@33..34
+                  PipelineElement@33..34
+                    Word@33..34 "1"
+          Newline@34..35 "\n"
+          Newline@35..36 "\n"
+          Newline@36..37 "\n"
+          Whitespace@37..41 "    "
+          Pipeline@41..52
+            PipelineElement@41..52
+              Let@41..52
+                Word@41..46 "const"
+                Whitespace@46..47 " "
+                Word@47..48 "y"
+                Whitespace@48..49 " "
+                Assign@49..50 "="
+                Whitespace@50..51 " "
+                Pipeline@51..52
+                  PipelineElement@51..52
+                    Word@51..52 "2"
+          Whitespace@52..53 " "
+          Comment@53..56 "# d"
+          Newline@56..57 "\n"
+          RBrace@57..58 "}"
+  Newline@58..59 "\n"

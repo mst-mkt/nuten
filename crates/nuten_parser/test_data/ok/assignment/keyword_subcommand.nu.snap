@@ -1,0 +1,19 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/assignment/keyword_subcommand.nu
+---
+Root@0..16
+  Pipeline@0..15
+    PipelineElement@0..15
+      Assignment@0..15
+        Call@0..11
+          Word@0..6 "plugin"
+          Whitespace@6..7 " "
+          Word@7..11 "list"
+        Whitespace@11..12 " "
+        Assign@12..13 "="
+        Whitespace@13..14 " "
+        Pipeline@14..15
+          PipelineElement@14..15
+            Word@14..15 "1"
+  Newline@15..16 "\n"

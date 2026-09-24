@@ -1,0 +1,59 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/variable/bare_dollar_declaration.nu
+---
+Root@0..51
+  Pipeline@0..9
+    PipelineElement@0..9
+      Let@0..9
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "$"
+        Whitespace@5..6 " "
+        Assign@6..7 "="
+        Whitespace@7..8 " "
+        Pipeline@8..9
+          PipelineElement@8..9
+            Word@8..9 "1"
+  Newline@9..10 "\n"
+  Pipeline@10..19
+    PipelineElement@10..19
+      Let@10..19
+        Word@10..13 "mut"
+        Whitespace@13..14 " "
+        Word@14..15 "$"
+        Whitespace@15..16 " "
+        Assign@16..17 "="
+        Whitespace@17..18 " "
+        Pipeline@18..19
+          PipelineElement@18..19
+            Word@18..19 "1"
+  Newline@19..20 "\n"
+  Pipeline@20..31
+    PipelineElement@20..31
+      Let@20..31
+        Word@20..25 "const"
+        Whitespace@25..26 " "
+        Word@26..27 "$"
+        Whitespace@27..28 " "
+        Assign@28..29 "="
+        Whitespace@29..30 " "
+        Pipeline@30..31
+          PipelineElement@30..31
+            Word@30..31 "1"
+  Newline@31..32 "\n"
+  Pipeline@32..50
+    PipelineElement@32..50
+      Let@32..50
+        Word@32..38 "export"
+        Whitespace@38..39 " "
+        Word@39..44 "const"
+        Whitespace@44..45 " "
+        Word@45..46 "$"
+        Whitespace@46..47 " "
+        Assign@47..48 "="
+        Whitespace@48..49 " "
+        Pipeline@49..50
+          PipelineElement@49..50
+            Word@49..50 "1"
+  Newline@50..51 "\n"

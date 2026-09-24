@@ -1,0 +1,60 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/assignment/variable_target.nu
+---
+Root@0..49
+  Pipeline@0..6
+    PipelineElement@0..6
+      Assignment@0..6
+        Word@0..2 "$x"
+        Whitespace@2..3 " "
+        Assign@3..4 "="
+        Whitespace@4..5 " "
+        Pipeline@5..6
+          PipelineElement@5..6
+            Word@5..6 "1"
+  Newline@6..7 "\n"
+  Pipeline@7..24
+    PipelineElement@7..24
+      Assignment@7..24
+        Word@7..9 "$x"
+        Whitespace@9..10 " "
+        Assign@10..12 "+="
+        Whitespace@12..13 " "
+        Pipeline@13..24
+          PipelineElement@13..15
+            Call@13..15
+              Word@13..15 "ls"
+          Whitespace@15..16 " "
+          Pipe@16..17 "|"
+          Whitespace@17..18 " "
+          PipelineElement@18..24
+            Call@18..24
+              Word@18..24 "length"
+  Newline@24..25 "\n"
+  Pipeline@25..48
+    PipelineElement@25..48
+      Assignment@25..48
+        CellPath@25..33
+          Word@25..29 "$env"
+          Dot@29..30 "."
+          Word@30..33 "FOO"
+        Whitespace@33..34 " "
+        Assign@34..35 "="
+        Whitespace@35..36 " "
+        Pipeline@36..48
+          PipelineElement@36..42
+            Call@36..37
+              Word@36..37 "a"
+            Whitespace@37..38 " "
+            Redirection@38..42
+              OutGt@38..40 "o>"
+              Whitespace@40..41 " "
+              Word@41..42 "f"
+          Whitespace@42..43 " "
+          ErrGtPipe@43..46 "e>|"
+          Whitespace@46..47 " "
+          PipelineElement@47..48
+            Call@47..48
+              Word@47..48 "b"
+  Newline@48..49 "\n"

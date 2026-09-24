@@ -1,0 +1,57 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/malformed_io_lists.nu
+---
+Root@0..69
+  Pipeline@0..38
+    PipelineElement@0..38
+      Def@0..38
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "g"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        Word@10..31 "[int | string -> int]"
+        Whitespace@31..32 " "
+        Block@32..38
+          LBrace@32..33 "{"
+          Whitespace@33..34 " "
+          Pipeline@34..36
+            PipelineElement@34..36
+              Call@34..36
+                Word@34..36 "ls"
+          Whitespace@36..37 " "
+          RBrace@37..38 "}"
+  Newline@38..39 "\n"
+  Pipeline@39..68
+    PipelineElement@39..68
+      Def@39..68
+        Word@39..42 "def"
+        Whitespace@42..43 " "
+        Word@43..44 "m"
+        Whitespace@44..45 " "
+        Signature@45..47
+          LBracket@45..46 "["
+          RBracket@46..47 "]"
+        Colon@47..48 ":"
+        Whitespace@48..49 " "
+        Word@49..54 "[int]"
+        Whitespace@54..55 " "
+        Word@55..57 "->"
+        Whitespace@57..58 " "
+        Word@58..61 "int"
+        Whitespace@61..62 " "
+        Block@62..68
+          LBrace@62..63 "{"
+          Whitespace@63..64 " "
+          Pipeline@64..66
+            PipelineElement@64..66
+              Call@64..66
+                Word@64..66 "ls"
+          Whitespace@66..67 " "
+          RBrace@67..68 "}"
+  Newline@68..69 "\n"

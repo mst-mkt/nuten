@@ -1,0 +1,84 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/defined_list_parameters.nu
+---
+Root@0..128
+  Pipeline@0..77
+    PipelineElement@0..77
+      Def@0..77
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..14 "takes-list"
+        Whitespace@14..15 " "
+        Signature@15..70
+          LBracket@15..16 "["
+          Param@16..24
+            Word@16..17 "x"
+            Colon@17..18 ":"
+            Whitespace@18..19 " "
+            Word@19..23 "list"
+            Comma@23..24 ","
+          Whitespace@24..25 " "
+          Param@25..35
+            Word@25..26 "y"
+            Colon@26..27 ":"
+            Whitespace@27..28 " "
+            Word@28..34 "string"
+            Comma@34..35 ","
+          Whitespace@35..36 " "
+          Param@36..61
+            Word@36..46 "--flag(-f)"
+            Colon@46..47 ":"
+            Whitespace@47..48 " "
+            Type@48..60
+              Word@48..52 "list"
+              LAngle@52..53 "<"
+              Word@53..59 "string"
+              RAngle@59..60 ">"
+            Comma@60..61 ","
+          Whitespace@61..62 " "
+          Param@62..69
+            Word@62..69 "...rest"
+          RBracket@69..70 "]"
+        Whitespace@70..71 " "
+        Block@71..77
+          LBrace@71..72 "{"
+          Whitespace@72..73 " "
+          Pipeline@73..75
+            PipelineElement@73..75
+              Word@73..75 "$x"
+          Whitespace@75..76 " "
+          RBrace@76..77 "}"
+  Newline@77..78 "\n"
+  Pipeline@78..127
+    PipelineElement@78..127
+      Call@78..127
+        Word@78..88 "takes-list"
+        Whitespace@88..89 " "
+        List@89..96
+          LBracket@89..90 "["
+          Word@90..91 "1"
+          Comma@91..92 ","
+          Whitespace@92..94 "  "
+          Word@94..95 "2"
+          RBracket@95..96 "]"
+        Whitespace@96..97 " "
+        Word@97..104 "[a,  b]"
+        Whitespace@104..105 " "
+        Word@105..107 "-f"
+        Whitespace@107..108 " "
+        List@108..120
+          LBracket@108..109 "["
+          Word@109..110 "c"
+          Comma@110..111 ","
+          Whitespace@111..113 "  "
+          Word@113..119 "[d  e]"
+          RBracket@119..120 "]"
+        Whitespace@120..121 " "
+        List@121..127
+          LBracket@121..122 "["
+          Word@122..123 "e"
+          Whitespace@123..125 "  "
+          Word@125..126 "f"
+          RBracket@126..127 "]"
+  Newline@127..128 "\n"

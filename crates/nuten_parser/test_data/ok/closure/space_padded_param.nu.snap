@@ -1,0 +1,21 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/closure/space_padded_param.nu
+---
+Root@0..11
+  Pipeline@0..10
+    PipelineElement@0..10
+      Call@0..10
+        Word@0..2 "do"
+        Whitespace@2..3 " "
+        Block@3..10
+          LBrace@3..4 "{"
+          ClosureParams@4..9
+            Pipe@4..5 "|"
+            Whitespace@5..6 " "
+            Param@6..7
+              Word@6..7 "x"
+            Whitespace@7..8 " "
+            Pipe@8..9 "|"
+          RBrace@9..10 "}"
+  Newline@10..11 "\n"

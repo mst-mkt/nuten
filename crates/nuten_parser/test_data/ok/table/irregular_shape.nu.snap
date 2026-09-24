@@ -1,0 +1,25 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/table/irregular_shape.nu
+---
+Root@0..74
+  Pipeline@0..6
+    PipelineElement@0..6
+      Word@0..6 "[a; b]"
+  Newline@6..7 "\n"
+  Pipeline@7..27
+    PipelineElement@7..27
+      Word@7..27 "[[a b] [c d]; [1 2]]"
+  Newline@27..28 "\n"
+  Pipeline@28..43
+    PipelineElement@28..43
+      Word@28..43 "[[a b]; {a: 1}]"
+  Newline@43..44 "\n"
+  Pipeline@44..56
+    PipelineElement@44..56
+      Word@44..56 "[[a b]; 1 2]"
+  Newline@56..57 "\n"
+  Pipeline@57..73
+    PipelineElement@57..73
+      Word@57..73 "[[a b]; [1 2] 3]"
+  Newline@73..74 "\n"

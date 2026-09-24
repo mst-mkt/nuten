@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/as_let_value.nu
+---
+Root@0..32
+  Pipeline@0..31
+    PipelineElement@0..31
+      Let@0..31
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "p"
+        Whitespace@5..6 " "
+        Assign@6..7 "="
+        Whitespace@7..8 " "
+        Pipeline@8..31
+          PipelineElement@8..31
+            Alias@8..31
+              Word@8..13 "alias"
+              Whitespace@13..14 " "
+              Word@14..15 "q"
+              Whitespace@15..16 " "
+              Assign@16..17 "="
+              Whitespace@17..18 " "
+              Call@18..31
+                Word@18..20 "ls"
+                Whitespace@20..21 " "
+                Pipe@21..22 "|"
+                Newline@22..23 "\n"
+                Whitespace@23..27 "    "
+                Word@27..31 "sort"
+  Newline@31..32 "\n"

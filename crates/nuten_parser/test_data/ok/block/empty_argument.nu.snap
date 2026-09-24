@@ -1,0 +1,90 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/empty_argument.nu
+---
+Root@0..102
+  Pipeline@0..15
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..15
+      Where@5..15
+        Word@5..10 "where"
+        Whitespace@10..11 " "
+        Block@11..15
+          LBrace@11..12 "{"
+          Whitespace@12..14 "  "
+          RBrace@14..15 "}"
+  Newline@15..16 "\n"
+  Pipeline@16..33
+    PipelineElement@16..18
+      Call@16..18
+        Word@16..18 "ls"
+    Whitespace@18..19 " "
+    Pipe@19..20 "|"
+    Whitespace@20..21 " "
+    PipelineElement@21..33
+      Call@21..33
+        Word@21..28 "collect"
+        Whitespace@28..29 " "
+        Block@29..33
+          LBrace@29..30 "{"
+          Whitespace@30..32 "  "
+          RBrace@32..33 "}"
+  Newline@33..34 "\n"
+  Pipeline@34..54
+    PipelineElement@34..54
+      Call@34..54
+        Word@34..44 "interleave"
+        Whitespace@44..45 " "
+        Block@45..49
+          LBrace@45..46 "{"
+          Whitespace@46..48 "  "
+          RBrace@48..49 "}"
+        Whitespace@49..50 " "
+        Block@50..54
+          LBrace@50..51 "{"
+          Whitespace@51..53 "  "
+          RBrace@53..54 "}"
+  Newline@54..55 "\n"
+  Pipeline@55..76
+    PipelineElement@55..58
+      List@55..58
+        LBracket@55..56 "["
+        Word@56..57 "1"
+        RBracket@57..58 "]"
+    Whitespace@58..59 " "
+    Pipe@59..60 "|"
+    Whitespace@60..61 " "
+    PipelineElement@61..76
+      Call@61..76
+        Word@61..65 "each"
+        Whitespace@65..66 " "
+        Word@66..71 "while"
+        Whitespace@71..72 " "
+        Block@72..76
+          LBrace@72..73 "{"
+          Whitespace@73..75 "  "
+          RBrace@75..76 "}"
+  Newline@76..77 "\n"
+  Pipeline@77..101
+    PipelineElement@77..79
+      Call@77..79
+        Word@77..79 "ls"
+    Whitespace@79..80 " "
+    Pipe@80..81 "|"
+    Whitespace@81..82 " "
+    PipelineElement@82..101
+      Call@82..101
+        Word@82..88 "rename"
+        Whitespace@88..89 " "
+        Word@89..96 "--block"
+        Whitespace@96..97 " "
+        Block@97..101
+          LBrace@97..98 "{"
+          Whitespace@98..100 "  "
+          RBrace@100..101 "}"
+  Newline@101..102 "\n"

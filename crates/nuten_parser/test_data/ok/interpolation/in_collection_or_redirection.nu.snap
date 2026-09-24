@@ -1,0 +1,58 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/interpolation/in_collection_or_redirection.nu
+---
+Root@0..47
+  Pipeline@0..22
+    PipelineElement@0..22
+      List@0..22
+        LBracket@0..1 "["
+        Interpolation@1..8
+          InterpText@1..4 "$\"a"
+          Subexpression@4..7
+            LParen@4..5 "("
+            Pipeline@5..6
+              PipelineElement@5..6
+                Word@5..6 "1"
+            RParen@6..7 ")"
+          InterpText@7..8 "\""
+        Whitespace@8..9 " "
+        Record@9..21
+          LBrace@9..10 "{"
+          RecordField@10..20
+            Word@10..11 "k"
+            Colon@11..12 ":"
+            Whitespace@12..13 " "
+            Interpolation@13..20
+              InterpText@13..16 "$\"b"
+              Subexpression@16..19
+                LParen@16..17 "("
+                Pipeline@17..18
+                  PipelineElement@17..18
+                    Word@17..18 "2"
+                RParen@18..19 ")"
+              InterpText@19..20 "\""
+          RBrace@20..21 "}"
+        RBracket@21..22 "]"
+  Newline@22..23 "\n"
+  Pipeline@23..46
+    PipelineElement@23..46
+      Call@23..25
+        Word@23..25 "ls"
+      Whitespace@25..26 " "
+      Redirection@26..46
+        OutGt@26..28 "o>"
+        Whitespace@28..29 " "
+        Interpolation@29..46
+          InterpText@29..31 "$\""
+          Subexpression@31..41
+            LParen@31..32 "("
+            Pipeline@32..40
+              PipelineElement@32..40
+                Call@32..40
+                  Word@32..36 "date"
+                  Whitespace@36..37 " "
+                  Word@37..40 "now"
+            RParen@40..41 ")"
+          InterpText@41..46 ".log\""
+  Newline@46..47 "\n"

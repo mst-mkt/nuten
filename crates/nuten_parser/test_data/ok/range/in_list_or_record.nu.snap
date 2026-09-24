@@ -1,0 +1,81 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/in_list_or_record.nu
+---
+Root@0..67
+  Pipeline@0..13
+    PipelineElement@0..13
+      List@0..13
+        LBracket@0..1 "["
+        Range@1..5
+          Word@1..3 "$x"
+          RangeOperator@3..5 ".."
+        Whitespace@5..6 " "
+        Range@6..12
+          Subexpression@6..9
+            LParen@6..7 "("
+            Pipeline@7..8
+              PipelineElement@7..8
+                Word@7..8 "1"
+            RParen@8..9 ")"
+          RangeOperator@9..11 ".."
+          Word@11..12 "3"
+        RBracket@12..13 "]"
+  Newline@13..14 "\n"
+  Pipeline@14..25
+    PipelineElement@14..25
+      Record@14..25
+        LBrace@14..15 "{"
+        RecordField@15..24
+          Word@15..16 "a"
+          Colon@16..17 ":"
+          Whitespace@17..18 " "
+          Range@18..24
+            Word@18..20 "$x"
+            RangeOperator@20..22 ".."
+            Word@22..24 "$y"
+        RBrace@24..25 "}"
+  Newline@25..26 "\n"
+  Pipeline@26..55
+    PipelineElement@26..55
+      List@26..55
+        LBracket@26..27 "["
+        Range@27..31
+          Word@27..28 "1"
+          RangeOperator@28..30 ".."
+          Word@30..31 "3"
+        Whitespace@31..32 " "
+        Range@32..37
+          Word@32..33 "1"
+          RangeOperator@33..35 ".."
+          Word@35..37 "$x"
+        Whitespace@37..38 " "
+        Range@38..44
+          Word@38..39 "1"
+          RangeOperator@39..41 ".."
+          Subexpression@41..44
+            LParen@41..42 "("
+            Pipeline@42..43
+              PipelineElement@42..43
+                Word@42..43 "2"
+            RParen@43..44 ")"
+        Whitespace@44..45 " "
+        Word@45..49 "a..b"
+        Whitespace@49..50 " "
+        Word@50..54 "1..."
+        RBracket@54..55 "]"
+  Newline@55..56 "\n"
+  Pipeline@56..66
+    PipelineElement@56..66
+      Record@56..66
+        LBrace@56..57 "{"
+        RecordField@57..65
+          Word@57..58 "a"
+          Colon@58..59 ":"
+          Whitespace@59..60 " "
+          Range@60..65
+            Word@60..61 "1"
+            RangeOperator@61..63 ".."
+            Word@63..65 "$x"
+        RBrace@65..66 "}"
+  Newline@66..67 "\n"

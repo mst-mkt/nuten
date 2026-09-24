@@ -1,0 +1,36 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/cell_path/dashed_or_bare_variable_head.nu
+---
+Root@0..17
+  Pipeline@0..2
+    PipelineElement@0..2
+      CellPath@0..2
+        Error@0..1
+          Word@0..1 "$"
+        Error@1..2
+          Question@1..2 "?"
+  Newline@2..3 "\n"
+  Pipeline@3..8
+    PipelineElement@3..8
+      CellPath@3..8
+        Error@3..7
+          Word@3..7 "$a-b"
+        Error@7..8
+          Question@7..8 "?"
+  Newline@8..9 "\n"
+  Pipeline@9..16
+    PipelineElement@9..16
+      CellPath@9..16
+        Error@9..13
+          Word@9..13 "$a-b"
+        Dot@13..14 "."
+        Error@14..16
+          Word@14..16 "-1"
+  Newline@16..17 "\n"
+error 0..1 "$": MissingVariableName
+error 1..2 "?": CellPathSeparator { expected: "`.`" }
+error 3..7 "$a-b": InvalidVariableName
+error 7..8 "?": CellPathSeparator { expected: "`.`" }
+error 9..13 "$a-b": InvalidVariableName
+error 14..16 "-1": NegativeCellPathIndex

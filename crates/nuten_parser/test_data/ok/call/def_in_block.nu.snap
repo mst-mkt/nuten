@@ -1,0 +1,83 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/def_in_block.nu
+---
+Root@0..80
+  Pipeline@0..25
+    PipelineElement@0..25
+      Call@0..25
+        Word@0..2 "do"
+        Whitespace@2..3 " "
+        Block@3..25
+          LBrace@3..4 "{"
+          Whitespace@4..5 " "
+          Pipeline@5..23
+            PipelineElement@5..23
+              Def@5..23
+                Word@5..8 "def"
+                Whitespace@8..9 " "
+                Word@9..12 "all"
+                Whitespace@12..13 " "
+                Signature@13..16
+                  LBracket@13..14 "["
+                  Param@14..15
+                    Word@14..15 "x"
+                  RBracket@15..16 "]"
+                Whitespace@16..17 " "
+                Block@17..23
+                  LBrace@17..18 "{"
+                  Whitespace@18..19 " "
+                  Pipeline@19..21
+                    PipelineElement@19..21
+                      Word@19..21 "$x"
+                  Whitespace@21..22 " "
+                  RBrace@22..23 "}"
+          Whitespace@23..24 " "
+          RBrace@24..25 "}"
+  Newline@25..26 "\n"
+  Pipeline@26..37
+    PipelineElement@26..37
+      Call@26..37
+        Word@26..29 "all"
+        Whitespace@29..30 " "
+        Word@30..37 "{a:  1}"
+  Newline@37..38 "\n"
+  Pipeline@38..65
+    PipelineElement@38..65
+      Call@38..65
+        Word@38..40 "do"
+        Whitespace@40..41 " "
+        Block@41..65
+          LBrace@41..42 "{"
+          Whitespace@42..43 " "
+          Pipeline@43..63
+            PipelineElement@43..63
+              Def@43..63
+                Word@43..46 "def"
+                Whitespace@46..47 " "
+                Word@47..52 "inner"
+                Whitespace@52..53 " "
+                Signature@53..56
+                  LBracket@53..54 "["
+                  Param@54..55
+                    Word@54..55 "x"
+                  RBracket@55..56 "]"
+                Whitespace@56..57 " "
+                Block@57..63
+                  LBrace@57..58 "{"
+                  Whitespace@58..59 " "
+                  Pipeline@59..61
+                    PipelineElement@59..61
+                      Word@59..61 "$x"
+                  Whitespace@61..62 " "
+                  RBrace@62..63 "}"
+          Whitespace@63..64 " "
+          RBrace@64..65 "}"
+  Newline@65..66 "\n"
+  Pipeline@66..79
+    PipelineElement@66..79
+      Call@66..79
+        Word@66..71 "inner"
+        Whitespace@71..72 " "
+        Word@72..79 "{a:  1}"
+  Newline@79..80 "\n"

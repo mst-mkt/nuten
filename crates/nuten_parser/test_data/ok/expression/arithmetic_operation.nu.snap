@@ -1,0 +1,51 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/arithmetic_operation.nu
+---
+Root@0..34
+  Pipeline@0..5
+    PipelineElement@0..5
+      MathExpression@0..5
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Operator@2..3 "+"
+        Whitespace@3..4 " "
+        Word@4..5 "2"
+  Newline@5..6 "\n"
+  Pipeline@6..15
+    PipelineElement@6..15
+      MathExpression@6..15
+        Word@6..7 "1"
+        Whitespace@7..8 " "
+        Operator@8..9 "+"
+        Whitespace@9..10 " "
+        Word@10..11 "2"
+        Whitespace@11..12 " "
+        Operator@12..13 "*"
+        Whitespace@13..14 " "
+        Word@14..15 "3"
+  Newline@15..16 "\n"
+  Pipeline@16..24
+    PipelineElement@16..24
+      MathExpression@16..24
+        Word@16..17 "1"
+        Whitespace@17..18 " "
+        Operator@18..19 "+"
+        Whitespace@19..20 " "
+        Subexpression@20..24
+          LParen@20..21 "("
+          Pipeline@21..23
+            PipelineElement@21..23
+              Call@21..23
+                Word@21..23 "ls"
+          RParen@23..24 ")"
+  Newline@24..25 "\n"
+  Pipeline@25..33
+    PipelineElement@25..33
+      MathExpression@25..33
+        Word@25..27 "$a"
+        Whitespace@27..28 " "
+        Operator@28..30 "//"
+        Whitespace@30..31 " "
+        Word@31..33 "$b"
+  Newline@33..34 "\n"

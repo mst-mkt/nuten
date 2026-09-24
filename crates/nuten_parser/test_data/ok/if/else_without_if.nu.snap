@@ -1,0 +1,48 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/else_without_if.nu
+---
+Root@0..51
+  Pipeline@0..10
+    PipelineElement@0..10
+      ExternalCall@0..10
+        Word@0..4 "else"
+        Whitespace@4..5 " "
+        Word@5..10 "{ 2 }"
+  Newline@10..11 "\n"
+  Pipeline@11..33
+    PipelineElement@11..13
+      Call@11..13
+        Word@11..13 "ls"
+    Whitespace@13..14 " "
+    Pipe@14..15 "|"
+    Whitespace@15..16 " "
+    PipelineElement@16..33
+      ExternalCall@16..33
+        Word@16..20 "else"
+        Whitespace@20..21 " "
+        Word@21..27 "{a: 1}"
+        Whitespace@27..28 " "
+        List@28..33
+          LBracket@28..29 "["
+          Word@29..30 "b"
+          Whitespace@30..31 " "
+          Word@31..32 "c"
+          RBracket@32..33 "]"
+  Newline@33..34 "\n"
+  Pipeline@34..50
+    PipelineElement@34..50
+      Let@34..50
+        Word@34..37 "let"
+        Whitespace@37..38 " "
+        Word@38..39 "x"
+        Whitespace@39..40 " "
+        Assign@40..41 "="
+        Whitespace@41..42 " "
+        Pipeline@42..50
+          PipelineElement@42..50
+            ExternalCall@42..50
+              Word@42..46 "else"
+              Whitespace@46..47 " "
+              Word@47..50 "{1}"
+  Newline@50..51 "\n"

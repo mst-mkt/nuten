@@ -1,0 +1,86 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/def/io_type_unclosed_angle.nu
+---
+Root@0..91
+  Pipeline@0..32
+    PipelineElement@0..32
+      Def@0..32
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "f"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        Error@10..25
+          Word@10..13 "int"
+          Whitespace@13..14 " "
+          Word@14..16 "->"
+          Whitespace@16..17 " "
+          Word@17..25 "list<int"
+        Whitespace@25..26 " "
+        Block@26..32
+          LBrace@26..27 "{"
+          Whitespace@27..28 " "
+          Pipeline@28..30
+            PipelineElement@28..30
+              Call@28..30
+                Word@28..30 "ls"
+          Whitespace@30..31 " "
+          RBrace@31..32 "}"
+  Newline@32..33 "\n"
+  Pipeline@33..61
+    PipelineElement@33..61
+      Def@33..61
+        Word@33..39 "extern"
+        Whitespace@39..40 " "
+        Word@40..41 "e"
+        Whitespace@41..42 " "
+        Signature@42..44
+          LBracket@42..43 "["
+          RBracket@43..44 "]"
+        Colon@44..45 ":"
+        Whitespace@45..46 " "
+        Error@46..61
+          Word@46..49 "int"
+          Whitespace@49..50 " "
+          Word@50..52 "->"
+          Whitespace@52..53 " "
+          Word@53..61 "list<int"
+  Newline@61..62 "\n"
+  Pipeline@62..90
+    PipelineElement@62..90
+      Def@62..90
+        Word@62..65 "def"
+        Whitespace@65..66 " "
+        Word@66..67 "f"
+        Whitespace@67..68 " "
+        Signature@68..70
+          LBracket@68..69 "["
+          RBracket@69..70 "]"
+        Whitespace@70..71 " "
+        Colon@71..72 ":"
+        Whitespace@72..73 " "
+        Error@73..83
+          Word@73..76 "int"
+          Whitespace@76..77 " "
+          Word@77..79 "->"
+          Whitespace@79..80 " "
+          Word@80..83 "a<b"
+        Whitespace@83..84 " "
+        Block@84..90
+          LBrace@84..85 "{"
+          Whitespace@85..86 " "
+          Pipeline@86..88
+            PipelineElement@86..88
+              Call@86..88
+                Word@86..88 "ls"
+          Whitespace@88..89 " "
+          RBrace@89..90 "}"
+  Newline@90..91 "\n"
+error 21..22 "<": Lex(Unclosed)
+error 57..58 "<": Lex(Unclosed)
+error 81..82 "<": Lex(Unclosed)

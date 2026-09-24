@@ -1,0 +1,26 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/else_attribute.nu
+---
+Root@0..24
+  Pipeline@0..23
+    PipelineElement@0..23
+      If@0..23
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Word@3..5 "$a"
+        Whitespace@5..6 " "
+        Block@6..9
+          LBrace@6..7 "{"
+          Pipeline@7..8
+            PipelineElement@7..8
+              Word@7..8 "1"
+          RBrace@8..9 "}"
+        Whitespace@9..10 " "
+        Word@10..14 "else"
+        Whitespace@14..15 " "
+        Call@15..23
+          Word@15..19 "@foo"
+          Whitespace@19..20 " "
+          Word@20..23 "{1}"
+  Newline@23..24 "\n"

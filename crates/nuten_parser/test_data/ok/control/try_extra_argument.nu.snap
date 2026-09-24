@@ -1,0 +1,73 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/try_extra_argument.nu
+---
+Root@0..67
+  Pipeline@0..29
+    PipelineElement@0..29
+      Call@0..29
+        Word@0..3 "try"
+        Whitespace@3..4 " "
+        Block@4..10
+          LBrace@4..5 "{"
+          Whitespace@5..6 " "
+          Pipeline@6..8
+            PipelineElement@6..8
+              Call@6..8
+                Word@6..8 "ls"
+          Whitespace@8..9 " "
+          RBrace@9..10 "}"
+        Whitespace@10..11 " "
+        Word@11..16 "catch"
+        Whitespace@16..17 " "
+        Block@17..23
+          LBrace@17..18 "{"
+          Whitespace@18..19 " "
+          Pipeline@19..21
+            PipelineElement@19..21
+              Call@19..21
+                Word@19..21 "ls"
+          Whitespace@21..22 " "
+          RBrace@22..23 "}"
+        Whitespace@23..24 " "
+        Word@24..29 "extra"
+  Newline@29..30 "\n"
+  Pipeline@30..66
+    PipelineElement@30..66
+      Call@30..66
+        Word@30..33 "try"
+        Whitespace@33..34 " "
+        Block@34..40
+          LBrace@34..35 "{"
+          Whitespace@35..36 " "
+          Pipeline@36..38
+            PipelineElement@36..38
+              Call@36..38
+                Word@36..38 "ls"
+          Whitespace@38..39 " "
+          RBrace@39..40 "}"
+        Whitespace@40..41 " "
+        Word@41..46 "catch"
+        Whitespace@46..47 " "
+        Block@47..53
+          LBrace@47..48 "{"
+          Whitespace@48..49 " "
+          Pipeline@49..51
+            PipelineElement@49..51
+              Call@49..51
+                Word@49..51 "ls"
+          Whitespace@51..52 " "
+          RBrace@52..53 "}"
+        Whitespace@53..54 " "
+        Word@54..59 "catch"
+        Whitespace@59..60 " "
+        Block@60..66
+          LBrace@60..61 "{"
+          Whitespace@61..62 " "
+          Pipeline@62..64
+            PipelineElement@62..64
+              Call@62..64
+                Word@62..64 "ls"
+          Whitespace@64..65 " "
+          RBrace@65..66 "}"
+  Newline@66..67 "\n"

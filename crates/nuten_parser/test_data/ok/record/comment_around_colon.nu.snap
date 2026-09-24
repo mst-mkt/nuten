@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/comment_around_colon.nu
+---
+Root@0..39
+  Pipeline@0..25
+    PipelineElement@0..25
+      List@0..25
+        LBracket@0..1 "["
+        Record@1..12
+          LBrace@1..2 "{"
+          RecordField@2..11
+            Word@2..3 "a"
+            Whitespace@3..4 " "
+            Comment@4..7 "# c"
+            Newline@7..8 "\n"
+            Colon@8..9 ":"
+            Whitespace@9..10 " "
+            Word@10..11 "1"
+          RBrace@11..12 "}"
+        Whitespace@12..13 " "
+        Record@13..24
+          LBrace@13..14 "{"
+          RecordField@14..23
+            Word@14..15 "a"
+            Colon@15..16 ":"
+            Whitespace@16..17 " "
+            Comment@17..20 "# c"
+            Newline@20..21 "\n"
+            Whitespace@21..22 " "
+            Word@22..23 "1"
+          RBrace@23..24 "}"
+        RBracket@24..25 "]"
+  Newline@25..26 "\n"
+  Pipeline@26..38
+    PipelineElement@26..38
+      List@26..38
+        LBracket@26..27 "["
+        Word@27..37 "{a: b:#c\n}"
+        RBracket@37..38 "]"
+  Newline@38..39 "\n"

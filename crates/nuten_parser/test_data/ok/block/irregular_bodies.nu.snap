@@ -1,0 +1,18 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/irregular_bodies.nu
+---
+Root@0..38
+  Pipeline@0..37
+    PipelineElement@0..37
+      Call@0..37
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Word@5..11 "{|x 1}"
+        Whitespace@11..12 " "
+        Word@12..18 "{ls |}"
+        Whitespace@18..19 " "
+        Word@19..27 "{a && b}"
+        Whitespace@27..28 " "
+        Word@28..37 "{|x|; ls}"
+  Newline@37..38 "\n"

@@ -1,0 +1,74 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/as_value_or_operand.nu
+---
+Root@0..53
+  Pipeline@0..15
+    PipelineElement@0..15
+      Assignment@0..15
+        CellPath@0..8
+          Word@0..4 "$env"
+          Dot@4..5 "."
+          Word@5..8 "FOO"
+        Whitespace@8..9 " "
+        Assign@9..10 "="
+        Whitespace@10..11 " "
+        Pipeline@11..15
+          PipelineElement@11..15
+            CellPath@11..15
+              Word@11..13 "$x"
+              Dot@13..14 "."
+              Word@14..15 "a"
+  Newline@15..16 "\n"
+  Pipeline@16..29
+    PipelineElement@16..29
+      MathExpression@16..29
+        CellPath@16..20
+          Word@16..18 "$x"
+          Dot@18..19 "."
+          Word@19..20 "a"
+        Whitespace@20..21 " "
+        Operator@21..22 "+"
+        Whitespace@22..23 " "
+        CellPath@23..29
+          Subexpression@23..27
+            LParen@23..24 "("
+            Pipeline@24..26
+              PipelineElement@24..26
+                Call@24..26
+                  Word@24..26 "ls"
+            RParen@26..27 ")"
+          Dot@27..28 "."
+          Word@28..29 "b"
+  Newline@29..30 "\n"
+  Pipeline@30..42
+    PipelineElement@30..42
+      Let@30..42
+        Word@30..33 "let"
+        Whitespace@33..34 " "
+        Word@34..35 "y"
+        Whitespace@35..36 " "
+        Assign@36..37 "="
+        Whitespace@37..38 " "
+        Pipeline@38..42
+          PipelineElement@38..42
+            CellPath@38..42
+              Word@38..40 "$x"
+              Dot@40..41 "."
+              Word@41..42 "a"
+  Newline@42..43 "\n"
+  Pipeline@43..52
+    PipelineElement@43..52
+      Interpolation@43..52
+        InterpText@43..45 "$\""
+        Subexpression@45..51
+          LParen@45..46 "("
+          Pipeline@46..50
+            PipelineElement@46..50
+              CellPath@46..50
+                Word@46..48 "$x"
+                Dot@48..49 "."
+                Word@49..50 "a"
+          RParen@50..51 ")"
+        InterpText@51..52 "\""
+  Newline@52..53 "\n"

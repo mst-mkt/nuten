@@ -1,0 +1,68 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/try_catch.nu
+---
+Root@0..64
+  Pipeline@0..30
+    PipelineElement@0..30
+      Try@0..30
+        Word@0..3 "try"
+        Whitespace@3..4 " "
+        Block@4..10
+          LBrace@4..5 "{"
+          Whitespace@5..6 " "
+          Pipeline@6..8
+            PipelineElement@6..8
+              Call@6..8
+                Word@6..8 "ls"
+          Whitespace@8..9 " "
+          RBrace@9..10 "}"
+        Whitespace@10..11 " "
+        Word@11..16 "catch"
+        Whitespace@16..17 " "
+        Block@17..30
+          LBrace@17..18 "{"
+          Whitespace@18..19 " "
+          Pipeline@19..28
+            PipelineElement@19..28
+              Call@19..28
+                Word@19..24 "print"
+                Whitespace@24..25 " "
+                Word@25..28 "$in"
+          Whitespace@28..29 " "
+          RBrace@29..30 "}"
+  Newline@30..31 "\n"
+  Pipeline@31..63
+    PipelineElement@31..63
+      Try@31..63
+        Word@31..34 "try"
+        Whitespace@34..35 " "
+        Block@35..41
+          LBrace@35..36 "{"
+          Whitespace@36..37 " "
+          Pipeline@37..39
+            PipelineElement@37..39
+              Call@37..39
+                Word@37..39 "ls"
+          Whitespace@39..40 " "
+          RBrace@40..41 "}"
+        Whitespace@41..42 " "
+        Word@42..47 "catch"
+        Whitespace@47..48 " "
+        Block@48..63
+          LBrace@48..49 "{"
+          ClosureParams@49..52
+            Pipe@49..50 "|"
+            Param@50..51
+              Word@50..51 "e"
+            Pipe@51..52 "|"
+          Whitespace@52..53 " "
+          Pipeline@53..61
+            PipelineElement@53..61
+              Call@53..61
+                Word@53..58 "print"
+                Whitespace@58..59 " "
+                Word@59..61 "$e"
+          Whitespace@61..62 " "
+          RBrace@62..63 "}"
+  Newline@63..64 "\n"

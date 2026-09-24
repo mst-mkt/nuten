@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/literal_head_with_range.nu
+---
+Root@0..21
+  Pipeline@0..8
+    PipelineElement@0..8
+      CellPath@0..8
+        List@0..6
+          LBracket@0..1 "["
+          Range@1..5
+            Word@1..2 "1"
+            RangeOperator@2..4 ".."
+            Word@4..5 "2"
+          RBracket@5..6 "]"
+        Dot@6..7 "."
+        Word@7..8 "0"
+  Newline@8..9 "\n"
+  Pipeline@9..20
+    PipelineElement@9..20
+      CellPath@9..20
+        Record@9..18
+          LBrace@9..10 "{"
+          RecordField@10..17
+            Word@10..11 "a"
+            Colon@11..12 ":"
+            Whitespace@12..13 " "
+            Range@13..17
+              Word@13..14 "1"
+              RangeOperator@14..16 ".."
+              Word@16..17 "2"
+          RBrace@17..18 "}"
+        Dot@18..19 "."
+        Word@19..20 "a"
+  Newline@20..21 "\n"

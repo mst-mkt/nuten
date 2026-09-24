@@ -1,0 +1,78 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/closure/typed_default_and_rest_params.nu
+---
+Root@0..75
+  Pipeline@0..32
+    PipelineElement@0..32
+      Call@0..32
+        Word@0..2 "do"
+        Whitespace@2..3 " "
+        Block@3..32
+          LBrace@3..4 "{"
+          ClosureParams@4..28
+            Pipe@4..5 "|"
+            Param@5..7
+              Word@5..6 "x"
+              Comma@6..7 ","
+            Whitespace@7..8 " "
+            Param@8..19
+              Word@8..9 "y"
+              Colon@9..10 ":"
+              Whitespace@10..11 " "
+              Word@11..14 "int"
+              Whitespace@14..15 " "
+              Eq@15..16 "="
+              Whitespace@16..17 " "
+              Word@17..18 "2"
+              Comma@18..19 ","
+            Whitespace@19..20 " "
+            Param@20..27
+              Word@20..27 "...rest"
+            Pipe@27..28 "|"
+          Whitespace@28..29 " "
+          Pipeline@29..31
+            PipelineElement@29..31
+              Word@29..31 "$x"
+          RBrace@31..32 "}"
+  Newline@32..33 "\n"
+  Pipeline@33..74
+    PipelineElement@33..74
+      Call@33..74
+        Word@33..35 "do"
+        Whitespace@35..36 " "
+        Block@36..74
+          LBrace@36..37 "{"
+          ClosureParams@37..70
+            Pipe@37..38 "|"
+            Param@38..69
+              Word@38..39 "x"
+              Colon@39..40 ":"
+              Whitespace@40..41 " "
+              Type@41..69
+                Word@41..47 "record"
+                LAngle@47..48 "<"
+                TypeField@48..54
+                  Word@48..49 "a"
+                  Colon@49..50 ":"
+                  Whitespace@50..51 " "
+                  Word@51..54 "int"
+                Comma@54..55 ","
+                Whitespace@55..56 " "
+                TypeField@56..68
+                  Word@56..57 "b"
+                  Colon@57..58 ":"
+                  Whitespace@58..59 " "
+                  Type@59..68
+                    Word@59..63 "list"
+                    LAngle@63..64 "<"
+                    Word@64..67 "int"
+                    RAngle@67..68 ">"
+                RAngle@68..69 ">"
+            Pipe@69..70 "|"
+          Whitespace@70..71 " "
+          Pipeline@71..73
+            PipelineElement@71..73
+              Word@71..73 "$x"
+          RBrace@73..74 "}"
+  Newline@74..75 "\n"

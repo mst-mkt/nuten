@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/extern_body.nu
+---
+Root@0..40
+  Pipeline@0..18
+    PipelineElement@0..18
+      Def@0..18
+        Word@0..6 "extern"
+        Whitespace@6..7 " "
+        Word@7..8 "r"
+        Whitespace@8..9 " "
+        Signature@9..11
+          LBracket@9..10 "["
+          RBracket@10..11 "]"
+        Whitespace@11..12 " "
+        Word@12..18 "{ ls }"
+  Newline@18..19 "\n"
+  Pipeline@19..39
+    PipelineElement@19..39
+      Def@19..39
+        Word@19..25 "extern"
+        Whitespace@25..26 " "
+        Word@26..27 "z"
+        Whitespace@27..28 " "
+        Signature@28..30
+          LBracket@28..29 "["
+          RBracket@29..30 "]"
+        Whitespace@30..31 " "
+        Word@31..39 "{  ls  }"
+  Newline@39..40 "\n"

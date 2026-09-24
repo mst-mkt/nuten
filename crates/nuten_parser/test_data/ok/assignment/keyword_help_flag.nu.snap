@@ -1,0 +1,65 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/assignment/keyword_help_flag.nu
+---
+Root@0..67
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..13
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..9 "-h"
+        Whitespace@9..10 " "
+        Assign@10..11 "="
+        Whitespace@11..12 " "
+        Word@12..13 "x"
+  Newline@13..14 "\n"
+  Pipeline@14..25
+    PipelineElement@14..25
+      Call@14..25
+        Word@14..18 "hide"
+        Whitespace@18..19 " "
+        Word@19..21 "-h"
+        Whitespace@21..22 " "
+        Assign@22..23 "="
+        Whitespace@23..24 " "
+        Word@24..25 "1"
+  Newline@25..26 "\n"
+  Pipeline@26..36
+    PipelineElement@26..36
+      Call@26..36
+        Word@26..29 "run"
+        Whitespace@29..30 " "
+        Word@30..32 "-h"
+        Whitespace@32..33 " "
+        Assign@33..34 "="
+        Whitespace@34..35 " "
+        Word@35..36 "1"
+  Newline@36..37 "\n"
+  Pipeline@37..54
+    PipelineElement@37..54
+      Call@37..54
+        Word@37..43 "plugin"
+        Whitespace@43..44 " "
+        Word@44..47 "use"
+        Whitespace@47..48 " "
+        Word@48..50 "-h"
+        Whitespace@50..51 " "
+        Assign@51..52 "="
+        Whitespace@52..53 " "
+        Word@53..54 "1"
+  Newline@54..55 "\n"
+  Pipeline@55..66
+    PipelineElement@55..66
+      Assignment@55..66
+        ExternalCall@55..62
+          Word@55..59 "%use"
+          Whitespace@59..60 " "
+          Word@60..62 "-h"
+        Whitespace@62..63 " "
+        Assign@63..64 "="
+        Whitespace@64..65 " "
+        Pipeline@65..66
+          PipelineElement@65..66
+            Word@65..66 "1"
+  Newline@66..67 "\n"

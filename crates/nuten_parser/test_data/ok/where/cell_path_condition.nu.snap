@@ -1,0 +1,71 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/where/cell_path_condition.nu
+---
+Root@0..59
+  Pipeline@0..20
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..20
+      Where@5..20
+        Word@5..10 "where"
+        Whitespace@10..11 " "
+        MathExpression@11..20
+          CellPath@11..16
+            Word@11..14 "$it"
+            Dot@14..15 "."
+            Word@15..16 "a"
+          Whitespace@16..17 " "
+          Operator@17..18 ">"
+          Whitespace@18..19 " "
+          Word@19..20 "1"
+  Newline@20..21 "\n"
+  Pipeline@21..40
+    PipelineElement@21..23
+      Call@21..23
+        Word@21..23 "ls"
+    Whitespace@23..24 " "
+    Pipe@24..25 "|"
+    Whitespace@25..26 " "
+    PipelineElement@26..40
+      Where@26..40
+        Word@26..31 "where"
+        Whitespace@31..32 " "
+        CellPath@32..40
+          Record@32..38
+            LBrace@32..33 "{"
+            RecordField@33..37
+              Word@33..34 "a"
+              Colon@34..35 ":"
+              Whitespace@35..36 " "
+              Word@36..37 "1"
+            RBrace@37..38 "}"
+          Dot@38..39 "."
+          Word@39..40 "a"
+  Newline@40..41 "\n"
+  Pipeline@41..58
+    PipelineElement@41..43
+      Call@41..43
+        Word@41..43 "ls"
+    Whitespace@43..44 " "
+    Pipe@44..45 "|"
+    Whitespace@45..46 " "
+    PipelineElement@46..58
+      Where@46..58
+        Word@46..51 "where"
+        Whitespace@51..52 " "
+        CellPath@52..58
+          Subexpression@52..56
+            LParen@52..53 "("
+            Pipeline@53..55
+              PipelineElement@53..55
+                Call@53..55
+                  Word@53..55 "ls"
+            RParen@55..56 ")"
+          Dot@56..57 "."
+          Word@57..58 "a"
+  Newline@58..59 "\n"

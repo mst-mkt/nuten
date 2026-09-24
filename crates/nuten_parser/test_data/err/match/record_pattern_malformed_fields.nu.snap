@@ -1,0 +1,113 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/match/record_pattern_malformed_fields.nu
+---
+Root@0..135
+  Pipeline@0..134
+    PipelineElement@0..134
+      Match@0..134
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..134
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..19
+            Error@11..14
+              Word@11..14 "{a}"
+            Whitespace@14..15 " "
+            FatArrow@15..17 "=>"
+            Whitespace@17..18 " "
+            Word@18..19 "1"
+          Comma@19..20 ","
+          Whitespace@20..21 " "
+          MatchArm@21..31
+            Error@21..26
+              Word@21..26 "{a: }"
+            Whitespace@26..27 " "
+            FatArrow@27..29 "=>"
+            Whitespace@29..30 " "
+            Word@30..31 "2"
+          Comma@31..32 ","
+          Whitespace@32..33 " "
+          MatchArm@33..43
+            Error@33..38
+              Word@33..38 "{a 1}"
+            Whitespace@38..39 " "
+            FatArrow@39..41 "=>"
+            Whitespace@41..42 " "
+            Word@42..43 "3"
+          Comma@43..44 ","
+          Whitespace@44..45 " "
+          MatchArm@45..57
+            Error@45..52
+              Word@45..52 "{$a: 1}"
+            Whitespace@52..53 " "
+            FatArrow@53..55 "=>"
+            Whitespace@55..56 " "
+            Word@56..57 "4"
+          Comma@57..58 ","
+          Whitespace@58..59 " "
+          MatchArm@59..71
+            Error@59..66
+              Word@59..66 "{...$x}"
+            Whitespace@66..67 " "
+            FatArrow@67..69 "=>"
+            Whitespace@69..70 " "
+            Word@70..71 "5"
+          Comma@71..72 ","
+          Whitespace@72..73 " "
+          MatchArm@73..88
+            Error@73..83
+              Word@73..83 "{a: 1 | 2}"
+            Whitespace@83..84 " "
+            FatArrow@84..86 "=>"
+            Whitespace@86..87 " "
+            Word@87..88 "6"
+          Comma@88..89 ","
+          Whitespace@89..90 " "
+          MatchArm@90..102
+            Error@90..97
+              Word@90..97 "{a = b}"
+            Whitespace@97..98 " "
+            FatArrow@98..100 "=>"
+            Whitespace@100..101 " "
+            Word@101..102 "7"
+          Comma@102..103 ","
+          Whitespace@103..104 " "
+          MatchArm@104..117
+            Error@104..112
+              Word@104..112 "{a: 1 b}"
+            Whitespace@112..113 " "
+            FatArrow@113..115 "=>"
+            Whitespace@115..116 " "
+            Word@116..117 "8"
+          Comma@117..118 ","
+          Whitespace@118..119 " "
+          MatchArm@119..132
+            RecordPattern@119..127
+              LBrace@119..120 "{"
+              RecordField@120..126
+                Word@120..121 "a"
+                Colon@121..122 ":"
+                Whitespace@122..123 " "
+                Error@123..126
+                  Word@123..126 "{b}"
+              RBrace@126..127 "}"
+            Whitespace@127..128 " "
+            FatArrow@128..130 "=>"
+            Whitespace@130..131 " "
+            Word@131..132 "9"
+          Whitespace@132..133 " "
+          RBrace@133..134 "}"
+  Newline@134..135 "\n"
+error 11..14 "{a}": RecordPatternKey
+error 21..26 "{a: }": RecordPatternKey
+error 33..38 "{a 1}": RecordPatternKey
+error 45..52 "{$a: 1}": RecordPatternKey
+error 59..66 "{...$x}": RecordPatternKey
+error 73..83 "{a: 1 | 2}": RecordPatternKey
+error 90..97 "{a = b}": RecordPatternKey
+error 104..112 "{a: 1 b}": RecordPatternKey
+error 123..126 "{b}": RecordPatternKey

@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/empty_io_list.nu
+---
+Root@0..20
+  Pipeline@0..19
+    PipelineElement@0..19
+      Def@0..19
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "c"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        IoTypes@10..12
+          LBracket@10..11 "["
+          RBracket@11..12 "]"
+        Whitespace@12..13 " "
+        Block@13..19
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          Pipeline@15..17
+            PipelineElement@15..17
+              Call@15..17
+                Word@15..17 "ls"
+          Whitespace@17..18 " "
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"

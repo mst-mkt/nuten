@@ -1,0 +1,68 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/assignment/keyword_use.nu
+---
+Root@0..90
+  Pipeline@0..16
+    PipelineElement@0..16
+      Call@0..16
+        Word@0..3 "use"
+        Whitespace@3..4 " "
+        Word@4..7 "std"
+        Whitespace@7..8 " "
+        Word@8..9 "x"
+        Whitespace@9..10 " "
+        Assign@10..11 "="
+        Whitespace@11..12 " "
+        Word@12..13 "1"
+        Whitespace@13..14 " "
+        Word@14..16 "-h"
+  Newline@16..17 "\n"
+  Pipeline@17..45
+    PipelineElement@17..45
+      Call@17..45
+        Word@17..23 "export"
+        Whitespace@23..24 " "
+        Word@24..27 "use"
+        Whitespace@27..28 " "
+        Word@28..31 "std"
+        Whitespace@31..32 " "
+        Word@32..33 "x"
+        Whitespace@33..34 " "
+        Assign@34..35 "="
+        Whitespace@35..36 " "
+        Word@36..42 "{a: 1}"
+        Whitespace@42..43 " "
+        Word@43..45 "-h"
+  Newline@45..46 "\n"
+  Pipeline@46..66
+    PipelineElement@46..66
+      Call@46..66
+        Word@46..49 "use"
+        Whitespace@49..50 " "
+        Word@50..52 "-h"
+        Whitespace@52..53 " "
+        Assign@53..54 "="
+        Whitespace@54..55 " "
+        Word@55..57 "ls"
+        Whitespace@57..58 " "
+        Pipe@58..59 "|"
+        Whitespace@59..60 " "
+        Word@60..66 "length"
+  Newline@66..67 "\n"
+  Pipeline@67..89
+    PipelineElement@67..89
+      Call@67..89
+        Word@67..70 "use"
+        Whitespace@70..71 " "
+        Word@71..73 "-h"
+        Whitespace@73..74 " "
+        Assign@74..75 "="
+        Whitespace@75..76 " "
+        Word@76..78 "ls"
+        Whitespace@78..79 " "
+        Pipe@79..80 "|"
+        Newline@80..81 "\n"
+        Whitespace@81..83 "  "
+        Word@83..89 "length"
+  Newline@89..90 "\n"

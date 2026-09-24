@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/pipeline/single_line.nu
+---
+Root@0..46
+  Pipeline@0..21
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..13
+      Call@5..13
+        Word@5..8 "get"
+        Whitespace@8..9 " "
+        Word@9..13 "name"
+    Whitespace@13..14 " "
+    Pipe@14..15 "|"
+    Whitespace@15..16 " "
+    PipelineElement@16..21
+      Call@16..21
+        Word@16..21 "first"
+  Newline@21..22 "\n"
+  Pipeline@22..45
+    PipelineElement@22..32
+      Call@22..32
+        Word@22..26 "open"
+        Whitespace@26..27 " "
+        Word@27..32 "a.txt"
+    Pipe@32..33 "|"
+    PipelineElement@33..38
+      Call@33..38
+        Word@33..38 "lines"
+    Pipe@38..39 "|"
+    PipelineElement@39..45
+      Call@39..45
+        Word@39..45 "length"
+  Newline@45..46 "\n"

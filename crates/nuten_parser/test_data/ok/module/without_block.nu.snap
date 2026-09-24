@@ -1,0 +1,19 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/without_block.nu
+---
+Root@0..23
+  Pipeline@0..8
+    PipelineElement@0..8
+      Call@0..8
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "a"
+  Newline@8..9 "\n"
+  Pipeline@9..22
+    PipelineElement@9..22
+      Call@9..22
+        Word@9..15 "module"
+        Whitespace@15..18 "   "
+        Word@18..22 "b.nu"
+  Newline@22..23 "\n"

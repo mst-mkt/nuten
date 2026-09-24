@@ -1,0 +1,33 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/shell_operators_inside.nu
+---
+Root@0..27
+  Pipeline@0..26
+    PipelineElement@0..26
+      List@0..26
+        LBracket@0..1 "["
+        List@1..9
+          LBracket@1..2 "["
+          Word@2..3 "a"
+          Whitespace@3..4 " "
+          Word@4..6 "&&"
+          Whitespace@6..7 " "
+          Word@7..8 "b"
+          RBracket@8..9 "]"
+        Whitespace@9..10 " "
+        List@10..25
+          LBracket@10..11 "["
+          Word@11..12 "a"
+          Whitespace@12..13 " "
+          PipePipe@13..15 "||"
+          Whitespace@15..16 " "
+          List@16..24
+            LBracket@16..17 "["
+            Word@17..18 "b"
+            Whitespace@18..19 " "
+            Word@19..23 "2>&1"
+            RBracket@23..24 "]"
+          RBracket@24..25 "]"
+        RBracket@25..26 "]"
+  Newline@26..27 "\n"

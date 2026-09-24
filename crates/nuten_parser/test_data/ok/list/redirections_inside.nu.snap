@@ -1,0 +1,27 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/redirections_inside.nu
+---
+Root@0..22
+  Pipeline@0..21
+    PipelineElement@0..21
+      List@0..21
+        LBracket@0..1 "["
+        List@1..20
+          LBracket@1..2 "["
+          Word@2..3 "a"
+          Whitespace@3..4 " "
+          Word@4..7 "o>|"
+          Whitespace@7..8 " "
+          Word@8..9 "b"
+          Whitespace@9..10 " "
+          Word@10..12 "2>"
+          Whitespace@12..13 " "
+          Word@13..14 "c"
+          Whitespace@14..15 " "
+          OutGt@15..17 "o>"
+          Whitespace@17..18 " "
+          Word@18..19 "d"
+          RBracket@19..20 "]"
+        RBracket@20..21 "]"
+  Newline@21..22 "\n"

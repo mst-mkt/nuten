@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/flag_list_value.nu
+---
+Root@0..56
+  Pipeline@0..29
+    PipelineElement@0..29
+      Call@0..29
+        Word@0..4 "glob"
+        Whitespace@4..5 " "
+        Word@5..14 "--exclude"
+        Whitespace@14..15 " "
+        List@15..22
+          LBracket@15..16 "["
+          Word@16..17 "a"
+          Comma@17..18 ","
+          Whitespace@18..20 "  "
+          Word@20..21 "b"
+          RBracket@21..22 "]"
+        Whitespace@22..23 " "
+        String@23..29 "\"*.nu\""
+  Newline@29..30 "\n"
+  Pipeline@30..55
+    PipelineElement@30..55
+      Call@30..55
+        Word@30..34 "glob"
+        Whitespace@34..35 " "
+        Word@35..51 "--exclude=[a  b]"
+        Whitespace@51..52 " "
+        String@52..55 "\"*\""
+  Newline@55..56 "\n"

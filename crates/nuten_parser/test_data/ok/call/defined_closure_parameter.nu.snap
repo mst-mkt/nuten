@@ -1,0 +1,69 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/defined_closure_parameter.nu
+---
+Root@0..94
+  Pipeline@0..39
+    PipelineElement@0..39
+      Def@0..39
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..16 "with-closure"
+        Whitespace@16..17 " "
+        Signature@17..29
+          LBracket@17..18 "["
+          Param@18..28
+            Word@18..19 "c"
+            Colon@19..20 ":"
+            Whitespace@20..21 " "
+            Word@21..28 "closure"
+          RBracket@28..29 "]"
+        Whitespace@29..30 " "
+        Block@30..39
+          LBrace@30..31 "{"
+          Whitespace@31..32 " "
+          Pipeline@32..37
+            PipelineElement@32..37
+              Call@32..37
+                Word@32..34 "do"
+                Whitespace@34..35 " "
+                Word@35..37 "$c"
+          Whitespace@37..38 " "
+          RBrace@38..39 "}"
+  Newline@39..40 "\n"
+  Pipeline@40..64
+    PipelineElement@40..64
+      Call@40..64
+        Word@40..52 "with-closure"
+        Whitespace@52..53 " "
+        Block@53..64
+          LBrace@53..54 "{"
+          ClosureParams@54..57
+            Pipe@54..55 "|"
+            Param@55..56
+              Word@55..56 "x"
+            Pipe@56..57 "|"
+          Whitespace@57..60 "   "
+          Pipeline@60..62
+            PipelineElement@60..62
+              Word@60..62 "$x"
+          Whitespace@62..63 " "
+          RBrace@63..64 "}"
+  Newline@64..65 "\n"
+  Pipeline@65..93
+    PipelineElement@65..93
+      Call@65..93
+        Word@65..77 "with-closure"
+        Whitespace@77..78 " "
+        Block@78..93
+          LBrace@78..79 "{"
+          Whitespace@79..81 "  "
+          Pipeline@81..91
+            PipelineElement@81..91
+              Call@81..91
+                Word@81..86 "print"
+                Whitespace@86..89 "   "
+                Word@89..91 "hi"
+          Whitespace@91..92 " "
+          RBrace@92..93 "}"
+  Newline@93..94 "\n"

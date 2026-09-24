@@ -1,0 +1,61 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/ambiguous_braces_argument.nu
+---
+Root@0..76
+  Pipeline@0..38
+    PipelineElement@0..38
+      Call@0..38
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Record@5..12
+          LBrace@5..6 "{"
+          RecordField@6..11
+            Word@6..7 "a"
+            Colon@7..8 ":"
+            Whitespace@8..10 "  "
+            Word@10..11 "1"
+          RBrace@11..12 "}"
+        Whitespace@12..13 " "
+        Word@13..30 "{...$x, print hi}"
+        Whitespace@30..31 " "
+        List@31..38
+          LBracket@31..32 "["
+          Word@32..33 "a"
+          Comma@33..34 ","
+          Whitespace@34..36 "  "
+          Word@36..37 "b"
+          RBracket@37..38 "]"
+  Newline@38..39 "\n"
+  Pipeline@39..50
+    PipelineElement@39..50
+      Call@39..50
+        Word@39..42 "all"
+        Whitespace@42..43 " "
+        Word@43..50 "{a:  1}"
+  Newline@50..51 "\n"
+  Pipeline@51..62
+    PipelineElement@51..62
+      Call@51..62
+        Word@51..54 "all"
+        Whitespace@54..55 " "
+        Word@55..62 "{...$x}"
+  Newline@62..63 "\n"
+  Pipeline@63..75
+    PipelineElement@63..75
+      Call@63..75
+        Word@63..66 "any"
+        Whitespace@66..67 " "
+        Block@67..75
+          LBrace@67..68 "{"
+          ClosureParams@68..71
+            Pipe@68..69 "|"
+            Param@69..70
+              Word@69..70 "x"
+            Pipe@70..71 "|"
+          Whitespace@71..72 " "
+          Pipeline@72..74
+            PipelineElement@72..74
+              Word@72..74 "$x"
+          RBrace@74..75 "}"
+  Newline@75..76 "\n"

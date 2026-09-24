@@ -1,0 +1,83 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/comma_separated_list_argument.nu
+---
+Root@0..88
+  Pipeline@0..20
+    PipelineElement@0..3
+      List@0..3
+        LBracket@0..1 "["
+        Word@1..2 "1"
+        RBracket@2..3 "]"
+    Whitespace@3..4 " "
+    Pipe@4..5 "|"
+    Whitespace@5..6 " "
+    PipelineElement@6..20
+      Call@6..20
+        Word@6..12 "append"
+        Whitespace@12..13 " "
+        List@13..20
+          LBracket@13..14 "["
+          Word@14..15 "2"
+          Comma@15..16 ","
+          Whitespace@16..18 "  "
+          Word@18..19 "3"
+          RBracket@19..20 "]"
+  Newline@20..21 "\n"
+  Pipeline@21..48
+    PipelineElement@21..27
+      Record@21..27
+        LBrace@21..22 "{"
+        RecordField@22..26
+          Word@22..23 "a"
+          Colon@23..24 ":"
+          Whitespace@24..25 " "
+          Word@25..26 "1"
+        RBrace@26..27 "}"
+    Whitespace@27..28 " "
+    Pipe@28..29 "|"
+    Whitespace@29..30 " "
+    PipelineElement@30..48
+      Call@30..48
+        Word@30..35 "merge"
+        Whitespace@35..36 " "
+        Word@36..40 "deep"
+        Whitespace@40..41 " "
+        List@41..48
+          LBracket@41..42 "["
+          Word@42..43 "a"
+          Comma@43..44 ","
+          Whitespace@44..46 "  "
+          Word@46..47 "b"
+          RBracket@47..48 "]"
+  Newline@48..49 "\n"
+  Pipeline@49..70
+    PipelineElement@49..52
+      List@49..52
+        LBracket@49..50 "["
+        Word@50..51 "1"
+        RBracket@51..52 "]"
+    Whitespace@52..53 " "
+    Pipe@53..54 "|"
+    Whitespace@54..55 " "
+    PipelineElement@55..70
+      Call@55..70
+        Word@55..62 "%append"
+        Whitespace@62..63 " "
+        List@63..70
+          LBracket@63..64 "["
+          Word@64..65 "2"
+          Comma@65..66 ","
+          Whitespace@66..68 "  "
+          Word@68..69 "3"
+          RBracket@69..70 "]"
+  Newline@70..71 "\n"
+  Pipeline@71..87
+    PipelineElement@71..87
+      Call@71..87
+        Word@71..74 "str"
+        Whitespace@74..75 " "
+        Word@75..79 "join"
+        Whitespace@79..80 " "
+        Word@80..87 "[a,  b]"
+  Newline@87..88 "\n"

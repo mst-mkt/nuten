@@ -1,0 +1,28 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/if/misspelled_else.nu
+---
+Root@0..20
+  Pipeline@0..19
+    PipelineElement@0..19
+      If@0..19
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        MathExpression@3..15
+          Word@3..7 "true"
+          Whitespace@7..8 " "
+          Error@8..11
+            Word@8..11 "{1}"
+          Whitespace@11..12 " "
+          Error@12..15
+            Word@12..15 "els"
+        Whitespace@15..16 " "
+        Block@16..19
+          LBrace@16..17 "{"
+          Pipeline@17..18
+            PipelineElement@17..18
+              Word@17..18 "2"
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"
+error 8..11 "{1}": MissingOperator
+error 12..15 "els": MissingOperator

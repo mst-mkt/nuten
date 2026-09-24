@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/imported_with_extra_spaces.nu
+---
+Root@0..48
+  Pipeline@0..17
+    PipelineElement@0..17
+      Use@0..17
+        Word@0..3 "use"
+        Whitespace@3..4 " "
+        Word@4..15 "std/testing"
+        Whitespace@15..16 " "
+        Word@16..17 "*"
+  Newline@17..18 "\n"
+  Pipeline@18..47
+    PipelineElement@18..47
+      AttributeBlock@18..47
+        Attribute@18..32
+          Word@18..23 "@test"
+          Whitespace@23..25 "  "
+          Word@25..32 "{a:  1}"
+        Newline@32..33 "\n"
+        Def@33..47
+          Word@33..36 "def"
+          Whitespace@36..38 "  "
+          Word@38..39 "t"
+          Whitespace@39..41 "  "
+          Signature@41..43
+            LBracket@41..42 "["
+            RBracket@42..43 "]"
+          Whitespace@43..45 "  "
+          Block@45..47
+            LBrace@45..46 "{"
+            RBrace@46..47 "}"
+  Newline@47..48 "\n"

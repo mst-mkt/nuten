@@ -1,0 +1,130 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/multiline_record_type.nu
+---
+Root@0..133
+  Pipeline@0..63
+    PipelineElement@0..63
+      Def@0..63
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..6 "tc"
+        Whitespace@6..7 " "
+        Signature@7..56
+          LBracket@7..8 "["
+          Param@8..55
+            Word@8..9 "x"
+            Colon@9..10 ":"
+            Whitespace@10..11 " "
+            Type@11..55
+              Word@11..17 "record"
+              LAngle@17..18 "<"
+              Newline@18..19 "\n"
+              Whitespace@19..21 "  "
+              TypeField@21..27
+                Word@21..22 "a"
+                Colon@22..23 ":"
+                Whitespace@23..24 " "
+                Word@24..27 "int"
+              Newline@27..28 "\n"
+              Whitespace@28..30 "  "
+              TypeField@30..53
+                Word@30..31 "b"
+                Colon@31..32 ":"
+                Whitespace@32..33 " "
+                Type@33..53
+                  Word@33..37 "list"
+                  LAngle@37..38 "<"
+                  Type@38..52
+                    Word@38..44 "record"
+                    LAngle@44..45 "<"
+                    TypeField@45..51
+                      Word@45..46 "c"
+                      Colon@46..47 ":"
+                      Whitespace@47..48 " "
+                      Word@48..51 "int"
+                    RAngle@51..52 ">"
+                  RAngle@52..53 ">"
+              Newline@53..54 "\n"
+              RAngle@54..55 ">"
+          RBracket@55..56 "]"
+        Whitespace@56..57 " "
+        Block@57..63
+          LBrace@57..58 "{"
+          Whitespace@58..59 " "
+          Pipeline@59..61
+            PipelineElement@59..61
+              Call@59..61
+                Word@59..61 "ls"
+          Whitespace@61..62 " "
+          RBrace@62..63 "}"
+  Newline@63..64 "\n"
+  Pipeline@64..97
+    PipelineElement@64..97
+      Def@64..97
+        Word@64..67 "def"
+        Whitespace@67..68 " "
+        Word@68..70 "tj"
+        Whitespace@70..71 " "
+        Signature@71..90
+          LBracket@71..72 "["
+          Param@72..89
+            Word@72..73 "x"
+            Colon@73..74 ":"
+            Whitespace@74..75 " "
+            Type@75..89
+              Word@75..81 "record"
+              LAngle@81..82 "<"
+              TypeField@82..88
+                Word@82..83 "a"
+                Colon@83..84 ":"
+                Newline@84..85 "\n"
+                Word@85..88 "int"
+              RAngle@88..89 ">"
+          RBracket@89..90 "]"
+        Whitespace@90..91 " "
+        Block@91..97
+          LBrace@91..92 "{"
+          Whitespace@92..93 " "
+          Pipeline@93..95
+            PipelineElement@93..95
+              Call@93..95
+                Word@93..95 "ls"
+          Whitespace@95..96 " "
+          RBrace@96..97 "}"
+  Newline@97..98 "\n"
+  Pipeline@98..132
+    PipelineElement@98..132
+      Def@98..132
+        Word@98..101 "def"
+        Whitespace@101..102 " "
+        Word@102..104 "tn"
+        Whitespace@104..105 " "
+        Signature@105..125
+          LBracket@105..106 "["
+          Param@106..124
+            Word@106..107 "x"
+            Colon@107..108 ":"
+            Whitespace@108..109 " "
+            Type@109..124
+              Word@109..115 "record"
+              LAngle@115..116 "<"
+              TypeField@116..123
+                Word@116..117 "a"
+                Newline@117..118 "\n"
+                Colon@118..119 ":"
+                Whitespace@119..120 " "
+                Word@120..123 "int"
+              RAngle@123..124 ">"
+          RBracket@124..125 "]"
+        Whitespace@125..126 " "
+        Block@126..132
+          LBrace@126..127 "{"
+          Whitespace@127..128 " "
+          Pipeline@128..130
+            PipelineElement@128..130
+              Call@128..130
+                Word@128..130 "ls"
+          Whitespace@130..131 " "
+          RBrace@131..132 "}"
+  Newline@132..133 "\n"

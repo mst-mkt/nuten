@@ -1,0 +1,65 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/quoted_types.nu
+---
+Root@0..72
+  Pipeline@0..35
+    PipelineElement@0..35
+      Def@0..35
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..6 "tq"
+        Whitespace@6..7 " "
+        Signature@7..28
+          LBracket@7..8 "["
+          Param@8..27
+            Word@8..9 "x"
+            Colon@9..10 ":"
+            Whitespace@10..11 " "
+            String@11..27 "\"record<a: int>\""
+          RBracket@27..28 "]"
+        Whitespace@28..29 " "
+        Block@29..35
+          LBrace@29..30 "{"
+          Whitespace@30..31 " "
+          Pipeline@31..33
+            PipelineElement@31..33
+              Call@31..33
+                Word@31..33 "ls"
+          Whitespace@33..34 " "
+          RBrace@34..35 "}"
+  Newline@35..36 "\n"
+  Pipeline@36..71
+    PipelineElement@36..71
+      Def@36..71
+        Word@36..39 "def"
+        Whitespace@39..40 " "
+        Word@40..42 "tr"
+        Whitespace@42..43 " "
+        Signature@43..64
+          LBracket@43..44 "["
+          Param@44..63
+            Word@44..45 "x"
+            Colon@45..46 ":"
+            Whitespace@46..47 " "
+            Type@47..63
+              Word@47..53 "record"
+              LAngle@53..54 "<"
+              TypeField@54..62
+                Word@54..55 "a"
+                Colon@55..56 ":"
+                Whitespace@56..57 " "
+                String@57..62 "\"b>c\""
+              RAngle@62..63 ">"
+          RBracket@63..64 "]"
+        Whitespace@64..65 " "
+        Block@65..71
+          LBrace@65..66 "{"
+          Whitespace@66..67 " "
+          Pipeline@67..69
+            PipelineElement@67..69
+              Call@67..69
+                Word@67..69 "ls"
+          Whitespace@69..70 " "
+          RBrace@70..71 "}"
+  Newline@71..72 "\n"

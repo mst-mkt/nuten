@@ -1,0 +1,27 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/expression/stray_operator.nu
+---
+Root@0..12
+  Pipeline@0..3
+    PipelineElement@0..3
+      MathExpression@0..3
+        Word@0..1 "-"
+        Whitespace@1..2 " "
+        Error@2..3
+          Word@2..3 "1"
+  Newline@3..4 "\n"
+  Pipeline@4..11
+    PipelineElement@4..11
+      MathExpression@4..11
+        Word@4..5 "1"
+        Whitespace@5..6 " "
+        Operator@6..7 "+"
+        Whitespace@7..8 " "
+        Word@8..9 "+"
+        Whitespace@9..10 " "
+        Error@10..11
+          Word@10..11 "2"
+  Newline@11..12 "\n"
+error 2..3 "1": MissingOperator
+error 10..11 "2": MissingOperator

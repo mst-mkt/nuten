@@ -1,0 +1,26 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/definition_after_trailing_pipe.nu
+---
+Root@0..34
+  Pipeline@0..33
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Newline@4..5 "\n"
+    PipelineElement@5..33
+      Call@5..33
+        Word@5..14 "@category"
+        Whitespace@14..15 " "
+        Word@15..16 "x"
+        Newline@16..17 "\n"
+        Word@17..20 "def"
+        Whitespace@20..21 " "
+        Word@21..22 "f"
+        Whitespace@22..23 " "
+        Word@23..30 "[a:int]"
+        Whitespace@30..31 " "
+        Word@31..33 "{}"
+  Newline@33..34 "\n"

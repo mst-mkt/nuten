@@ -1,0 +1,67 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/closure/argument_of_each.nu
+---
+Root@0..59
+  Pipeline@0..24
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..24
+      Call@5..24
+        Word@5..9 "each"
+        Whitespace@9..10 " "
+        Block@10..24
+          LBrace@10..11 "{"
+          ClosureParams@11..14
+            Pipe@11..12 "|"
+            Param@12..13
+              Word@12..13 "x"
+            Pipe@13..14 "|"
+          Whitespace@14..15 " "
+          Pipeline@15..22
+            PipelineElement@15..22
+              CellPath@15..22
+                Word@15..17 "$x"
+                Dot@17..18 "."
+                Word@18..22 "name"
+          Whitespace@22..23 " "
+          RBrace@23..24 "}"
+  Newline@24..25 "\n"
+  Pipeline@25..58
+    PipelineElement@25..27
+      Call@25..27
+        Word@25..27 "ls"
+    Whitespace@27..28 " "
+    Pipe@28..29 "|"
+    Whitespace@29..30 " "
+    PipelineElement@30..58
+      Call@30..58
+        Word@30..34 "each"
+        Whitespace@34..35 " "
+        Block@35..58
+          LBrace@35..36 "{"
+          Whitespace@36..37 " "
+          ClosureParams@37..43
+            Pipe@37..38 "|"
+            Param@38..40
+              Word@38..39 "x"
+              Comma@39..40 ","
+            Whitespace@40..41 " "
+            Param@41..42
+              Word@41..42 "y"
+            Pipe@42..43 "|"
+          Newline@43..44 "\n"
+          Whitespace@44..48 "    "
+          Pipeline@48..56
+            PipelineElement@48..56
+              Call@48..56
+                Word@48..53 "print"
+                Whitespace@53..54 " "
+                Word@54..56 "$x"
+          Newline@56..57 "\n"
+          RBrace@57..58 "}"
+  Newline@58..59 "\n"

@@ -1,0 +1,16 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/operation_as_call_argument.nu
+---
+Root@0..11
+  Pipeline@0..10
+    PipelineElement@0..10
+      Call@0..10
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Word@5..6 "1"
+        Whitespace@6..7 " "
+        Word@7..8 "+"
+        Whitespace@8..9 " "
+        Word@9..10 "2"
+  Newline@10..11 "\n"

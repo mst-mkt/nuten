@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/variable/punctuation_in_name_nested.nu
+---
+Root@0..32
+  Pipeline@0..21
+    PipelineElement@0..21
+      Match@0..21
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..7 "1"
+        Whitespace@7..8 " "
+        MatchArms@8..21
+          LBrace@8..9 "{"
+          Whitespace@9..10 " "
+          MatchArm@10..19
+            Word@10..11 "_"
+            Whitespace@11..12 " "
+            FatArrow@12..14 "=>"
+            Whitespace@14..15 " "
+            Error@15..19
+              Word@15..19 "$a-b"
+          Whitespace@19..20 " "
+          RBrace@20..21 "}"
+  Newline@21..22 "\n"
+  Pipeline@22..31
+    PipelineElement@22..31
+      Record@22..31
+        LBrace@22..23 "{"
+        Spread@23..30
+          SpreadOperator@23..26 "..."
+          Error@26..30
+            Word@26..30 "$a-b"
+        RBrace@30..31 "}"
+  Newline@31..32 "\n"
+error 15..19 "$a-b": InvalidVariableName
+error 26..30 "$a-b": InvalidVariableName

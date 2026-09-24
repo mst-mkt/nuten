@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/while_help_flag.nu
+---
+Root@0..33
+  Pipeline@0..15
+    PipelineElement@0..15
+      While@0..15
+        Word@0..5 "while"
+        Whitespace@5..6 " "
+        Word@6..8 "-h"
+        Whitespace@8..9 " "
+        Word@9..11 "$a"
+        Whitespace@11..12 " "
+        Block@12..15
+          LBrace@12..13 "{"
+          Pipeline@13..14
+            PipelineElement@13..14
+              Word@13..14 "1"
+          RBrace@14..15 "}"
+  Newline@15..16 "\n"
+  Pipeline@16..32
+    PipelineElement@16..32
+      While@16..32
+        Word@16..21 "while"
+        Whitespace@21..22 " "
+        Word@22..28 "--help"
+        Whitespace@28..29 " "
+        Block@29..32
+          LBrace@29..30 "{"
+          Pipeline@30..31
+            PipelineElement@30..31
+              Word@30..31 "1"
+          RBrace@31..32 "}"
+  Newline@32..33 "\n"

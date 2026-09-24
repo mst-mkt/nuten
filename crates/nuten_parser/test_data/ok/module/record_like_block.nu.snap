@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/record_like_block.nu
+---
+Root@0..33
+  Pipeline@0..15
+    PipelineElement@0..15
+      Module@0..15
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "x"
+        Whitespace@8..9 " "
+        Block@9..15
+          LBrace@9..10 "{"
+          Pipeline@10..14
+            PipelineElement@10..14
+              Call@10..14
+                Word@10..12 "a:"
+                Whitespace@12..13 " "
+                Word@13..14 "1"
+          RBrace@14..15 "}"
+  Newline@15..16 "\n"
+  Pipeline@16..32
+    PipelineElement@16..32
+      Module@16..32
+        Word@16..22 "module"
+        Whitespace@22..23 " "
+        Word@23..24 "y"
+        Whitespace@24..25 " "
+        Block@25..32
+          LBrace@25..26 "{"
+          Pipeline@26..31
+            PipelineElement@26..31
+              Call@26..31
+                Word@26..31 "...$x"
+          RBrace@31..32 "}"
+  Newline@32..33 "\n"

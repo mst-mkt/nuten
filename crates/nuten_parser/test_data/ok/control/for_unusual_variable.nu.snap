@@ -1,0 +1,73 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/for_unusual_variable.nu
+---
+Root@0..65
+  Pipeline@0..20
+    PipelineElement@0..20
+      Call@0..20
+        Word@0..3 "for"
+        Whitespace@3..4 " "
+        Word@4..6 "in"
+        Whitespace@6..7 " "
+        Word@7..9 "in"
+        Whitespace@9..10 " "
+        Word@10..13 "[1]"
+        Whitespace@13..14 " "
+        Block@14..20
+          LBrace@14..15 "{"
+          Whitespace@15..16 " "
+          Pipeline@16..18
+            PipelineElement@16..18
+              Call@16..18
+                Word@16..18 "ls"
+          Whitespace@18..19 " "
+          RBrace@19..20 "}"
+  Newline@20..21 "\n"
+  Pipeline@21..42
+    PipelineElement@21..42
+      Call@21..42
+        Word@21..24 "for"
+        Whitespace@24..25 " "
+        Word@25..26 "x"
+        Whitespace@26..27 " "
+        Word@27..28 "y"
+        Whitespace@28..29 " "
+        Word@29..31 "in"
+        Whitespace@31..32 " "
+        Word@32..35 "[1]"
+        Whitespace@35..36 " "
+        Block@36..42
+          LBrace@36..37 "{"
+          Whitespace@37..38 " "
+          Pipeline@38..40
+            PipelineElement@38..40
+              Call@38..40
+                Word@38..40 "ls"
+          Whitespace@40..41 " "
+          RBrace@41..42 "}"
+  Newline@42..43 "\n"
+  Pipeline@43..64
+    PipelineElement@43..64
+      For@43..64
+        Word@43..46 "for"
+        Whitespace@46..47 " "
+        Word@47..50 "{a}"
+        Whitespace@50..51 " "
+        Word@51..53 "in"
+        Whitespace@53..54 " "
+        List@54..57
+          LBracket@54..55 "["
+          Word@55..56 "1"
+          RBracket@56..57 "]"
+        Whitespace@57..58 " "
+        Block@58..64
+          LBrace@58..59 "{"
+          Whitespace@59..60 " "
+          Pipeline@60..62
+            PipelineElement@60..62
+              Call@60..62
+                Word@60..62 "ls"
+          Whitespace@62..63 " "
+          RBrace@63..64 "}"
+  Newline@64..65 "\n"

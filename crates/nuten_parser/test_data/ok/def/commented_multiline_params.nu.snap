@@ -1,0 +1,51 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/commented_multiline_params.nu
+---
+Root@0..73
+  Pipeline@0..72
+    PipelineElement@0..72
+      Def@0..72
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "g"
+        Whitespace@5..6 " "
+        Signature@6..63
+          LBracket@6..7 "["
+          Newline@7..8 "\n"
+          Whitespace@8..10 "  "
+          Comment@10..19 "# leading"
+          Newline@19..20 "\n"
+          Whitespace@20..22 "  "
+          Param@22..23
+            Word@22..23 "x"
+          Whitespace@23..24 " "
+          Comment@24..33 "# about x"
+          Newline@33..34 "\n"
+          Whitespace@34..36 "  "
+          Param@36..47
+            Word@36..42 "--flag"
+            Whitespace@42..43 " "
+            ShortFlag@43..47 "(-f)"
+          Newline@47..48 "\n"
+          Whitespace@48..50 "  "
+          Param@50..61
+            Word@50..57 "--other"
+            Whitespace@57..58 " "
+            Eq@58..59 "="
+            Whitespace@59..60 " "
+            Word@60..61 "1"
+          Newline@61..62 "\n"
+          RBracket@62..63 "]"
+        Whitespace@63..64 " "
+        Block@64..72
+          LBrace@64..65 "{"
+          Newline@65..66 "\n"
+          Whitespace@66..68 "  "
+          Pipeline@68..70
+            PipelineElement@68..70
+              Call@68..70
+                Word@68..70 "ls"
+          Newline@70..71 "\n"
+          RBrace@71..72 "}"
+  Newline@72..73 "\n"

@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/word_head.nu
+---
+Root@0..19
+  Pipeline@0..2
+    PipelineElement@0..2
+      Word@0..2 "-x"
+  Newline@2..3 "\n"
+  Pipeline@3..9
+    PipelineElement@3..9
+      Call@3..9
+        Word@3..7 "1abc"
+        Whitespace@7..8 " "
+        Word@8..9 "2"
+  Newline@9..10 "\n"
+  Pipeline@10..18
+    PipelineElement@10..18
+      Call@10..18
+        Word@10..12 "ls"
+        Whitespace@12..13 " "
+        Word@13..18 "[1 2]"
+  Newline@18..19 "\n"

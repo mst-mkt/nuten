@@ -1,0 +1,98 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/piped.nu
+---
+Root@0..89
+  Pipeline@0..24
+    PipelineElement@0..6
+      Range@0..6
+        Word@0..2 "$x"
+        RangeOperator@2..4 ".."
+        Word@4..6 "$y"
+    Whitespace@6..7 " "
+    Pipe@7..8 "|"
+    Whitespace@8..9 " "
+    PipelineElement@9..24
+      Call@9..24
+        Word@9..13 "each"
+        Whitespace@13..14 " "
+        Block@14..24
+          LBrace@14..15 "{"
+          Whitespace@15..16 " "
+          ClosureParams@16..19
+            Pipe@16..17 "|"
+            Param@17..18
+              Word@17..18 "i"
+            Pipe@18..19 "|"
+          Whitespace@19..20 " "
+          Pipeline@20..22
+            PipelineElement@20..22
+              Word@20..22 "$i"
+          Whitespace@22..23 " "
+          RBrace@23..24 "}"
+  Newline@24..25 "\n"
+  Pipeline@25..47
+    PipelineElement@25..29
+      Range@25..29
+        Word@25..26 "1"
+        RangeOperator@26..28 ".."
+        Word@28..29 "3"
+    Whitespace@29..30 " "
+    Pipe@30..31 "|"
+    Whitespace@31..32 " "
+    PipelineElement@32..47
+      Call@32..47
+        Word@32..36 "each"
+        Whitespace@36..37 " "
+        Block@37..47
+          LBrace@37..38 "{"
+          Whitespace@38..39 " "
+          ClosureParams@39..42
+            Pipe@39..40 "|"
+            Param@40..41
+              Word@40..41 "i"
+            Pipe@41..42 "|"
+          Whitespace@42..43 " "
+          Pipeline@43..45
+            PipelineElement@43..45
+              Word@43..45 "$i"
+          Whitespace@45..46 " "
+          RBrace@46..47 "}"
+  Newline@47..48 "\n"
+  Pipeline@48..71
+    PipelineElement@48..53
+      Call@48..53
+        Word@48..53 "1..$n"
+    Whitespace@53..54 " "
+    Pipe@54..55 "|"
+    Whitespace@55..56 " "
+    PipelineElement@56..71
+      Call@56..71
+        Word@56..60 "each"
+        Whitespace@60..61 " "
+        Block@61..71
+          LBrace@61..62 "{"
+          Whitespace@62..63 " "
+          ClosureParams@63..66
+            Pipe@63..64 "|"
+            Param@64..65
+              Word@64..65 "i"
+            Pipe@65..66 "|"
+          Whitespace@66..67 " "
+          Pipeline@67..69
+            PipelineElement@67..69
+              Word@67..69 "$i"
+          Whitespace@69..70 " "
+          RBrace@70..71 "}"
+  Newline@71..72 "\n"
+  Pipeline@72..88
+    PipelineElement@72..79
+      Call@72..79
+        Word@72..79 "1..(ls)"
+    Whitespace@79..80 " "
+    Pipe@80..81 "|"
+    Whitespace@81..82 " "
+    PipelineElement@82..88
+      Call@82..88
+        Word@82..88 "length"
+  Newline@88..89 "\n"

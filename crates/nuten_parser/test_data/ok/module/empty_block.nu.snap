@@ -1,0 +1,28 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/empty_block.nu
+---
+Root@0..25
+  Pipeline@0..12
+    PipelineElement@0..12
+      Module@0..12
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "m"
+        Whitespace@8..9 " "
+        Block@9..12
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          RBrace@11..12 "}"
+  Newline@12..13 "\n"
+  Pipeline@13..24
+    PipelineElement@13..24
+      Module@13..24
+        Word@13..19 "module"
+        Whitespace@19..20 " "
+        Word@20..21 "n"
+        Whitespace@21..22 " "
+        Block@22..24
+          LBrace@22..23 "{"
+          RBrace@23..24 "}"
+  Newline@24..25 "\n"

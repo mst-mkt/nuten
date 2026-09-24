@@ -1,0 +1,30 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/spread/as_argument.nu
+---
+Root@0..41
+  Pipeline@0..10
+    PipelineElement@0..10
+      ExternalCall@0..10
+        Word@0..4 "else"
+        Whitespace@4..5 " "
+        Spread@5..10
+          SpreadOperator@5..8 "..."
+          Word@8..10 "$x"
+  Newline@10..11 "\n"
+  Pipeline@11..30
+    PipelineElement@11..30
+      Call@11..30
+        Word@11..16 "print"
+        Whitespace@16..17 " "
+        Word@17..22 "...$x"
+        Whitespace@22..23 " "
+        Word@23..30 "...(ls)"
+  Newline@30..31 "\n"
+  Pipeline@31..40
+    PipelineElement@31..40
+      Call@31..40
+        Word@31..34 "foo"
+        Whitespace@34..35 " "
+        Word@35..40 "...$x"
+  Newline@40..41 "\n"

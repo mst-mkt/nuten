@@ -1,0 +1,25 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/piped.nu
+---
+Root@0..19
+  Pipeline@0..18
+    PipelineElement@0..9
+      List@0..9
+        LBracket@0..1 "["
+        Word@1..2 "a"
+        Whitespace@2..3 " "
+        List@3..8
+          LBracket@3..4 "["
+          Word@4..5 "b"
+          Whitespace@5..6 " "
+          Word@6..7 "c"
+          RBracket@7..8 "]"
+        RBracket@8..9 "]"
+    Whitespace@9..10 " "
+    Pipe@10..11 "|"
+    Whitespace@11..12 " "
+    PipelineElement@12..18
+      Call@12..18
+        Word@12..18 "length"
+  Newline@18..19 "\n"

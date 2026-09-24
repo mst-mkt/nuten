@@ -1,0 +1,79 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/closure/split_params.nu
+---
+Root@0..57
+  Pipeline@0..34
+    PipelineElement@0..34
+      Call@0..34
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Block@5..11
+          LBrace@5..6 "{"
+          ClosureParams@6..8
+            PipePipe@6..8 "||"
+          Whitespace@8..9 " "
+          Pipeline@9..10
+            PipelineElement@9..10
+              Word@9..10 "1"
+          RBrace@10..11 "}"
+        Whitespace@11..12 " "
+        Block@12..17
+          LBrace@12..13 "{"
+          ClosureParams@13..16
+            Pipe@13..14 "|"
+            Param@14..15
+              Word@14..15 "x"
+            Pipe@15..16 "|"
+          RBrace@16..17 "}"
+        Whitespace@17..18 " "
+        Block@18..22
+          LBrace@18..19 "{"
+          ClosureParams@19..21
+            PipePipe@19..21 "||"
+          RBrace@21..22 "}"
+        Whitespace@22..23 " "
+        Block@23..34
+          LBrace@23..24 "{"
+          ClosureParams@24..30
+            Pipe@24..25 "|"
+            Param@25..27
+              Word@25..26 "x"
+              Comma@26..27 ","
+            Newline@27..28 "\n"
+            Param@28..29
+              Word@28..29 "y"
+            Pipe@29..30 "|"
+          Whitespace@30..31 " "
+          Pipeline@31..33
+            PipelineElement@31..33
+              Word@31..33 "$x"
+          RBrace@33..34 "}"
+  Newline@34..35 "\n"
+  Pipeline@35..56
+    PipelineElement@35..56
+      Call@35..56
+        Word@35..37 "do"
+        Whitespace@37..38 " "
+        Block@38..56
+          LBrace@38..39 "{"
+          ClosureParams@39..52
+            Pipe@39..40 "|"
+            Param@40..49
+              Word@40..41 "x"
+              Newline@41..42 "\n"
+              Colon@42..43 ":"
+              Whitespace@43..44 " "
+              Word@44..47 "int"
+              Newline@47..48 "\n"
+              Comma@48..49 ","
+            Whitespace@49..50 " "
+            Param@50..51
+              Word@50..51 "y"
+            Pipe@51..52 "|"
+          Whitespace@52..53 " "
+          Pipeline@53..55
+            PipelineElement@53..55
+              Word@53..55 "$x"
+          RBrace@55..56 "}"
+  Newline@56..57 "\n"

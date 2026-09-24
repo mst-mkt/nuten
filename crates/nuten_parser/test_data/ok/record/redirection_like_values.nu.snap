@@ -1,0 +1,128 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/redirection_like_values.nu
+---
+Root@0..165
+  Pipeline@0..35
+    PipelineElement@0..35
+      List@0..35
+        LBracket@0..1 "["
+        Word@1..12 "{a: b:#c d}"
+        Whitespace@12..13 " "
+        Word@13..24 "{x: y:e>|z}"
+        Whitespace@24..25 " "
+        Record@25..34
+          LBrace@25..26 "{"
+          RecordField@26..32
+            Word@26..27 "a"
+            Colon@27..28 ":"
+            Whitespace@28..29 " "
+            ErrGtPipe@29..32 "e>|"
+          RecordField@32..33
+            Word@32..33 "b"
+          RBrace@33..34 "}"
+        RBracket@34..35 "]"
+  Newline@35..36 "\n"
+  Pipeline@36..102
+    PipelineElement@36..102
+      List@36..102
+        LBracket@36..37 "["
+        Word@37..47 "{a: x:o>|}"
+        Whitespace@47..48 " "
+        Record@48..57
+          LBrace@48..49 "{"
+          RecordField@49..55
+            Word@49..50 "a"
+            Colon@50..51 ":"
+            Whitespace@51..52 " "
+            Word@52..55 "o>|"
+          RecordField@55..56
+            Word@55..56 "b"
+          RBrace@56..57 "}"
+        Whitespace@57..58 " "
+        Word@58..71 "{x: y:o+e>|z}"
+        Whitespace@71..72 " "
+        Record@72..83
+          LBrace@72..73 "{"
+          RecordField@73..81
+            Word@73..74 "a"
+            Colon@74..75 ":"
+            Whitespace@75..76 " "
+            OutErrGtPipe@76..81 "o+e>|"
+          RecordField@81..82
+            Word@81..82 "b"
+          RBrace@82..83 "}"
+        Whitespace@83..84 " "
+        Record@84..92
+          LBrace@84..85 "{"
+          RecordField@85..89
+            Word@85..86 "a"
+            Colon@86..87 ":"
+            Whitespace@87..88 " "
+            Word@88..89 "b"
+          RecordField@89..91
+            Pipe@89..90 "|"
+            Word@90..91 "c"
+          RBrace@91..92 "}"
+        Whitespace@92..93 " "
+        Record@93..101
+          LBrace@93..94 "{"
+          RecordField@94..99
+            Word@94..95 "a"
+            Colon@95..96 ":"
+            Whitespace@96..97 " "
+            PipePipe@97..99 "||"
+          RecordField@99..100
+            Word@99..100 "b"
+          RBrace@100..101 "}"
+        RBracket@101..102 "]"
+  Newline@102..103 "\n"
+  Pipeline@103..164
+    PipelineElement@103..164
+      List@103..164
+        LBracket@103..104 "["
+        Word@104..116 "{a: x:out>|}"
+        Whitespace@116..117 " "
+        Record@117..128
+          LBrace@117..118 "{"
+          RecordField@118..126
+            Word@118..119 "a"
+            Colon@119..120 ":"
+            Whitespace@120..121 " "
+            Word@121..126 "out>|"
+          RecordField@126..127
+            Word@126..127 "b"
+          RBrace@127..128 "}"
+        Whitespace@128..129 " "
+        Record@129..138
+          LBrace@129..130 "{"
+          RecordField@130..137
+            Word@130..131 "a"
+            Colon@131..132 ":"
+            Newline@132..133 "\n"
+            Whitespace@133..134 " "
+            Word@134..137 "b:c"
+          RBrace@137..138 "}"
+        Whitespace@138..139 " "
+        Record@139..147
+          LBrace@139..140 "{"
+          RecordField@140..146
+            Word@140..141 "a"
+            Colon@141..142 ":"
+            Comma@142..143 ","
+            Word@143..146 "b:c"
+          RBrace@146..147 "}"
+        Whitespace@147..148 " "
+        Record@148..163
+          LBrace@148..149 "{"
+          Spread@149..154
+            SpreadOperator@149..152 "..."
+            Word@152..154 "$x"
+          Whitespace@154..155 " "
+          RecordField@155..162
+            Word@155..156 "k"
+            Whitespace@156..157 " "
+            Word@157..162 "[a b]"
+          RBrace@162..163 "}"
+        RBracket@163..164 "]"
+  Newline@164..165 "\n"

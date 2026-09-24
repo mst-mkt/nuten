@@ -1,0 +1,12 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/while_missing_body.nu
+---
+Root@0..11
+  Pipeline@0..10
+    PipelineElement@0..10
+      Call@0..10
+        Word@0..5 "while"
+        Whitespace@5..6 " "
+        Word@6..10 "true"
+  Newline@10..11 "\n"

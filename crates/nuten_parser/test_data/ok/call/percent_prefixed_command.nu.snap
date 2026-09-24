@@ -1,0 +1,57 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/percent_prefixed_command.nu
+---
+Root@0..84
+  Pipeline@0..12
+    PipelineElement@0..12
+      Call@0..12
+        Word@0..1 "%"
+        Whitespace@1..2 " "
+        Word@2..4 "ls"
+        Whitespace@4..5 " "
+        Word@5..12 "[a,  b]"
+  Newline@12..13 "\n"
+  Pipeline@13..26
+    PipelineElement@13..26
+      Call@13..26
+        Word@13..18 "%echo"
+        Whitespace@18..19 " "
+        Record@19..26
+          LBrace@19..20 "{"
+          RecordField@20..25
+            Word@20..21 "a"
+            Colon@21..22 ":"
+            Whitespace@22..24 "  "
+            Word@24..25 "1"
+          RBrace@25..26 "}"
+  Newline@26..27 "\n"
+  Pipeline@27..42
+    PipelineElement@27..42
+      ExternalCall@27..42
+        Word@27..34 "%nosuch"
+        Whitespace@34..35 " "
+        Word@35..42 "{a:  1}"
+  Newline@42..43 "\n"
+  Pipeline@43..65
+    PipelineElement@43..65
+      ExternalCall@43..65
+        Word@43..49 "%where"
+        Whitespace@49..50 " "
+        Word@50..57 "{a:  1}"
+        Whitespace@57..58 " "
+        List@58..65
+          LBracket@58..59 "["
+          Word@59..60 "a"
+          Comma@60..61 ","
+          Whitespace@61..63 "  "
+          Word@63..64 "b"
+          RBracket@64..65 "]"
+  Newline@65..66 "\n"
+  Pipeline@66..83
+    PipelineElement@66..83
+      Call@66..83
+        Word@66..70 "%all"
+        Whitespace@70..71 " "
+        Word@71..83 "{a: 1, b: 2}"
+  Newline@83..84 "\n"

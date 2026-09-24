@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/pipeline/line_end_pipe_before_blank_line.nu
+---
+Root@0..39
+  Pipeline@0..4
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+  Newline@4..5 "\n"
+  Newline@5..6 "\n"
+  Pipeline@6..12
+    PipelineElement@6..12
+      Call@6..12
+        Word@6..12 "length"
+  Newline@12..13 "\n"
+  Newline@13..14 "\n"
+  Pipeline@14..18
+    PipelineElement@14..16
+      Call@14..16
+        Word@14..16 "ls"
+    Whitespace@16..17 " "
+    Pipe@17..18 "|"
+  Newline@18..19 "\n"
+  Whitespace@19..21 "  "
+  Comment@21..30 "# comment"
+  Newline@30..31 "\n"
+  Newline@31..32 "\n"
+  Pipeline@32..38
+    PipelineElement@32..38
+      Call@32..38
+        Word@32..38 "length"
+  Newline@38..39 "\n"

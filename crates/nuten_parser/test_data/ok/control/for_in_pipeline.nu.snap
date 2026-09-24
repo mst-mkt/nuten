@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/for_in_pipeline.nu
+---
+Root@0..33
+  Pipeline@0..32
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..24
+      For@5..24
+        Word@5..8 "for"
+        Whitespace@8..9 " "
+        Word@9..10 "x"
+        Whitespace@10..11 " "
+        Word@11..13 "in"
+        Whitespace@13..14 " "
+        Word@14..17 "$in"
+        Whitespace@17..18 " "
+        Block@18..24
+          LBrace@18..19 "{"
+          Whitespace@19..20 " "
+          Pipeline@20..22
+            PipelineElement@20..22
+              Word@20..22 "$x"
+          Whitespace@22..23 " "
+          RBrace@23..24 "}"
+    Whitespace@24..25 " "
+    Pipe@25..26 "|"
+    Whitespace@26..27 " "
+    PipelineElement@27..32
+      Call@27..32
+        Word@27..32 "first"
+  Newline@32..33 "\n"

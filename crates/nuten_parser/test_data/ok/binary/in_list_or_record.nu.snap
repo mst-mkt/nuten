@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/binary/in_list_or_record.nu
+---
+Root@0..29
+  Pipeline@0..16
+    PipelineElement@0..16
+      List@0..16
+        LBracket@0..1 "["
+        Binary@1..7
+          Word@1..3 "0x"
+          LBracket@3..4 "["
+          Word@4..6 "ff"
+          RBracket@6..7 "]"
+        Whitespace@7..8 " "
+        Binary@8..15
+          Word@8..10 "0x"
+          LBracket@10..11 "["
+          Word@11..12 "f"
+          Whitespace@12..13 " "
+          Word@13..14 "f"
+          RBracket@14..15 "]"
+        RBracket@15..16 "]"
+  Newline@16..17 "\n"
+  Pipeline@17..28
+    PipelineElement@17..28
+      Record@17..28
+        LBrace@17..18 "{"
+        RecordField@18..27
+          Word@18..19 "a"
+          Colon@19..20 ":"
+          Whitespace@20..21 " "
+          Binary@21..27
+            Word@21..23 "0x"
+            LBracket@23..24 "["
+            Word@24..26 "ff"
+            RBracket@26..27 "]"
+        RBrace@27..28 "}"
+  Newline@28..29 "\n"

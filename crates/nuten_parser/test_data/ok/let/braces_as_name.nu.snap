@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/braces_as_name.nu
+---
+Root@0..31
+  Pipeline@0..14
+    PipelineElement@0..14
+      Let@0..14
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..10 "{a: 1}"
+        Whitespace@10..11 " "
+        Assign@11..12 "="
+        Whitespace@12..13 " "
+        Pipeline@13..14
+          PipelineElement@13..14
+            Word@13..14 "1"
+  Newline@14..15 "\n"
+  Pipeline@15..30
+    PipelineElement@15..30
+      Let@15..30
+        Word@15..18 "let"
+        Whitespace@18..19 " "
+        Word@19..26 "{ls  x}"
+        Whitespace@26..27 " "
+        Assign@27..28 "="
+        Whitespace@28..29 " "
+        Pipeline@29..30
+          PipelineElement@29..30
+            Word@29..30 "1"
+  Newline@30..31 "\n"

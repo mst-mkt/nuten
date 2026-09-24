@@ -1,0 +1,68 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/expression/not_missing_operand.nu
+---
+Root@0..63
+  Pipeline@0..3
+    PipelineElement@0..3
+      MathExpression@0..3
+        Error@0..3
+          Word@0..3 "not"
+  Newline@3..4 "\n"
+  Pipeline@4..11
+    PipelineElement@4..11
+      MathExpression@4..11
+        Operator@4..7 "not"
+        Whitespace@7..8 " "
+        Error@8..11
+          Word@8..11 "not"
+  Newline@11..12 "\n"
+  Pipeline@12..22
+    PipelineElement@12..22
+      MathExpression@12..22
+        Word@12..14 "$a"
+        Whitespace@14..15 " "
+        Operator@15..18 "and"
+        Whitespace@18..19 " "
+        Error@19..22
+          Word@19..22 "not"
+  Newline@22..23 "\n"
+  Pipeline@23..35
+    PipelineElement@23..26
+      MathExpression@23..26
+        Error@23..26
+          Word@23..26 "not"
+    Whitespace@26..27 " "
+    Pipe@27..28 "|"
+    Whitespace@28..29 " "
+    PipelineElement@29..35
+      Call@29..35
+        Word@29..35 "length"
+  Newline@35..36 "\n"
+  Pipeline@36..62
+    PipelineElement@36..62
+      MathExpression@36..62
+        Operator@36..39 "not"
+        Whitespace@39..40 " "
+        Word@40..42 "if"
+        Whitespace@42..43 " "
+        Error@43..45
+          Word@43..45 "$a"
+        Whitespace@45..46 " "
+        Error@46..51
+          Word@46..51 "{ 1 }"
+        Whitespace@51..52 " "
+        Error@52..56
+          Word@52..56 "else"
+        Whitespace@56..57 " "
+        Error@57..62
+          Word@57..62 "{ 2 }"
+  Newline@62..63 "\n"
+error 0..3 "not": MissingTerm
+error 8..11 "not": MissingTerm
+error 19..22 "not": MissingTerm
+error 23..26 "not": MissingTerm
+error 43..45 "$a": MissingOperator
+error 46..51 "{ 1 }": MissingOperator
+error 52..56 "else": MissingOperator
+error 57..62 "{ 2 }": MissingOperator

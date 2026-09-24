@@ -1,0 +1,12 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/pipeline/pipe_before_final_newline.nu
+---
+Root@0..5
+  Pipeline@0..4
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+  Newline@4..5 "\n"

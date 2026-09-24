@@ -1,0 +1,120 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/subexpression/declaration_inside.nu
+---
+Root@0..97
+  Pipeline@0..27
+    PipelineElement@0..27
+      Subexpression@0..27
+        LParen@0..1 "("
+        Pipeline@1..26
+          PipelineElement@1..26
+            Let@1..26
+              Word@1..4 "let"
+              Whitespace@4..5 " "
+              Word@5..6 "x"
+              Whitespace@6..7 " "
+              Assign@7..8 "="
+              Whitespace@8..9 " "
+              Pipeline@9..10
+                PipelineElement@9..10
+                  Word@9..10 "1"
+              Newline@10..11 "\n"
+              Pipeline@11..23
+                PipelineElement@11..23
+                  Call@11..23
+                    Word@11..16 "print"
+                    Whitespace@16..17 " "
+                    String@17..23 "\"side\""
+              Newline@23..24 "\n"
+              Pipeline@24..26
+                PipelineElement@24..26
+                  Word@24..26 "42"
+        RParen@26..27 ")"
+  Newline@27..28 "\n"
+  Pipeline@28..60
+    PipelineElement@28..60
+      Subexpression@28..60
+        LParen@28..29 "("
+        Pipeline@29..59
+          PipelineElement@29..59
+            Let@29..59
+              Word@29..32 "let"
+              Whitespace@32..33 " "
+              Word@33..34 "x"
+              Whitespace@34..35 " "
+              Assign@35..36 "="
+              Whitespace@36..37 " "
+              Pipeline@37..38
+                PipelineElement@37..38
+                  Word@37..38 "1"
+              Newline@38..39 "\n"
+              Newline@39..40 "\n"
+              Pipeline@40..49
+                PipelineElement@40..49
+                  Let@40..49
+                    Word@40..43 "let"
+                    Whitespace@43..44 " "
+                    Word@44..45 "y"
+                    Whitespace@45..46 " "
+                    Assign@46..47 "="
+                    Whitespace@47..48 " "
+                    Pipeline@48..49
+                      PipelineElement@48..49
+                        Word@48..49 "2"
+              Newline@49..50 "\n"
+              Newline@50..51 "\n"
+              Pipeline@51..59
+                PipelineElement@51..59
+                  Call@51..59
+                    Word@51..56 "print"
+                    Whitespace@56..57 " "
+                    Word@57..59 "hi"
+        RParen@59..60 ")"
+  Newline@60..61 "\n"
+  Pipeline@61..72
+    PipelineElement@61..72
+      Subexpression@61..72
+        LParen@61..62 "("
+        Pipeline@62..69
+          PipelineElement@62..69
+            Let@62..69
+              Word@62..65 "let"
+              Whitespace@65..66 " "
+              Word@66..67 "x"
+              Whitespace@67..68 " "
+              Assign@68..69 "="
+        Whitespace@69..70 " "
+        Semicolon@70..71 ";"
+        RParen@71..72 ")"
+  Newline@72..73 "\n"
+  Pipeline@73..96
+    PipelineElement@73..96
+      Subexpression@73..96
+        LParen@73..74 "("
+        Pipeline@74..95
+          PipelineElement@74..95
+            Def@74..95
+              Word@74..77 "def"
+              Whitespace@77..78 " "
+              Word@78..79 "f"
+              Whitespace@79..80 " "
+              Signature@80..88
+                LParen@80..81 "("
+                Param@81..87
+                  Word@81..82 "x"
+                  Colon@82..83 ":"
+                  Whitespace@83..84 " "
+                  Word@84..87 "int"
+                RParen@87..88 ")"
+              Whitespace@88..89 " "
+              Block@89..95
+                LBrace@89..90 "{"
+                Whitespace@90..91 " "
+                Pipeline@91..93
+                  PipelineElement@91..93
+                    Word@91..93 "$x"
+                Whitespace@93..94 " "
+                RBrace@94..95 "}"
+        RParen@95..96 ")"
+  Newline@96..97 "\n"

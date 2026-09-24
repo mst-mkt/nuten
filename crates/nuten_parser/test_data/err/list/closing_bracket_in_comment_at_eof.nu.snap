@@ -1,0 +1,12 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/list/closing_bracket_in_comment_at_eof.nu
+---
+Root@0..11
+  Pipeline@0..11
+    PipelineElement@0..11
+      Call@0..11
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Error@5..11 "[a #b]"
+error 5..6 "[": Lex(Unclosed)

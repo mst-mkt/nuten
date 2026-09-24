@@ -1,0 +1,1 @@
+let x: listx<int> = []

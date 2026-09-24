@@ -1,0 +1,18 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/crlf_multiline.nu
+---
+Root@0..15
+  Pipeline@0..13
+    PipelineElement@0..13
+      List@0..13
+        LBracket@0..1 "["
+        List@1..12
+          LBracket@1..2 "["
+          Newline@2..4 "\r\n"
+          Whitespace@4..8 "    "
+          Word@8..9 "a"
+          Newline@9..11 "\r\n"
+          RBracket@11..12 "]"
+        RBracket@12..13 "]"
+  Newline@13..15 "\r\n"

@@ -1,0 +1,40 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/record_pattern_operators.nu
+---
+Root@0..52
+  Pipeline@0..51
+    PipelineElement@0..51
+      Match@0..51
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..51
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..22
+            Word@11..17 "{a: =}"
+            Whitespace@17..18 " "
+            FatArrow@18..20 "=>"
+            Whitespace@20..21 " "
+            Word@21..22 "1"
+          Comma@22..23 ","
+          Whitespace@23..24 " "
+          MatchArm@24..36
+            Word@24..31 "{: : 1}"
+            Whitespace@31..32 " "
+            FatArrow@32..34 "=>"
+            Whitespace@34..35 " "
+            Word@35..36 "2"
+          Comma@36..37 ","
+          Whitespace@37..38 " "
+          MatchArm@38..49
+            Word@38..44 "{a: |}"
+            Whitespace@44..45 " "
+            FatArrow@45..47 "=>"
+            Whitespace@47..48 " "
+            Word@48..49 "3"
+          Whitespace@49..50 " "
+          RBrace@50..51 "}"
+  Newline@51..52 "\n"

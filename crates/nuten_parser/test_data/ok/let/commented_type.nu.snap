@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/commented_type.nu
+---
+Root@0..38
+  Pipeline@0..37
+    PipelineElement@0..37
+      Subexpression@0..37
+        LParen@0..1 "("
+        Pipeline@1..36
+          PipelineElement@1..36
+            Let@1..36
+              Word@1..4 "let"
+              Whitespace@4..5 " "
+              Word@5..7 "x:"
+              Whitespace@7..8 " "
+              Word@8..17 "record<a:"
+              Whitespace@17..18 " "
+              Comment@18..21 "# c"
+              Newline@21..22 "\n"
+              Whitespace@22..23 " "
+              Word@23..27 "int>"
+              Whitespace@27..28 " "
+              Assign@28..29 "="
+              Whitespace@29..30 " "
+              Pipeline@30..36
+                PipelineElement@30..36
+                  Record@30..36
+                    LBrace@30..31 "{"
+                    RecordField@31..35
+                      Word@31..32 "a"
+                      Colon@32..33 ":"
+                      Whitespace@33..34 " "
+                      Word@34..35 "1"
+                    RBrace@35..36 "}"
+        RParen@36..37 ")"
+  Newline@37..38 "\n"

@@ -1,0 +1,52 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/closure/flags.nu
+---
+Root@0..60
+  Pipeline@0..42
+    PipelineElement@0..42
+      Call@0..42
+        Word@0..2 "do"
+        Whitespace@2..3 " "
+        Block@3..42
+          LBrace@3..4 "{"
+          ClosureParams@4..35
+            Pipe@4..5 "|"
+            Param@5..17
+              Word@5..11 "--flag"
+              Whitespace@11..12 " "
+              ShortFlag@12..16 "(-f)"
+              Comma@16..17 ","
+            Whitespace@17..18 " "
+            Param@18..34
+              Word@18..29 "--other(-o)"
+              Colon@29..30 ":"
+              Whitespace@30..31 " "
+              Word@31..34 "int"
+            Pipe@34..35 "|"
+          Whitespace@35..36 " "
+          Pipeline@36..41
+            PipelineElement@36..41
+              Word@36..41 "$flag"
+          RBrace@41..42 "}"
+  Newline@42..43 "\n"
+  Pipeline@43..59
+    PipelineElement@43..59
+      Call@43..59
+        Word@43..45 "do"
+        Whitespace@45..46 " "
+        Block@46..59
+          LBrace@46..47 "{"
+          ClosureParams@47..55
+            Pipe@47..48 "|"
+            Param@48..54
+              Word@48..49 "x"
+              Whitespace@49..50 " "
+              ShortFlag@50..54 "(-f)"
+            Pipe@54..55 "|"
+          Whitespace@55..56 " "
+          Pipeline@56..58
+            PipelineElement@56..58
+              Word@56..58 "$x"
+          RBrace@58..59 "}"
+  Newline@59..60 "\n"

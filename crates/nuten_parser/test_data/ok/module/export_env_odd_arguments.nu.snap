@@ -1,0 +1,48 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/export_env_odd_arguments.nu
+---
+Root@0..113
+  Pipeline@0..35
+    PipelineElement@0..35
+      Call@0..35
+        Word@0..10 "export-env"
+        Whitespace@10..11 " "
+        Word@11..25 "{ $env.C = 1 }"
+        Whitespace@25..26 " "
+        Word@26..35 "(ls   -a)"
+  Newline@35..36 "\n"
+  Pipeline@36..46
+    PipelineElement@36..46
+      Call@36..46
+        Word@36..46 "export-env"
+  Newline@46..47 "\n"
+  Pipeline@47..65
+    PipelineElement@47..65
+      ExportEnv@47..65
+        Word@47..57 "export-env"
+        Whitespace@57..58 " "
+        Block@58..65
+          LBrace@58..59 "{"
+          Pipeline@59..64
+            PipelineElement@59..64
+              Call@59..64
+                Word@59..64 "...$x"
+          RBrace@64..65 "}"
+  Newline@65..66 "\n"
+  Pipeline@66..79
+    PipelineElement@66..79
+      Call@66..79
+        Word@66..76 "export-env"
+        Whitespace@76..77 " "
+        Word@77..79 "$x"
+  Newline@79..80 "\n"
+  Pipeline@80..112
+    PipelineElement@80..112
+      Call@80..112
+        Word@80..90 "export-env"
+        Whitespace@90..91 " "
+        Word@91..97 "--help"
+        Whitespace@97..98 " "
+        Word@98..112 "{ $env.A = 1 }"
+  Newline@112..113 "\n"

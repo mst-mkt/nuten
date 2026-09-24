@@ -1,0 +1,71 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/interpolation/spaced_parens.nu
+---
+Root@0..62
+  Pipeline@0..18
+    PipelineElement@0..10
+      Interpolation@0..10
+        InterpText@0..3 "$\"x"
+        Subexpression@3..9
+          LParen@3..4 "("
+          Whitespace@4..5 " "
+          Pipeline@5..7
+            PipelineElement@5..7
+              Word@5..7 "$y"
+          Whitespace@7..8 " "
+          RParen@8..9 ")"
+        InterpText@9..10 "\""
+    Whitespace@10..11 " "
+    Pipe@11..12 "|"
+    Whitespace@12..13 " "
+    PipelineElement@13..18
+      Call@13..18
+        Word@13..18 "print"
+  Newline@18..19 "\n"
+  Pipeline@19..33
+    PipelineElement@19..33
+      ExternalCall@19..33
+        Word@19..24 "^echo"
+        Whitespace@24..25 " "
+        Interpolation@25..33
+          InterpText@25..27 "$\""
+          Subexpression@27..32
+            LParen@27..28 "("
+            Whitespace@28..29 " "
+            Pipeline@29..30
+              PipelineElement@29..30
+                Word@29..30 "1"
+            Whitespace@30..31 " "
+            RParen@31..32 ")"
+          InterpText@32..33 "\""
+  Newline@33..34 "\n"
+  Pipeline@34..49
+    PipelineElement@34..49
+      Alias@34..49
+        Word@34..39 "alias"
+        Whitespace@39..40 " "
+        Word@40..42 "al"
+        Whitespace@42..43 " "
+        Assign@43..44 "="
+        Whitespace@44..45 " "
+        Call@45..49
+          Word@45..49 "echo"
+  Newline@49..50 "\n"
+  Pipeline@50..61
+    PipelineElement@50..61
+      Call@50..61
+        Word@50..52 "al"
+        Whitespace@52..53 " "
+        Interpolation@53..61
+          InterpText@53..55 "$\""
+          Subexpression@55..60
+            LParen@55..56 "("
+            Whitespace@56..57 " "
+            Pipeline@57..58
+              PipelineElement@57..58
+                Word@57..58 "1"
+            Whitespace@58..59 " "
+            RParen@59..60 ")"
+          InterpText@60..61 "\""
+  Newline@61..62 "\n"

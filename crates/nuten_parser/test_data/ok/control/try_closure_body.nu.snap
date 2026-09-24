@@ -1,0 +1,25 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/try_closure_body.nu
+---
+Root@0..14
+  Pipeline@0..13
+    PipelineElement@0..13
+      Try@0..13
+        Word@0..3 "try"
+        Whitespace@3..4 " "
+        Block@4..13
+          LBrace@4..5 "{"
+          ClosureParams@5..8
+            Pipe@5..6 "|"
+            Param@6..7
+              Word@6..7 "e"
+            Pipe@7..8 "|"
+          Whitespace@8..9 " "
+          Pipeline@9..11
+            PipelineElement@9..11
+              Call@9..11
+                Word@9..11 "ls"
+          Whitespace@11..12 " "
+          RBrace@12..13 "}"
+  Newline@13..14 "\n"

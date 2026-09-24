@@ -1,0 +1,19 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/binary/as_argument.nu
+---
+Root@0..25
+  Pipeline@0..11
+    PipelineElement@0..11
+      Call@0..11
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Word@5..11 "0x[ff]"
+  Newline@11..12 "\n"
+  Pipeline@12..24
+    PipelineElement@12..24
+      ExternalCall@12..24
+        Word@12..17 "^echo"
+        Whitespace@17..18 " "
+        Word@18..24 "0x[ff]"
+  Newline@24..25 "\n"

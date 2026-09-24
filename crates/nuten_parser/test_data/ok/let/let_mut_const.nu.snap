@@ -1,0 +1,60 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/let_mut_const.nu
+---
+Root@0..52
+  Pipeline@0..9
+    PipelineElement@0..9
+      Let@0..9
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Assign@6..7 "="
+        Whitespace@7..8 " "
+        Pipeline@8..9
+          PipelineElement@8..9
+            Word@8..9 "1"
+  Newline@9..10 "\n"
+  Pipeline@10..34
+    PipelineElement@10..34
+      Let@10..34
+        Word@10..13 "mut"
+        Whitespace@13..14 " "
+        Word@14..16 "y:"
+        Whitespace@16..17 " "
+        Word@17..20 "int"
+        Whitespace@20..21 " "
+        Assign@21..22 "="
+        Whitespace@22..23 " "
+        Pipeline@23..34
+          PipelineElement@23..25
+            Call@23..25
+              Word@23..25 "ls"
+          Whitespace@25..26 " "
+          Pipe@26..27 "|"
+          Whitespace@27..28 " "
+          PipelineElement@28..34
+            Call@28..34
+              Word@28..34 "length"
+  Newline@34..35 "\n"
+  Pipeline@35..51
+    PipelineElement@35..51
+      Let@35..51
+        Word@35..40 "const"
+        Whitespace@40..41 " "
+        Word@41..42 "z"
+        Whitespace@42..43 " "
+        Assign@43..44 "="
+        Whitespace@44..45 " "
+        Pipeline@45..51
+          PipelineElement@45..51
+            Record@45..51
+              LBrace@45..46 "{"
+              RecordField@46..50
+                Word@46..47 "a"
+                Colon@47..48 ":"
+                Whitespace@48..49 " "
+                Word@49..50 "1"
+              RBrace@50..51 "}"
+  Newline@51..52 "\n"

@@ -1,0 +1,4 @@
+alias m = ls |
+
+
+| sort

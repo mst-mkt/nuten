@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/redirection/list_or_record_target_without_command.nu
+---
+Root@0..25
+  Pipeline@0..6
+    PipelineElement@0..6
+      Redirection@0..6
+        Error@0..2
+          OutGt@0..2 "o>"
+        Whitespace@2..3 " "
+        List@3..6
+          LBracket@3..4 "["
+          Word@4..5 "a"
+          RBracket@5..6 "]"
+  Newline@6..7 "\n"
+  Pipeline@7..24
+    PipelineElement@7..24
+      Redirection@7..16
+        Error@7..9
+          OutGt@7..9 "o>"
+        Whitespace@9..10 " "
+        Record@10..16
+          LBrace@10..11 "{"
+          RecordField@11..15
+            Word@11..12 "a"
+            Colon@12..13 ":"
+            Whitespace@13..14 " "
+            Word@14..15 "1"
+          RBrace@15..16 "}"
+      Whitespace@16..17 " "
+      Word@17..24 "{ls  x}"
+  Newline@24..25 "\n"
+error 0..2 "o>": RedirectionAtHead
+error 7..9 "o>": RedirectionAtHead

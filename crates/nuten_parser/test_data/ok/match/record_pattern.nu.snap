@@ -1,0 +1,100 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/record_pattern.nu
+---
+Root@0..92
+  Pipeline@0..91
+    PipelineElement@0..91
+      Match@0..91
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..91
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..18
+            RecordPattern@11..13
+              LBrace@11..12 "{"
+              RBrace@12..13 "}"
+            Whitespace@13..14 " "
+            FatArrow@14..16 "=>"
+            Whitespace@16..17 " "
+            Word@17..18 "a"
+          Comma@18..19 ","
+          Whitespace@19..20 " "
+          MatchArm@20..35
+            RecordPattern@20..30
+              LBrace@20..21 "{"
+              RecordField@21..25
+                Word@21..22 "a"
+                Colon@22..23 ":"
+                Whitespace@23..24 " "
+                Word@24..25 "1"
+              Comma@25..26 ","
+              Whitespace@26..27 " "
+              Word@27..29 "$b"
+              RBrace@29..30 "}"
+            Whitespace@30..31 " "
+            FatArrow@31..33 "=>"
+            Whitespace@33..34 " "
+            Word@34..35 "b"
+          Comma@35..36 ","
+          Whitespace@36..37 " "
+          MatchArm@37..52
+            RecordPattern@37..47
+              LBrace@37..38 "{"
+              RecordField@38..41
+                Word@38..39 "a"
+                Colon@39..40 ":"
+                Word@40..41 "1"
+              Comma@41..42 ","
+              RecordField@42..46
+                Word@42..43 "b"
+                Colon@43..44 ":"
+                Word@44..46 "$c"
+              RBrace@46..47 "}"
+            Whitespace@47..48 " "
+            FatArrow@48..50 "=>"
+            Whitespace@50..51 " "
+            Word@51..52 "c"
+          Comma@52..53 ","
+          Whitespace@53..54 " "
+          MatchArm@54..89
+            RecordPattern@54..84
+              LBrace@54..55 "{"
+              RecordField@55..69
+                String@55..60 "\"a b\""
+                Colon@60..61 ":"
+                Whitespace@61..62 " "
+                ListPattern@62..69
+                  LBracket@62..63 "["
+                  Word@63..65 "$d"
+                  Whitespace@65..66 " "
+                  Word@66..68 ".."
+                  RBracket@68..69 "]"
+              Comma@69..70 ","
+              Whitespace@70..71 " "
+              RecordField@71..83
+                Word@71..72 "e"
+                Colon@72..73 ":"
+                Whitespace@73..74 " "
+                RecordPattern@74..83
+                  LBrace@74..75 "{"
+                  RecordField@75..82
+                    Word@75..76 "f"
+                    Colon@76..77 ":"
+                    Whitespace@77..78 " "
+                    Range@78..82
+                      Word@78..79 "1"
+                      RangeOperator@79..81 ".."
+                      Word@81..82 "3"
+                  RBrace@82..83 "}"
+              RBrace@83..84 "}"
+            Whitespace@84..85 " "
+            FatArrow@85..87 "=>"
+            Whitespace@87..88 " "
+            Word@88..89 "d"
+          Whitespace@89..90 " "
+          RBrace@90..91 "}"
+  Newline@91..92 "\n"

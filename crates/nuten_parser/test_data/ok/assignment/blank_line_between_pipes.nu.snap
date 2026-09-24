@@ -1,0 +1,26 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/assignment/blank_line_between_pipes.nu
+---
+Root@0..14
+  Pipeline@0..13
+    PipelineElement@0..13
+      Assignment@0..13
+        Word@0..2 "$x"
+        Whitespace@2..3 " "
+        Assign@3..4 "="
+        Whitespace@4..5 " "
+        Pipeline@5..13
+          PipelineElement@5..6
+            Call@5..6
+              Word@5..6 "a"
+          Whitespace@6..7 " "
+          Pipe@7..8 "|"
+          Newline@8..9 "\n"
+          Newline@9..10 "\n"
+          Pipe@10..11 "|"
+          Whitespace@11..12 " "
+          PipelineElement@12..13
+            Call@12..13
+              Word@12..13 "b"
+  Newline@13..14 "\n"

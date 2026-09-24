@@ -1,0 +1,63 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/expression/missing_operator.nu
+---
+Root@0..37
+  Pipeline@0..3
+    PipelineElement@0..3
+      MathExpression@0..3
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Error@2..3
+          Word@2..3 "2"
+  Newline@3..4 "\n"
+  Pipeline@4..11
+    PipelineElement@4..11
+      MathExpression@4..11
+        List@4..9
+          LBracket@4..5 "["
+          Word@5..6 "1"
+          Whitespace@6..7 " "
+          Word@7..8 "2"
+          RBracket@8..9 "]"
+        Whitespace@9..10 " "
+        Error@10..11
+          Word@10..11 "3"
+  Newline@11..12 "\n"
+  Pipeline@12..16
+    PipelineElement@12..16
+      MathExpression@12..16
+        Word@12..13 "1"
+        Whitespace@13..14 " "
+        Error@14..16
+          Word@14..16 "-2"
+  Newline@16..17 "\n"
+  Pipeline@17..24
+    PipelineElement@17..24
+      MathExpression@17..24
+        Word@17..18 "1"
+        Whitespace@18..19 " "
+        Operator@19..20 "+"
+        Whitespace@20..21 " "
+        Word@21..22 "2"
+        Whitespace@22..23 " "
+        Error@23..24
+          Word@23..24 "3"
+  Newline@24..25 "\n"
+  Pipeline@25..36
+    PipelineElement@25..36
+      MathExpression@25..36
+        Word@25..26 "1"
+        Whitespace@26..27 " "
+        Operator@27..28 "+"
+        Whitespace@28..29 " "
+        Word@29..30 "2"
+        Whitespace@30..31 " "
+        Error@31..36
+          Word@31..36 "[3 4]"
+  Newline@36..37 "\n"
+error 2..3 "2": MissingOperator
+error 10..11 "3": MissingOperator
+error 14..16 "-2": MissingOperator
+error 23..24 "3": MissingOperator
+error 31..36 "[3 4]": MissingOperator

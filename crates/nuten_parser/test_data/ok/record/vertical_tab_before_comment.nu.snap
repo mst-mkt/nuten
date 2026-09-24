@@ -1,0 +1,33 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/vertical_tab_before_comment.nu
+---
+Root@0..47
+  Pipeline@0..25
+    PipelineElement@0..25
+      List@0..25
+        LBracket@0..1 "["
+        Word@1..24 "{a: $env.x\u{b}#:[b c: d]\n}"
+        RBracket@24..25 "]"
+  Newline@25..26 "\n"
+  Pipeline@26..46
+    PipelineElement@26..46
+      List@26..46
+        LBracket@26..27 "["
+        Record@27..45
+          LBrace@27..28 "{"
+          RecordField@28..34
+            Word@28..29 "a"
+            Colon@29..30 ":"
+            Whitespace@30..31 " "
+            Word@31..34 "k\u{b}#"
+          Comma@34..35 ","
+          RecordField@35..43
+            String@35..40 "\"x:}\""
+            Colon@40..41 ":"
+            Whitespace@41..42 " "
+            Word@42..43 "2"
+          Newline@43..44 "\n"
+          RBrace@44..45 "}"
+        RBracket@45..46 "]"
+  Newline@46..47 "\n"

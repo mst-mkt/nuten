@@ -1,0 +1,43 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/pipeline/line_start_pipe_after_comment.nu
+---
+Root@0..62
+  Pipeline@0..35
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Newline@2..3 "\n"
+    Pipe@3..4 "|"
+    Whitespace@4..5 " "
+    PipelineElement@5..13
+      Call@5..13
+        Word@5..8 "get"
+        Whitespace@8..9 " "
+        Word@9..13 "name"
+    Newline@13..14 "\n"
+    Whitespace@14..16 "  "
+    Comment@16..25 "# comment"
+    Newline@25..26 "\n"
+    Whitespace@26..28 "  "
+    Pipe@28..29 "|"
+    Whitespace@29..30 " "
+    PipelineElement@30..35
+      Call@30..35
+        Word@30..35 "first"
+  Newline@35..36 "\n"
+  Newline@36..37 "\n"
+  Pipeline@37..61
+    PipelineElement@37..39
+      Call@37..39
+        Word@37..39 "ls"
+    Whitespace@39..40 " "
+    Comment@40..50 "# trailing"
+    Newline@50..51 "\n"
+    Whitespace@51..53 "  "
+    Pipe@53..54 "|"
+    Whitespace@54..55 " "
+    PipelineElement@55..61
+      Call@55..61
+        Word@55..61 "length"
+  Newline@61..62 "\n"

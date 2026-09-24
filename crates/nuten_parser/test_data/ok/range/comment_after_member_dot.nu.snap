@@ -1,0 +1,12 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/comment_after_member_dot.nu
+---
+Root@0..15
+  Pipeline@0..14
+    PipelineElement@0..14
+      List@0..14
+        LBracket@0..1 "["
+        Word@1..13 "(ls).#(\n)..3"
+        RBracket@13..14 "]"
+  Newline@14..15 "\n"

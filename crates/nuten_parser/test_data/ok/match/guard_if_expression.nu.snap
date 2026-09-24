@@ -1,0 +1,99 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/guard_if_expression.nu
+---
+Root@0..101
+  Pipeline@0..100
+    PipelineElement@0..100
+      Match@0..100
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..100
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..42
+            Word@11..13 "$y"
+            Whitespace@13..14 " "
+            Word@14..16 "if"
+            Whitespace@16..17 " "
+            If@17..37
+              Word@17..19 "if"
+              Whitespace@19..20 " "
+              Word@20..24 "true"
+              Whitespace@24..25 " "
+              Block@25..28
+                LBrace@25..26 "{"
+                Pipeline@26..27
+                  PipelineElement@26..27
+                    Word@26..27 "1"
+                RBrace@27..28 "}"
+              Whitespace@28..29 " "
+              Word@29..33 "else"
+              Whitespace@33..34 " "
+              Block@34..37
+                LBrace@34..35 "{"
+                Pipeline@35..36
+                  PipelineElement@35..36
+                    Word@35..36 "2"
+                RBrace@36..37 "}"
+            Whitespace@37..38 " "
+            FatArrow@38..40 "=>"
+            Whitespace@40..41 " "
+            Word@41..42 "a"
+          Comma@42..43 ","
+          Whitespace@43..44 " "
+          MatchArm@44..61
+            Word@44..46 "$y"
+            Whitespace@46..47 " "
+            Word@47..49 "if"
+            Whitespace@49..50 " "
+            Word@50..52 "$y"
+            Whitespace@52..53 " "
+            Pipe@53..54 "|"
+            Whitespace@54..55 " "
+            Word@55..56 "z"
+            Whitespace@56..57 " "
+            FatArrow@57..59 "=>"
+            Whitespace@59..60 " "
+            Word@60..61 "b"
+          Comma@61..62 ","
+          Whitespace@62..63 " "
+          MatchArm@63..98
+            Word@63..65 "$y"
+            Whitespace@65..66 " "
+            Word@66..68 "if"
+            Whitespace@68..69 " "
+            MathExpression@69..93
+              Word@69..70 "1"
+              Whitespace@70..71 " "
+              Operator@71..72 "+"
+              Whitespace@72..73 " "
+              If@73..93
+                Word@73..75 "if"
+                Whitespace@75..76 " "
+                Word@76..80 "true"
+                Whitespace@80..81 " "
+                Block@81..84
+                  LBrace@81..82 "{"
+                  Pipeline@82..83
+                    PipelineElement@82..83
+                      Word@82..83 "1"
+                  RBrace@83..84 "}"
+                Whitespace@84..85 " "
+                Word@85..89 "else"
+                Whitespace@89..90 " "
+                Block@90..93
+                  LBrace@90..91 "{"
+                  Pipeline@91..92
+                    PipelineElement@91..92
+                      Word@91..92 "2"
+                  RBrace@92..93 "}"
+            Whitespace@93..94 " "
+            FatArrow@94..96 "=>"
+            Whitespace@96..97 " "
+            Word@97..98 "c"
+          Whitespace@98..99 " "
+          RBrace@99..100 "}"
+  Newline@100..101 "\n"

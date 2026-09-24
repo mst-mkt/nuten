@@ -1,0 +1,55 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/extern_arguments.nu
+---
+Root@0..74
+  Pipeline@0..25
+    PipelineElement@0..25
+      Def@0..25
+        Word@0..6 "extern"
+        Whitespace@6..7 " "
+        Word@7..15 "external"
+        Whitespace@15..16 " "
+        Signature@16..25
+          LBracket@16..17 "["
+          Param@17..24
+            Word@17..18 "x"
+            Colon@18..19 ":"
+            Whitespace@19..20 " "
+            Word@20..24 "list"
+          RBracket@24..25 "]"
+  Newline@25..26 "\n"
+  Pipeline@26..42
+    PipelineElement@26..42
+      Call@26..42
+        Word@26..34 "external"
+        Whitespace@34..35 " "
+        Word@35..42 "[1,  2]"
+  Newline@42..43 "\n"
+  Pipeline@43..59
+    PipelineElement@43..59
+      Def@43..59
+        Word@43..49 "extern"
+        Whitespace@49..50 " "
+        Word@50..55 "outer"
+        Whitespace@55..56 " "
+        Signature@56..59
+          LBracket@56..57 "["
+          Param@57..58
+            Word@57..58 "x"
+          RBracket@58..59 "]"
+  Newline@59..60 "\n"
+  Pipeline@60..73
+    PipelineElement@60..73
+      Call@60..73
+        Word@60..65 "outer"
+        Whitespace@65..66 " "
+        Record@66..73
+          LBrace@66..67 "{"
+          RecordField@67..72
+            Word@67..68 "a"
+            Colon@68..69 ":"
+            Whitespace@69..71 "  "
+            Word@71..72 "1"
+          RBrace@72..73 "}"
+  Newline@73..74 "\n"

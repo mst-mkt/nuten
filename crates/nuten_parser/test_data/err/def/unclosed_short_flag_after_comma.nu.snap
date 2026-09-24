@@ -1,0 +1,21 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/def/unclosed_short_flag_after_comma.nu
+---
+Root@0..16
+  Pipeline@0..15
+    PipelineElement@0..15
+      Def@0..15
+        Word@0..3 "def"
+        Whitespace@3..4 "\r"
+        Word@4..5 ","
+        Whitespace@5..6 "\r"
+        Signature@6..15
+          LBracket@6..7 "["
+          Param@7..14
+            Word@7..10 "%\u{c}#"
+            Comma@10..11 ","
+            Error@11..14 "(-\r"
+          RBracket@14..15 "]"
+  Newline@15..16 "\n"
+error 11..12 "(": Lex(Unclosed)

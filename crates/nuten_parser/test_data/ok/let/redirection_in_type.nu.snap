@@ -1,0 +1,118 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/redirection_in_type.nu
+---
+Root@0..136
+  Pipeline@0..21
+    PipelineElement@0..21
+      Let@0..21
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..6 "x:"
+        Whitespace@6..7 " "
+        Word@7..10 "a<b"
+        Whitespace@10..11 " "
+        Word@11..12 "c"
+        Whitespace@12..13 " "
+        Redirection@13..17
+          OutGt@13..15 "o>"
+          Whitespace@15..16 " "
+          Word@16..17 "f"
+        Whitespace@17..18 " "
+        Assign@18..19 "="
+        Whitespace@19..20 " "
+        Pipeline@20..21
+          PipelineElement@20..21
+            Word@20..21 "1"
+  Newline@21..22 "\n"
+  Pipeline@22..44
+    PipelineElement@22..44
+      Let@22..44
+        Word@22..27 "const"
+        Whitespace@27..28 " "
+        Word@28..30 "x:"
+        Whitespace@30..31 " "
+        Word@31..34 "int"
+        Whitespace@34..35 " "
+        Redirection@35..40
+          OutGt@35..37 "o>"
+          Whitespace@37..38 " "
+          Word@38..40 "a<"
+        Whitespace@40..41 " "
+        Assign@41..42 "="
+        Whitespace@42..43 " "
+        Pipeline@43..44
+          PipelineElement@43..44
+            Word@43..44 "1"
+  Newline@44..45 "\n"
+  Pipeline@45..67
+    PipelineElement@45..67
+      Let@45..67
+        Word@45..50 "const"
+        Whitespace@50..51 " "
+        Word@51..53 "x:"
+        Whitespace@53..54 " "
+        Redirection@54..59
+          OutGt@54..56 "o>"
+          Whitespace@56..57 " "
+          Word@57..59 "a<"
+        Whitespace@59..60 " "
+        Word@60..63 "int"
+        Whitespace@63..64 " "
+        Assign@64..65 "="
+        Whitespace@65..66 " "
+        Pipeline@66..67
+          PipelineElement@66..67
+            Word@66..67 "1"
+  Newline@67..68 "\n"
+  Pipeline@68..97
+    PipelineElement@68..97
+      Let@68..97
+        Word@68..74 "export"
+        Whitespace@74..75 " "
+        Word@75..80 "const"
+        Whitespace@80..81 " "
+        Word@81..83 "x:"
+        Whitespace@83..84 " "
+        Word@84..87 "int"
+        Whitespace@87..88 " "
+        Redirection@88..93
+          OutGt@88..90 "o>"
+          Whitespace@90..91 " "
+          Word@91..93 "a<"
+        Whitespace@93..94 " "
+        Assign@94..95 "="
+        Whitespace@95..96 " "
+        Pipeline@96..97
+          PipelineElement@96..97
+            Word@96..97 "1"
+  Newline@97..98 "\n"
+  Pipeline@98..135
+    PipelineElement@98..135
+      Let@98..135
+        Word@98..103 "const"
+        Whitespace@103..104 " "
+        Word@104..106 "x:"
+        Whitespace@106..107 " "
+        Redirection@107..111
+          OutGt@107..109 "o>"
+          Whitespace@109..110 " "
+          Word@110..111 "f"
+        Whitespace@111..112 " "
+        Word@112..121 "record<a:"
+        Whitespace@121..122 " "
+        Word@122..126 "int>"
+        Whitespace@126..127 " "
+        Assign@127..128 "="
+        Whitespace@128..129 " "
+        Pipeline@129..135
+          PipelineElement@129..135
+            Record@129..135
+              LBrace@129..130 "{"
+              RecordField@130..134
+                Word@130..131 "a"
+                Colon@131..132 ":"
+                Whitespace@132..133 " "
+                Word@133..134 "1"
+              RBrace@134..135 "}"
+  Newline@135..136 "\n"

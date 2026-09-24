@@ -1,0 +1,72 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/stacked_with_extra_spaces.nu
+---
+Root@0..126
+  Pipeline@0..125
+    PipelineElement@0..125
+      AttributeBlock@0..125
+        Attribute@0..42
+          Word@0..8 "@example"
+          Whitespace@8..10 "  "
+          String@10..13 "\"a\""
+          Whitespace@13..15 "  "
+          Block@15..23
+            LBrace@15..16 "{"
+            Whitespace@16..18 "  "
+            Pipeline@18..20
+              PipelineElement@18..20
+                Call@18..20
+                  Word@18..20 "ls"
+            Whitespace@20..22 "  "
+            RBrace@22..23 "}"
+          Whitespace@23..25 "  "
+          Word@25..33 "--result"
+          Whitespace@33..35 "  "
+          Record@35..42
+            LBrace@35..36 "{"
+            RecordField@36..41
+              Word@36..37 "a"
+              Colon@37..38 ":"
+              Whitespace@38..40 "  "
+              Word@40..41 "1"
+            RBrace@41..42 "}"
+        Whitespace@42..44 "  "
+        Comment@44..61 "# the description"
+        Newline@61..62 "\n"
+        Attribute@62..81
+          Word@62..75 "@search-terms"
+          Whitespace@75..77 "  "
+          Word@77..78 "a"
+          Whitespace@78..80 "  "
+          Word@80..81 "b"
+        Newline@81..82 "\n"
+        Attribute@82..94
+          Word@82..91 "@category"
+          Whitespace@91..93 "  "
+          Word@93..94 "x"
+        Semicolon@94..95 ";"
+        Whitespace@95..97 "  "
+        Def@97..125
+          Word@97..100 "def"
+          Whitespace@100..102 "  "
+          Word@102..107 "--env"
+          Whitespace@107..109 "  "
+          Word@109..110 "f"
+          Whitespace@110..112 "  "
+          Signature@112..119
+            LBracket@112..113 "["
+            Param@113..118
+              Word@113..114 "a"
+              Colon@114..115 ":"
+              Word@115..118 "int"
+            RBracket@118..119 "]"
+          Whitespace@119..121 "  "
+          Block@121..125
+            LBrace@121..122 "{"
+            Pipeline@122..124
+              PipelineElement@122..124
+                Call@122..124
+                  Word@122..124 "ls"
+            RBrace@124..125 "}"
+  Newline@125..126 "\n"

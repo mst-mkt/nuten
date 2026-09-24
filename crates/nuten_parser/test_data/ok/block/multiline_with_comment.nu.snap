@@ -1,0 +1,43 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/multiline_with_comment.nu
+---
+Root@0..55
+  Pipeline@0..54
+    PipelineElement@0..54
+      Call@0..54
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Block@5..54
+          LBrace@5..6 "{"
+          Newline@6..7 "\n"
+          Whitespace@7..11 "    "
+          Comment@11..20 "# comment"
+          Newline@20..21 "\n"
+          Whitespace@21..25 "    "
+          Pipeline@25..27
+            PipelineElement@25..27
+              Call@25..27
+                Word@25..27 "ls"
+          Semicolon@27..28 ";"
+          Whitespace@28..29 " "
+          Pipeline@29..32
+            PipelineElement@29..32
+              Call@29..32
+                Word@29..32 "pwd"
+          Newline@32..33 "\n"
+          Whitespace@33..37 "    "
+          Pipeline@37..52
+            PipelineElement@37..39
+              Call@37..39
+                Word@37..39 "ls"
+            Newline@39..40 "\n"
+            Whitespace@40..44 "    "
+            Pipe@44..45 "|"
+            Whitespace@45..46 " "
+            PipelineElement@46..52
+              Call@46..52
+                Word@46..52 "length"
+          Newline@52..53 "\n"
+          RBrace@53..54 "}"
+  Newline@54..55 "\n"

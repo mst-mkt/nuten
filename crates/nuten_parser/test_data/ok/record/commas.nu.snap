@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/commas.nu
+---
+Root@0..25
+  Pipeline@0..24
+    PipelineElement@0..24
+      List@0..24
+        LBracket@0..1 "["
+        Record@1..13
+          LBrace@1..2 "{"
+          RecordField@2..6
+            Word@2..3 "a"
+            Colon@3..4 ":"
+            Whitespace@4..5 " "
+            Word@5..6 "1"
+          Comma@6..7 ","
+          Whitespace@7..8 " "
+          RecordField@8..12
+            Word@8..9 "b"
+            Colon@9..10 ":"
+            Whitespace@10..11 " "
+            Word@11..12 "2"
+          RBrace@12..13 "}"
+        Whitespace@13..14 " "
+        Record@14..23
+          LBrace@14..15 "{"
+          RecordField@15..18
+            Word@15..16 "a"
+            Colon@16..17 ":"
+            Word@17..18 "1"
+          Comma@18..19 ","
+          RecordField@19..22
+            Word@19..20 "b"
+            Colon@20..21 ":"
+            Word@21..22 "2"
+          RBrace@22..23 "}"
+        RBracket@23..24 "]"
+  Newline@24..25 "\n"

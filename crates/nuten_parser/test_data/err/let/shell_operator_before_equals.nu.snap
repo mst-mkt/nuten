@@ -1,0 +1,90 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/let/shell_operator_before_equals.nu
+---
+Root@0..68
+  Pipeline@0..12
+    PipelineElement@0..12
+      Let@0..12
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Error@6..8
+          PipePipe@6..8 "||"
+        Whitespace@8..9 " "
+        Assign@9..10 "="
+        Whitespace@10..11 " "
+        Pipeline@11..12
+          PipelineElement@11..12
+            Word@11..12 "1"
+  Newline@12..13 "\n"
+  Pipeline@13..25
+    PipelineElement@13..25
+      Let@13..25
+        Word@13..16 "let"
+        Whitespace@16..17 " "
+        Word@17..18 "x"
+        Whitespace@18..19 " "
+        Error@19..21
+          Word@19..21 "&&"
+        Whitespace@21..22 " "
+        Assign@22..23 "="
+        Whitespace@23..24 " "
+        Pipeline@24..25
+          PipelineElement@24..25
+            Word@24..25 "1"
+  Newline@25..26 "\n"
+  Pipeline@26..38
+    PipelineElement@26..38
+      Let@26..38
+        Word@26..29 "let"
+        Whitespace@29..30 " "
+        Word@30..31 "x"
+        Whitespace@31..32 " "
+        Error@32..34
+          Word@32..34 "2>"
+        Whitespace@34..35 " "
+        Assign@35..36 "="
+        Whitespace@36..37 " "
+        Pipeline@37..38
+          PipelineElement@37..38
+            Word@37..38 "1"
+  Newline@38..39 "\n"
+  Pipeline@39..53
+    PipelineElement@39..53
+      Let@39..53
+        Word@39..42 "let"
+        Whitespace@42..43 " "
+        Word@43..44 "x"
+        Whitespace@44..45 " "
+        Error@45..49
+          Word@45..49 "2>&1"
+        Whitespace@49..50 " "
+        Assign@50..51 "="
+        Whitespace@51..52 " "
+        Pipeline@52..53
+          PipelineElement@52..53
+            Word@52..53 "1"
+  Newline@53..54 "\n"
+  Pipeline@54..67
+    PipelineElement@54..67
+      Let@54..67
+        Word@54..57 "let"
+        Whitespace@57..58 " "
+        Word@58..59 "x"
+        Whitespace@59..60 " "
+        Error@60..63
+          Word@60..63 "o>|"
+        Whitespace@63..64 " "
+        Assign@64..65 "="
+        Whitespace@65..66 " "
+        Pipeline@66..67
+          PipelineElement@66..67
+            Word@66..67 "1"
+  Newline@67..68 "\n"
+error 6..8 "||": ShellOrOr
+error 19..21 "&&": ShellAndAnd
+error 32..34 "2>": ShellErrRedirect
+error 45..49 "2>&1": ShellOutErrRedirect
+error 60..63 "o>|": OutPipe

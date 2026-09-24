@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/redirection_between_operands.nu
+---
+Root@0..37
+  Pipeline@0..16
+    PipelineElement@0..16
+      MathExpression@0..3
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Operator@2..3 "+"
+      Whitespace@3..4 " "
+      Redirection@4..14
+        OutGt@4..6 "o>"
+        Whitespace@6..7 " "
+        Word@7..14 "out.txt"
+      Whitespace@14..15 " "
+      Word@15..16 "2"
+  Newline@16..17 "\n"
+  Pipeline@17..36
+    PipelineElement@17..36
+      MathExpression@17..20
+        Operator@17..20 "not"
+      Whitespace@20..21 " "
+      Redirection@21..31
+        OutGt@21..23 "o>"
+        Whitespace@23..24 " "
+        Word@24..31 "out.txt"
+      Whitespace@31..32 " "
+      Word@32..36 "true"
+  Newline@36..37 "\n"

@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/attribute/blank_lines_before_pipe.nu
+---
+Root@0..11
+  Pipeline@0..4
+    PipelineElement@0..4
+      Attribute@0..4
+        Error@0..2
+          Word@0..2 "@a"
+        Whitespace@2..3 " "
+        Word@3..4 "x"
+  Newline@4..5 "\n"
+  Newline@5..6 "\n"
+  Newline@6..7 "\n"
+  Pipeline@7..10
+    Pipe@7..8 "|"
+    Whitespace@8..9 " "
+    PipelineElement@9..10
+      Call@9..10
+        Word@9..10 "y"
+  Newline@10..11 "\n"
+error 0..2 "@a": AttributeWithoutDefinition

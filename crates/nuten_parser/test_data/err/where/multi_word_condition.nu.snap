@@ -1,0 +1,17 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/where/multi_word_condition.nu
+---
+Root@0..10
+  Pipeline@0..9
+    PipelineElement@0..9
+      Where@0..9
+        Word@0..5 "where"
+        Whitespace@5..6 " "
+        MathExpression@6..9
+          Word@6..7 "a"
+          Whitespace@7..8 " "
+          Error@8..9
+            Word@8..9 "b"
+  Newline@9..10 "\n"
+error 8..9 "b": MissingOperator

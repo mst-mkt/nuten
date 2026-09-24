@@ -1,0 +1,67 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/piped_literal.nu
+---
+Root@0..62
+  Pipeline@0..14
+    PipelineElement@0..5
+      List@0..5
+        LBracket@0..1 "["
+        Word@1..2 "1"
+        Whitespace@2..3 " "
+        Word@3..4 "2"
+        RBracket@4..5 "]"
+    Whitespace@5..6 " "
+    Pipe@6..7 "|"
+    Whitespace@7..8 " "
+    PipelineElement@8..14
+      Call@8..14
+        Word@8..14 "length"
+  Newline@14..15 "\n"
+  Pipeline@15..29
+    PipelineElement@15..21
+      Record@15..21
+        LBrace@15..16 "{"
+        RecordField@16..20
+          Word@16..17 "a"
+          Colon@17..18 ":"
+          Whitespace@18..19 " "
+          Word@19..20 "1"
+        RBrace@20..21 "}"
+    Whitespace@21..22 " "
+    Pipe@22..23 "|"
+    Whitespace@23..24 " "
+    PipelineElement@24..29
+      Call@24..29
+        Word@24..27 "get"
+        Whitespace@27..28 " "
+        Word@28..29 "a"
+  Newline@29..30 "\n"
+  Pipeline@30..47
+    PipelineElement@30..34
+      String@30..34 "\"hi\""
+    Whitespace@34..35 " "
+    Pipe@35..36 "|"
+    Whitespace@36..37 " "
+    PipelineElement@37..47
+      Call@37..47
+        Word@37..40 "str"
+        Whitespace@40..41 " "
+        Word@41..47 "length"
+  Newline@47..48 "\n"
+  Pipeline@48..61
+    PipelineElement@48..52
+      Subexpression@48..52
+        LParen@48..49 "("
+        Pipeline@49..51
+          PipelineElement@49..51
+            Call@49..51
+              Word@49..51 "ls"
+        RParen@51..52 ")"
+    Whitespace@52..53 " "
+    Pipe@53..54 "|"
+    Whitespace@54..55 " "
+    PipelineElement@55..61
+      Call@55..61
+        Word@55..61 "length"
+  Newline@61..62 "\n"

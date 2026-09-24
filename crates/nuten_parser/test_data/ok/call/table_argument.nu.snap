@@ -1,0 +1,47 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/table_argument.nu
+---
+Root@0..59
+  Pipeline@0..29
+    PipelineElement@0..3
+      List@0..3
+        LBracket@0..1 "["
+        Word@1..2 "1"
+        RBracket@2..3 "]"
+    Whitespace@3..4 " "
+    Pipe@4..5 "|"
+    Whitespace@5..6 " "
+    PipelineElement@6..29
+      Call@6..29
+        Word@6..12 "append"
+        Whitespace@12..13 " "
+        Table@13..29
+          LBracket@13..14 "["
+          List@14..20
+            LBracket@14..15 "["
+            Word@15..16 "a"
+            Whitespace@16..18 "  "
+            Word@18..19 "b"
+            RBracket@19..20 "]"
+          Semicolon@20..21 ";"
+          Whitespace@21..22 " "
+          List@22..28
+            LBracket@22..23 "["
+            Word@23..24 "1"
+            Whitespace@24..26 "  "
+            Word@26..27 "2"
+            RBracket@27..28 "]"
+          RBracket@28..29 "]"
+  Newline@29..30 "\n"
+  Pipeline@30..58
+    PipelineElement@30..58
+      Call@30..58
+        Word@30..34 "glob"
+        Whitespace@34..35 " "
+        Word@35..37 "-e"
+        Whitespace@37..38 " "
+        Word@38..54 "[[a  b]; [1  2]]"
+        Whitespace@54..55 " "
+        String@55..58 "\"*\""
+  Newline@58..59 "\n"

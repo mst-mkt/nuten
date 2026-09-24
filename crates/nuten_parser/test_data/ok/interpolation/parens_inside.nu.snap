@@ -1,0 +1,60 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/interpolation/parens_inside.nu
+---
+Root@0..50
+  Pipeline@0..18
+    PipelineElement@0..18
+      Call@0..18
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        Interpolation@6..18
+          InterpText@6..9 "$\"a"
+          Subexpression@9..16
+            LParen@9..10 "("
+            Pipeline@10..15
+              PipelineElement@10..15
+                MathExpression@10..15
+                  Word@10..11 "1"
+                  Whitespace@11..12 " "
+                  Operator@12..13 "+"
+                  Whitespace@13..14 " "
+                  Word@14..15 "2"
+            RParen@15..16 ")"
+          InterpText@16..18 "b\""
+  Newline@18..19 "\n"
+  Pipeline@19..37
+    PipelineElement@19..37
+      Call@19..37
+        Word@19..24 "print"
+        Whitespace@24..25 " "
+        Interpolation@25..37
+          InterpText@25..27 "$'"
+          Subexpression@27..31
+            LParen@27..28 "("
+            Pipeline@28..30
+              PipelineElement@28..30
+                Call@28..30
+                  Word@28..30 "ls"
+            RParen@30..31 ")"
+          Subexpression@31..36
+            LParen@31..32 "("
+            Pipeline@32..35
+              PipelineElement@32..35
+                Call@32..35
+                  Word@32..35 "pwd"
+            RParen@35..36 ")"
+          InterpText@36..37 "'"
+  Newline@37..38 "\n"
+  Pipeline@38..49
+    PipelineElement@38..49
+      Call@38..49
+        Word@38..43 "print"
+        Whitespace@43..44 " "
+        Interpolation@44..49
+          InterpText@44..46 "$\""
+          Subexpression@46..48
+            LParen@46..47 "("
+            RParen@47..48 ")"
+          InterpText@48..49 "\""
+  Newline@49..50 "\n"

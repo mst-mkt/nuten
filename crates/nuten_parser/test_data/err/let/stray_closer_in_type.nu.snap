@@ -1,0 +1,87 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/let/stray_closer_in_type.nu
+---
+Root@0..107
+  Pipeline@0..27
+    PipelineElement@0..27
+      Let@0..27
+        Word@0..3 "mut"
+        Whitespace@3..4 " "
+        Word@4..6 "x:"
+        Whitespace@6..7 " "
+        Error@7..22
+          Word@7..16 "record<a:"
+          Whitespace@16..17 " "
+          Word@17..22 "int]>"
+        Whitespace@22..23 " "
+        Assign@23..24 "="
+        Whitespace@24..25 " "
+        Pipeline@25..27
+          PipelineElement@25..27
+            Record@25..27
+              LBrace@25..26 "{"
+              RBrace@26..27 "}"
+  Newline@27..28 "\n"
+  Pipeline@28..51
+    PipelineElement@28..51
+      Let@28..51
+        Word@28..33 "const"
+        Whitespace@33..34 " "
+        Word@34..36 "x:"
+        Whitespace@36..37 " "
+        Error@37..46 "list<int)"
+        Whitespace@46..47 " "
+        Assign@47..48 "="
+        Whitespace@48..49 " "
+        Pipeline@49..51
+          PipelineElement@49..51
+            List@49..51
+              LBracket@49..50 "["
+              RBracket@50..51 "]"
+  Newline@51..52 "\n"
+  Pipeline@52..75
+    PipelineElement@52..75
+      Let@52..75
+        Word@52..55 "let"
+        Whitespace@55..56 " "
+        Word@56..58 "x:"
+        Whitespace@58..59 " "
+        Error@59..71
+          Word@59..62 "a<b"
+          Whitespace@62..63 " "
+          Word@63..66 "c]>"
+          Whitespace@66..67 " "
+          OutGt@67..69 "o>"
+          Whitespace@69..70 " "
+          Word@70..71 "f"
+        Whitespace@71..72 " "
+        Assign@72..73 "="
+        Whitespace@73..74 " "
+        Pipeline@74..75
+          PipelineElement@74..75
+            Word@74..75 "1"
+  Newline@75..76 "\n"
+  Pipeline@76..106
+    PipelineElement@76..106
+      Let@76..106
+        Word@76..82 "export"
+        Whitespace@82..83 " "
+        Word@83..88 "const"
+        Whitespace@88..89 " "
+        Word@89..91 "x:"
+        Whitespace@91..92 " "
+        Error@92..101 "list<int)"
+        Whitespace@101..102 " "
+        Assign@102..103 "="
+        Whitespace@103..104 " "
+        Pipeline@104..106
+          PipelineElement@104..106
+            List@104..106
+              LBracket@104..105 "["
+              RBracket@105..106 "]"
+  Newline@106..107 "\n"
+error 20..21 "]": Lex(UnmatchedCloser)
+error 45..46 ")": Lex(UnmatchedCloser)
+error 64..65 "]": Lex(UnmatchedCloser)
+error 100..101 ")": Lex(UnmatchedCloser)

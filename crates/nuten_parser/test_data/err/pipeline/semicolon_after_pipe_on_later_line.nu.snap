@@ -1,0 +1,24 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/pipeline/semicolon_after_pipe_on_later_line.nu
+---
+Root@0..22
+  Pipeline@0..4
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+  Newline@4..5 "\n"
+  Comment@5..14 "# comment"
+  Newline@14..15 "\n"
+  Newline@15..16 "\n"
+  Error@16..17
+    Semicolon@16..17 ";"
+  Whitespace@17..18 " "
+  Pipeline@18..21
+    PipelineElement@18..21
+      Call@18..21
+        Word@18..21 "pwd"
+  Newline@21..22 "\n"
+error 16..17 ";": SemicolonAfterPipe

@@ -1,0 +1,26 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/redirection/separate_stdout_and_stderr_targets.nu
+---
+Root@0..35
+  Pipeline@0..34
+    PipelineElement@0..25
+      Call@0..2
+        Word@0..2 "ls"
+      Whitespace@2..3 " "
+      Redirection@3..14
+        OutGtGt@3..6 "o>>"
+        Whitespace@6..7 " "
+        Word@7..14 "out.txt"
+      Whitespace@14..15 " "
+      Redirection@15..25
+        ErrGt@15..17 "e>"
+        Whitespace@17..18 " "
+        Word@18..25 "err.log"
+    Whitespace@25..26 " "
+    Pipe@26..27 "|"
+    Whitespace@27..28 " "
+    PipelineElement@28..34
+      Call@28..34
+        Word@28..34 "length"
+  Newline@34..35 "\n"

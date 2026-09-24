@@ -1,0 +1,103 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/block/empty_control_body.nu
+---
+Root@0..107
+  Pipeline@0..23
+    PipelineElement@0..23
+      If@0..23
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Word@3..7 "true"
+        Whitespace@7..8 " "
+        Block@8..13
+          LBrace@8..9 "{"
+          Whitespace@9..12 "   "
+          RBrace@12..13 "}"
+        Whitespace@13..14 " "
+        Word@14..18 "else"
+        Whitespace@18..19 " "
+        Block@19..23
+          LBrace@19..20 "{"
+          Whitespace@20..22 "  "
+          RBrace@22..23 "}"
+  Newline@23..24 "\n"
+  Pipeline@24..41
+    PipelineElement@24..41
+      For@24..41
+        Word@24..27 "for"
+        Whitespace@27..28 " "
+        Word@28..29 "x"
+        Whitespace@29..30 " "
+        Word@30..32 "in"
+        Whitespace@32..33 " "
+        List@33..35
+          LBracket@33..34 "["
+          RBracket@34..35 "]"
+        Whitespace@35..36 " "
+        Block@36..41
+          LBrace@36..37 "{"
+          Whitespace@37..40 "   "
+          RBrace@40..41 "}"
+  Newline@41..42 "\n"
+  Pipeline@42..57
+    PipelineElement@42..57
+      While@42..57
+        Word@42..47 "while"
+        Whitespace@47..48 " "
+        Word@48..53 "false"
+        Whitespace@53..54 " "
+        Block@54..57
+          LBrace@54..55 "{"
+          Whitespace@55..56 " "
+          RBrace@56..57 "}"
+  Newline@57..58 "\n"
+  Pipeline@58..66
+    PipelineElement@58..66
+      Loop@58..66
+        Word@58..62 "loop"
+        Whitespace@62..63 " "
+        Block@63..66
+          LBrace@63..64 "{"
+          Whitespace@64..65 " "
+          RBrace@65..66 "}"
+  Newline@66..67 "\n"
+  Pipeline@67..84
+    PipelineElement@67..84
+      Try@67..84
+        Word@67..70 "try"
+        Whitespace@70..71 " "
+        Block@71..74
+          LBrace@71..72 "{"
+          Whitespace@72..73 " "
+          RBrace@73..74 "}"
+        Whitespace@74..75 " "
+        Word@75..80 "catch"
+        Whitespace@80..81 " "
+        Block@81..84
+          LBrace@81..82 "{"
+          Whitespace@82..83 " "
+          RBrace@83..84 "}"
+  Newline@84..85 "\n"
+  Pipeline@85..106
+    PipelineElement@85..106
+      Match@85..106
+        Word@85..90 "match"
+        Whitespace@90..91 " "
+        Word@91..92 "1"
+        Whitespace@92..93 " "
+        MatchArms@93..106
+          LBrace@93..94 "{"
+          Whitespace@94..95 " "
+          MatchArm@95..104
+            Word@95..96 "1"
+            Whitespace@96..97 " "
+            FatArrow@97..99 "=>"
+            Whitespace@99..100 " "
+            Block@100..104
+              LBrace@100..101 "{"
+              Whitespace@101..103 "  "
+              RBrace@103..104 "}"
+          Whitespace@104..105 " "
+          RBrace@105..106 "}"
+  Newline@106..107 "\n"

@@ -1,0 +1,24 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/string_bounds.nu
+---
+Root@0..35
+  Pipeline@0..9
+    PipelineElement@0..9
+      CellPath@0..9
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        String@3..9 "\"a..b\""
+  Newline@9..10 "\n"
+  Pipeline@10..17
+    PipelineElement@10..17
+      Word@10..17 "$\"a\"..3"
+  Newline@17..18 "\n"
+  Pipeline@18..24
+    PipelineElement@18..24
+      Word@18..24 "\"a\"..3"
+  Newline@24..25 "\n"
+  Pipeline@25..34
+    PipelineElement@25..34
+      Word@25..34 "r#'a'#..3"
+  Newline@34..35 "\n"

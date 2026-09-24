@@ -1,0 +1,53 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/empty_nested.nu
+---
+Root@0..37
+  Pipeline@0..9
+    PipelineElement@0..9
+      List@0..9
+        LBracket@0..1 "["
+        Record@1..4
+          LBrace@1..2 "{"
+          Whitespace@2..3 " "
+          RBrace@3..4 "}"
+        Whitespace@4..5 " "
+        Record@5..8
+          LBrace@5..6 "{"
+          Newline@6..7 "\n"
+          RBrace@7..8 "}"
+        RBracket@8..9 "]"
+  Newline@9..10 "\n"
+  Pipeline@10..19
+    PipelineElement@10..19
+      Record@10..19
+        LBrace@10..11 "{"
+        RecordField@11..18
+          Word@11..12 "a"
+          Colon@12..13 ":"
+          Whitespace@13..14 " "
+          Record@14..18
+            LBrace@14..15 "{"
+            Whitespace@15..17 "  "
+            RBrace@17..18 "}"
+        RBrace@18..19 "}"
+  Newline@19..20 "\n"
+  Pipeline@20..36
+    PipelineElement@20..36
+      Record@20..36
+        LBrace@20..21 "{"
+        Spread@21..29
+          SpreadOperator@21..24 "..."
+          Record@24..29
+            LBrace@24..25 "{"
+            Whitespace@25..28 "   "
+            RBrace@28..29 "}"
+        Comma@29..30 ","
+        Whitespace@30..31 " "
+        RecordField@31..35
+          Word@31..32 "a"
+          Colon@32..33 ":"
+          Whitespace@33..34 " "
+          Word@34..35 "1"
+        RBrace@35..36 "}"
+  Newline@36..37 "\n"

@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/as_let_value.nu
+---
+Root@0..36
+  Pipeline@0..35
+    PipelineElement@0..35
+      Let@0..35
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "v"
+        Whitespace@5..6 " "
+        Assign@6..7 "="
+        Whitespace@7..8 " "
+        Pipeline@8..35
+          PipelineElement@8..35
+            Match@8..35
+              Word@8..13 "match"
+              Whitespace@13..14 " "
+              Word@14..16 "$x"
+              Whitespace@16..17 " "
+              MatchArms@17..35
+                LBrace@17..18 "{"
+                Whitespace@18..19 " "
+                MatchArm@19..25
+                  Word@19..20 "1"
+                  Whitespace@20..21 " "
+                  FatArrow@21..23 "=>"
+                  Whitespace@23..24 " "
+                  Word@24..25 "a"
+                Comma@25..26 ","
+                Whitespace@26..27 " "
+                MatchArm@27..33
+                  Word@27..28 "_"
+                  Whitespace@28..29 " "
+                  FatArrow@29..31 "=>"
+                  Whitespace@31..32 " "
+                  Word@32..33 "b"
+                Whitespace@33..34 " "
+                RBrace@34..35 "}"
+  Newline@35..36 "\n"

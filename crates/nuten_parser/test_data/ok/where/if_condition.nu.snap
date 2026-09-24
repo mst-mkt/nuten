@@ -1,0 +1,48 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/where/if_condition.nu
+---
+Root@0..71
+  Pipeline@0..33
+    PipelineElement@0..33
+      Where@0..33
+        Word@0..5 "where"
+        Whitespace@5..6 " "
+        If@6..33
+          Word@6..8 "if"
+          Whitespace@8..9 " "
+          Word@9..13 "true"
+          Whitespace@13..14 " "
+          Block@14..20
+            LBrace@14..15 "{"
+            Pipeline@15..19
+              PipelineElement@15..19
+                Word@15..19 "true"
+            RBrace@19..20 "}"
+          Whitespace@20..21 " "
+          Word@21..25 "else"
+          Whitespace@25..26 " "
+          Block@26..33
+            LBrace@26..27 "{"
+            Pipeline@27..32
+              PipelineElement@27..32
+                Word@27..32 "false"
+            RBrace@32..33 "}"
+  Newline@33..34 "\n"
+  Pipeline@34..70
+    PipelineElement@34..70
+      Where@34..70
+        Word@34..39 "where"
+        Whitespace@39..40 " "
+        Word@40..42 "if"
+        Whitespace@42..43 " "
+        Word@43..47 "true"
+        Whitespace@47..48 " "
+        Word@48..54 "{true}"
+        Whitespace@54..55 " "
+        Word@55..59 "else"
+        Whitespace@59..60 " "
+        Word@60..67 "{false}"
+        Whitespace@67..68 " "
+        Word@68..70 "--"
+  Newline@70..71 "\n"

@@ -1,0 +1,103 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/spread/in_record.nu
+---
+Root@0..99
+  Pipeline@0..55
+    PipelineElement@0..55
+      Record@0..55
+        LBrace@0..1 "{"
+        Spread@1..6
+          SpreadOperator@1..4 "..."
+          Word@4..6 "$x"
+        Whitespace@6..7 " "
+        Spread@7..14
+          SpreadOperator@7..10 "..."
+          CellPath@10..14
+            Word@10..12 "$x"
+            Dot@12..13 "."
+            Word@13..14 "a"
+        Whitespace@14..15 " "
+        Spread@15..21
+          SpreadOperator@15..18 "..."
+          Subexpression@18..21
+            LParen@18..19 "("
+            Pipeline@19..20
+              PipelineElement@19..20
+                Call@19..20
+                  Word@19..20 "f"
+            RParen@20..21 ")"
+        Whitespace@21..22 " "
+        Spread@22..31
+          SpreadOperator@22..25 "..."
+          Record@25..31
+            LBrace@25..26 "{"
+            RecordField@26..30
+              Word@26..27 "a"
+              Colon@27..28 ":"
+              Whitespace@28..29 " "
+              Word@29..30 "1"
+            RBrace@30..31 "}"
+        Whitespace@31..32 " "
+        Spread@32..43
+          SpreadOperator@32..35 "..."
+          CellPath@35..43
+            Record@35..41
+              LBrace@35..36 "{"
+              RecordField@36..40
+                Word@36..37 "a"
+                Colon@37..38 ":"
+                Whitespace@38..39 " "
+                Word@39..40 "1"
+              RBrace@40..41 "}"
+            Dot@41..42 "."
+            Word@42..43 "a"
+        Whitespace@43..44 " "
+        Spread@44..54
+          SpreadOperator@44..47 "..."
+          Record@47..54
+            LBrace@47..48 "{"
+            Spread@48..53
+              SpreadOperator@48..51 "..."
+              Word@51..53 "$y"
+            RBrace@53..54 "}"
+        RBrace@54..55 "}"
+  Newline@55..56 "\n"
+  Pipeline@56..79
+    PipelineElement@56..79
+      Record@56..79
+        LBrace@56..57 "{"
+        RecordField@57..61
+          Word@57..58 "a"
+          Colon@58..59 ":"
+          Whitespace@59..60 " "
+          Word@60..61 "1"
+        Comma@61..62 ","
+        Whitespace@62..63 " "
+        Spread@63..68
+          SpreadOperator@63..66 "..."
+          Word@66..68 "$x"
+        Comma@68..69 ","
+        Whitespace@69..70 " "
+        RecordField@70..78
+          Word@70..71 "b"
+          Colon@71..72 ":"
+          Whitespace@72..73 " "
+          Word@73..78 "...$x"
+        RBrace@78..79 "}"
+  Newline@79..80 "\n"
+  Pipeline@80..98
+    PipelineElement@80..98
+      Record@80..98
+        LBrace@80..81 "{"
+        Spread@81..86
+          SpreadOperator@81..84 "..."
+          Record@84..86
+            LBrace@84..85 "{"
+            RBrace@85..86 "}"
+        Whitespace@86..87 " "
+        Spread@87..97
+          SpreadOperator@87..90 "..."
+          Word@90..97 "{|x| 1}"
+        RBrace@97..98 "}"
+  Newline@98..99 "\n"

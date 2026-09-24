@@ -1,0 +1,38 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/aliased.nu
+---
+Root@0..47
+  Pipeline@0..22
+    PipelineElement@0..22
+      Alias@0..22
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..15 "@category"
+        Whitespace@15..16 " "
+        Assign@16..17 "="
+        Whitespace@17..18 " "
+        Call@18..22
+          Word@18..22 "echo"
+  Newline@22..23 "\n"
+  Pipeline@23..46
+    PipelineElement@23..46
+      AttributeBlock@23..46
+        Attribute@23..34
+          Word@23..32 "@category"
+          Whitespace@32..33 " "
+          Word@33..34 "x"
+        Newline@34..35 "\n"
+        Def@35..46
+          Word@35..38 "def"
+          Whitespace@38..39 " "
+          Word@39..40 "j"
+          Whitespace@40..41 " "
+          Signature@41..43
+            LBracket@41..42 "["
+            RBracket@42..43 "]"
+          Whitespace@43..44 " "
+          Block@44..46
+            LBrace@44..45 "{"
+            RBrace@45..46 "}"
+  Newline@46..47 "\n"

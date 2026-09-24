@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/commented_record_type.nu
+---
+Root@0..39
+  Pipeline@0..38
+    PipelineElement@0..38
+      Def@0..38
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..6 "td"
+        Whitespace@6..7 " "
+        Signature@7..31
+          LBracket@7..8 "["
+          Param@8..30
+            Word@8..9 "x"
+            Colon@9..10 ":"
+            Whitespace@10..11 " "
+            Word@11..30 "record<a: int # c\n>"
+          RBracket@30..31 "]"
+        Whitespace@31..32 " "
+        Block@32..38
+          LBrace@32..33 "{"
+          Whitespace@33..34 " "
+          Pipeline@34..36
+            PipelineElement@34..36
+              Call@34..36
+                Word@34..36 "ls"
+          Whitespace@36..37 " "
+          RBrace@37..38 "}"
+  Newline@38..39 "\n"

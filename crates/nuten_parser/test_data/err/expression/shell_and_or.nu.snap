@@ -1,0 +1,50 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/expression/shell_and_or.nu
+---
+Root@0..29
+  Pipeline@0..10
+    PipelineElement@0..10
+      MathExpression@0..10
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Operator@2..3 "+"
+        Whitespace@3..4 " "
+        Word@4..5 "2"
+        Whitespace@5..6 " "
+        Error@6..8
+          PipePipe@6..8 "||"
+        Whitespace@8..9 " "
+        Error@9..10
+          Word@9..10 "3"
+  Newline@10..11 "\n"
+  Pipeline@11..21
+    PipelineElement@11..21
+      MathExpression@11..21
+        Word@11..12 "1"
+        Whitespace@12..13 " "
+        Operator@13..14 "+"
+        Whitespace@14..15 " "
+        Word@15..16 "2"
+        Whitespace@16..17 " "
+        Error@17..19
+          Word@17..19 "&&"
+        Whitespace@19..20 " "
+        Error@20..21
+          Word@20..21 "3"
+  Newline@21..22 "\n"
+  Pipeline@22..28
+    PipelineElement@22..28
+      MathExpression@22..28
+        Word@22..23 "1"
+        Whitespace@23..24 " "
+        Operator@24..25 "+"
+        Whitespace@25..26 " "
+        Error@26..28
+          PipePipe@26..28 "||"
+  Newline@28..29 "\n"
+error 6..8 "||": ShellOrOr
+error 9..10 "3": MissingOperator
+error 17..19 "&&": ShellAndAnd
+error 20..21 "3": MissingOperator
+error 26..28 "||": ShellOrOr

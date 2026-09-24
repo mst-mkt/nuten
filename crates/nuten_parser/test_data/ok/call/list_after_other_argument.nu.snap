@@ -1,0 +1,45 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/list_after_other_argument.nu
+---
+Root@0..35
+  Pipeline@0..19
+    PipelineElement@0..19
+      Call@0..19
+        Word@0..2 "do"
+        Whitespace@2..3 " "
+        Block@3..12
+          LBrace@3..4 "{"
+          ClosureParams@4..7
+            Pipe@4..5 "|"
+            Param@5..6
+              Word@5..6 "x"
+            Pipe@6..7 "|"
+          Whitespace@7..8 " "
+          Pipeline@8..10
+            PipelineElement@8..10
+              Word@8..10 "$x"
+          Whitespace@10..11 " "
+          RBrace@11..12 "}"
+        Whitespace@12..13 " "
+        List@13..19
+          LBracket@13..14 "["
+          Word@14..15 "1"
+          Whitespace@15..17 "  "
+          Word@17..18 "2"
+          RBracket@18..19 "]"
+  Newline@19..20 "\n"
+  Pipeline@20..34
+    PipelineElement@20..34
+      Call@20..34
+        Word@20..24 "echo"
+        Whitespace@24..25 " "
+        Word@25..28 "not"
+        Whitespace@28..29 " "
+        List@29..34
+          LBracket@29..30 "["
+          Word@30..31 "1"
+          Whitespace@31..32 " "
+          Word@32..33 "2"
+          RBracket@33..34 "]"
+  Newline@34..35 "\n"

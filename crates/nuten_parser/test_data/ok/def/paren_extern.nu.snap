@@ -1,0 +1,36 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/paren_extern.nu
+---
+Root@0..46
+  Pipeline@0..25
+    PipelineElement@0..25
+      Def@0..25
+        Word@0..6 "extern"
+        Whitespace@6..7 " "
+        Word@7..8 "k"
+        Whitespace@8..9 " "
+        Signature@9..25
+          LParen@9..10 "("
+          Param@10..24
+            Word@10..16 "--flag"
+            Colon@16..17 ":"
+            Whitespace@17..18 " "
+            Word@18..24 "string"
+          RParen@24..25 ")"
+  Newline@25..26 "\n"
+  Pipeline@26..45
+    PipelineElement@26..45
+      Def@26..45
+        Word@26..32 "extern"
+        Whitespace@32..33 " "
+        Word@33..34 "o"
+        Whitespace@34..35 " "
+        Signature@35..38
+          LParen@35..36 "("
+          Param@36..37
+            Word@36..37 "x"
+          RParen@37..38 ")"
+        Whitespace@38..39 " "
+        Word@39..45 "{ ls }"
+  Newline@45..46 "\n"

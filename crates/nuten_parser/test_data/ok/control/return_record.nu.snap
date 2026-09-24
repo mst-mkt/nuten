@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/return_record.nu
+---
+Root@0..29
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..13
+        Word@0..6 "return"
+        Whitespace@6..7 " "
+        Record@7..13
+          LBrace@7..8 "{"
+          RecordField@8..12
+            Word@8..9 "a"
+            Colon@9..10 ":"
+            Whitespace@10..11 " "
+            Word@11..12 "1"
+          RBrace@12..13 "}"
+  Newline@13..14 "\n"
+  Pipeline@14..28
+    PipelineElement@14..28
+      Call@14..28
+        Word@14..20 "return"
+        Whitespace@20..21 " "
+        Record@21..28
+          LBrace@21..22 "{"
+          Spread@22..27
+            SpreadOperator@22..25 "..."
+            Word@25..27 "$x"
+          RBrace@27..28 "}"
+  Newline@28..29 "\n"

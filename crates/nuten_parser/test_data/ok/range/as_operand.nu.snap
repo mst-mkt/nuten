@@ -1,0 +1,17 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/as_operand.nu
+---
+Root@0..11
+  Pipeline@0..10
+    PipelineElement@0..10
+      MathExpression@0..10
+        Word@0..2 "$x"
+        Whitespace@2..3 " "
+        Operator@3..4 "+"
+        Whitespace@4..5 " "
+        Range@5..10
+          Word@5..6 "1"
+          RangeOperator@6..8 ".."
+          Word@8..10 "$n"
+  Newline@10..11 "\n"

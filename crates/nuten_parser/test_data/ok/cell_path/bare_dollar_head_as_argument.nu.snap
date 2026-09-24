@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/bare_dollar_head_as_argument.nu
+---
+Root@0..28
+  Pipeline@0..9
+    PipelineElement@0..9
+      Call@0..9
+        Word@0..3 "get"
+        Whitespace@3..4 " "
+        CellPath@4..9
+          Word@4..5 "$"
+          Dot@5..6 "."
+          Word@6..7 "a"
+          Dot@7..8 "."
+          Word@8..9 "0"
+  Newline@9..10 "\n"
+  Pipeline@10..17
+    PipelineElement@10..17
+      Call@10..17
+        Word@10..13 "foo"
+        Whitespace@13..14 " "
+        CellPath@14..17
+          Word@14..15 "$"
+          Dot@15..16 "."
+          Word@16..17 "a"
+  Newline@17..18 "\n"
+  Pipeline@18..27
+    PipelineElement@18..27
+      ExternalCall@18..27
+        Word@18..23 "^echo"
+        Whitespace@23..24 " "
+        CellPath@24..27
+          Word@24..25 "$"
+          Dot@25..26 "."
+          Word@26..27 "a"
+  Newline@27..28 "\n"

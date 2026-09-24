@@ -1,0 +1,77 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/def_named_like_keyword.nu
+---
+Root@0..68
+  Pipeline@0..19
+    PipelineElement@0..19
+      Def@0..19
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..8 "else"
+        Whitespace@8..9 " "
+        Signature@9..12
+          LBracket@9..10 "["
+          Param@10..11
+            Word@10..11 "x"
+          RBracket@11..12 "]"
+        Whitespace@12..13 " "
+        Block@13..19
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          Pipeline@15..17
+            PipelineElement@15..17
+              Word@15..17 "$x"
+          Whitespace@17..18 " "
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"
+  Pipeline@20..32
+    PipelineElement@20..32
+      Call@20..32
+        Word@20..24 "else"
+        Whitespace@24..25 " "
+        Record@25..32
+          LBrace@25..26 "{"
+          RecordField@26..31
+            Word@26..27 "a"
+            Colon@27..28 ":"
+            Whitespace@28..30 "  "
+            Word@30..31 "1"
+          RBrace@31..32 "}"
+  Newline@32..33 "\n"
+  Pipeline@33..53
+    PipelineElement@33..53
+      Def@33..53
+        Word@33..36 "def"
+        Whitespace@36..37 " "
+        Word@37..42 "catch"
+        Whitespace@42..43 " "
+        Signature@43..46
+          LBracket@43..44 "["
+          Param@44..45
+            Word@44..45 "x"
+          RBracket@45..46 "]"
+        Whitespace@46..47 " "
+        Block@47..53
+          LBrace@47..48 "{"
+          Whitespace@48..49 " "
+          Pipeline@49..51
+            PipelineElement@49..51
+              Word@49..51 "$x"
+          Whitespace@51..52 " "
+          RBrace@52..53 "}"
+  Newline@53..54 "\n"
+  Pipeline@54..67
+    PipelineElement@54..67
+      Call@54..67
+        Word@54..59 "catch"
+        Whitespace@59..60 " "
+        Record@60..67
+          LBrace@60..61 "{"
+          RecordField@61..66
+            Word@61..62 "a"
+            Colon@62..63 ":"
+            Whitespace@63..65 "  "
+            Word@65..66 "1"
+          RBrace@66..67 "}"
+  Newline@67..68 "\n"

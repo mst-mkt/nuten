@@ -1,0 +1,37 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/list_as_first_argument.nu
+---
+Root@0..40
+  Pipeline@0..23
+    PipelineElement@0..14
+      Call@0..14
+        Word@0..7 "default"
+        Whitespace@7..8 " "
+        List@8..14
+          LBracket@8..9 "["
+          Word@9..10 "1"
+          Whitespace@10..12 "  "
+          Word@12..13 "2"
+          RBracket@13..14 "]"
+    Whitespace@14..15 " "
+    Pipe@15..16 "|"
+    Whitespace@16..17 " "
+    PipelineElement@17..23
+      Call@17..23
+        Word@17..23 "ignore"
+  Newline@23..24 "\n"
+  Pipeline@24..39
+    PipelineElement@24..39
+      Call@24..39
+        Word@24..31 "default"
+        Whitespace@31..32 " "
+        List@32..35
+          LBracket@32..33 "["
+          Word@33..34 "x"
+          RBracket@34..35 "]"
+        Whitespace@35..36 " "
+        Word@36..37 "a"
+        Whitespace@37..38 " "
+        Word@38..39 "b"
+  Newline@39..40 "\n"

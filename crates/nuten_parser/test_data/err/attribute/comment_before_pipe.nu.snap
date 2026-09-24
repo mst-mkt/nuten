@@ -1,0 +1,66 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/attribute/comment_before_pipe.nu
+---
+Root@0..50
+  Pipeline@0..15
+    PipelineElement@0..15
+      Attribute@0..12
+        Error@0..2
+          Word@0..2 "@a"
+        Whitespace@2..3 " "
+        Word@3..4 "x"
+        Newline@4..5 "\n"
+        Comment@5..8 "# c"
+        Newline@8..9 "\n"
+        Pipe@9..10 "|"
+        Whitespace@10..11 " "
+        Word@11..12 "y"
+      Newline@12..13 "\n"
+      Call@13..15
+        Word@13..15 "ls"
+  Newline@15..16 "\n"
+  Pipeline@16..31
+    PipelineElement@16..31
+      Attribute@16..28
+        Error@16..18
+          Word@16..18 "@a"
+        Whitespace@18..19 " "
+        Word@19..20 "x"
+        Whitespace@20..21 " "
+        Comment@21..24 "# c"
+        Newline@24..25 "\n"
+        Pipe@25..26 "|"
+        Whitespace@26..27 " "
+        Word@27..28 "y"
+      Newline@28..29 "\n"
+      Call@29..31
+        Word@29..31 "ls"
+  Newline@31..32 "\n"
+  Pipeline@32..36
+    PipelineElement@32..36
+      Attribute@32..36
+        Error@32..34
+          Word@32..34 "@a"
+        Whitespace@34..35 " "
+        Word@35..36 "x"
+  Whitespace@36..37 " "
+  Comment@37..40 "# c"
+  Newline@40..41 "\n"
+  Newline@41..42 "\n"
+  Newline@42..43 "\n"
+  Pipeline@43..46
+    Pipe@43..44 "|"
+    Whitespace@44..45 " "
+    PipelineElement@45..46
+      Call@45..46
+        Word@45..46 "y"
+  Newline@46..47 "\n"
+  Pipeline@47..49
+    PipelineElement@47..49
+      Call@47..49
+        Word@47..49 "ls"
+  Newline@49..50 "\n"
+error 0..2 "@a": AttributeWithoutDefinition
+error 16..18 "@a": AttributeWithoutDefinition
+error 32..34 "@a": AttributeWithoutDefinition

@@ -1,0 +1,44 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/subexpression/comment_inside.nu
+---
+Root@0..34
+  Pipeline@0..7
+    PipelineElement@0..7
+      Subexpression@0..7
+        LParen@0..1 "("
+        Whitespace@1..2 " "
+        Comment@2..5 "# c"
+        Newline@5..6 "\n"
+        RParen@6..7 ")"
+  Newline@7..8 "\n"
+  Pipeline@8..20
+    PipelineElement@8..20
+      Subexpression@8..20
+        LParen@8..9 "("
+        Pipeline@9..14
+          PipelineElement@9..14
+            Call@9..14
+              Word@9..11 "ls"
+              Whitespace@11..12 " "
+              Word@12..14 "-a"
+        Whitespace@14..15 " "
+        Comment@15..18 "# c"
+        Newline@18..19 "\n"
+        RParen@19..20 ")"
+  Newline@20..21 "\n"
+  Pipeline@21..33
+    PipelineElement@21..33
+      Subexpression@21..33
+        LParen@21..22 "("
+        Pipeline@22..27
+          PipelineElement@22..27
+            Call@22..27
+              Word@22..24 "ls"
+              Whitespace@24..25 " "
+              Word@25..27 "-a"
+        Newline@27..28 "\n"
+        Comment@28..31 "# c"
+        Newline@31..32 "\n"
+        RParen@32..33 ")"
+  Newline@33..34 "\n"

@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/keyword_prefixed_def_arguments.nu
+---
+Root@0..51
+  Pipeline@0..33
+    PipelineElement@0..33
+      Def@0..33
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        String@4..14 "\"return x\""
+        Whitespace@14..15 " "
+        Signature@15..26
+          LBracket@15..16 "["
+          Param@16..25
+            Word@16..17 "y"
+            Colon@17..18 ":"
+            Whitespace@18..19 " "
+            Word@19..25 "string"
+          RBracket@25..26 "]"
+        Whitespace@26..27 " "
+        Block@27..33
+          LBrace@27..28 "{"
+          Whitespace@28..29 " "
+          Pipeline@29..31
+            PipelineElement@29..31
+              Word@29..31 "$y"
+          Whitespace@31..32 " "
+          RBrace@32..33 "}"
+  Newline@33..34 "\n"
+  Pipeline@34..50
+    PipelineElement@34..50
+      Call@34..50
+        Word@34..40 "return"
+        Whitespace@40..41 " "
+        Word@41..42 "x"
+        Whitespace@42..43 " "
+        Word@43..50 "[a,  b]"
+  Newline@50..51 "\n"

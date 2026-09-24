@@ -1,0 +1,64 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/cell_path/repeated_suffix.nu
+---
+Root@0..40
+  Pipeline@0..6
+    PipelineElement@0..6
+      CellPath@0..6
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        Word@3..4 "a"
+        Question@4..5 "?"
+        Error@5..6
+          Question@5..6 "?"
+  Newline@6..7 "\n"
+  Pipeline@7..13
+    PipelineElement@7..13
+      CellPath@7..13
+        Word@7..9 "$x"
+        Dot@9..10 "."
+        Word@10..11 "a"
+        Bang@11..12 "!"
+        Error@12..13
+          Bang@12..13 "!"
+  Newline@13..14 "\n"
+  Pipeline@14..21
+    PipelineElement@14..21
+      CellPath@14..21
+        Word@14..16 "$x"
+        Dot@16..17 "."
+        Word@17..18 "a"
+        Question@18..19 "?"
+        Bang@19..20 "!"
+        Error@20..21
+          Question@20..21 "?"
+  Newline@21..22 "\n"
+  Pipeline@22..31
+    PipelineElement@22..31
+      CellPath@22..31
+        Word@22..24 "$x"
+        Dot@24..25 "."
+        Word@25..26 "a"
+        Question@26..27 "?"
+        Dot@27..28 "."
+        Word@28..29 "b"
+        Question@29..30 "?"
+        Error@30..31
+          Question@30..31 "?"
+  Newline@31..32 "\n"
+  Pipeline@32..39
+    PipelineElement@32..39
+      CellPath@32..39
+        Word@32..34 "$x"
+        Dot@34..35 "."
+        Error@35..37
+          Word@35..37 "-1"
+        Question@37..38 "?"
+        Question@38..39 "?"
+  Newline@39..40 "\n"
+error 5..6 "?": CellPathSeparator { expected: "`.` or `!`" }
+error 12..13 "!": CellPathSeparator { expected: "`.` or `?`" }
+error 20..21 "?": CellPathSeparator { expected: "`.`" }
+error 30..31 "?": CellPathSeparator { expected: "`.` or `!`" }
+error 35..37 "-1": NegativeCellPathIndex

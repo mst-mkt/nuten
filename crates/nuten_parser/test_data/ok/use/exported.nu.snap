@@ -1,0 +1,22 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/use/exported.nu
+---
+Root@0..33
+  Pipeline@0..32
+    PipelineElement@0..32
+      Use@0..32
+        Word@0..6 "export"
+        Whitespace@6..8 "  "
+        Word@8..11 "use"
+        Whitespace@11..13 "  "
+        Word@13..16 "std"
+        Whitespace@16..18 "  "
+        List@18..32
+          LBracket@18..19 "["
+          Word@19..25 "assert"
+          Comma@25..26 ","
+          Whitespace@26..28 "  "
+          Word@28..31 "log"
+          RBracket@31..32 "]"
+  Newline@32..33 "\n"

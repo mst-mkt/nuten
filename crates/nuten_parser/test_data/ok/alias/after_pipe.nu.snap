@@ -1,0 +1,212 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/after_pipe.nu
+---
+Root@0..252
+  Pipeline@0..2
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+  Semicolon@2..3 ";"
+  Whitespace@3..4 " "
+  Pipeline@4..26
+    Pipe@4..5 "|"
+    Whitespace@5..6 " "
+    PipelineElement@6..26
+      Alias@6..26
+        Word@6..11 "alias"
+        Whitespace@11..12 " "
+        Word@12..13 "t"
+        Whitespace@13..14 " "
+        Assign@14..15 "="
+        Whitespace@15..16 " "
+        Call@16..26
+          Word@16..18 "ls"
+          Whitespace@18..19 " "
+          Pipe@19..20 "|"
+          Whitespace@20..21 " "
+          Word@21..26 "[a,b]"
+  Newline@26..27 "\n"
+  Pipeline@27..44
+    PipelineElement@27..44
+      Alias@27..44
+        Word@27..32 "alias"
+        Whitespace@32..33 " "
+        Word@33..34 "u"
+        Whitespace@34..35 " "
+        Assign@35..36 "="
+        Whitespace@36..37 " "
+        Call@37..44
+          Pipe@37..38 "|"
+          Whitespace@38..39 " "
+          Word@39..44 "{x:1}"
+  Newline@44..45 "\n"
+  Pipeline@45..65
+    PipelineElement@45..65
+      Alias@45..65
+        Word@45..50 "alias"
+        Whitespace@50..51 " "
+        Word@51..52 "v"
+        Whitespace@52..53 " "
+        Assign@53..54 "="
+        Whitespace@54..55 " "
+        Call@55..65
+          OutGt@55..57 "o>"
+          Whitespace@57..58 " "
+          Word@58..59 "f"
+          Whitespace@59..60 " "
+          Word@60..65 "{x:1}"
+  Newline@65..66 "\n"
+  Pipeline@66..83
+    PipelineElement@66..83
+      Subexpression@66..83
+        LParen@66..67 "("
+        Pipeline@67..82
+          PipelineElement@67..82
+            Alias@67..82
+              Word@67..72 "alias"
+              Whitespace@72..73 " "
+              Word@73..74 "w"
+              Whitespace@74..75 " "
+              Assign@75..76 "="
+              Whitespace@76..77 " "
+              Call@77..82
+                Word@77..79 "ls"
+                Newline@79..80 "\n"
+                Word@80..82 "-l"
+        RParen@82..83 ")"
+  Newline@83..84 "\n"
+  Pipeline@84..105
+    PipelineElement@84..105
+      Alias@84..105
+        Word@84..89 "alias"
+        Whitespace@89..90 " "
+        Word@90..91 "x"
+        Whitespace@91..92 " "
+        Assign@92..93 "="
+        Whitespace@93..94 " "
+        Call@94..105
+          Pipe@94..95 "|"
+          Newline@95..96 "\n"
+          Word@96..105 "{x:1,y:2}"
+  Newline@105..106 "\n"
+  Pipeline@106..127
+    PipelineElement@106..127
+      Alias@106..127
+        Word@106..111 "alias"
+        Whitespace@111..112 " "
+        Word@112..113 "y"
+        Whitespace@113..114 " "
+        Assign@114..115 "="
+        Newline@115..116 "\n"
+        Call@116..127
+          Pipe@116..117 "|"
+          Whitespace@117..118 " "
+          Word@118..127 "{x:1,y:2}"
+  Newline@127..128 "\n"
+  Pipeline@128..149
+    PipelineElement@128..149
+      Alias@128..149
+        Word@128..133 "alias"
+        Whitespace@133..134 " "
+        Word@134..135 "z"
+        Whitespace@135..136 " "
+        Assign@136..137 "="
+        Whitespace@137..138 " "
+        Comment@138..141 "# c"
+        Newline@141..142 "\n"
+        Call@142..149
+          Pipe@142..143 "|"
+          Whitespace@143..144 " "
+          Word@144..149 "{x:1}"
+  Newline@149..150 "\n"
+  Pipeline@150..165
+    PipelineElement@150..165
+      Alias@150..165
+        Word@150..155 "alias"
+        Whitespace@155..156 " "
+        Word@156..158 "aa"
+        Whitespace@158..159 " "
+        Assign@159..160 "="
+        Whitespace@160..161 " "
+        Call@161..165
+          PipePipe@161..163 "||"
+          Whitespace@163..164 " "
+          Word@164..165 "y"
+  Newline@165..166 "\n"
+  Pipeline@166..180
+    PipelineElement@166..180
+      Alias@166..180
+        Word@166..171 "alias"
+        Whitespace@171..172 " "
+        Word@172..174 "ab"
+        Whitespace@174..175 " "
+        Assign@175..176 "="
+        Whitespace@176..177 " "
+        Call@177..180
+          Assign@177..178 "="
+          Whitespace@178..179 " "
+          Word@179..180 "y"
+  Newline@180..181 "\n"
+  Pipeline@181..191
+    PipelineElement@181..191
+      Call@181..191
+        Word@181..186 "alias"
+        Whitespace@186..187 " "
+        Word@187..189 "ac"
+        Whitespace@189..190 " "
+        Assign@190..191 "="
+  Newline@191..192 "\n"
+  Pipeline@192..194
+    PipelineElement@192..194
+      Call@192..194
+        Word@192..194 "ls"
+  Newline@194..195 "\n"
+  Pipeline@195..217
+    PipelineElement@195..217
+      Alias@195..217
+        Word@195..200 "alias"
+        Whitespace@200..201 " "
+        Word@201..203 "ad"
+        Whitespace@203..204 " "
+        Assign@204..205 "="
+        Newline@205..206 "\n"
+        Comment@206..209 "# c"
+        Newline@209..210 "\n"
+        Call@210..217
+          Pipe@210..211 "|"
+          Whitespace@211..212 " "
+          Word@212..217 "{x:1}"
+  Newline@217..218 "\n"
+  Pipeline@218..233
+    PipelineElement@218..233
+      Call@218..233
+        Word@218..223 "alias"
+        Whitespace@223..224 " "
+        Word@224..226 "ae"
+        Whitespace@226..227 " "
+        Assign@227..228 "="
+        Whitespace@228..229 " "
+        Word@229..233 "(ls)"
+  Newline@233..234 "\n"
+  Pipeline@234..251
+    PipelineElement@234..236
+      Call@234..236
+        Word@234..236 "ls"
+    Whitespace@236..237 " "
+    Pipe@237..238 "|"
+    Whitespace@238..239 " "
+    PipelineElement@239..251
+      Assignment@239..251
+        Call@239..247
+          Word@239..244 "alias"
+          Whitespace@244..245 " "
+          Word@245..247 "af"
+        Whitespace@247..248 " "
+        Assign@248..249 "="
+        Whitespace@249..250 " "
+        Pipeline@250..251
+          PipelineElement@250..251
+            Call@250..251
+              Word@250..251 "t"
+  Newline@251..252 "\n"

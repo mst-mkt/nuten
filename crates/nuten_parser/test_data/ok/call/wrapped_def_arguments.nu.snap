@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/wrapped_def_arguments.nu
+---
+Root@0..48
+  Pipeline@0..31
+    PipelineElement@0..31
+      Def@0..31
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..13 "--wrapped"
+        Whitespace@13..14 " "
+        Word@14..21 "wrapped"
+        Whitespace@21..22 " "
+        Signature@22..28
+          LBracket@22..23 "["
+          Param@23..27
+            Word@23..27 "...x"
+          RBracket@27..28 "]"
+        Whitespace@28..29 " "
+        Block@29..31
+          LBrace@29..30 "{"
+          RBrace@30..31 "}"
+  Newline@31..32 "\n"
+  Pipeline@32..47
+    PipelineElement@32..47
+      Call@32..47
+        Word@32..39 "wrapped"
+        Whitespace@39..40 " "
+        Word@40..47 "[1,  2]"
+  Newline@47..48 "\n"

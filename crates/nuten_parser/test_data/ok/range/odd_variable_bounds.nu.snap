@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/range/odd_variable_bounds.nu
+---
+Root@0..70
+  Pipeline@0..5
+    PipelineElement@0..5
+      CellPath@0..5
+        Word@0..1 "$"
+        Dot@1..2 "."
+        Word@2..3 "a"
+        Dot@3..4 "."
+        Word@4..5 "."
+  Newline@5..6 "\n"
+  Pipeline@6..69
+    PipelineElement@6..69
+      List@6..69
+        LBracket@6..7 "["
+        Word@7..13 "1..$.a"
+        Whitespace@13..14 " "
+        Word@14..20 "1..$x?"
+        Whitespace@20..21 " "
+        Word@21..28 "1..(1)!"
+        Whitespace@28..29 " "
+        Word@29..37 "1..$x.-1"
+        Whitespace@37..38 " "
+        Word@38..42 "1..$"
+        Whitespace@42..43 " "
+        Word@43..50 "1..$a-b"
+        Whitespace@50..51 " "
+        Word@51..60 "1..$a-b.c"
+        Whitespace@60..61 " "
+        Word@61..68 "1..$-.a"
+        RBracket@68..69 "]"
+  Newline@69..70 "\n"

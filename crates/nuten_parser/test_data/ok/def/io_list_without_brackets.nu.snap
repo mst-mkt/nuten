@@ -1,0 +1,46 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/io_list_without_brackets.nu
+---
+Root@0..52
+  Pipeline@0..51
+    PipelineElement@0..51
+      Def@0..51
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "a"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        IoTypes@10..44
+          IoType@10..23
+            Word@10..13 "int"
+            Whitespace@13..14 " "
+            Word@14..16 "->"
+            Whitespace@16..17 " "
+            Word@17..23 "string"
+          Comma@23..24 ","
+          IoType@24..44
+            Word@24..31 "nothing"
+            Whitespace@31..32 " "
+            Word@32..34 "->"
+            Whitespace@34..35 " "
+            Type@35..44
+              Word@35..39 "list"
+              LAngle@39..40 "<"
+              Word@40..43 "int"
+              RAngle@43..44 ">"
+        Whitespace@44..45 " "
+        Block@45..51
+          LBrace@45..46 "{"
+          Whitespace@46..47 " "
+          Pipeline@47..49
+            PipelineElement@47..49
+              Call@47..49
+                Word@47..49 "ls"
+          Whitespace@49..50 " "
+          RBrace@50..51 "}"
+  Newline@51..52 "\n"

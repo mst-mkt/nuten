@@ -1,0 +1,64 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/table/as_value.nu
+---
+Root@0..55
+  Pipeline@0..22
+    PipelineElement@0..22
+      Let@0..22
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "t"
+        Whitespace@5..6 " "
+        Assign@6..7 "="
+        Whitespace@7..8 " "
+        Pipeline@8..22
+          PipelineElement@8..22
+            Table@8..22
+              LBracket@8..9 "["
+              List@9..14
+                LBracket@9..10 "["
+                Word@10..11 "a"
+                Whitespace@11..12 " "
+                Word@12..13 "b"
+                RBracket@13..14 "]"
+              Semicolon@14..15 ";"
+              Whitespace@15..16 " "
+              List@16..21
+                LBracket@16..17 "["
+                Word@17..18 "1"
+                Whitespace@18..19 " "
+                Word@19..20 "2"
+                RBracket@20..21 "]"
+              RBracket@21..22 "]"
+  Newline@22..23 "\n"
+  Pipeline@23..38
+    PipelineElement@23..38
+      ExternalCall@23..38
+        Word@23..27 "^cmd"
+        Whitespace@27..28 " "
+        Word@28..38 "[[a]; [1]]"
+  Newline@38..39 "\n"
+  Pipeline@39..54
+    PipelineElement@39..54
+      Record@39..54
+        LBrace@39..40 "{"
+        RecordField@40..53
+          Word@40..41 "a"
+          Colon@41..42 ":"
+          Whitespace@42..43 " "
+          Table@43..53
+            LBracket@43..44 "["
+            List@44..47
+              LBracket@44..45 "["
+              Word@45..46 "a"
+              RBracket@46..47 "]"
+            Semicolon@47..48 ";"
+            Whitespace@48..49 " "
+            List@49..52
+              LBracket@49..50 "["
+              Word@50..51 "1"
+              RBracket@51..52 "]"
+            RBracket@52..53 "]"
+        RBrace@53..54 "}"
+  Newline@54..55 "\n"

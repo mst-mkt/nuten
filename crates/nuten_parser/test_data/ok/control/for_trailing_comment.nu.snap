@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/for_trailing_comment.nu
+---
+Root@0..24
+  Pipeline@0..19
+    PipelineElement@0..19
+      For@0..19
+        Word@0..3 "for"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Word@6..8 "in"
+        Whitespace@8..9 " "
+        List@9..12
+          LBracket@9..10 "["
+          Word@10..11 "1"
+          RBracket@11..12 "]"
+        Whitespace@12..13 " "
+        Block@13..19
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          Pipeline@15..17
+            PipelineElement@15..17
+              Call@15..17
+                Word@15..17 "ls"
+          Whitespace@17..18 " "
+          RBrace@18..19 "}"
+  Whitespace@19..20 " "
+  Comment@20..23 "# c"
+  Newline@23..24 "\n"

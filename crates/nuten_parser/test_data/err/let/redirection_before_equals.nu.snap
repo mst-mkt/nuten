@@ -1,0 +1,70 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/let/redirection_before_equals.nu
+---
+Root@0..50
+  Pipeline@0..16
+    PipelineElement@0..16
+      Let@0..16
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Redirection@6..8
+          Error@6..8
+            OutGt@6..8 "o>"
+        Whitespace@8..9 " "
+        Assign@9..10 "="
+        Whitespace@10..11 " "
+        Word@11..12 "f"
+        Whitespace@12..13 " "
+        Assign@13..14 "="
+        Whitespace@14..15 " "
+        Pipeline@15..16
+          PipelineElement@15..16
+            Word@15..16 "1"
+  Newline@16..17 "\n"
+  Pipeline@17..29
+    PipelineElement@17..29
+      Let@17..29
+        Word@17..20 "let"
+        Whitespace@20..21 " "
+        Redirection@21..23
+          Error@21..23
+            OutGt@21..23 "o>"
+        Whitespace@23..24 " "
+        Assign@24..25 "="
+        Whitespace@25..26 " "
+        Assign@26..27 "="
+        Whitespace@27..28 " "
+        Pipeline@28..29
+          PipelineElement@28..29
+            Word@28..29 "1"
+  Newline@29..30 "\n"
+  Pipeline@30..49
+    PipelineElement@30..49
+      Let@30..49
+        Word@30..33 "let"
+        Whitespace@33..34 " "
+        Word@34..35 "x"
+        Whitespace@35..36 " "
+        Redirection@36..40
+          OutGt@36..38 "o>"
+          Whitespace@38..39 " "
+          Word@39..40 "f"
+        Whitespace@40..41 " "
+        Redirection@41..45
+          Error@41..43
+            OutGt@41..43 "o>"
+          Whitespace@43..44 " "
+          Word@44..45 "g"
+        Whitespace@45..46 " "
+        Assign@46..47 "="
+        Whitespace@47..48 " "
+        Pipeline@48..49
+          PipelineElement@48..49
+            Word@48..49 "1"
+  Newline@49..50 "\n"
+error 6..8 "o>": MissingRedirectionTarget
+error 21..23 "o>": MissingRedirectionTarget
+error 41..43 "o>": MultipleRedirections

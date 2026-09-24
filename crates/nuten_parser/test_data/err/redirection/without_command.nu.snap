@@ -1,0 +1,44 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/redirection/without_command.nu
+---
+Root@0..42
+  Pipeline@0..10
+    PipelineElement@0..10
+      Redirection@0..10
+        Error@0..2
+          OutGt@0..2 "o>"
+        Whitespace@2..3 " "
+        Word@3..10 "out.txt"
+  Newline@10..11 "\n"
+  Pipeline@11..26
+    PipelineElement@11..13
+      Call@11..13
+        Word@11..13 "ls"
+    Whitespace@13..14 " "
+    Pipe@14..15 "|"
+    Whitespace@15..16 " "
+    PipelineElement@16..26
+      Redirection@16..26
+        Error@16..18
+          ErrGt@16..18 "e>"
+        Whitespace@18..19 " "
+        Word@19..26 "err.log"
+  Newline@26..27 "\n"
+  Pipeline@27..41
+    PipelineElement@27..29
+      Call@27..29
+        Word@27..29 "ls"
+    Whitespace@29..30 " "
+    Pipe@30..31 "|"
+    Whitespace@31..32 " "
+    Error@32..35
+      ErrGtPipe@32..35 "e>|"
+    Whitespace@35..36 " "
+    PipelineElement@36..41
+      Call@36..41
+        Word@36..41 "lines"
+  Newline@41..42 "\n"
+error 0..2 "o>": RedirectionAtHead
+error 16..18 "e>": RedirectionAtHead
+error 32..35 "e>|": RedirectionAtHead

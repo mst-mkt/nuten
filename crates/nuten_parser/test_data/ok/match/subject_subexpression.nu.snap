@@ -1,0 +1,53 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/subject_subexpression.nu
+---
+Root@0..54
+  Pipeline@0..53
+    PipelineElement@0..53
+      Match@0..53
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Subexpression@6..19
+          LParen@6..7 "("
+          Pipeline@7..18
+            PipelineElement@7..9
+              Word@7..9 "$x"
+            Whitespace@9..10 " "
+            Pipe@10..11 "|"
+            Whitespace@11..12 " "
+            PipelineElement@12..18
+              Call@12..18
+                Word@12..18 "length"
+          RParen@18..19 ")"
+        Whitespace@19..20 " "
+        MatchArms@20..53
+          LBrace@20..21 "{"
+          Whitespace@21..22 " "
+          MatchArm@22..31
+            Word@22..23 "0"
+            Whitespace@23..24 " "
+            FatArrow@24..26 "=>"
+            Whitespace@26..27 " "
+            Word@27..31 "null"
+          Comma@31..32 ","
+          Whitespace@32..33 " "
+          MatchArm@33..51
+            Word@33..35 "$n"
+            Whitespace@35..36 " "
+            FatArrow@36..38 "=>"
+            Whitespace@38..39 " "
+            Block@39..51
+              LBrace@39..40 "{"
+              Whitespace@40..41 " "
+              Pipeline@41..49
+                PipelineElement@41..49
+                  Call@41..49
+                    Word@41..46 "print"
+                    Whitespace@46..47 " "
+                    Word@47..49 "$n"
+              Whitespace@49..50 " "
+              RBrace@50..51 "}"
+          Whitespace@51..52 " "
+          RBrace@52..53 "}"
+  Newline@53..54 "\n"

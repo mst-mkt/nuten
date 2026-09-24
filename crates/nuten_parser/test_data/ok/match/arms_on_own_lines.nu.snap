@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/arms_on_own_lines.nu
+---
+Root@0..35
+  Pipeline@0..34
+    PipelineElement@0..34
+      Match@0..34
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..34
+          LBrace@9..10 "{"
+          Newline@10..11 "\n"
+          Whitespace@11..13 "  "
+          MatchArm@13..23
+            Word@13..14 "1"
+            Whitespace@14..15 " "
+            FatArrow@15..17 "=>"
+            Whitespace@17..18 " "
+            Block@18..23
+              LBrace@18..19 "{"
+              Whitespace@19..20 " "
+              Pipeline@20..21
+                PipelineElement@20..21
+                  Call@20..21
+                    Word@20..21 "a"
+              Whitespace@21..22 " "
+              RBrace@22..23 "}"
+          Newline@23..24 "\n"
+          Whitespace@24..26 "  "
+          MatchArm@26..32
+            Word@26..27 "_"
+            Whitespace@27..28 " "
+            FatArrow@28..30 "=>"
+            Whitespace@30..31 " "
+            Word@31..32 "b"
+          Newline@32..33 "\n"
+          RBrace@33..34 "}"
+  Newline@34..35 "\n"

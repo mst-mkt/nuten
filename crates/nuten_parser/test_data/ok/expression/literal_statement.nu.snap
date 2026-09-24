@@ -1,0 +1,29 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/literal_statement.nu
+---
+Root@0..23
+  Pipeline@0..6
+    PipelineElement@0..6
+      Block@0..6
+        LBrace@0..1 "{"
+        Whitespace@1..2 " "
+        Pipeline@2..4
+          PipelineElement@2..4
+            Call@2..4
+              Word@2..4 "ls"
+        Whitespace@4..5 " "
+        RBrace@5..6 "}"
+  Newline@6..7 "\n"
+  Pipeline@7..15
+    PipelineElement@7..15
+      RawString@7..15 "r#'raw'#"
+  Newline@15..16 "\n"
+  Pipeline@16..17
+    PipelineElement@16..17
+      Word@16..17 "1"
+  Newline@17..18 "\n"
+  Pipeline@18..22
+    PipelineElement@18..22
+      Word@18..22 "true"
+  Newline@22..23 "\n"

@@ -1,0 +1,74 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/io_types_without_arrow.nu
+---
+Root@0..76
+  Pipeline@0..27
+    PipelineElement@0..27
+      Def@0..27
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "f"
+        Whitespace@5..6 " "
+        Signature@6..8
+          LBracket@6..7 "["
+          RBracket@7..8 "]"
+        Colon@8..9 ":"
+        Whitespace@9..10 " "
+        Word@10..13 "int"
+        Whitespace@13..14 " "
+        Word@14..20 "string"
+        Whitespace@20..21 " "
+        Block@21..27
+          LBrace@21..22 "{"
+          Whitespace@22..23 " "
+          Pipeline@23..25
+            PipelineElement@23..25
+              Call@23..25
+                Word@23..25 "ls"
+          Whitespace@25..26 " "
+          RBrace@26..27 "}"
+  Newline@27..28 "\n"
+  Pipeline@28..56
+    PipelineElement@28..56
+      Def@28..56
+        Word@28..31 "def"
+        Whitespace@31..32 " "
+        Word@32..33 "o"
+        Whitespace@33..34 " "
+        Signature@34..36
+          LBracket@34..35 "["
+          RBracket@35..36 "]"
+        Colon@36..37 ":"
+        Whitespace@37..38 " "
+        Word@38..41 "int"
+        Whitespace@41..42 " "
+        Word@42..45 "int"
+        Whitespace@45..46 " "
+        Word@46..49 "int"
+        Whitespace@49..50 " "
+        Block@50..56
+          LBrace@50..51 "{"
+          Whitespace@51..52 " "
+          Pipeline@52..54
+            PipelineElement@52..54
+              Call@52..54
+                Word@52..54 "ls"
+          Whitespace@54..55 " "
+          RBrace@55..56 "}"
+  Newline@56..57 "\n"
+  Pipeline@57..75
+    PipelineElement@57..75
+      Def@57..75
+        Word@57..63 "extern"
+        Whitespace@63..64 " "
+        Word@64..66 "aa"
+        Whitespace@66..67 " "
+        Signature@67..69
+          LBracket@67..68 "["
+          RBracket@68..69 "]"
+        Whitespace@69..70 " "
+        Colon@70..71 ":"
+        Whitespace@71..72 " "
+        Word@72..75 "bar"
+  Newline@75..76 "\n"

@@ -1,0 +1,34 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/string_name_with_multiline_block.nu
+---
+Root@0..40
+  Pipeline@0..39
+    PipelineElement@0..39
+      Module@0..39
+        Word@0..6 "module"
+        Whitespace@6..9 "   "
+        String@9..14 "\"j k\""
+        Whitespace@14..17 "   "
+        Block@17..39
+          LBrace@17..18 "{"
+          Newline@18..19 "\n"
+          Pipeline@19..37
+            PipelineElement@19..37
+              Def@19..37
+                Word@19..25 "export"
+                Whitespace@25..26 " "
+                Word@26..29 "def"
+                Whitespace@29..30 " "
+                Word@30..31 "l"
+                Whitespace@31..32 " "
+                Signature@32..34
+                  LBracket@32..33 "["
+                  RBracket@33..34 "]"
+                Whitespace@34..35 " "
+                Block@35..37
+                  LBrace@35..36 "{"
+                  RBrace@36..37 "}"
+          Newline@37..38 "\n"
+          RBrace@38..39 "}"
+  Newline@39..40 "\n"

@@ -1,0 +1,67 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/let/unclosed_type_angle.nu
+---
+Root@0..56
+  Pipeline@0..14
+    PipelineElement@0..14
+      Let@0..14
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Word@4..6 "x:"
+        Whitespace@6..7 " "
+        Error@7..10
+          Word@7..10 "a<b"
+        Whitespace@10..11 " "
+        Assign@11..12 "="
+        Whitespace@12..13 " "
+        Pipeline@13..14
+          PipelineElement@13..14
+            Word@13..14 "1"
+  Newline@14..15 "\n"
+  Pipeline@15..35
+    PipelineElement@15..35
+      Let@15..35
+        Word@15..18 "let"
+        Whitespace@18..19 " "
+        Word@19..21 "x:"
+        Whitespace@21..22 " "
+        Error@22..31
+          Word@22..23 "a"
+          Whitespace@23..24 " "
+          OutGt@24..26 "o>"
+          Whitespace@26..27 " "
+          Assign@27..28 "="
+          Whitespace@28..29 " "
+          Word@29..31 "<b"
+        Whitespace@31..32 " "
+        Assign@32..33 "="
+        Whitespace@33..34 " "
+        Pipeline@34..35
+          PipelineElement@34..35
+            Word@34..35 "1"
+  Newline@35..36 "\n"
+  Pipeline@36..55
+    PipelineElement@36..55
+      Let@36..55
+        Word@36..41 "const"
+        Whitespace@41..42 " "
+        Word@42..44 "x:"
+        Whitespace@44..45 " "
+        Error@45..46
+          Word@45..46 "<"
+        Whitespace@46..47 " "
+        Redirection@47..51
+          OutGt@47..49 "o>"
+          Whitespace@49..50 " "
+          Word@50..51 ">"
+        Whitespace@51..52 " "
+        Assign@52..53 "="
+        Whitespace@53..54 " "
+        Pipeline@54..55
+          PipelineElement@54..55
+            Word@54..55 "1"
+  Newline@55..56 "\n"
+error 8..9 "<": Lex(Unclosed)
+error 29..30 "<": Lex(Unclosed)
+error 45..46 "<": Lex(Unclosed)

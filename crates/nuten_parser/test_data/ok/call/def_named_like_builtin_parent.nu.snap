@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/def_named_like_builtin_parent.nu
+---
+Root@0..32
+  Pipeline@0..14
+    PipelineElement@0..14
+      Def@0..14
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..7 "str"
+        Whitespace@7..8 " "
+        Signature@8..11
+          LBracket@8..9 "["
+          Param@9..10
+            Word@9..10 "x"
+          RBracket@10..11 "]"
+        Whitespace@11..12 " "
+        Block@12..14
+          LBrace@12..13 "{"
+          RBrace@13..14 "}"
+  Newline@14..15 "\n"
+  Pipeline@15..31
+    PipelineElement@15..31
+      Call@15..31
+        Word@15..18 "str"
+        Whitespace@18..19 " "
+        Word@19..23 "join"
+        Whitespace@23..24 " "
+        Word@24..31 "[1,  2]"
+  Newline@31..32 "\n"

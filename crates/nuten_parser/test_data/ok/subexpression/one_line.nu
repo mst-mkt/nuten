@@ -1,0 +1,5 @@
+(ls)
+()
+(ls | get name)
+echo (1 + 2)
+(ls; pwd)

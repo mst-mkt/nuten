@@ -1,0 +1,72 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/record/empty_argument.nu
+---
+Root@0..76
+  Pipeline@0..19
+    PipelineElement@0..19
+      Call@0..19
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Record@5..8
+          LBrace@5..6 "{"
+          Whitespace@6..7 " "
+          RBrace@7..8 "}"
+        Whitespace@8..9 " "
+        Record@9..11
+          LBrace@9..10 "{"
+          RBrace@10..11 "}"
+        Whitespace@11..12 " "
+        Record@12..19
+          LBrace@12..13 "{"
+          Whitespace@13..14 " "
+          Comment@14..17 "# c"
+          Newline@17..18 "\n"
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"
+  Pipeline@20..39
+    PipelineElement@20..26
+      Record@20..26
+        LBrace@20..21 "{"
+        RecordField@21..25
+          Word@21..22 "a"
+          Colon@22..23 ":"
+          Whitespace@23..24 " "
+          Word@24..25 "1"
+        RBrace@25..26 "}"
+    Whitespace@26..27 " "
+    Pipe@27..28 "|"
+    Whitespace@28..29 " "
+    PipelineElement@29..39
+      Call@29..39
+        Word@29..34 "merge"
+        Whitespace@34..35 " "
+        Record@35..39
+          LBrace@35..36 "{"
+          Whitespace@36..38 "  "
+          RBrace@38..39 "}"
+  Newline@39..40 "\n"
+  Pipeline@40..50
+    PipelineElement@40..50
+      Call@40..50
+        Word@40..45 "print"
+        Whitespace@45..46 " "
+        Record@46..50
+          LBrace@46..47 "{"
+          Whitespace@47..49 "  "
+          RBrace@49..50 "}"
+  Newline@50..51 "\n"
+  Pipeline@51..63
+    PipelineElement@51..63
+      Call@51..63
+        Word@51..56 "print"
+        Whitespace@56..57 " "
+        Word@57..63 "{  }.a"
+  Newline@63..64 "\n"
+  Pipeline@64..75
+    PipelineElement@64..75
+      ExternalCall@64..75
+        Word@64..69 "^echo"
+        Whitespace@69..70 " "
+        Word@70..75 "{   }"
+  Newline@75..76 "\n"

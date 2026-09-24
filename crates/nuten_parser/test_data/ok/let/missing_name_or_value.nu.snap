@@ -1,0 +1,45 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/let/missing_name_or_value.nu
+---
+Root@0..32
+  Pipeline@0..7
+    PipelineElement@0..7
+      Let@0..7
+        Word@0..3 "let"
+        Whitespace@3..4 " "
+        Assign@4..5 "="
+        Whitespace@5..6 " "
+        Pipeline@6..7
+          PipelineElement@6..7
+            Word@6..7 "1"
+  Newline@7..8 "\n"
+  Pipeline@8..15
+    PipelineElement@8..15
+      Let@8..15
+        Word@8..11 "let"
+        Whitespace@11..12 " "
+        Word@12..13 "x"
+        Whitespace@13..14 " "
+        Assign@14..15 "="
+  Newline@15..16 "\n"
+  Pipeline@16..25
+    PipelineElement@16..21
+      Call@16..21
+        Word@16..19 "let"
+        Whitespace@19..20 " "
+        Word@20..21 "x"
+    Whitespace@21..22 " "
+    Pipe@22..23 "|"
+    Whitespace@23..24 " "
+    PipelineElement@24..25
+      Call@24..25
+        Word@24..25 "a"
+  Newline@25..26 "\n"
+  Pipeline@26..31
+    PipelineElement@26..31
+      Call@26..31
+        Word@26..29 "let"
+        Whitespace@29..30 " "
+        Word@30..31 "x"
+  Newline@31..32 "\n"

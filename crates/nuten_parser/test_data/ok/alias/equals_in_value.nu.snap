@@ -1,0 +1,21 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/equals_in_value.nu
+---
+Root@0..22
+  Pipeline@0..21
+    PipelineElement@0..21
+      Alias@0..21
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..7 "k"
+        Whitespace@7..8 " "
+        Assign@8..9 "="
+        Whitespace@9..10 " "
+        Call@10..21
+          Word@10..13 "foo"
+          Whitespace@13..14 " "
+          Assign@14..15 "="
+          Whitespace@15..16 " "
+          Word@16..21 "[a,b]"
+  Newline@21..22 "\n"

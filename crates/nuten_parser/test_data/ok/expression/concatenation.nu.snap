@@ -1,0 +1,29 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/concatenation.nu
+---
+Root@0..22
+  Pipeline@0..10
+    PipelineElement@0..10
+      MathExpression@0..10
+        List@0..3
+          LBracket@0..1 "["
+          Word@1..2 "1"
+          RBracket@2..3 "]"
+        Whitespace@3..4 " "
+        Operator@4..6 "++"
+        Whitespace@6..7 " "
+        List@7..10
+          LBracket@7..8 "["
+          Word@8..9 "2"
+          RBracket@9..10 "]"
+  Newline@10..11 "\n"
+  Pipeline@11..21
+    PipelineElement@11..21
+      MathExpression@11..21
+        String@11..14 "\"a\""
+        Whitespace@14..15 " "
+        Operator@15..17 "++"
+        Whitespace@17..18 " "
+        String@18..21 "\"b\""
+  Newline@21..22 "\n"

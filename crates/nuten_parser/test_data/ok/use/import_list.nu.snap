@@ -1,0 +1,36 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/use/import_list.nu
+---
+Root@0..61
+  Pipeline@0..14
+    PipelineElement@0..14
+      Use@0..14
+        Word@0..3 "use"
+        Whitespace@3..4 " "
+        Word@4..14 "std/assert"
+  Newline@14..15 "\n"
+  Pipeline@15..40
+    PipelineElement@15..40
+      Use@15..40
+        Word@15..18 "use"
+        Whitespace@18..21 "   "
+        Word@21..24 "std"
+        Whitespace@24..27 "   "
+        List@27..40
+          LBracket@27..28 "["
+          Word@28..34 "assert"
+          Comma@34..35 ","
+          Whitespace@35..36 " "
+          Word@36..39 "log"
+          RBracket@39..40 "]"
+  Newline@40..41 "\n"
+  Pipeline@41..60
+    PipelineElement@41..60
+      Use@41..60
+        Word@41..44 "use"
+        Whitespace@44..45 " "
+        Word@45..49 "m.nu"
+        Whitespace@49..50 " "
+        String@50..60 "\"path add\""
+  Newline@60..61 "\n"

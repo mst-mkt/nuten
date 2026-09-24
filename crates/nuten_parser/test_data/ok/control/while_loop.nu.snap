@@ -1,0 +1,58 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/while_loop.nu
+---
+Root@0..48
+  Pipeline@0..24
+    PipelineElement@0..24
+      While@0..24
+        Word@0..5 "while"
+        Whitespace@5..6 " "
+        MathExpression@6..12
+          Word@6..8 "$a"
+          Whitespace@8..9 " "
+          Operator@9..10 "<"
+          Whitespace@10..11 " "
+          Word@11..12 "3"
+        Whitespace@12..13 " "
+        Block@13..24
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          Pipeline@15..22
+            PipelineElement@15..22
+              Assignment@15..22
+                Word@15..17 "$a"
+                Whitespace@17..18 " "
+                Assign@18..20 "+="
+                Whitespace@20..21 " "
+                Pipeline@21..22
+                  PipelineElement@21..22
+                    Word@21..22 "1"
+          Whitespace@22..23 " "
+          RBrace@23..24 "}"
+  Newline@24..25 "\n"
+  Pipeline@25..47
+    PipelineElement@25..47
+      While@25..47
+        Word@25..30 "while"
+        Whitespace@30..31 " "
+        MathExpression@31..43
+          Word@31..33 "$a"
+          Whitespace@33..34 " "
+          Operator@34..36 "in"
+          Whitespace@36..37 " "
+          List@37..43
+            LBracket@37..38 "["
+            Word@38..39 "1"
+            Comma@39..40 ","
+            Whitespace@40..41 " "
+            Word@41..42 "2"
+            RBracket@42..43 "]"
+        Whitespace@43..44 " "
+        Block@44..47
+          LBrace@44..45 "{"
+          Pipeline@45..46
+            PipelineElement@45..46
+              Word@45..46 "1"
+          RBrace@46..47 "}"
+  Newline@47..48 "\n"

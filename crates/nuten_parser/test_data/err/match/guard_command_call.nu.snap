@@ -1,0 +1,33 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/match/guard_command_call.nu
+---
+Root@0..29
+  Pipeline@0..28
+    PipelineElement@0..28
+      Match@0..28
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..28
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..26
+            Word@11..13 "$y"
+            Whitespace@13..14 " "
+            Word@14..16 "if"
+            Whitespace@16..17 " "
+            MathExpression@17..21
+              Word@17..18 "f"
+              Whitespace@18..19 " "
+              Error@19..21
+                Word@19..21 "$y"
+            Whitespace@21..22 " "
+            FatArrow@22..24 "=>"
+            Whitespace@24..25 " "
+            Word@25..26 "a"
+          Whitespace@26..27 " "
+          RBrace@27..28 "}"
+  Newline@28..29 "\n"
+error 19..21 "$y": MissingOperator

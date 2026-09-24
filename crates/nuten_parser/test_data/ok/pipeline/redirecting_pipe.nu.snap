@@ -1,0 +1,49 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/pipeline/redirecting_pipe.nu
+---
+Root@0..76
+  Pipeline@0..20
+    PipelineElement@0..10
+      ExternalCall@0..10
+        Word@0..4 "^cat"
+        Whitespace@4..5 " "
+        Word@5..10 "/nope"
+    Whitespace@10..11 " "
+    ErrGtPipe@11..14 "e>|"
+    Whitespace@14..15 " "
+    PipelineElement@15..20
+      Call@15..20
+        Word@15..20 "lines"
+  Newline@20..21 "\n"
+  Pipeline@21..43
+    PipelineElement@21..31
+      ExternalCall@21..31
+        Word@21..25 "^cat"
+        Whitespace@25..26 " "
+        Word@26..31 "/nope"
+    Whitespace@31..32 " "
+    OutErrGtPipe@32..37 "o+e>|"
+    Whitespace@37..38 " "
+    PipelineElement@38..43
+      Call@38..43
+        Word@38..43 "lines"
+  Newline@43..44 "\n"
+  Pipeline@44..75
+    PipelineElement@44..65
+      ExternalCall@44..54
+        Word@44..48 "^cat"
+        Whitespace@48..49 " "
+        Word@49..54 "/nope"
+      Whitespace@54..55 " "
+      Redirection@55..65
+        OutGt@55..57 "o>"
+        Whitespace@57..58 " "
+        Word@58..65 "out.txt"
+    Whitespace@65..66 " "
+    ErrGtPipe@66..69 "e>|"
+    Whitespace@69..70 " "
+    PipelineElement@70..75
+      Call@70..75
+        Word@70..75 "lines"
+  Newline@75..76 "\n"

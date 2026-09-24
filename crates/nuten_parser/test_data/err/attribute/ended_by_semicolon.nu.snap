@@ -1,0 +1,53 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/attribute/ended_by_semicolon.nu
+---
+Root@0..50
+  Pipeline@0..24
+    PipelineElement@0..24
+      Attribute@0..4
+        Error@0..2
+          Word@0..2 "@f"
+        Whitespace@2..3 " "
+        Word@3..4 "x"
+      Semicolon@4..5 ";"
+      Whitespace@5..6 " "
+      Let@6..24
+        Word@6..12 "export"
+        Whitespace@12..13 " "
+        Word@13..18 "const"
+        Whitespace@18..19 " "
+        Word@19..20 "h"
+        Whitespace@20..21 " "
+        Assign@21..22 "="
+        Whitespace@22..23 " "
+        Pipeline@23..24
+          PipelineElement@23..24
+            Word@23..24 "1"
+  Newline@24..25 "\n"
+  Pipeline@25..36
+    PipelineElement@25..36
+      Attribute@25..36
+        Error@25..34
+          Word@25..34 "@category"
+        Whitespace@34..35 " "
+        Word@35..36 "x"
+  Semicolon@36..37 ";"
+  Semicolon@37..38 ";"
+  Pipeline@38..49
+    PipelineElement@38..49
+      Def@38..49
+        Word@38..41 "def"
+        Whitespace@41..42 " "
+        Word@42..43 "k"
+        Whitespace@43..44 " "
+        Signature@44..46
+          LBracket@44..45 "["
+          RBracket@45..46 "]"
+        Whitespace@46..47 " "
+        Block@47..49
+          LBrace@47..48 "{"
+          RBrace@48..49 "}"
+  Newline@49..50 "\n"
+error 0..2 "@f": AttributeWithoutDefinition
+error 25..34 "@category": AttributeWithoutDefinition

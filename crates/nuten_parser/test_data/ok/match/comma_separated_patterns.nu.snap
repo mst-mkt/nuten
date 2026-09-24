@@ -1,0 +1,14 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/comma_separated_patterns.nu
+---
+Root@0..23
+  Pipeline@0..22
+    PipelineElement@0..22
+      Match@0..22
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        Word@9..22 "{ 1, 2 => a }"
+  Newline@22..23 "\n"

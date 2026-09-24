@@ -1,0 +1,42 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/table/comments_between_rows.nu
+---
+Root@0..40
+  Pipeline@0..39
+    PipelineElement@0..39
+      Table@0..39
+        LBracket@0..1 "["
+        List@1..6
+          LBracket@1..2 "["
+          Word@2..3 "a"
+          Whitespace@3..4 " "
+          Word@4..5 "b"
+          RBracket@5..6 "]"
+        Semicolon@6..7 ";"
+        Whitespace@7..8 " "
+        Comment@8..11 "# c"
+        Newline@11..12 "\n"
+        Whitespace@12..14 "  "
+        List@14..19
+          LBracket@14..15 "["
+          Word@15..16 "1"
+          Whitespace@16..17 " "
+          Word@17..18 "2"
+          RBracket@18..19 "]"
+        Whitespace@19..20 " "
+        Comment@20..23 "# d"
+        Newline@23..24 "\n"
+        Whitespace@24..26 "  "
+        Comment@26..29 "# e"
+        Newline@29..30 "\n"
+        Whitespace@30..32 "  "
+        List@32..37
+          LBracket@32..33 "["
+          Word@33..34 "3"
+          Whitespace@34..35 " "
+          Word@35..36 "4"
+          RBracket@36..37 "]"
+        Newline@37..38 "\n"
+        RBracket@38..39 "]"
+  Newline@39..40 "\n"

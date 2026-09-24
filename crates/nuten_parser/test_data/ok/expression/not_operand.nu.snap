@@ -1,0 +1,51 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/not_operand.nu
+---
+Root@0..39
+  Pipeline@0..8
+    PipelineElement@0..8
+      MathExpression@0..8
+        Operator@0..3 "not"
+        Whitespace@3..4 " "
+        Word@4..8 "true"
+  Newline@8..9 "\n"
+  Pipeline@9..18
+    PipelineElement@9..18
+      MathExpression@9..18
+        Operator@9..12 "not"
+        Whitespace@12..13 " "
+        List@13..18
+          LBracket@13..14 "["
+          Word@14..15 "1"
+          Whitespace@15..16 " "
+          Word@16..17 "2"
+          RBracket@17..18 "]"
+  Newline@18..19 "\n"
+  Pipeline@19..27
+    PipelineElement@19..27
+      MathExpression@19..27
+        Operator@19..22 "not"
+        Whitespace@22..23 " "
+        Subexpression@23..27
+          LParen@23..24 "("
+          Pipeline@24..26
+            PipelineElement@24..26
+              Call@24..26
+                Word@24..26 "ls"
+          RParen@26..27 ")"
+  Newline@27..28 "\n"
+  Pipeline@28..38
+    PipelineElement@28..38
+      MathExpression@28..38
+        Operator@28..31 "not"
+        Whitespace@31..32 " "
+        Record@32..38
+          LBrace@32..33 "{"
+          RecordField@33..37
+            Word@33..34 "a"
+            Colon@34..35 ":"
+            Whitespace@35..36 " "
+            Word@36..37 "1"
+          RBrace@37..38 "}"
+  Newline@38..39 "\n"

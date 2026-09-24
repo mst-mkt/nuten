@@ -1,0 +1,57 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/redirected.nu
+---
+Root@0..51
+  Pipeline@0..22
+    PipelineElement@0..22
+      If@0..13
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Subexpression@3..9
+          LParen@3..4 "("
+          Pipeline@4..8
+            PipelineElement@4..8
+              Word@4..8 "true"
+          RParen@8..9 ")"
+        Whitespace@9..10 " "
+        Block@10..13
+          LBrace@10..11 "{"
+          Pipeline@11..12
+            PipelineElement@11..12
+              Word@11..12 "1"
+          RBrace@12..13 "}"
+      Whitespace@13..14 " "
+      Redirection@14..22
+        OutGt@14..16 "o>"
+        Whitespace@16..17 " "
+        Word@17..22 "f.txt"
+  Newline@22..23 "\n"
+  Pipeline@23..50
+    PipelineElement@23..50
+      If@23..41
+        Word@23..25 "if"
+        Whitespace@25..26 " "
+        Word@26..28 "$a"
+        Whitespace@28..29 " "
+        Block@29..32
+          LBrace@29..30 "{"
+          Pipeline@30..31
+            PipelineElement@30..31
+              Word@30..31 "1"
+          RBrace@31..32 "}"
+        Whitespace@32..33 " "
+        Word@33..37 "else"
+        Whitespace@37..38 " "
+        Block@38..41
+          LBrace@38..39 "{"
+          Pipeline@39..40
+            PipelineElement@39..40
+              Word@39..40 "2"
+          RBrace@40..41 "}"
+      Whitespace@41..42 " "
+      Redirection@42..50
+        OutGt@42..44 "o>"
+        Whitespace@44..45 " "
+        Word@45..50 "f.txt"
+  Newline@50..51 "\n"

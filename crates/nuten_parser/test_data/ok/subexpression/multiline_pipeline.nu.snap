@@ -1,0 +1,64 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/subexpression/multiline_pipeline.nu
+---
+Root@0..48
+  Pipeline@0..24
+    PipelineElement@0..24
+      Subexpression@0..24
+        LParen@0..1 "("
+        Pipeline@1..23
+          PipelineElement@1..23
+            Let@1..23
+              Word@1..4 "mut"
+              Whitespace@4..5 " "
+              Word@5..6 "x"
+              Whitespace@6..7 " "
+              Assign@7..8 "="
+              Whitespace@8..9 " "
+              Pipeline@9..13
+                PipelineElement@9..11
+                  Call@9..11
+                    Word@9..11 "ls"
+                Whitespace@11..12 " "
+                Pipe@12..13 "|"
+              Newline@13..14 "\n"
+              Newline@14..15 "\n"
+              Pipeline@15..23
+                PipelineElement@15..23
+                  Call@15..23
+                    Word@15..20 "print"
+                    Whitespace@20..21 " "
+                    Word@21..23 "hi"
+        RParen@23..24 ")"
+  Newline@24..25 "\n"
+  Pipeline@25..47
+    PipelineElement@25..47
+      Subexpression@25..47
+        LParen@25..26 "("
+        Pipeline@26..46
+          PipelineElement@26..46
+            Let@26..46
+              Word@26..29 "let"
+              Whitespace@29..30 " "
+              Word@30..31 "x"
+              Whitespace@31..32 " "
+              Assign@32..33 "="
+              Whitespace@33..34 " "
+              Pipeline@34..38
+                PipelineElement@34..36
+                  Call@34..36
+                    Word@34..36 "ls"
+                Whitespace@36..37 " "
+                Pipe@37..38 "|"
+              Newline@38..39 "\n"
+              Newline@39..40 "\n"
+              Newline@40..41 "\n"
+              Pipeline@41..46
+                Pipe@41..42 "|"
+                Whitespace@42..43 " "
+                PipelineElement@43..46
+                  Call@43..46
+                    Word@43..46 "foo"
+        RParen@46..47 ")"
+  Newline@47..48 "\n"

@@ -1,0 +1,28 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/where/help_flag.nu
+---
+Root@0..33
+  Pipeline@0..19
+    PipelineElement@0..19
+      Where@0..19
+        Word@0..5 "where"
+        Whitespace@5..6 " "
+        Word@6..8 "-h"
+        Whitespace@8..9 " "
+        Word@9..11 "--"
+        Whitespace@11..12 " "
+        MathExpression@12..19
+          Word@12..14 "-1"
+          Whitespace@14..15 " "
+          Operator@15..17 "=="
+          Whitespace@17..18 " "
+          Word@18..19 "1"
+  Newline@19..20 "\n"
+  Pipeline@20..32
+    PipelineElement@20..32
+      Call@20..32
+        Word@20..25 "where"
+        Whitespace@25..26 " "
+        Word@26..32 "--help"
+  Newline@32..33 "\n"

@@ -1,0 +1,68 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/or_patterns.nu
+---
+Root@0..64
+  Pipeline@0..30
+    PipelineElement@0..30
+      Match@0..30
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        MatchArms@9..30
+          LBrace@9..10 "{"
+          Whitespace@10..11 " "
+          MatchArm@11..28
+            Word@11..12 "1"
+            Whitespace@12..13 " "
+            Pipe@13..14 "|"
+            Whitespace@14..15 " "
+            Word@15..16 "2"
+            Whitespace@16..17 " "
+            Pipe@17..18 "|"
+            Whitespace@18..19 " "
+            Range@19..23
+              Word@19..20 "3"
+              RangeOperator@20..22 ".."
+              Word@22..23 "5"
+            Whitespace@23..24 " "
+            FatArrow@24..26 "=>"
+            Whitespace@26..27 " "
+            Word@27..28 "a"
+          Whitespace@28..29 " "
+          RBrace@29..30 "}"
+  Newline@30..31 "\n"
+  Pipeline@31..63
+    PipelineElement@31..63
+      Match@31..63
+        Word@31..36 "match"
+        Whitespace@36..37 " "
+        Word@37..39 "$x"
+        Whitespace@39..40 " "
+        MatchArms@40..63
+          LBrace@40..41 "{"
+          Whitespace@41..42 " "
+          MatchArm@42..61
+            Word@42..43 "a"
+            Whitespace@43..44 " "
+            Pipe@44..45 "|"
+            Whitespace@45..46 " "
+            Word@46..47 "b"
+            Whitespace@47..48 " "
+            Pipe@48..49 "|"
+            Whitespace@49..50 " "
+            ListPattern@50..56
+              LBracket@50..51 "["
+              Word@51..52 "c"
+              Comma@52..53 ","
+              Whitespace@53..54 " "
+              Word@54..55 "d"
+              RBracket@55..56 "]"
+            Whitespace@56..57 " "
+            FatArrow@57..59 "=>"
+            Whitespace@59..60 " "
+            Word@60..61 "a"
+          Whitespace@61..62 " "
+          RBrace@62..63 "}"
+  Newline@63..64 "\n"

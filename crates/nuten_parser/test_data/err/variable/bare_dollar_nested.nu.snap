@@ -1,0 +1,71 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/variable/bare_dollar_nested.nu
+---
+Root@0..50
+  Pipeline@0..3
+    PipelineElement@0..3
+      List@0..3
+        LBracket@0..1 "["
+        Error@1..2
+          Word@1..2 "$"
+        RBracket@2..3 "]"
+  Newline@3..4 "\n"
+  Pipeline@4..10
+    PipelineElement@4..10
+      Record@4..10
+        LBrace@4..5 "{"
+        RecordField@5..9
+          Word@5..6 "a"
+          Colon@6..7 ":"
+          Whitespace@7..8 " "
+          Error@8..9
+            Word@8..9 "$"
+        RBrace@9..10 "}"
+  Newline@10..11 "\n"
+  Pipeline@11..29
+    PipelineElement@11..29
+      If@11..29
+        Word@11..13 "if"
+        Whitespace@13..14 " "
+        Word@14..18 "true"
+        Whitespace@18..19 " "
+        Block@19..22
+          LBrace@19..20 "{"
+          Whitespace@20..21 " "
+          RBrace@21..22 "}"
+        Whitespace@22..23 " "
+        Word@23..27 "else"
+        Whitespace@27..28 " "
+        Error@28..29
+          Word@28..29 "$"
+  Newline@29..30 "\n"
+  Pipeline@30..42
+    PipelineElement@30..32
+      Call@30..32
+        Word@30..32 "ls"
+    Whitespace@32..33 " "
+    Pipe@33..34 "|"
+    Whitespace@34..35 " "
+    PipelineElement@35..42
+      Where@35..42
+        Word@35..40 "where"
+        Whitespace@40..41 " "
+        Error@41..42
+          Word@41..42 "$"
+  Newline@42..43 "\n"
+  Pipeline@43..49
+    PipelineElement@43..49
+      List@43..49
+        LBracket@43..44 "["
+        Spread@44..48
+          SpreadOperator@44..47 "..."
+          Error@47..48
+            Word@47..48 "$"
+        RBracket@48..49 "]"
+  Newline@49..50 "\n"
+error 1..2 "$": MissingVariableName
+error 8..9 "$": MissingVariableName
+error 28..29 "$": MissingVariableName
+error 41..42 "$": MissingVariableName
+error 47..48 "$": MissingVariableName

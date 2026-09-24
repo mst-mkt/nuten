@@ -1,0 +1,95 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/glob_import_in_block.nu
+---
+Root@0..120
+  Pipeline@0..30
+    PipelineElement@0..30
+      Def@0..30
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..19 "imported-inside"
+        Whitespace@19..20 " "
+        Signature@20..23
+          LBracket@20..21 "["
+          Param@21..22
+            Word@21..22 "x"
+          RBracket@22..23 "]"
+        Whitespace@23..24 " "
+        Block@24..30
+          LBrace@24..25 "{"
+          Whitespace@25..26 " "
+          Pipeline@26..28
+            PipelineElement@26..28
+              Word@26..28 "$x"
+          Whitespace@28..29 " "
+          RBrace@29..30 "}"
+  Newline@30..31 "\n"
+  Pipeline@31..73
+    PipelineElement@31..73
+      Call@31..73
+        Word@31..33 "do"
+        Whitespace@33..34 " "
+        Block@34..73
+          LBrace@34..35 "{"
+          Whitespace@35..36 " "
+          Pipeline@36..46
+            PipelineElement@36..46
+              Use@36..46
+                Word@36..39 "use"
+                Whitespace@39..40 " "
+                Word@40..44 "m.nu"
+                Whitespace@44..45 " "
+                Word@45..46 "*"
+          Semicolon@46..47 ";"
+          Whitespace@47..48 " "
+          Pipeline@48..71
+            PipelineElement@48..71
+              Call@48..71
+                Word@48..63 "imported-inside"
+                Whitespace@63..64 " "
+                Word@64..71 "{a:  1}"
+          Whitespace@71..72 " "
+          RBrace@72..73 "}"
+  Newline@73..74 "\n"
+  Pipeline@74..105
+    PipelineElement@74..105
+      Call@74..105
+        Word@74..76 "do"
+        Whitespace@76..77 " "
+        Block@77..105
+          LBrace@77..78 "{"
+          Whitespace@78..79 " "
+          Pipeline@79..89
+            PipelineElement@79..89
+              Use@79..89
+                Word@79..82 "use"
+                Whitespace@82..83 " "
+                Word@83..87 "m.nu"
+                Whitespace@87..88 " "
+                Word@88..89 "*"
+          Semicolon@89..90 ";"
+          Whitespace@90..91 " "
+          Pipeline@91..103
+            PipelineElement@91..103
+              Call@91..103
+                Word@91..95 "each"
+                Whitespace@95..96 " "
+                Word@96..103 "{a:  1}"
+          Whitespace@103..104 " "
+          RBrace@104..105 "}"
+  Newline@105..106 "\n"
+  Pipeline@106..119
+    PipelineElement@106..119
+      Call@106..119
+        Word@106..111 "print"
+        Whitespace@111..112 " "
+        Record@112..119
+          LBrace@112..113 "{"
+          RecordField@113..118
+            Word@113..114 "a"
+            Colon@114..115 ":"
+            Whitespace@115..117 "  "
+            Word@117..118 "1"
+          RBrace@118..119 "}"
+  Newline@119..120 "\n"

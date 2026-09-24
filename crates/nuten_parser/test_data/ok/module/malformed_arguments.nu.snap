@@ -1,0 +1,46 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/malformed_arguments.nu
+---
+Root@0..63
+  Pipeline@0..16
+    PipelineElement@0..16
+      Call@0..16
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "-"
+        Whitespace@8..9 " "
+        Word@9..12 "{x}"
+        Whitespace@12..13 " "
+        Word@13..16 "{y}"
+  Newline@16..17 "\n"
+  Pipeline@17..27
+    PipelineElement@17..27
+      Call@17..27
+        Word@17..23 "module"
+        Whitespace@23..24 " "
+        Word@24..25 "e"
+        Whitespace@25..26 " "
+        Word@26..27 "f"
+  Newline@27..28 "\n"
+  Pipeline@28..41
+    PipelineElement@28..41
+      Call@28..41
+        Word@28..34 "module"
+        Whitespace@34..35 " "
+        Word@35..37 "-a"
+        Whitespace@37..38 " "
+        Word@38..41 "{x}"
+  Newline@41..42 "\n"
+  Pipeline@42..55
+    PipelineElement@42..55
+      Call@42..55
+        Word@42..48 "module"
+        Whitespace@48..49 " "
+        Word@49..55 "(ls|x)"
+  Newline@55..56 "\n"
+  Pipeline@56..62
+    PipelineElement@56..62
+      Call@56..62
+        Word@56..62 "module"
+  Newline@62..63 "\n"

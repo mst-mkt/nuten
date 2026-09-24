@@ -1,0 +1,41 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/interpolation/escaped_and_quoted_parens.nu
+---
+Root@0..41
+  Pipeline@0..19
+    PipelineElement@0..19
+      Call@0..19
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        Interpolation@6..19
+          InterpText@6..15 "$\"\\(a) \\\\"
+          Subexpression@15..18
+            LParen@15..16 "("
+            Pipeline@16..17
+              PipelineElement@16..17
+                Call@16..17
+                  Word@16..17 "b"
+            RParen@17..18 ")"
+          InterpText@18..19 "\""
+  Newline@19..20 "\n"
+  Pipeline@20..40
+    PipelineElement@20..40
+      Call@20..40
+        Word@20..25 "print"
+        Whitespace@25..26 " "
+        Interpolation@26..40
+          InterpText@26..28 "$\""
+          Subexpression@28..39
+            LParen@28..29 "("
+            Pipeline@29..38
+              PipelineElement@29..38
+                MathExpression@29..38
+                  String@29..32 "')'"
+                  Whitespace@32..33 " "
+                  Operator@33..34 "+"
+                  Whitespace@34..35 " "
+                  String@35..38 "\")\""
+            RParen@38..39 ")"
+          InterpText@39..40 "\""
+  Newline@40..41 "\n"

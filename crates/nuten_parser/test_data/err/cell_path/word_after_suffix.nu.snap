@@ -1,0 +1,49 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/cell_path/word_after_suffix.nu
+---
+Root@0..28
+  Pipeline@0..6
+    PipelineElement@0..6
+      CellPath@0..6
+        Word@0..2 "$x"
+        Dot@2..3 "."
+        Word@3..4 "a"
+        Question@4..5 "?"
+        Error@5..6
+          Word@5..6 "b"
+  Newline@6..7 "\n"
+  Pipeline@7..13
+    PipelineElement@7..13
+      CellPath@7..13
+        Word@7..9 "$x"
+        Dot@9..10 "."
+        Word@10..11 "a"
+        Bang@11..12 "!"
+        Error@12..13
+          Word@12..13 "b"
+  Newline@13..14 "\n"
+  Pipeline@14..19
+    PipelineElement@14..19
+      CellPath@14..19
+        Word@14..16 "$x"
+        Dot@16..17 "."
+        Word@17..18 "?"
+        Error@18..19
+          Word@18..19 "a"
+  Newline@19..20 "\n"
+  Pipeline@20..27
+    PipelineElement@20..27
+      CellPath@20..27
+        Word@20..22 "$x"
+        Dot@22..23 "."
+        Word@23..24 "a"
+        Bang@24..25 "!"
+        Question@25..26 "?"
+        Error@26..27
+          Word@26..27 "b"
+  Newline@27..28 "\n"
+error 5..6 "b": CellPathSeparator { expected: "`.` or `!`" }
+error 12..13 "b": CellPathSeparator { expected: "`.` or `?`" }
+error 18..19 "a": CellPathSeparator { expected: "`.`, `?`, or `!`" }
+error 26..27 "b": CellPathSeparator { expected: "`.`" }

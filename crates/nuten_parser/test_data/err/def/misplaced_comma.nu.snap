@@ -1,0 +1,159 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/def/misplaced_comma.nu
+---
+Root@0..115
+  Pipeline@0..19
+    PipelineElement@0..19
+      Def@0..19
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "a"
+        Whitespace@5..6 " "
+        Signature@6..12
+          LBracket@6..7 "["
+          Param@7..10
+            Word@7..8 "x"
+            Comma@8..9 ","
+            Error@9..10
+              Comma@9..10 ","
+          Param@10..11
+            Word@10..11 "y"
+          RBracket@11..12 "]"
+        Whitespace@12..13 " "
+        Block@13..19
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          Pipeline@15..17
+            PipelineElement@15..17
+              Call@15..17
+                Word@15..17 "ls"
+          Whitespace@17..18 " "
+          RBrace@18..19 "}"
+  Newline@19..20 "\n"
+  Pipeline@20..42
+    PipelineElement@20..42
+      Def@20..42
+        Word@20..23 "def"
+        Whitespace@23..24 " "
+        Word@24..25 "b"
+        Whitespace@25..26 " "
+        Signature@26..35
+          LBracket@26..27 "["
+          Param@27..34
+            Word@27..28 "x"
+            Colon@28..29 ":"
+            Error@29..30
+              Comma@29..30 ","
+            Whitespace@30..31 " "
+            Word@31..34 "int"
+          RBracket@34..35 "]"
+        Whitespace@35..36 " "
+        Block@36..42
+          LBrace@36..37 "{"
+          Whitespace@37..38 " "
+          Pipeline@38..40
+            PipelineElement@38..40
+              Call@38..40
+                Word@38..40 "ls"
+          Whitespace@40..41 " "
+          RBrace@41..42 "}"
+  Newline@42..43 "\n"
+  Pipeline@43..64
+    PipelineElement@43..64
+      Def@43..64
+        Word@43..46 "def"
+        Whitespace@46..47 " "
+        Word@47..48 "c"
+        Whitespace@48..49 " "
+        Signature@49..57
+          LBracket@49..50 "["
+          Param@50..56
+            Word@50..51 "x"
+            Whitespace@51..52 " "
+            Eq@52..53 "="
+            Error@53..54
+              Comma@53..54 ","
+            Whitespace@54..55 " "
+            Word@55..56 "1"
+          RBracket@56..57 "]"
+        Whitespace@57..58 " "
+        Block@58..64
+          LBrace@58..59 "{"
+          Whitespace@59..60 " "
+          Pipeline@60..62
+            PipelineElement@60..62
+              Call@60..62
+                Word@60..62 "ls"
+          Whitespace@62..63 " "
+          RBrace@63..64 "}"
+  Newline@64..65 "\n"
+  Pipeline@65..92
+    PipelineElement@65..92
+      Def@65..92
+        Word@65..68 "def"
+        Whitespace@68..69 " "
+        Word@69..70 "d"
+        Whitespace@70..71 " "
+        Signature@71..85
+          LBracket@71..72 "["
+          Param@72..80
+            Word@72..73 "x"
+            Whitespace@73..74 " "
+            Eq@74..75 "="
+            Whitespace@75..76 " "
+            Word@76..77 "1"
+            Comma@77..78 ","
+            Whitespace@78..79 " "
+            Error@79..80
+              Colon@79..80 ":"
+          Whitespace@80..81 " "
+          Param@81..84
+            Word@81..84 "int"
+          RBracket@84..85 "]"
+        Whitespace@85..86 " "
+        Block@86..92
+          LBrace@86..87 "{"
+          Whitespace@87..88 " "
+          Pipeline@88..90
+            PipelineElement@88..90
+              Call@88..90
+                Word@88..90 "ls"
+          Whitespace@90..91 " "
+          RBrace@91..92 "}"
+  Newline@92..93 "\n"
+  Pipeline@93..114
+    PipelineElement@93..114
+      Def@93..114
+        Word@93..96 "def"
+        Whitespace@96..97 " "
+        Word@97..98 "e"
+        Whitespace@98..99 " "
+        Signature@99..107
+          LBracket@99..100 "["
+          Param@100..104
+            Word@100..101 "x"
+            Comma@101..102 ","
+            Whitespace@102..103 " "
+            Error@103..104
+              Eq@103..104 "="
+          Whitespace@104..105 " "
+          Param@105..106
+            Word@105..106 "2"
+          RBracket@106..107 "]"
+        Whitespace@107..108 " "
+        Block@108..114
+          LBrace@108..109 "{"
+          Whitespace@109..110 " "
+          Pipeline@110..112
+            PipelineElement@110..112
+              Call@110..112
+                Word@110..112 "ls"
+          Whitespace@112..113 " "
+          RBrace@113..114 "}"
+  Newline@114..115 "\n"
+error 9..10 ",": SignatureSeparator
+error 29..30 ",": SignatureSeparator
+error 53..54 ",": SignatureSeparator
+error 79..80 ":": SignatureSeparator
+error 103..104 "=": SignatureSeparator

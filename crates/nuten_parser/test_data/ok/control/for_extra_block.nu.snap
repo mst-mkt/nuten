@@ -1,0 +1,39 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/control/for_extra_block.nu
+---
+Root@0..27
+  Pipeline@0..26
+    PipelineElement@0..26
+      For@0..26
+        Word@0..3 "for"
+        Whitespace@3..4 " "
+        Word@4..5 "x"
+        Whitespace@5..6 " "
+        Word@6..8 "in"
+        Whitespace@8..9 " "
+        List@9..12
+          LBracket@9..10 "["
+          Word@10..11 "1"
+          RBracket@11..12 "]"
+        Whitespace@12..13 " "
+        Block@13..19
+          LBrace@13..14 "{"
+          Whitespace@14..15 " "
+          Pipeline@15..17
+            PipelineElement@15..17
+              Call@15..17
+                Word@15..17 "ls"
+          Whitespace@17..18 " "
+          RBrace@18..19 "}"
+        Whitespace@19..20 " "
+        Block@20..26
+          LBrace@20..21 "{"
+          Whitespace@21..22 " "
+          Pipeline@22..24
+            PipelineElement@22..24
+              Call@22..24
+                Word@22..24 "ls"
+          Whitespace@24..25 " "
+          RBrace@25..26 "}"
+  Newline@26..27 "\n"

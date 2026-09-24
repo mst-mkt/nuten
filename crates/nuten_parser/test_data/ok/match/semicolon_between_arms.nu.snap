@@ -1,0 +1,14 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/match/semicolon_between_arms.nu
+---
+Root@0..28
+  Pipeline@0..27
+    PipelineElement@0..27
+      Match@0..27
+        Word@0..5 "match"
+        Whitespace@5..6 " "
+        Word@6..8 "$x"
+        Whitespace@8..9 " "
+        Word@9..27 "{ 1 => a; _ => b }"
+  Newline@27..28 "\n"

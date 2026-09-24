@@ -1,0 +1,73 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/cell_path/nested_in_other_syntax.nu
+---
+Root@0..51
+  Pipeline@0..17
+    PipelineElement@0..17
+      Call@0..17
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        CellPath@6..9
+          Word@6..8 "$x"
+          Error@8..9
+            Question@8..9 "?"
+        Whitespace@9..10 " "
+        CellPath@10..17
+          Subexpression@10..14
+            LParen@10..11 "("
+            Pipeline@11..13
+              PipelineElement@11..13
+                Call@11..13
+                  Word@11..13 "ls"
+            RParen@13..14 ")"
+          Dot@14..15 "."
+          Error@15..17
+            Word@15..17 "-1"
+  Newline@17..18 "\n"
+  Pipeline@18..23
+    PipelineElement@18..23
+      List@18..23
+        LBracket@18..19 "["
+        CellPath@19..22
+          Word@19..21 "$x"
+          Error@21..22
+            Question@21..22 "?"
+        RBracket@22..23 "]"
+  Newline@23..24 "\n"
+  Pipeline@24..35
+    PipelineElement@24..35
+      Record@24..35
+        LBrace@24..25 "{"
+        RecordField@25..34
+          Word@25..26 "a"
+          Colon@26..27 ":"
+          Whitespace@27..28 " "
+          CellPath@28..34
+            Word@28..30 "$x"
+            Dot@30..31 "."
+            Word@31..32 "a"
+            Question@32..33 "?"
+            Error@33..34
+              Question@33..34 "?"
+        RBrace@34..35 "}"
+  Newline@35..36 "\n"
+  Pipeline@36..50
+    PipelineElement@36..50
+      Call@36..50
+        Word@36..39 "def"
+        Whitespace@39..40 " "
+        Word@40..41 "f"
+        Whitespace@41..42 " "
+        Word@42..44 "[]"
+        Whitespace@44..45 " "
+        CellPath@45..50
+          Word@45..49 "$env"
+          Error@49..50
+            Question@49..50 "?"
+  Newline@50..51 "\n"
+error 8..9 "?": CellPathSeparator { expected: "`.`" }
+error 15..17 "-1": NegativeCellPathIndex
+error 21..22 "?": CellPathSeparator { expected: "`.`" }
+error 33..34 "?": CellPathSeparator { expected: "`.` or `!`" }
+error 49..50 "?": CellPathSeparator { expected: "`.`" }

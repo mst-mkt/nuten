@@ -1,0 +1,42 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/alias/commented_broken_pipeline.nu
+---
+Root@0..52
+  Pipeline@0..27
+    PipelineElement@0..27
+      Alias@0..27
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..7 "h"
+        Whitespace@7..8 " "
+        Assign@8..9 "="
+        Whitespace@9..10 " "
+        Call@10..27
+          Word@10..12 "ls"
+          Whitespace@12..13 " "
+          Pipe@13..14 "|"
+          Whitespace@14..15 " "
+          Comment@15..18 "# c"
+          Newline@18..19 "\n"
+          Whitespace@19..23 "    "
+          Word@23..27 "sort"
+  Newline@27..28 "\n"
+  Pipeline@28..51
+    PipelineElement@28..51
+      Alias@28..51
+        Word@28..33 "alias"
+        Whitespace@33..34 " "
+        Word@34..35 "i"
+        Whitespace@35..36 " "
+        Assign@36..37 "="
+        Whitespace@37..38 " "
+        Call@38..51
+          Word@38..40 "ls"
+          Newline@40..41 "\n"
+          Comment@41..44 "# c"
+          Newline@44..45 "\n"
+          Pipe@45..46 "|"
+          Whitespace@46..47 " "
+          Word@47..51 "sort"
+  Newline@51..52 "\n"

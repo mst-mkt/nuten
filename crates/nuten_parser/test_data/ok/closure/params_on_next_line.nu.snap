@@ -1,0 +1,25 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/closure/params_on_next_line.nu
+---
+Root@0..14
+  Pipeline@0..13
+    PipelineElement@0..13
+      Call@0..13
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Block@5..13
+          LBrace@5..6 "{"
+          Newline@6..7 "\n"
+          ClosureParams@7..10
+            Pipe@7..8 "|"
+            Param@8..9
+              Word@8..9 "x"
+            Pipe@9..10 "|"
+          Whitespace@10..11 " "
+          Pipeline@11..12
+            PipelineElement@11..12
+              Call@11..12
+                Word@11..12 "x"
+          RBrace@12..13 "}"
+  Newline@13..14 "\n"

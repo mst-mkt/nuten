@@ -1,0 +1,53 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/nested_list_flag_value.nu
+---
+Root@0..66
+  Pipeline@0..20
+    PipelineElement@0..20
+      Call@0..20
+        Word@0..4 "glob"
+        Whitespace@4..5 " "
+        Word@5..7 "-e"
+        Whitespace@7..8 " "
+        List@8..16
+          LBracket@8..9 "["
+          Word@9..12 "[a]"
+          Whitespace@12..14 "  "
+          Word@14..15 "b"
+          RBracket@15..16 "]"
+        Whitespace@16..17 " "
+        String@17..20 "\"*\""
+  Newline@20..21 "\n"
+  Pipeline@21..44
+    PipelineElement@21..44
+      Call@21..44
+        Word@21..25 "glob"
+        Whitespace@25..26 " "
+        Word@26..28 "-e"
+        Whitespace@28..29 " "
+        List@29..40
+          LBracket@29..30 "["
+          Word@30..36 "[a  b]"
+          Whitespace@36..38 "  "
+          Word@38..39 "c"
+          RBracket@39..40 "]"
+        Whitespace@40..41 " "
+        String@41..44 "\"*\""
+  Newline@44..45 "\n"
+  Pipeline@45..65
+    PipelineElement@45..65
+      Call@45..65
+        Word@45..49 "glob"
+        Whitespace@49..50 " "
+        Word@50..52 "-e"
+        Whitespace@52..53 " "
+        List@53..61
+          LBracket@53..54 "["
+          Word@54..57 "{a}"
+          Whitespace@57..59 "  "
+          Word@59..60 "b"
+          RBracket@60..61 "]"
+        Whitespace@61..62 " "
+        String@62..65 "\"*\""
+  Newline@65..66 "\n"

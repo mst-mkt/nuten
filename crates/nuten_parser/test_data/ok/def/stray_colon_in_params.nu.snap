@@ -1,0 +1,65 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/stray_colon_in_params.nu
+---
+Root@0..52
+  Pipeline@0..31
+    PipelineElement@0..31
+      Def@0..31
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..5 "n"
+        Whitespace@5..6 " "
+        Signature@6..24
+          LBracket@6..7 "["
+          Param@7..23
+            Word@7..8 "x"
+            Colon@8..9 ":"
+            Whitespace@9..10 " "
+            Word@10..13 "int"
+            Whitespace@13..14 " "
+            Eq@14..15 "="
+            Whitespace@15..16 " "
+            Word@16..17 "1"
+            Whitespace@17..18 " "
+            Colon@18..19 ":"
+            Whitespace@19..20 " "
+            Word@20..23 "int"
+          RBracket@23..24 "]"
+        Whitespace@24..25 " "
+        Block@25..31
+          LBrace@25..26 "{"
+          Whitespace@26..27 " "
+          Pipeline@27..29
+            PipelineElement@27..29
+              Call@27..29
+                Word@27..29 "ls"
+          Whitespace@29..30 " "
+          RBrace@30..31 "}"
+  Newline@31..32 "\n"
+  Pipeline@32..51
+    PipelineElement@32..51
+      Def@32..51
+        Word@32..35 "def"
+        Whitespace@35..36 " "
+        Word@36..37 "y"
+        Whitespace@37..38 " "
+        Signature@38..44
+          LBracket@38..39 "["
+          Param@39..43
+            Word@39..40 "z"
+            Colon@40..41 ":"
+            Whitespace@41..42 " "
+            Semicolon@42..43 ";"
+          RBracket@43..44 "]"
+        Whitespace@44..45 " "
+        Block@45..51
+          LBrace@45..46 "{"
+          Whitespace@46..47 " "
+          Pipeline@47..49
+            PipelineElement@47..49
+              Call@47..49
+                Word@47..49 "ls"
+          Whitespace@49..50 " "
+          RBrace@50..51 "}"
+  Newline@51..52 "\n"

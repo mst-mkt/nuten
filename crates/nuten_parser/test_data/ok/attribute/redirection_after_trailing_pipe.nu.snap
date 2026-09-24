@@ -1,0 +1,82 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/attribute/redirection_after_trailing_pipe.nu
+---
+Root@0..71
+  Pipeline@0..15
+    PipelineElement@0..2
+      Call@0..2
+        Word@0..2 "ls"
+    Whitespace@2..3 " "
+    Pipe@3..4 "|"
+    Newline@4..5 "\n"
+    PipelineElement@5..9
+      Call@5..9
+        Word@5..7 "@a"
+        Whitespace@7..8 " "
+        Word@8..9 "x"
+    Newline@9..10 "\n"
+    ErrGtPipe@10..13 "e>|"
+    Whitespace@13..14 " "
+    PipelineElement@14..15
+      Call@14..15
+        Word@14..15 "y"
+  Newline@15..16 "\n"
+  Pipeline@16..34
+    PipelineElement@16..18
+      Call@16..18
+        Word@16..18 "ls"
+    Whitespace@18..19 " "
+    Pipe@19..20 "|"
+    Newline@20..21 "\n"
+    PipelineElement@21..34
+      Call@21..25
+        Word@21..23 "@a"
+        Whitespace@23..24 " "
+        Word@24..25 "x"
+      Newline@25..26 "\n"
+      Redirection@26..31
+        OutGt@26..28 "o>"
+        Whitespace@28..30 "  "
+        Word@30..31 "f"
+      Whitespace@31..33 "  "
+      Word@33..34 "z"
+  Newline@34..35 "\n"
+  Pipeline@35..52
+    PipelineElement@35..37
+      Call@35..37
+        Word@35..37 "ls"
+    Whitespace@37..38 " "
+    Pipe@38..39 "|"
+    Newline@39..40 "\n"
+    PipelineElement@40..52
+      Call@40..45
+        Word@40..42 "@a"
+        Whitespace@42..44 "  "
+        Word@44..45 "x"
+      Semicolon@45..46 ";"
+      Whitespace@46..48 "  "
+      Redirection@48..52
+        OutGt@48..50 "o>"
+        Whitespace@50..51 " "
+        Word@51..52 "f"
+  Newline@52..53 "\n"
+  Pipeline@53..70
+    PipelineElement@53..55
+      Call@53..55
+        Word@53..55 "ls"
+    Whitespace@55..56 " "
+    Pipe@56..57 "|"
+    Newline@57..58 "\n"
+    PipelineElement@58..62
+      Call@58..62
+        Word@58..60 "@a"
+        Whitespace@60..61 " "
+        Word@61..62 "x"
+    Newline@62..63 "\n"
+    OutErrGtPipe@63..68 "o+e>|"
+    Whitespace@68..69 " "
+    PipelineElement@69..70
+      Call@69..70
+        Word@69..70 "y"
+  Newline@70..71 "\n"

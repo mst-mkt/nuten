@@ -1,0 +1,40 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/cell_path/in_list_or_record.nu
+---
+Root@0..24
+  Pipeline@0..13
+    PipelineElement@0..13
+      List@0..13
+        LBracket@0..1 "["
+        CellPath@1..5
+          Word@1..3 "$x"
+          Dot@3..4 "."
+          Word@4..5 "a"
+        Whitespace@5..6 " "
+        CellPath@6..12
+          Subexpression@6..10
+            LParen@6..7 "("
+            Pipeline@7..9
+              PipelineElement@7..9
+                Call@7..9
+                  Word@7..9 "ls"
+            RParen@9..10 ")"
+          Dot@10..11 "."
+          Word@11..12 "b"
+        RBracket@12..13 "]"
+  Newline@13..14 "\n"
+  Pipeline@14..23
+    PipelineElement@14..23
+      Record@14..23
+        LBrace@14..15 "{"
+        RecordField@15..22
+          Word@15..16 "a"
+          Colon@16..17 ":"
+          Whitespace@17..18 " "
+          CellPath@18..22
+            Word@18..20 "$x"
+            Dot@20..21 "."
+            Word@21..22 "b"
+        RBrace@22..23 "}"
+  Newline@23..24 "\n"

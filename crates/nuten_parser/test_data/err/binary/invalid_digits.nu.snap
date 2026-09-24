@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/binary/invalid_digits.nu
+---
+Root@0..21
+  Pipeline@0..6
+    PipelineElement@0..6
+      Error@0..6
+        Word@0..6 "0x[zz]"
+  Newline@6..7 "\n"
+  Pipeline@7..14
+    PipelineElement@7..14
+      Error@7..14
+        Word@7..14 "0o[400]"
+  Newline@14..15 "\n"
+  Pipeline@15..20
+    PipelineElement@15..20
+      Error@15..20
+        Word@15..20 "0b[2]"
+  Newline@20..21 "\n"
+error 0..6 "0x[zz]": BinaryDigits
+error 7..14 "0o[400]": BinaryDigits
+error 15..20 "0b[2]": BinaryDigits

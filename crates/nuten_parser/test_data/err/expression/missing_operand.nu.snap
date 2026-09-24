@@ -1,0 +1,74 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/expression/missing_operand.nu
+---
+Root@0..47
+  Pipeline@0..3
+    PipelineElement@0..3
+      MathExpression@0..3
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Error@2..3
+          Word@2..3 "+"
+  Newline@3..4 "\n"
+  Pipeline@4..16
+    PipelineElement@4..16
+      MathExpression@4..7
+        Word@4..5 "1"
+        Whitespace@5..6 " "
+        Error@6..7
+          Word@6..7 "+"
+      Whitespace@7..8 " "
+      Redirection@8..16
+        OutGt@8..10 "o>"
+        Whitespace@10..11 " "
+        Word@11..16 "f.txt"
+  Newline@16..17 "\n"
+  Pipeline@17..20
+    PipelineElement@17..20
+      MathExpression@17..20
+        Word@17..18 "1"
+        Whitespace@18..19 " "
+        Error@19..20
+          Word@19..20 "+"
+  Semicolon@20..21 ";"
+  Whitespace@21..22 " "
+  Pipeline@22..24
+    PipelineElement@22..24
+      Call@22..24
+        Word@22..24 "ls"
+  Newline@24..25 "\n"
+  Pipeline@25..33
+    PipelineElement@25..33
+      Assignment@25..33
+        Word@25..27 "$x"
+        Whitespace@27..28 " "
+        Assign@28..29 "="
+        Whitespace@29..30 " "
+        Pipeline@30..33
+          PipelineElement@30..33
+            MathExpression@30..33
+              Word@30..31 "1"
+              Whitespace@31..32 " "
+              Error@32..33
+                Word@32..33 "+"
+  Newline@33..34 "\n"
+  Pipeline@34..46
+    PipelineElement@34..37
+      MathExpression@34..37
+        Word@34..35 "1"
+        Whitespace@35..36 " "
+        Error@36..37
+          Word@36..37 "+"
+    Whitespace@37..38 " "
+    Pipe@38..39 "|"
+    Whitespace@39..40 " "
+    PipelineElement@40..46
+      Call@40..46
+        Word@40..46 "length"
+  Newline@46..47 "\n"
+error 2..3 "+": MissingTerm
+error 6..7 "+": MissingTerm
+error 19..20 "+": MissingTerm
+error 32..33 "+": MissingTerm
+error 36..37 "+": MissingTerm

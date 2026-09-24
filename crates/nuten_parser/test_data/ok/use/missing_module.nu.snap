@@ -1,0 +1,17 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/use/missing_module.nu
+---
+Root@0..15
+  Pipeline@0..3
+    PipelineElement@0..3
+      Call@0..3
+        Word@0..3 "use"
+  Newline@3..4 "\n"
+  Pipeline@4..14
+    PipelineElement@4..14
+      Call@4..14
+        Word@4..10 "export"
+        Whitespace@10..11 " "
+        Word@11..14 "use"
+  Newline@14..15 "\n"

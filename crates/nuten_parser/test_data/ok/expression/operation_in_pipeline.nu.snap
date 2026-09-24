@@ -1,0 +1,49 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/expression/operation_in_pipeline.nu
+---
+Root@0..45
+  Pipeline@0..14
+    PipelineElement@0..5
+      MathExpression@0..5
+        Word@0..1 "1"
+        Whitespace@1..2 " "
+        Operator@2..3 "+"
+        Whitespace@3..4 " "
+        Word@4..5 "2"
+    Whitespace@5..6 " "
+    Pipe@6..7 "|"
+    Whitespace@7..8 " "
+    PipelineElement@8..14
+      Call@8..14
+        Word@8..14 "length"
+  Newline@14..15 "\n"
+  Pipeline@15..31
+    PipelineElement@15..31
+      MathExpression@15..20
+        Word@15..16 "1"
+        Whitespace@16..17 " "
+        Operator@17..18 "+"
+        Whitespace@18..19 " "
+        Word@19..20 "2"
+      Whitespace@20..21 " "
+      Redirection@21..31
+        OutGt@21..23 "o>"
+        Whitespace@23..24 " "
+        Word@24..31 "out.txt"
+  Newline@31..32 "\n"
+  Pipeline@32..44
+    PipelineElement@32..34
+      Call@32..34
+        Word@32..34 "ls"
+    Whitespace@34..35 " "
+    Pipe@35..36 "|"
+    Whitespace@36..37 " "
+    PipelineElement@37..44
+      MathExpression@37..44
+        Word@37..40 "$in"
+        Whitespace@40..41 " "
+        Operator@41..42 "+"
+        Whitespace@42..43 " "
+        Word@43..44 "1"
+  Newline@44..45 "\n"

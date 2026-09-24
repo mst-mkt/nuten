@@ -1,0 +1,53 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/redirection/shell_redirection.nu
+---
+Root@0..59
+  Pipeline@0..17
+    PipelineElement@0..17
+      ExternalCall@0..17
+        Word@0..4 "^cat"
+        Whitespace@4..5 " "
+        Word@5..6 "x"
+        Whitespace@6..7 " "
+        Error@7..9
+          Word@7..9 "2>"
+        Whitespace@9..10 " "
+        Word@10..17 "err.log"
+  Newline@17..18 "\n"
+  Pipeline@18..29
+    PipelineElement@18..29
+      ExternalCall@18..29
+        Word@18..22 "^cat"
+        Whitespace@22..23 " "
+        Word@23..24 "x"
+        Whitespace@24..25 " "
+        Error@25..29
+          Word@25..29 "2>&1"
+  Newline@29..30 "\n"
+  Pipeline@30..47
+    PipelineElement@30..47
+      Call@30..47
+        Word@30..34 "echo"
+        Whitespace@34..35 " "
+        String@35..39 "\"&&\""
+        Whitespace@39..40 " "
+        Word@40..43 "2>>"
+        Whitespace@43..44 " "
+        Word@44..47 "x2>"
+  Newline@47..48 "\n"
+  Pipeline@48..58
+    PipelineElement@48..58
+      MathExpression@48..58
+        Word@48..49 "1"
+        Whitespace@49..50 " "
+        Operator@50..51 "+"
+        Whitespace@51..52 " "
+        Word@52..53 "2"
+        Whitespace@53..54 " "
+        Error@54..58
+          Word@54..58 "2>&1"
+  Newline@58..59 "\n"
+error 7..9 "2>": ShellErrRedirect
+error 25..29 "2>&1": ShellOutErrRedirect
+error 54..58 "2>&1": ShellOutErrRedirect

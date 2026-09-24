@@ -1,0 +1,70 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/if/else_value_with_flag.nu
+---
+Root@0..80
+  Pipeline@0..24
+    PipelineElement@0..24
+      Call@0..24
+        Word@0..2 "if"
+        Whitespace@2..3 " "
+        Word@3..5 "$a"
+        Whitespace@5..6 " "
+        Block@6..9
+          LBrace@6..7 "{"
+          Pipeline@7..8
+            PipelineElement@7..8
+              Word@7..8 "1"
+          RBrace@8..9 "}"
+        Whitespace@9..10 " "
+        Word@10..14 "else"
+        Whitespace@14..15 " "
+        Word@15..17 "$a"
+        Whitespace@17..18 " "
+        Word@18..24 "--help"
+  Newline@24..25 "\n"
+  Pipeline@25..50
+    PipelineElement@25..50
+      Call@25..50
+        Word@25..27 "if"
+        Whitespace@27..28 " "
+        Word@28..30 "$a"
+        Whitespace@30..31 " "
+        Block@31..34
+          LBrace@31..32 "{"
+          Pipeline@32..33
+            PipelineElement@32..33
+              Word@32..33 "1"
+          RBrace@33..34 "}"
+        Whitespace@34..35 " "
+        Word@35..39 "else"
+        Whitespace@39..40 " "
+        Subexpression@40..43
+          LParen@40..41 "("
+          Pipeline@41..42
+            PipelineElement@41..42
+              Word@41..42 "1"
+          RParen@42..43 ")"
+        Whitespace@43..44 " "
+        Word@44..50 "--help"
+  Newline@50..51 "\n"
+  Pipeline@51..79
+    PipelineElement@51..79
+      Call@51..79
+        Word@51..53 "if"
+        Whitespace@53..54 " "
+        Word@54..56 "$a"
+        Whitespace@56..57 " "
+        Block@57..60
+          LBrace@57..58 "{"
+          Pipeline@58..59
+            PipelineElement@58..59
+              Word@58..59 "1"
+          RBrace@59..60 "}"
+        Whitespace@60..61 " "
+        Word@61..65 "else"
+        Whitespace@65..66 " "
+        RawString@66..72 "r#'x'#"
+        Whitespace@72..73 " "
+        Word@73..79 "--help"
+  Newline@79..80 "\n"

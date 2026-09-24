@@ -1,0 +1,49 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/module/help_flag.nu
+---
+Root@0..84
+  Pipeline@0..19
+    PipelineElement@0..19
+      Call@0..19
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..8 "c"
+        Whitespace@8..9 " "
+        Word@9..15 "--help"
+        Whitespace@15..16 " "
+        Word@16..19 "{x}"
+  Newline@19..20 "\n"
+  Pipeline@20..39
+    PipelineElement@20..39
+      Call@20..39
+        Word@20..26 "module"
+        Whitespace@26..27 " "
+        Word@27..28 "d"
+        Whitespace@28..29 " "
+        Word@29..32 "{x}"
+        Whitespace@32..33 " "
+        Word@33..39 "--help"
+  Newline@39..40 "\n"
+  Pipeline@40..60
+    PipelineElement@40..60
+      Call@40..60
+        Word@40..46 "module"
+        Whitespace@46..47 " "
+        Word@47..49 "-h"
+        Whitespace@49..50 " "
+        Word@50..56 "(ls|x)"
+        Whitespace@56..57 " "
+        Word@57..60 "{x}"
+  Newline@60..61 "\n"
+  Pipeline@61..83
+    PipelineElement@61..83
+      Call@61..83
+        Word@61..67 "export"
+        Whitespace@67..68 " "
+        Word@68..74 "module"
+        Whitespace@74..75 " "
+        Word@75..81 "--help"
+        Whitespace@81..82 " "
+        Word@82..83 "q"
+  Newline@83..84 "\n"

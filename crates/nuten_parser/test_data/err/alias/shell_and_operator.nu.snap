@@ -1,0 +1,23 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/alias/shell_and_operator.nu
+---
+Root@0..19
+  Pipeline@0..18
+    PipelineElement@0..18
+      Alias@0..18
+        Word@0..5 "alias"
+        Whitespace@5..6 " "
+        Word@6..7 "a"
+        Whitespace@7..8 " "
+        Assign@8..9 "="
+        Whitespace@9..10 " "
+        ExternalCall@10..18
+          Word@10..13 "^ls"
+          Whitespace@13..14 " "
+          Error@14..16
+            Word@14..16 "&&"
+          Whitespace@16..17 " "
+          Word@17..18 "y"
+  Newline@18..19 "\n"
+error 14..16 "&&": ShellAndAnd

@@ -1,0 +1,35 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/pipeline/stdout_redirecting_pipe.nu
+---
+Root@0..27
+  Pipeline@0..14
+    PipelineElement@0..14
+      Call@0..14
+        Word@0..4 "echo"
+        Whitespace@4..5 " "
+        Word@5..6 "a"
+        Whitespace@6..7 " "
+        Error@7..10
+          Word@7..10 "o>|"
+        Whitespace@10..11 " "
+        Word@11..14 "cat"
+  Newline@14..15 "\n"
+  Pipeline@15..26
+    PipelineElement@15..26
+      MathExpression@15..26
+        Word@15..16 "1"
+        Whitespace@16..17 " "
+        Operator@17..18 "+"
+        Whitespace@18..19 " "
+        Word@19..20 "2"
+        Whitespace@20..21 " "
+        Error@21..24
+          Word@21..24 "o>|"
+        Whitespace@24..25 " "
+        Error@25..26
+          Word@25..26 "x"
+  Newline@26..27 "\n"
+error 7..10 "o>|": OutPipe
+error 21..24 "o>|": OutPipe
+error 25..26 "x": MissingOperator

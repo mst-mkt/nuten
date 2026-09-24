@@ -1,0 +1,75 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/import_replacing_def.nu
+---
+Root@0..120
+  Pipeline@0..54
+    PipelineElement@0..54
+      Module@0..54
+        Word@0..6 "module"
+        Whitespace@6..7 " "
+        Word@7..15 "imported"
+        Whitespace@15..16 " "
+        Block@16..54
+          LBrace@16..17 "{"
+          Whitespace@17..18 " "
+          Pipeline@18..52
+            PipelineElement@18..52
+              Def@18..52
+                Word@18..24 "export"
+                Whitespace@24..25 " "
+                Word@25..28 "def"
+                Whitespace@28..29 " "
+                Word@29..37 "replaced"
+                Whitespace@37..38 " "
+                Signature@38..49
+                  LBracket@38..39 "["
+                  Param@39..48
+                    Word@39..40 "x"
+                    Colon@40..41 ":"
+                    Whitespace@41..42 " "
+                    Word@42..48 "string"
+                  RBracket@48..49 "]"
+                Whitespace@49..50 " "
+                Block@50..52
+                  LBrace@50..51 "{"
+                  RBrace@51..52 "}"
+          Whitespace@52..53 " "
+          RBrace@53..54 "}"
+  Newline@54..55 "\n"
+  Pipeline@55..80
+    PipelineElement@55..80
+      Def@55..80
+        Word@55..58 "def"
+        Whitespace@58..59 " "
+        Word@59..67 "replaced"
+        Whitespace@67..68 " "
+        Signature@68..77
+          LBracket@68..69 "["
+          Param@69..76
+            Word@69..70 "x"
+            Colon@70..71 ":"
+            Whitespace@71..72 " "
+            Word@72..76 "list"
+          RBracket@76..77 "]"
+        Whitespace@77..78 " "
+        Block@78..80
+          LBrace@78..79 "{"
+          RBrace@79..80 "}"
+  Newline@80..81 "\n"
+  Pipeline@81..102
+    PipelineElement@81..102
+      Use@81..102
+        Word@81..84 "use"
+        Whitespace@84..85 " "
+        Word@85..93 "imported"
+        Whitespace@93..94 " "
+        Word@94..102 "replaced"
+  Newline@102..103 "\n"
+  Pipeline@103..119
+    PipelineElement@103..119
+      Call@103..119
+        Word@103..111 "replaced"
+        Whitespace@111..112 " "
+        Word@112..119 "[1,  2]"
+  Newline@119..120 "\n"
