@@ -1,10 +1,10 @@
 //! The command-line interface.
 //!
-//! Exits with 0 when every file is formatted.
-//! Exits with 2 when the arguments are invalid.
-//! Exits with 2 too when any file has syntax errors or cannot be read or written.
+//! `nuten format` exits with 0 when every file is formatted.
+//! It exits with 2 when any file has syntax errors or cannot be read or written.
 //! The other files are still formatted then.
 //! Exit code 1 is kept for a future check mode.
+//! Any command exits with 2 when the arguments are invalid.
 
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
@@ -15,22 +15,40 @@ use std::{
 };
 
 use nuten_format::{Config, format};
-use usage::Cli;
+use usage::{Args, Cli, Subcommands};
 
 #[derive(Cli)]
 #[usage(bin = "nuten", version, unknown_flags = "error")]
-struct Args {
+struct Nuten {
+    #[usage(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommands)]
+enum Command {
+    /// Format files in place
+    Format(Format),
+}
+
+#[derive(Args)]
+struct Format {
     /// Files to format in place
     #[usage(required)]
     files: Vec<PathBuf>,
 }
 
 fn main() -> ExitCode {
-    let args = Args::parse();
+    match Nuten::parse().command {
+        Command::Format(Format {
+            files,
+        }) => format_files(&files),
+    }
+}
+
+fn format_files(files: &[PathBuf]) -> ExitCode {
     let config = Config::default();
     // Not `any`: the files after a failure are still to be formatted.
-    let failures = args
-        .files
+    let failures = files
         .iter()
         .filter(|path| !format_file(path, &config))
         .count();

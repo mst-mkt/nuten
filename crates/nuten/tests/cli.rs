@@ -1,7 +1,9 @@
 //! Runs the binary on files in a temporary directory.
 
 use std::{
-    env, fs,
+    env,
+    ffi::OsStr,
+    fs,
     path::{Path, PathBuf},
     process::{Command, Output},
     sync::atomic::{AtomicUsize, Ordering},
@@ -36,11 +38,19 @@ impl Drop for TempDir {
     }
 }
 
-fn nuten(paths: &[&Path]) -> Output {
+fn nuten(args: &[&OsStr]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_nuten"))
-        .args(paths)
+        .args(args)
         .output()
         .unwrap()
+}
+
+fn format(paths: &[&Path]) -> Output {
+    let args: Vec<_> = [OsStr::new("format")]
+        .into_iter()
+        .chain(paths.iter().map(|path| path.as_os_str()))
+        .collect();
+    nuten(&args)
 }
 
 fn stderr(output: &Output) -> String {
@@ -48,11 +58,11 @@ fn stderr(output: &Output) -> String {
 }
 
 #[test]
-fn formats_each_file_in_place() {
+fn format_rewrites_each_file_in_place() {
     let dir = TempDir::new();
     let a = dir.file("a.nu", "ls|first");
     let b = dir.file("b.nu", "echo   a\n\n\n");
-    let output = nuten(&[&a, &b]);
+    let output = format(&[&a, &b]);
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
@@ -61,24 +71,24 @@ fn formats_each_file_in_place() {
 }
 
 #[test]
-fn leaves_formatted_file_alone() {
+fn format_leaves_formatted_file_alone() {
     let dir = TempDir::new();
     let path = dir.file("a.nu", "ls | first\n");
     // Writing would fail.
     let mut permissions = fs::metadata(&path).unwrap().permissions();
     permissions.set_readonly(true);
     fs::set_permissions(&path, permissions).unwrap();
-    let output = nuten(&[&path]);
+    let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
     assert!(output.stderr.is_empty());
 }
 
 #[test]
-fn reports_syntax_error_position_and_continues() {
+fn format_reports_syntax_error_position_and_continues() {
     let dir = TempDir::new();
     let bad = dir.file("bad.nu", "ls\n\n  ls || x\n");
     let good = dir.file("good.nu", "ls|first");
-    let output = nuten(&[&bad, &good]);
+    let output = format(&[&bad, &good]);
     assert_eq!(output.status.code(), Some(2));
     let stderr = stderr(&output);
     assert_eq!(stderr.lines().count(), 1, "{stderr}");
@@ -91,26 +101,51 @@ fn reports_syntax_error_position_and_continues() {
 }
 
 #[test]
-fn reports_unreadable_file() {
+fn format_reports_unreadable_file() {
     let dir = TempDir::new();
     let missing = dir.path("missing.nu");
-    let output = nuten(&[&missing]);
+    let output = format(&[&missing]);
     assert_eq!(output.status.code(), Some(2));
     assert!(stderr(&output).starts_with(&format!("{}: ", missing.display())));
 }
 
 #[test]
-fn wants_at_least_one_file() {
-    let output = nuten(&[]);
+fn format_wants_at_least_one_file() {
+    let output = format(&[]);
     assert_eq!(output.status.code(), Some(2));
     assert!(!output.stderr.is_empty());
 }
 
 #[test]
-fn rejects_unknown_flag() {
-    let output = nuten(&[Path::new("--bogus")]);
+fn format_rejects_unknown_flag() {
+    let output = format(&[Path::new("--bogus")]);
     assert_eq!(output.status.code(), Some(2));
     let stderr = stderr(&output);
     assert!(stderr.contains("--bogus"), "{stderr}");
     assert!(!stderr.contains("No such file"), "{stderr}");
+}
+
+#[test]
+fn format_takes_file_named_like_subcommand() {
+    let dir = TempDir::new();
+    let path = dir.file("format", "ls|first");
+    let output = format(&[&path]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert_eq!(fs::read_to_string(&path).unwrap(), "ls | first\n");
+}
+
+#[test]
+fn wants_subcommand() {
+    let output = nuten(&[]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn rejects_file_without_subcommand() {
+    let dir = TempDir::new();
+    let path = dir.file("a.nu", "ls|first");
+    let output = nuten(&[path.as_os_str()]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(fs::read_to_string(&path).unwrap(), "ls|first");
 }
