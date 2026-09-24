@@ -2,6 +2,8 @@
 //!
 //! `nuten format` exits with 0 when every file is formatted.
 //! It exits with 2 when any file has syntax errors or cannot be read or written.
+//! It does the same when a directory it walks into cannot be read.
+//! The same goes for an ignore file with a line it cannot read.
 //! The other files are still formatted then.
 //! It formats nothing and exits with 2 when a config file is wrong or cannot be read.
 //! It does the same when it cannot tell whether a config file exists.
@@ -17,8 +19,10 @@ mod files;
 mod parallel;
 
 use std::{
+    collections::HashSet,
     fmt::Display,
     fs,
+    hash::Hash,
     io::{self, Write},
     path::{Path, PathBuf},
     process::ExitCode,
@@ -50,17 +54,17 @@ struct Format {
     /// Config file for all files, instead of the one nearest each file
     #[usage(short = 'c', long)]
     config: Option<PathBuf>,
-    /// Files to format in place
+    /// Files to format in place; a directory stands for the `.nu` files under it
     #[usage(required)]
-    files: Vec<PathBuf>,
+    paths: Vec<PathBuf>,
 }
 
 fn main() -> ExitCode {
     match Nuten::parse().command {
         Command::Format(Format {
             config,
-            files,
-        }) => format_files(&files, config.as_deref()),
+            paths,
+        }) => format_paths(&paths, config.as_deref()),
         Command::Schema => print_schema(),
     }
 }
@@ -77,10 +81,14 @@ fn print_schema() -> ExitCode {
     }
 }
 
-/// Formats each of `files` with the config file `config_file`, or else with the one nearest it.
-fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
+/// Formats the files `paths` name, with the config file `config_file` or else the nearest one.
+fn format_paths(paths: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
+    let expanded = files::expand(paths);
+    for problem in &expanded.problems {
+        eprintln!("{problem}");
+    }
     // Also keeps two threads off one file, which could read it halfway written.
-    let files = files::distinct(files);
+    let files = files::distinct(&expanded.files);
     let Ok(configs) = config::of_files(&files, config_file) else {
         return ExitCode::from(2);
     };
@@ -88,7 +96,7 @@ fn format_files(files: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
     for problem in failures.iter().flatten() {
         eprintln!("{problem}");
     }
-    if failures.is_empty() {
+    if expanded.problems.is_empty() && failures.is_empty() {
         ExitCode::SUCCESS
     } else {
         ExitCode::from(2)
@@ -124,6 +132,12 @@ fn format_file(path: &Path, config: &Config) -> Result<(), Vec<String>> {
         fs::write(path, formatted).map_err(io_problem)?;
     }
     Ok(())
+}
+
+/// Each of `items` once, in the order it first comes.
+fn unique<T: Copy + Eq + Hash>(items: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
+    let mut seen = HashSet::new();
+    items.filter(move |item| seen.insert(*item))
 }
 
 /// Not `fs::read_to_string` alone, which waits forever on a FIFO.

@@ -13,7 +13,7 @@ use std::{
 
 /// A fresh directory for each test, removed when dropped.
 /// Its path has no symlinks, since the paths of config files are reported with symlinks resolved.
-/// No config file is above it.
+/// No config file, ignore file, or repository of git is above it.
 struct TempDir(PathBuf);
 
 impl TempDir {
@@ -25,6 +25,16 @@ impl TempDir {
         let dir = TempDir(fs::canonicalize(&dir).unwrap());
         let above = nuten_config::find(&dir.0).unwrap();
         assert_eq!(above, None, "a config file above the temporary directory");
+        let ignoring: Vec<_> = dir
+            .0
+            .ancestors()
+            .flat_map(|ancestor| [".git", ".gitignore", ".ignore"].map(|name| ancestor.join(name)))
+            .filter(|path| path.exists())
+            .collect();
+        assert!(
+            ignoring.is_empty(),
+            "{ignoring:?} above the temporary directory"
+        );
         dir
     }
 
@@ -54,11 +64,20 @@ impl Drop for TempDir {
     }
 }
 
+/// The binary, blind to the git config of the user, which could ignore the files of a test.
+fn nuten_command() -> Command {
+    let nowhere = env::temp_dir().join("nuten-cli-nowhere");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_nuten"));
+    command
+        .env("HOME", &nowhere)
+        .env("XDG_CONFIG_HOME", &nowhere)
+        .env("GIT_CONFIG_SYSTEM", &nowhere)
+        .env_remove("GIT_CONFIG_GLOBAL");
+    command
+}
+
 fn nuten(args: &[&OsStr]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_nuten"))
-        .args(args)
-        .output()
-        .unwrap()
+    nuten_command().args(args).output().unwrap()
 }
 
 fn format(paths: &[&Path]) -> Output {
@@ -71,7 +90,7 @@ fn format(paths: &[&Path]) -> Output {
 
 /// Runs `nuten format` with `args` from `dir`, so that relative paths are in `dir`.
 fn format_in(dir: &TempDir, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_nuten"))
+    nuten_command()
         .arg("format")
         .args(args)
         .current_dir(&dir.0)
@@ -523,7 +542,7 @@ fn fifo(path: &Path) {
 /// Not `format`, which would hang along with the binary if it read a FIFO.
 #[cfg(unix)]
 fn format_in_time(paths: &[&Path]) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_nuten"))
+    let mut child = nuten_command()
         .arg("format")
         .args(paths)
         .stderr(Stdio::piped())
@@ -576,7 +595,7 @@ fn format_writes_nothing_when_existence_of_config_file_cannot_be_told() {
     let nuon = deep.join("nuten.nuon");
     let error = fs::symlink_metadata(&nuon).unwrap_err();
     // Two files in one directory, so that it is looked up and reported once for both.
-    let output = Command::new(env!("CARGO_BIN_EXE_nuten"))
+    let output = nuten_command()
         .args([
             OsStr::new("format"),
             OsStr::new("a.nu"),
@@ -776,6 +795,533 @@ fn format_takes_given_config_for_other_files_when_one_has_syntax_error() {
     assert_eq!(read(&good), "if true {\n  ls\n}\n");
 }
 
+const UNFORMATTED: &str = "ls|first";
+const FORMATTED: &str = "ls | first\n";
+
+/// Writes `UNFORMATTED` to each of `names` in `dir`.
+fn write_unformatted<const N: usize>(dir: &TempDir, names: [&str; N]) -> [PathBuf; N] {
+    names.map(|name| dir.file(name, UNFORMATTED))
+}
+
+fn assert_succeeds_quietly(output: &Output) {
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(output));
+    assert!(output.stderr.is_empty(), "{}", stderr(output));
+}
+
+#[test]
+fn format_formats_nu_files_under_directory() {
+    let dir = TempDir::new();
+    let nu = write_unformatted(&dir, ["d/a.nu", "d/e/f/b.nu"]);
+    let other = write_unformatted(&dir, ["d/a.txt", "d/a.nu.bak", "d/nu", "d/e/NU.NU", "a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    for path in &nu {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+    for path in &other {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_formats_hidden_files_under_directory() {
+    let dir = TempDir::new();
+    let paths = write_unformatted(&dir, ["d/.config/nushell/config.nu", "d/.a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    for path in &paths {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_skips_version_control_directories_under_directory() {
+    let dir = TempDir::new();
+    let skipped = write_unformatted(
+        &dir,
+        [
+            "d/.git/hooks/a.nu",
+            "d/.hg/a.nu",
+            "d/.svn/a.nu",
+            "d/.bzr/a.nu",
+            "d/.jj/a.nu",
+            "d/e/.git/a.nu",
+        ],
+    );
+    let taken = write_unformatted(&dir, ["d/.github/a.nu", "d/git/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    for path in &skipped {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+    for path in &taken {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_skips_files_gitignore_ignores_in_git_repository() {
+    let dir = TempDir::new();
+    dir.dir("d/.git");
+    dir.file("d/.gitignore", "gen/\n*.gen.nu\n");
+    dir.file("d/e/.gitignore", "local.nu\n");
+    let ignored = write_unformatted(&dir, ["d/gen/a.nu", "d/a.gen.nu", "d/e/local.nu"]);
+    let taken = write_unformatted(&dir, ["d/a.nu", "d/local.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    for path in &ignored {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+    for path in &taken {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_skips_files_gitignore_above_directory_ignores() {
+    let dir = TempDir::new();
+    dir.dir(".git");
+    dir.file(".gitignore", "gen/\n");
+    let [ignored, taken] = write_unformatted(&dir, ["d/gen/a.nu", "d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_takes_no_gitignore_above_git_repository() {
+    let dir = TempDir::new();
+    dir.file(".gitignore", "gen/\n");
+    dir.dir("d/.git");
+    let [path] = write_unformatted(&dir, ["d/gen/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_skips_files_gitignore_ignores_when_dot_git_is_file() {
+    let dir = TempDir::new();
+    dir.file("d/.git", "gitdir: ../elsewhere\n");
+    dir.file("d/.gitignore", "gen/\n");
+    let [ignored, taken] = write_unformatted(&dir, ["d/gen/a.nu", "d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_skips_files_git_exclude_ignores() {
+    let dir = TempDir::new();
+    dir.file("d/.git/info/exclude", "gen/\n");
+    let [ignored, taken] = write_unformatted(&dir, ["d/gen/a.nu", "d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_skips_files_global_excludes_file_of_git_ignores() {
+    let dir = TempDir::new();
+    dir.file("config/git/ignore", "gen/\n");
+    let config_home = dir.path("config");
+    dir.dir("d/.git");
+    let [ignored, taken] = write_unformatted(&dir, ["d/gen/a.nu", "d/a.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("XDG_CONFIG_HOME", config_home)
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_takes_no_gitignore_outside_git_repository() {
+    let dir = TempDir::new();
+    dir.file("d/.gitignore", "a.nu\n");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_skips_files_dot_ignore_ignores_outside_git_repository() {
+    let dir = TempDir::new();
+    dir.file("d/.ignore", "a.nu\n");
+    let [ignored, taken] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_formats_ignored_file_given_directly() {
+    let dir = TempDir::new();
+    dir.dir(".git");
+    dir.file(".gitignore", "a.nu\n");
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    let output = format_in(&dir, &["a.nu"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_walks_directory_given_directly_though_ignored_or_version_control_directory() {
+    let dir = TempDir::new();
+    dir.dir(".git");
+    dir.file(".gitignore", "gen/\n");
+    let paths = write_unformatted(&dir, ["gen/a.nu", ".git/a.nu"]);
+    let output = format_in(&dir, &["gen", ".git"]);
+    assert_succeeds_quietly(&output);
+    for path in &paths {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_reports_ignore_file_line_it_cannot_read_and_leaves_files_under_it_alone() {
+    let dir = TempDir::new();
+    let gitignore = dir.file("d/e/.gitignore", "gen/\na{b\n");
+    let skipped = write_unformatted(&dir, ["d/e/a.nu", "d/e/f/a.nu"]);
+    let [taken] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(
+        stderr.starts_with(&format!("{}:2: ", gitignore.display())),
+        "{stderr}"
+    );
+    for path in &skipped {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_leaves_directory_given_alone_when_its_ignore_file_has_line_it_cannot_read() {
+    let dir = TempDir::new();
+    let ignore = dir.file("d/.ignore", "a{b\n");
+    let [skipped, taken] = write_unformatted(&dir, ["d/a.nu", "b.nu"]);
+    let output = format_in(&dir, &["d", "b.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(
+        stderr.starts_with(&format!("{}:1: ", ignore.display())),
+        "{stderr}"
+    );
+    assert_eq!(read(&skipped), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_reports_each_ignore_file_line_it_cannot_read() {
+    let dir = TempDir::new();
+    let ignore = dir.file("d/.ignore", "a{b\nc\nd{e\n");
+    let output = format_in(&dir, &["d"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    let lines: Vec<_> = stderr.lines().collect();
+    assert_eq!(lines.len(), 2, "{stderr}");
+    assert!(
+        lines[0].starts_with(&format!("{}:1: ", ignore.display())),
+        "{stderr}"
+    );
+    assert!(
+        lines[1].starts_with(&format!("{}:3: ", ignore.display())),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_leaves_directory_alone_when_ignore_file_above_it_has_line_it_cannot_read() {
+    let dir = TempDir::new();
+    let ignore = dir.file("d/.ignore", "a{b\n");
+    let [skipped] = write_unformatted(&dir, ["d/e/a.nu"]);
+    let output = format_in(&dir, &["d/e"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(
+        stderr.starts_with(&format!("{}:1: ", ignore.display())),
+        "{stderr}"
+    );
+    assert_eq!(read(&skipped), UNFORMATTED);
+}
+
+#[test]
+fn format_leaves_directories_alone_when_global_excludes_file_of_git_has_line_it_cannot_read() {
+    let dir = TempDir::new();
+    let excludes = dir.file("config/git/ignore", "a{b\n");
+    let config_home = dir.path("config");
+    let [skipped, taken] = write_unformatted(&dir, ["d/a.nu", "b.nu"]);
+    let output = nuten_command()
+        .args(["format", "d", "b.nu"])
+        .env("XDG_CONFIG_HOME", config_home)
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(
+        stderr.starts_with(&format!("{}:1: ", excludes.display())),
+        "{stderr}"
+    );
+    assert_eq!(read(&skipped), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_reports_problem_of_directory_once_when_given_twice() {
+    let dir = TempDir::new();
+    let ignore = dir.file("d/.ignore", "a{b\n");
+    let output = format_in(&dir, &["d", "d"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(
+        stderr.starts_with(&format!("{}:1: ", ignore.display())),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_reports_problem_of_ignore_file_once_when_above_one_directory_and_in_another() {
+    let dir = TempDir::new();
+    dir.file("d/.ignore", "a{b\n");
+    dir.dir("d/e");
+    for paths in [["d", "d/e"], ["d/e", "d"]] {
+        let output = format_in(&dir, &paths);
+        assert_eq!(output.status.code(), Some(2));
+        let stderr = stderr(&output);
+        assert_eq!(stderr.lines().count(), 1, "{paths:?}: {stderr}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_unreadable_current_directory_by_dot() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new();
+    fs::set_permissions(&dir.0, fs::Permissions::from_mode(0o300)).unwrap();
+    let error = fs::read_dir(&dir.0).err();
+    let outputs = [&["."][..], &["./"], &[".", "./"]].map(|paths| format_in(&dir, paths));
+    fs::set_permissions(&dir.0, fs::Permissions::from_mode(0o755)).unwrap();
+    // Root reads a directory without permission, so the test proves nothing then.
+    let Some(error) = error else {
+        return;
+    };
+    for output in &outputs {
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(stderr(output), io_error_line(Path::new("."), &error));
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_unreadable_directory_once_when_given_with_dot_or_trailing_slash() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new();
+    let unreadable = dir.dir("u");
+    fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o300)).unwrap();
+    let error = fs::read_dir(&unreadable).err();
+    let output = format_in(&dir, &["u", "u/", "u/.", "./u/"]);
+    fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o755)).unwrap();
+    // Root reads a directory without permission, so the test proves nothing then.
+    let Some(error) = error else {
+        return;
+    };
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(stderr(&output), io_error_line(Path::new("u"), &error));
+}
+
+#[cfg(unix)]
+#[test]
+fn format_walks_no_symlink_under_directory() {
+    let dir = TempDir::new();
+    let outside = write_unformatted(&dir, ["out/a.nu", "out/e/b.nu"]);
+    dir.dir("d");
+    std::os::unix::fs::symlink(&outside[0], dir.path("d/link.nu")).unwrap();
+    std::os::unix::fs::symlink(dir.path("out/e"), dir.path("d/link")).unwrap();
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    for path in &outside {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_walks_symlink_to_directory_given_directly() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["real/a.nu"]);
+    std::os::unix::fs::symlink(dir.path("real"), dir.path("link")).unwrap();
+    let output = format_in(&dir, &["link"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_skips_fifo_under_directory_without_waiting() {
+    let dir = TempDir::new();
+    fifo(&dir.dir("d").join("fifo.nu"));
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = format_in_time(&[&dir.path("d")]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_succeeds_on_directory_without_nu_files() {
+    let dir = TempDir::new();
+    dir.file("d/a.txt", UNFORMATTED);
+    dir.dir("e");
+    let output = format_in(&dir, &["d", "e"]);
+    assert_succeeds_quietly(&output);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_files_under_directory_in_path_order_where_directory_is_given() {
+    let dir = TempDir::new();
+    for name in ["z.nu", "d/b.nu", "d/a.nu", "d/a/c.nu", "y.nu"] {
+        dir.file(name, "ls ||");
+    }
+    let output = format_in(&dir, &["z.nu", "d", "y.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    let heads: Vec<_> = stderr
+        .lines()
+        .map(|line| &line[..line.find(':').unwrap()])
+        .collect();
+    assert_eq!(
+        heads,
+        ["z.nu", "d/a/c.nu", "d/a.nu", "d/b.nu", "y.nu"],
+        "{stderr}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_files_under_current_directory_by_paths_relative_to_it() {
+    let dir = TempDir::new();
+    dir.file("a/bad.nu", "ls ||");
+    for given in [".", "./"] {
+        let output = format_in(&dir, &[given]);
+        assert_eq!(output.status.code(), Some(2));
+        let stderr = stderr(&output);
+        assert!(stderr.starts_with("a/bad.nu:1:4: "), "{given}: {stderr}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_file_under_overlapping_directories_once_at_first_path() {
+    let dir = TempDir::new();
+    dir.file("d/e/bad.nu", "ls ||");
+    let output = format_in(&dir, &["d/e", "d", "d/e/bad.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(stderr.starts_with("d/e/bad.nu:1:4: "), "{stderr}");
+}
+
+#[test]
+fn format_takes_nearest_config_file_for_each_file_under_directory() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{indent_width: 2}");
+    dir.file("d/e/nuten.nuon", "{indent_width: 3}");
+    let top = dir.file("d/a.nu", BLOCK);
+    let inner = dir.file("d/e/a.nu", BLOCK);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&top), "if true {\n  ls\n}\n");
+    assert_eq!(read(&inner), "if true {\n   ls\n}\n");
+}
+
+#[test]
+fn format_writes_nothing_when_config_file_under_directory_is_wrong() {
+    let dir = TempDir::new();
+    let nuon = dir.file("d/e/nuten.nuon", "{a: 1}");
+    let paths = write_unformatted(&dir, ["d/a.nu", "d/e/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        format!("{}:1:2: unknown key `a`\n", nuon.display())
+    );
+    for path in &paths {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_unreadable_directory_under_directory_and_continues() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new();
+    let [locked, taken] = write_unformatted(&dir, ["d/locked/a.nu", "d/b.nu"]);
+    let locked_dir = dir.path("d/locked");
+    fs::set_permissions(&locked_dir, fs::Permissions::from_mode(0o000)).unwrap();
+    let error = fs::read_dir(&locked_dir).err();
+    let output = format_in(&dir, &["d"]);
+    fs::set_permissions(&locked_dir, fs::Permissions::from_mode(0o755)).unwrap();
+    // Root reads a directory without permission, so the test proves nothing then.
+    let Some(error) = error else {
+        return;
+    };
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        io_error_line(Path::new("d/locked"), &error)
+    );
+    assert_eq!(read(&locked), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_problems_of_walking_before_problems_of_formatting() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new();
+    dir.file("a.nu", "ls ||");
+    dir.dir("d/locked");
+    let locked_dir = dir.path("d/locked");
+    fs::set_permissions(&locked_dir, fs::Permissions::from_mode(0o000)).unwrap();
+    let error = fs::read_dir(&locked_dir).err();
+    let output = format_in(&dir, &["a.nu", "d"]);
+    fs::set_permissions(&locked_dir, fs::Permissions::from_mode(0o755)).unwrap();
+    // Root reads a directory without permission, so the test proves nothing then.
+    let Some(error) = error else {
+        return;
+    };
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    let lines: Vec<_> = stderr.lines().collect();
+    assert_eq!(
+        lines[0],
+        io_error_line(Path::new("d/locked"), &error).trim_end(),
+        "{stderr}"
+    );
+    assert!(lines[1].starts_with("a.nu:1:4: "), "{stderr}");
+    assert_eq!(lines.len(), 2, "{stderr}");
+}
+
 #[test]
 fn wants_subcommand() {
     let output = nuten(&[]);
@@ -814,7 +1360,7 @@ fn schema_rejects_extra_argument() {
 fn schema_succeeds_when_reader_closes_first() {
     let (reader, writer) = io::pipe().unwrap();
     drop(reader);
-    let output = Command::new(env!("CARGO_BIN_EXE_nuten"))
+    let output = nuten_command()
         .arg("schema")
         .stdout(writer)
         .output()
@@ -827,11 +1373,7 @@ fn schema_succeeds_when_reader_closes_first() {
 #[test]
 fn schema_reports_write_error() {
     let full = fs::File::options().write(true).open("/dev/full").unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_nuten"))
-        .arg("schema")
-        .stdout(full)
-        .output()
-        .unwrap();
+    let output = nuten_command().arg("schema").stdout(full).output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert!(!output.stderr.is_empty());
 }

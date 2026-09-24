@@ -1,7 +1,7 @@
 //! The config each file is formatted with.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt::Display,
     fs,
     hash::Hash,
@@ -10,7 +10,7 @@ use std::{
 
 use nuten_config::{Config, Format, find};
 
-use crate::{located, read_regular_file};
+use crate::{located, read_regular_file, unique};
 
 /// A problem already reported to stderr.
 #[derive(Debug, Clone, Copy)]
@@ -114,10 +114,4 @@ fn load(path: &Path) -> Result<Config, Reported> {
 fn report(message: impl Display) -> Reported {
     eprintln!("{message}");
     Reported
-}
-
-/// Each path once, in the order it first comes.
-fn unique<'a>(paths: impl Iterator<Item = &'a Path>) -> impl Iterator<Item = &'a Path> {
-    let mut seen = HashSet::new();
-    paths.filter(move |path| seen.insert(*path))
 }

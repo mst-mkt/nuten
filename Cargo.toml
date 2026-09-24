@@ -16,6 +16,7 @@ nuten-format = { path = "crates/nuten_format" }
 nuten-parser = { path = "crates/nuten_parser" }
 nuten-syntax = { path = "crates/nuten_syntax" }
 
+ignore = "0.4.33"
 insta = { version = "1.48.0", features = ["glob"] }
 jsonc-parser = "0.33.2"
 rowan = "0.17.0"
