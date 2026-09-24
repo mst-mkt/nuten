@@ -252,7 +252,7 @@ impl Node {
                     == Some(SyntaxKind::RBracket);
                 (opens != closes).then_some("holds one of its brackets without the other")
             },
-            Node::CellPath(_) | Node::Range(_) | Node::Spread(_) => self
+            Node::CellPath(_) | Node::Range(_) | Node::Spread(_) | Node::Interpolation(_) => self
                 .syntax()
                 .children_with_tokens()
                 .any(|child| child.kind().is_trivia())

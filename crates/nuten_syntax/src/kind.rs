@@ -88,6 +88,10 @@ macro_rules! syntax_kinds {
                 /// A `(-f)` of one character, which nu takes for the parameter before it.
                 /// The parser emits this, not the lexer.
                 ShortFlag,
+                /// A run of an `Interpolation` outside each `( )`, as `$"a` or `b"`.
+                /// The first holds the `$` and the opening quote, and the last the closing quote.
+                /// The parser emits this, not the lexer.
+                InterpText,
                 /// An item with a lexing error, or a node wrapping a parse error.
                 Error,
             }
@@ -210,6 +214,9 @@ macro_rules! syntax_kinds {
                 /// It reads one as an argument of an external command too.
                 /// One as an argument of another command stays a `Word`.
                 Spread,
+                /// An `InterpString` nu reads as a value, as `$"a(1 + 2)b"`.
+                /// Its `InterpText`s, and each `( )` between them as a `Word`, all touching.
+                Interpolation,
                 /// A `Word` nu reads as a binary, as in `0x[ff 00]`.
                 /// Its prefix as a `Word`, `[`, the items and any `,` and comments among them, `]`.
                 /// Nu reads one where it takes any value.

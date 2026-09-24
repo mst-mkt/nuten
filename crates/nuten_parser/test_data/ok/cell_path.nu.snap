@@ -417,7 +417,10 @@ Root@0..754
   Newline@385..386 "\n"
   Pipeline@386..395
     PipelineElement@386..395
-      InterpString@386..395 "$\"($x.a)\""
+      Interpolation@386..395
+        InterpText@386..388 "$\""
+        Word@388..394 "($x.a)"
+        InterpText@394..395 "\""
   Newline@395..396 "\n"
   Pipeline@396..403
     PipelineElement@396..403

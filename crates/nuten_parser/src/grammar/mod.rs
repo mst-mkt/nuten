@@ -11,6 +11,7 @@ mod command;
 mod control;
 mod def;
 mod if_;
+mod interpolation;
 mod keyword;
 mod list;
 mod match_;
@@ -37,6 +38,7 @@ use self::{
     binary::{binary, binary_ahead},
     block::block,
     cell_path::{cell_path, cell_path_ahead},
+    interpolation::interpolation,
     list::{is_list, list_items},
     pipeline::pipeline,
     range::{range, range_ahead},
@@ -191,7 +193,7 @@ const CURLY: Brackets = Brackets {
 
 /// The next token as the value nu reads where it takes `shape`.
 /// A `Binary`, `Range`, `CellPath`, or `Subexpression` where nu reads one.
-/// A `List`, `Table`, `Record`, or `Block` too.
+/// A `List`, `Table`, `Record`, `Block`, or `Interpolation` too.
 /// Otherwise the token as it is, in an `Error` where nu reports one at a variable.
 ///
 /// The `Def` rule reads the one a signature stands in before `value` sees it.
@@ -212,6 +214,8 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
         squared(p, bracketed, shape);
     } else if let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace) {
         braced(p, bracketed, shape);
+    } else if shape.takes_value() && p.peek() == Some(SyntaxKind::InterpString) {
+        interpolation(p);
     } else if let Some(error) = variable_error(p, shape) {
         p.bump_error(error);
     } else {

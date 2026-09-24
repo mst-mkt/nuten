@@ -31,7 +31,10 @@ Root@0..107
       Call@47..67
         Word@47..53 "source"
         Whitespace@53..54 " "
-        InterpString@54..67 "$\"(pwd)/a.nu\""
+        Interpolation@54..67
+          InterpText@54..56 "$\""
+          Word@56..61 "(pwd)"
+          InterpText@61..67 "/a.nu\""
   Newline@67..68 "\n"
   Pipeline@68..89
     PipelineElement@68..89

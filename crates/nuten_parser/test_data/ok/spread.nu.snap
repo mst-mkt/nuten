@@ -75,7 +75,8 @@ Root@0..378
         Whitespace@67..68 " "
         Spread@68..75
           SpreadOperator@68..71 "..."
-          InterpString@71..75 "$\"a\""
+          Interpolation@71..75
+            InterpText@71..75 "$\"a\""
         Whitespace@75..76 " "
         Spread@76..82
           SpreadOperator@76..79 "..."

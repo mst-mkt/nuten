@@ -447,9 +447,12 @@ impl<'a> Parser<'a> {
     /// The next token cut into `pieces`, when it is a word and each lexed piece is one item.
     /// The pieces cover the token in order.
     pub(crate) fn split(&self, pieces: &[Piece]) -> Option<Relexed<'a>> {
-        let token = self
-            .nth_token(0)
-            .filter(|token| token.kind == SyntaxKind::Word)?;
+        self.split_token(SyntaxKind::Word, pieces)
+    }
+
+    /// As `split`, for a next token of `kind`.
+    pub(crate) fn split_token(&self, kind: SyntaxKind, pieces: &[Piece]) -> Option<Relexed<'a>> {
+        let token = self.nth_token(0).filter(|token| token.kind == kind)?;
         let tokens = pieces
             .iter()
             .map(|&piece| match piece {

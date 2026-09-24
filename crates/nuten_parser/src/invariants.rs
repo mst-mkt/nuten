@@ -35,7 +35,7 @@ pub enum Invariant {
     /// A bracketed node opens and closes with its brackets.
     /// A block holds its parameters right after its brace.
     /// A table holds its column names and their `;` first.
-    /// A cell path, a range, and a spread hold no trivia among their pieces.
+    /// A cell path, a range, a spread, and an interpolation hold no trivia among their pieces.
     NodeShape,
     /// The errors match the `Error` elements one to one, in order, each inside its element.
     ParseErrorPlacement,

@@ -289,7 +289,8 @@ Root@0..285
   Pipeline@229..242
     PipelineElement@229..242
       Assignment@229..242
-        InterpString@229..233 "$\"b\""
+        Interpolation@229..233
+          InterpText@229..233 "$\"b\""
         Whitespace@233..234 " "
         Assign@234..236 "+="
         Whitespace@236..237 " "
