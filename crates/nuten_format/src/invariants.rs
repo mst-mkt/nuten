@@ -340,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    fn file_with_syntax_errors_has_no_output_to_ask_about() {
+    fn file_with_syntax_errors_leaves_no_violations() {
         let checked = check("ls |", &Config::default());
         assert_eq!(checked.syntax_errors[0].kind, ParseErrorKind::PipeAtEof);
         assert_eq!(checked.violations, []);
@@ -378,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    fn line_endings_inside_a_token_do_not_count() {
+    fn line_endings_inside_token_are_ignored() {
         assert_eq!(formatter_violations("'a\r\nb'\r\n", "'a\nb'\n"), []);
         assert_eq!(formatter_violations("'a\r\r\nb'\n", "'a\nb'\n"), []);
     }
@@ -392,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn commas_that_are_tokens_do_not_count() {
+    fn separator_commas_are_ignored() {
         assert_eq!(formatter_violations("[a, b,]\n", "[a b]\n"), []);
         assert_eq!(
             formatter_violations("[a\n, # c\nb]\n", "[\n    a\n    # c\n    b\n]\n"),
@@ -438,7 +438,7 @@ mod tests {
     }
 
     #[test]
-    fn trailing_whitespace_and_blank_lines_at_the_end_do_not_count() {
+    fn excess_whitespace_is_ignored() {
         assert_eq!(formatter_violations("ls # c  \n", "ls # c\n"), []);
         assert_eq!(formatter_violations("ls # c \r\r\n", "ls # c\n"), []);
         assert_eq!(formatter_violations("# c\n\n\n", "# c\n"), []);
@@ -457,14 +457,14 @@ mod tests {
     }
 
     #[test]
-    fn blank_lines_between_statements_of_a_block_count() {
+    fn blank_lines_between_block_statements_count() {
         let violations =
             formatter_violations("echo {\n# c\n\nls\n}\n", "echo {\n    # c\n    ls\n}\n");
         assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
     }
 
     #[test]
-    fn blank_lines_between_statements_of_a_subexpression_count() {
+    fn blank_lines_between_subexpression_statements_count() {
         let violations = formatter_violations(
             "(ls;\n# c\n\nprint hi)\n",
             "(\n    ls;\n    # c\n    print hi\n)\n",
@@ -473,7 +473,7 @@ mod tests {
     }
 
     #[test]
-    fn blank_lines_between_statements_a_let_takes_count() {
+    fn blank_lines_after_let_count() {
         let violations = formatter_violations(
             "(mut x = 1\n# c\n\nprint hi)\n",
             "(\n    mut x = 1\n    # c\n    print hi\n)\n",
@@ -482,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn blank_lines_between_statements_an_assignment_takes_count() {
+    fn blank_lines_after_assignment_count() {
         let violations = formatter_violations(
             "($x = 1\n# c\n\nprint hi)\n",
             "(\n    $x = 1\n    # c\n    print hi\n)\n",
@@ -491,7 +491,7 @@ mod tests {
     }
 
     #[test]
-    fn blank_lines_at_an_assignment_operator_do_not_count() {
+    fn blank_lines_at_assignment_operator_are_ignored() {
         assert_eq!(
             formatter_violations(
                 "(mut x = # c\n\nprint hi)\n",
@@ -511,7 +511,7 @@ mod tests {
     }
 
     #[test]
-    fn blank_lines_inside_a_statement_do_not_count() {
+    fn blank_lines_inside_statement_are_ignored() {
         assert_eq!(
             formatter_violations("ls |\n# c\n\n| first\n", "ls |\n# c\n| first\n"),
             []
@@ -519,7 +519,7 @@ mod tests {
     }
 
     #[test]
-    fn output_does_not_change_when_formatted_again() {
+    fn output_formats_to_itself() {
         let violations = formatter_violations("ls|first\n", "ls |  first\n");
         assert_eq!(
             invariant_names(&violations),
@@ -550,7 +550,7 @@ mod tests {
     }
 
     #[test]
-    fn change_of_line_ending_is_reported_by_byte() {
+    fn line_ending_change_is_reported_by_byte() {
         let violations = formatter_violations("ls\n", "ls\r\n");
         assert_eq!(
             invariant_names(&violations),

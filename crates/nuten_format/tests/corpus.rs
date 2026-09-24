@@ -27,7 +27,7 @@ const SYNTAX_ERRORS: &[&str] = &[
 ];
 
 #[test]
-fn every_corpus_file_keeps_the_invariants() {
+fn every_file_keeps_invariants_with_syntax_errors_as_listed() {
     let Some(dir) = env::var_os("NUTEN_CORPUS").map(PathBuf::from) else {
         eprintln!("skipping the corpus: NUTEN_CORPUS is not set");
         return;

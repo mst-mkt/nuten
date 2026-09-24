@@ -70,7 +70,7 @@ mod tests {
     use super::{Config, LineEnding, ParseErrorKind, format, invariants};
 
     #[test]
-    fn file_with_errors_is_rejected() {
+    fn file_with_syntax_errors_is_rejected() {
         let error = format("ls |", &Config::default()).unwrap_err();
         assert_eq!(error.errors.len(), 1);
         assert_eq!(error.errors[0].kind, ParseErrorKind::PipeAtEof);
@@ -78,7 +78,7 @@ mod tests {
     }
 
     #[test]
-    fn only_a_blank_file_comes_out_empty() {
+    fn only_blank_files_come_out_empty() {
         for src in ["", "\n", "  \n\n", "\r\n"] {
             assert_eq!(format(src, &Config::default()).unwrap(), "", "{src:?}");
         }
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn carriage_returns_before_line_break_stay_with_crlf() {
+    fn crlf_keeps_carriage_returns_before_line_break() {
         let crlf = Config {
             line_ending: LineEnding::CrLf,
             ..Config::default()
@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn syntax_nested_past_depth_limit_keeps_every_invariant() {
+    fn nesting_past_depth_limit_keeps_invariants() {
         for src in [
             format!("mut a = 1\n{}1\n", "$a  =  ".repeat(1_000)),
             format!("{}1\n", "let a  =  ".repeat(1_000)),
@@ -128,13 +128,13 @@ mod tests {
     }
 
     #[test]
-    fn blank_line_keeps_line_end_pipe_from_joining_next_statement() {
+    fn line_end_pipe_keeps_blank_line() {
         let src = "ls |\n\nlength\n";
         assert_eq!(format(src, &Config::default()).unwrap(), src);
     }
 
     #[test]
-    fn two_blank_lines_after_a_line_end_pipe_stay() {
+    fn two_blank_lines_separate_line_end_and_leading_pipes() {
         // With one, the `|` below would join the statement above.
         for (src, expected) in [
             ("ls |\n\n\n| length\n", "ls |\n\n\n| length\n"),

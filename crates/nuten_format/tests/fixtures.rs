@@ -23,7 +23,7 @@ const INPUT_SUFFIX: &str = ".input.nu";
 const EXPECTED_SUFFIX: &str = ".expected.nu";
 
 #[test]
-fn test_data_holds_only_fixture_pairs() {
+fn test_data_holds_only_fixture_files() {
     let strays: Vec<_> = files_below_test_data()
         .iter()
         .filter(|name| stem_of(name).is_none())
@@ -37,7 +37,7 @@ fn test_data_holds_only_fixture_pairs() {
 }
 
 #[test]
-fn fixtures_format_as_expected() {
+fn fixture_files_format_to_expected_keeping_invariants() {
     let names = files_below_test_data();
     let stems: BTreeSet<_> = names.iter().filter_map(|name| stem_of(name)).collect();
     assert!(!stems.is_empty(), "no fixtures");

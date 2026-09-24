@@ -183,7 +183,7 @@ mod tests {
     use super::ignores;
 
     #[test]
-    fn ignore_comment_takes_spaces_and_tabs_before_name() {
+    fn ignore_comment_allows_spaces_and_tabs_before_name() {
         for comment in [
             "# nuten-ignore",
             "#nuten-ignore",
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn ignore_comment_takes_whitespace_and_text_after_name() {
+    fn ignore_comment_allows_whitespace_and_text_after_name() {
         for comment in [
             "# nuten-ignore laid out as a table",
             "# nuten-ignore\tlaid out as a table",
