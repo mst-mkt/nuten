@@ -1,9 +1,9 @@
-//! Runs the binary on files in a temporary directory.
+//! Runs the binary on files in a temporary directory, and with its stdout closed or full.
 
 use std::{
     env,
     ffi::OsStr,
-    fs,
+    fs, io,
     path::{Path, PathBuf},
     process::{Command, Output},
     sync::atomic::{AtomicUsize, Ordering},
@@ -148,4 +148,48 @@ fn rejects_file_without_subcommand() {
     let output = nuten(&[path.as_os_str()]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(fs::read_to_string(&path).unwrap(), "ls|first");
+}
+
+#[test]
+fn schema_prints_json_schema_of_config_file() {
+    let output = nuten(&[OsStr::new("schema")]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert!(output.stderr.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        nuten_config::schema()
+    );
+}
+
+#[test]
+fn schema_rejects_extra_argument() {
+    let output = nuten(&[OsStr::new("schema"), OsStr::new("x")]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn schema_succeeds_when_reader_closes_first() {
+    let (reader, writer) = io::pipe().unwrap();
+    drop(reader);
+    let output = Command::new(env!("CARGO_BIN_EXE_nuten"))
+        .arg("schema")
+        .stdout(writer)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert!(output.stderr.is_empty());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn schema_reports_write_error() {
+    let full = fs::File::options().write(true).open("/dev/full").unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_nuten"))
+        .arg("schema")
+        .stdout(full)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!output.stderr.is_empty());
 }

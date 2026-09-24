@@ -4,12 +4,14 @@
 //! It exits with 2 when any file has syntax errors or cannot be read or written.
 //! The other files are still formatted then.
 //! Exit code 1 is kept for a future check mode.
+//! `nuten schema` exits with 2 when stdout cannot be written, unless its reader has closed it.
 //! Any command exits with 2 when the arguments are invalid.
 
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
 use std::{
     fs,
+    io::{self, Write},
     path::{Path, PathBuf},
     process::ExitCode,
 };
@@ -28,6 +30,8 @@ struct Nuten {
 enum Command {
     /// Format files in place
     Format(Format),
+    /// Print the JSON Schema of a config file
+    Schema,
 }
 
 #[derive(Args)]
@@ -42,6 +46,19 @@ fn main() -> ExitCode {
         Command::Format(Format {
             files,
         }) => format_files(&files),
+        Command::Schema => print_schema(),
+    }
+}
+
+fn print_schema() -> ExitCode {
+    match io::stdout().write_all(nuten_config::schema().as_bytes()) {
+        Ok(()) => ExitCode::SUCCESS,
+        // A reader that stops early, as `head` does, took what it wanted.
+        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("{error}");
+            ExitCode::from(2)
+        },
     }
 }
 

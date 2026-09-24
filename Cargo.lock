@@ -165,6 +165,7 @@ dependencies = [
 name = "nuten"
 version = "0.0.0"
 dependencies = [
+ "nuten-config",
  "nuten-format",
  "usage-rs",
 ]
