@@ -1,0 +1,2 @@
+module m {}
+module n {}

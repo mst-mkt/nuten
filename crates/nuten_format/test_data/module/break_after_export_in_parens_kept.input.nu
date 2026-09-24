@@ -1,0 +1,2 @@
+(export # c
+module m {})

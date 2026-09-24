@@ -1,0 +1,1 @@
+glob --exclude=[a  b] "*"

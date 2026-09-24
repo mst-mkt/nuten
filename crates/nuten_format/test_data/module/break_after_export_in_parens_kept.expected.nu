@@ -1,0 +1,4 @@
+(
+    export # c
+    module m {}
+)
