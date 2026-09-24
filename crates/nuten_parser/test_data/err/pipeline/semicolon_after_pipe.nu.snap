@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/err/pipeline/semicolon_after_pipe.nu
 ---
-Root@0..42
+Root@0..29
   Pipeline@0..4
     PipelineElement@0..2
       Call@0..2
@@ -42,20 +42,6 @@ Root@0..42
       Call@25..28
         Word@25..28 "pwd"
   Newline@28..29 "\n"
-  Pipeline@29..35
-    PipelineElement@29..31
-      Call@29..31
-        Word@29..31 "ls"
-    Whitespace@31..32 " "
-    ErrGtPipe@32..35 "e>|"
-  Whitespace@35..36 " "
-  Semicolon@36..37 ";"
-  Whitespace@37..38 " "
-  Pipeline@38..41
-    PipelineElement@38..41
-      Call@38..41
-        Word@38..41 "pwd"
-  Newline@41..42 "\n"
 error 5..6 ";": SemicolonAfterPipe
 error 14..15 ";": SemicolonAfterPipe
 error 23..24 ";": SemicolonAfterPipe
