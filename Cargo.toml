@@ -10,6 +10,7 @@ license = "MIT"
 repository = "https://github.com/mst-mkt/nuten"
 
 [workspace.dependencies]
+nuten-config = { path = "crates/nuten_config" }
 nuten-doc = { path = "crates/nuten_doc" }
 nuten-format = { path = "crates/nuten_format" }
 nuten-parser = { path = "crates/nuten_parser" }
