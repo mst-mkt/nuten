@@ -314,9 +314,16 @@ mod tests {
 
     #[test]
     fn path_error_leaves_enclosing_block_whole() {
-        let src = "if true { $x? }";
-        assert_eq!(cell_paths(src), 0);
-        assert!(parse(src).errors().is_empty());
+        let parsed = parse("if true { $x? }");
+        assert!(parsed.errors().is_empty());
+        let words = parsed
+            .syntax()
+            .descendants_with_tokens()
+            .filter(|element| element.kind() == SyntaxKind::Word);
+        assert_eq!(
+            words.map(|word| word.to_string()).collect::<Vec<_>>(),
+            ["if", "true", "{ $x? }"]
+        );
     }
 
     #[test]

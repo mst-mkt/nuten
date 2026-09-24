@@ -296,7 +296,15 @@ mod tests {
         assert_eq!(errors("ls |\n"), []);
         assert_eq!(errors("ls |\n# c\n"), []);
         assert_eq!(errors("ls |\n\n# c"), []);
+    }
+
+    #[test]
+    fn redirecting_pipe_at_eof_has_no_error() {
         assert_eq!(errors("ls e>|"), []);
+    }
+
+    #[test]
+    fn pipe_before_semicolon_reports_semicolon_after_pipe() {
         assert_eq!(errors("ls | ;"), [ParseErrorKind::SemicolonAfterPipe]);
     }
 

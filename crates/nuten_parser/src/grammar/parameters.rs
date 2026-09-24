@@ -1988,6 +1988,11 @@ mod tests {
         assert_eq!(number.arguments(&["-1", "[a]"]), [Some(NUMBER), Some(LIST)]);
         let string = declared(&[Word("b"), Eq, Value]).unwrap();
         assert_eq!(string.arguments(&["[a]"]), [Some(WORD)]);
+    }
+
+    #[test]
+    fn untyped_default_nuten_cannot_type_declares_nothing() {
+        use Item::{Eq, Word};
         for default in ["[1]", "{a: 1}", "(1)", "$x", "null"] {
             assert!(
                 declared(&[Word("b"), Eq, Word(default)]).is_none(),

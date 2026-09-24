@@ -731,10 +731,12 @@ mod tests {
     }
 
     #[test]
-    fn pipe_joins_redirection() {
+    fn pipe_joins_redirection_but_not_append() {
         assert_eq!(split("e>|cat"), ["e>|", "cat"]);
         assert_eq!(split("o+e>|cat"), ["o+e>|", "cat"]);
+        assert_eq!(split("err>|cat"), ["err>|", "cat"]);
         assert_eq!(split("e>>|cat"), ["e>>", "|", "cat"]);
+        assert_eq!(split("o>>|cat"), ["o>>", "|", "cat"]);
         assert_eq!(split("xe>|cat"), ["xe>", "|", "cat"]);
     }
 
@@ -773,7 +775,10 @@ mod tests {
                 assert_eq!(kind_of(text), expected, "{text:?}");
             }
         }
-        // Nu reports these, and nuten leaves them to the parser.
+    }
+
+    #[test]
+    fn spellings_nu_rejects_stay_words() {
         for text in ["o>|", "out>|", "&&", "2>", "2>&1"] {
             assert_eq!(kind_of(text), Word, "{text:?}");
         }
@@ -1292,18 +1297,25 @@ mod tests {
 
     #[test]
     fn special_bytes_are_tokens_at_item_start() {
-        assert_eq!(
-            lexed_in(",a,,b ,", Mode::List),
-            [
-                (Comma, ","),
-                (Word, "a"),
-                (Comma, ","),
-                (Comma, ","),
-                (Word, "b"),
-                (Whitespace, " "),
-                (Comma, ","),
-            ]
-        );
+        for &mode in Mode::ALL {
+            for &(byte, kind) in mode.special() {
+                let special = char::from(byte).to_string();
+                let src = format!("{special}a{special}{special}b {special}");
+                assert_eq!(
+                    lexed_in(&src, mode),
+                    [
+                        (kind, special.as_str()),
+                        (Word, "a"),
+                        (kind, special.as_str()),
+                        (kind, special.as_str()),
+                        (Word, "b"),
+                        (Whitespace, " "),
+                        (kind, special.as_str()),
+                    ],
+                    "{mode:?} {src:?}"
+                );
+            }
+        }
     }
 
     #[test]
