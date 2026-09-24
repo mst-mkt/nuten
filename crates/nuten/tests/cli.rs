@@ -61,7 +61,7 @@ fn formats_each_file_in_place() {
 }
 
 #[test]
-fn leaves_a_formatted_file_alone() {
+fn leaves_formatted_file_alone() {
     let dir = TempDir::new();
     let path = dir.file("a.nu", "ls | first\n");
     // Writing would fail.
@@ -74,7 +74,7 @@ fn leaves_a_formatted_file_alone() {
 }
 
 #[test]
-fn reports_syntax_errors_with_their_position_and_goes_on() {
+fn reports_syntax_error_position_and_continues() {
     let dir = TempDir::new();
     let bad = dir.file("bad.nu", "ls\n\n  ls || x\n");
     let good = dir.file("good.nu", "ls|first");
@@ -91,7 +91,7 @@ fn reports_syntax_errors_with_their_position_and_goes_on() {
 }
 
 #[test]
-fn reports_a_file_that_cannot_be_read() {
+fn reports_unreadable_file() {
     let dir = TempDir::new();
     let missing = dir.path("missing.nu");
     let output = nuten(&[&missing]);
@@ -107,7 +107,7 @@ fn wants_at_least_one_file() {
 }
 
 #[test]
-fn rejects_an_unknown_flag() {
+fn rejects_unknown_flag() {
     let output = nuten(&[Path::new("--bogus")]);
     assert_eq!(output.status.code(), Some(2));
     let stderr = stderr(&output);

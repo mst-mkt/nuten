@@ -85,7 +85,7 @@ mod tests {
     use super::line_column;
 
     #[test]
-    fn line_and_column_start_at_one_and_count_characters() {
+    fn line_column_is_one_based_in_characters() {
         assert_eq!(line_column("ls |", 3), (1, 4));
         assert_eq!(line_column("ls\n\nls |", 7), (3, 4));
         assert_eq!(line_column("ls\r\nls |", 7), (2, 4));
