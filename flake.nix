@@ -90,9 +90,13 @@
         {
           lib,
           pkgs,
+          config,
           mkFormatterModule,
           ...
         }:
+        let
+          cfg = config.programs.nuten;
+        in
         {
           imports = [
             (mkFormatterModule {
@@ -101,7 +105,28 @@
               includes = [ "*.nu" ];
             })
           ];
-          programs.nuten.package = lib.mkDefault (nutenOf pkgs).package;
+
+          options.programs.nuten.settings = lib.mkOption {
+            type = lib.types.submodule { freeformType = lib.types.json; };
+            default = { };
+            example = {
+              line_width = 80;
+            };
+            description = ''
+              Configuration to generate nuten.json with.
+              When not empty, it is passed with `--config`, and config files in the project are ignored.
+            '';
+          };
+
+          config = lib.mkMerge [
+            { programs.nuten.package = lib.mkDefault (nutenOf pkgs).package; }
+            (lib.mkIf (cfg.enable && cfg.settings != { }) {
+              settings.formatter.nuten.options = [
+                "--config"
+                (toString (pkgs.writeText "nuten.json" (builtins.toJSON cfg.settings)))
+              ];
+            })
+          ];
         };
 
       checks = forAllSystems (system: {
