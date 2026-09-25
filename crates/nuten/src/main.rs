@@ -10,6 +10,8 @@
 //! The same goes for a file `--config` names without a config extension.
 //! With `--check`, it changes no file.
 //! It then exits with 1 when any file would change and nothing is wrong.
+//! `nuten format -` formats stdin to stdout instead.
+//! It writes nothing to stdout when stdin or its config has a problem.
 //! Any command exits with 2 when stdout cannot be written, unless its reader has closed it.
 //! Any command exits with 2 when the arguments are invalid.
 
@@ -44,7 +46,7 @@ struct Nuten {
 
 #[derive(Subcommands)]
 enum Command {
-    /// Format files in place, or check whether they are formatted
+    /// Format files in place or check them, or format stdin to stdout
     Format(Format),
     /// Print the JSON Schema of a config file
     Schema,
@@ -59,10 +61,16 @@ struct Format {
     /// List the files that would change, instead of changing them
     #[usage(long)]
     check: bool,
-    /// Files to format in place; a directory stands for the `.nu` files under it
+    /// Files to format in place; a directory stands for the `.nu` files under it; `-` for stdin
     #[usage(default = ".")]
     paths: Vec<PathBuf>,
 }
+
+/// The path that stands for stdin.
+const STDIN_PATH: &str = "-";
+
+/// The name stdin goes by in reports.
+const STDIN_NAME: &str = "<stdin>";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
@@ -81,16 +89,35 @@ struct Report {
 
 fn main() -> ExitCode {
     match Nuten::parse().command {
-        Command::Format(Format {
-            config,
-            check,
-            paths,
-        }) => {
-            let mode = if check { Mode::Check } else { Mode::Write };
-            format_paths(&paths, config.as_deref(), mode)
-        },
+        Command::Format(args) => run_format(&args),
         Command::Schema => print_schema(),
     }
+}
+
+/// Formats stdin when the paths are only `-`, or else the files the paths name.
+fn run_format(args: &Format) -> ExitCode {
+    if let Some(problem) = argument_problem(args) {
+        return fail(&[problem]);
+    }
+    let mode = if args.check { Mode::Check } else { Mode::Write };
+    if reads_stdin(args) {
+        return format_stdin(args.config.as_deref(), mode);
+    }
+    match args.config.as_deref().map(config::load).transpose() {
+        Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
+        Err(problems) => fail(&problems),
+    }
+}
+
+fn reads_stdin(args: &Format) -> bool {
+    args.paths.iter().any(|path| path.as_os_str() == STDIN_PATH)
+}
+
+/// The problem with how `args` go together.
+/// Not `conflicts` of usage, which relates arguments and cannot tell `-` from other paths.
+fn argument_problem(args: &Format) -> Option<String> {
+    (reads_stdin(args) && args.paths.len() > 1)
+        .then(|| "`-` must be the only path, since it reads stdin".to_string())
 }
 
 fn print_schema() -> ExitCode {
@@ -118,15 +145,32 @@ fn write_stdout(text: &str) -> Result<(), String> {
     }
 }
 
-/// Formats the files `paths` name, with the config file `config_file` or else the nearest one.
-fn format_paths(paths: &[PathBuf], config_file: Option<&Path>, mode: Mode) -> ExitCode {
-    let report = match config_file.map(config::load).transpose() {
-        Ok(given) => report(paths, given.as_ref(), mode),
-        Err(problems) => Report {
-            changed: Vec::new(),
-            problems,
+/// Formats stdin to stdout, with `config_file` or else the config nearest the current directory.
+fn format_stdin(config_file: Option<&Path>, mode: Mode) -> ExitCode {
+    let name = Path::new(STDIN_NAME);
+    // Read in full first, so that a writer is not cut off when a config file has a problem.
+    let src = io::read_to_string(io::stdin())
+        .map_err(|error| vec![format!("{}: {error}", name.display())]);
+    let formatted = src.and_then(|src| {
+        let given = config_file.map(config::load).transpose()?;
+        let config = config::of_dir(Path::new("."), given.as_ref())?;
+        let formatted = format_text(name, &src, &config.format)?;
+        Ok((src, formatted))
+    });
+    match (formatted, mode) {
+        (Err(problems), _) => fail(&problems),
+        (Ok((src, formatted)), Mode::Check) if formatted != src => ExitCode::from(1),
+        (Ok(_), Mode::Check) => ExitCode::SUCCESS,
+        (Ok((_, formatted)), Mode::Write) => match write_stdout(&formatted) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(problem) => fail(&[problem]),
         },
-    };
+    }
+}
+
+/// Formats the files `paths` name, with `given` or else the nearest config.
+fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
+    let report = report(paths, given, mode);
     let listed = match mode {
         Mode::Write => Ok(()),
         Mode::Check => write_stdout(&listing(&report.changed)),
@@ -220,18 +264,24 @@ fn report_of(entries: Vec<Entry>, outcomes: Vec<Result<bool, Vec<String>>>) -> R
 fn format_file(path: &Path, config: &FormatConfig, mode: Mode) -> Result<bool, Vec<String>> {
     let io_problem = |error: io::Error| vec![format!("{}: {error}", path.display())];
     let src = read_regular_file(path).map_err(io_problem)?;
-    let formatted = format(&src, config).map_err(|errors| {
-        errors
-            .errors
-            .iter()
-            .map(|error| located(path, &src, error.range.start().into(), error.kind))
-            .collect::<Vec<_>>()
-    })?;
+    let formatted = format_text(path, &src, config)?;
     let changed = formatted != src;
     if changed && mode == Mode::Write {
         fs::write(path, formatted).map_err(io_problem)?;
     }
     Ok(changed)
+}
+
+/// `src`, the text of `path`, formatted.
+/// The error holds a line for each syntax error.
+fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, Vec<String>> {
+    format(src, config).map_err(|errors| {
+        errors
+            .errors
+            .iter()
+            .map(|error| located(path, src, error.range.start().into(), error.kind))
+            .collect()
+    })
 }
 
 /// Each of `items` once, in the order it first comes.

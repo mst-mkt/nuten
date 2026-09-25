@@ -1,4 +1,4 @@
-//! Runs the binary on files in a temporary directory, and with its stdout closed or full.
+//! Runs the binary on files in a temporary directory, on stdin, and with its stdout closed or full.
 
 use std::{
     env,
@@ -96,6 +96,25 @@ fn format_in(dir: &TempDir, args: &[&str]) -> Output {
         .current_dir(&dir.0)
         .output()
         .unwrap()
+}
+
+/// `nuten format` with `args` from `dir`, with `input` on its stdin.
+/// Not a pipe, whose writer fails when the binary exits before it reads stdin.
+fn format_stdin_command(dir: &TempDir, args: &[&str], input: &[u8]) -> Command {
+    let input_path = dir.path("stdin.input");
+    fs::write(&input_path, input).unwrap();
+    let mut command = nuten_command();
+    command
+        .arg("format")
+        .args(args)
+        .current_dir(&dir.0)
+        .stdin(fs::File::open(&input_path).unwrap());
+    command
+}
+
+/// Runs `nuten format` with `args` from `dir`, with `input` on its stdin.
+fn format_stdin_in(dir: &TempDir, args: &[&str], input: &[u8]) -> Output {
+    format_stdin_command(dir, args, input).output().unwrap()
 }
 
 /// A block, which each indent width formats differently.
@@ -1683,6 +1702,179 @@ fn format_check_reports_list_it_cannot_write() {
     let stderr = stderr(&output);
     assert!(stderr.starts_with("stdout: "), "{stderr}");
     assert_eq!(read(&path), UNFORMATTED);
+}
+
+#[test]
+fn format_writes_stdin_formatted_to_stdout() {
+    let dir = TempDir::new();
+    let output = format_stdin_in(&dir, &["-"], UNFORMATTED.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), FORMATTED);
+}
+
+#[test]
+fn format_takes_config_file_nearest_current_directory_for_stdin() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 2}");
+    let output = format_stdin_in(&dir, &["-"], BLOCK.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+}
+
+#[test]
+fn format_takes_given_config_file_for_stdin() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 3}");
+    dir.file("two.nuon", "{indent_width: 2}");
+    let output = format_stdin_in(&dir, &["-c", "two.nuon", "-"], BLOCK.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+}
+
+#[test]
+fn format_writes_nothing_to_stdout_and_reports_syntax_error_of_stdin() {
+    let dir = TempDir::new();
+    let output = format_stdin_in(&dir, &["-"], b"ls\nls ||");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    assert!(stderr.starts_with("<stdin>:2:4: "), "{stderr}");
+}
+
+#[test]
+fn format_reports_stdin_that_is_not_utf8() {
+    let dir = TempDir::new();
+    let output = format_stdin_in(&dir, &["-"], b"ls \xff");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    let stderr = stderr(&output);
+    assert!(stderr.starts_with("<stdin>: "), "{stderr}");
+}
+
+#[test]
+fn format_writes_nothing_to_stdout_when_config_file_for_stdin_is_wrong() {
+    let dir = TempDir::new();
+    let nuon = dir.file("nuten.nuon", "{a: 1}");
+    let output = format_stdin_in(&dir, &["-"], UNFORMATTED.as_bytes());
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        stderr(&output),
+        format!("{}:1:2: unknown key `a`\n", nuon.display())
+    );
+}
+
+#[test]
+fn format_check_on_stdin_exits_with_1_and_writes_nothing_when_it_would_change() {
+    let dir = TempDir::new();
+    let output = format_stdin_in(&dir, &["--check", "-"], UNFORMATTED.as_bytes());
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn format_check_on_stdin_succeeds_quietly_when_it_is_formatted() {
+    let dir = TempDir::new();
+    let output = format_stdin_in(&dir, &["--check", "-"], FORMATTED.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn format_rejects_stdin_with_other_paths() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    for args in [["-", "a.nu"], ["a.nu", "-"]] {
+        let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            stderr(&output),
+            "`-` must be the only path, since it reads stdin\n"
+        );
+        assert_eq!(read(&path), UNFORMATTED);
+    }
+}
+
+#[test]
+fn format_rejects_stdin_with_other_paths_before_reading_given_config_file() {
+    let dir = TempDir::new();
+    let args = ["-c", "missing.nuon", "-", "a.nu"];
+    let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stderr(&output),
+        "`-` must be the only path, since it reads stdin\n"
+    );
+}
+
+#[test]
+fn format_reads_stdin_in_full_before_reporting_config_file_of_it() {
+    let dir = TempDir::new();
+    dir.file("wrong.nuon", "{a: 1}");
+    dir.file("d/nuten.nuon", "{a: 1}");
+    // More than a pipe holds, so that writing fails if the binary exits before reading it all.
+    let input = "ls\n".repeat(1 << 20);
+    for (args, cwd) in [
+        (&["-c", "wrong.nuon", "-"][..], dir.0.clone()),
+        (&["-"], dir.path("d")),
+    ] {
+        let mut child = nuten_command()
+            .arg("format")
+            .args(args)
+            .current_dir(&cwd)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut stdin = child.stdin.take().unwrap();
+        let input = input.clone();
+        let writer = thread::spawn(move || io::Write::write_all(&mut stdin, input.as_bytes()));
+        let output = child.wait_with_output().unwrap();
+        assert!(writer.join().unwrap().is_ok(), "{args:?}");
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}");
+    }
+}
+
+#[test]
+fn format_check_on_stdin_exits_with_2_on_syntax_error() {
+    let dir = TempDir::new();
+    let output = format_stdin_in(&dir, &["--check", "-"], b"ls ||");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    let stderr = stderr(&output);
+    assert!(stderr.starts_with("<stdin>:1:4: "), "{stderr}");
+}
+
+#[test]
+fn format_counts_stdin_formatted_as_written_when_reader_closes_first() {
+    let dir = TempDir::new();
+    let (reader, writer) = io::pipe().unwrap();
+    drop(reader);
+    let output = format_stdin_command(&dir, &["-"], UNFORMATTED.as_bytes())
+        .stdout(writer)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert!(output.stderr.is_empty());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn format_reports_stdin_formatted_it_cannot_write() {
+    let dir = TempDir::new();
+    let full = fs::File::options().write(true).open("/dev/full").unwrap();
+    let output = format_stdin_command(&dir, &["-"], UNFORMATTED.as_bytes())
+        .stdout(full)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert!(stderr.starts_with("stdout: "), "{stderr}");
 }
 
 #[test]

@@ -26,6 +26,14 @@ impl Lookup {
         matches!(self, Lookup::Wrong(_))
     }
 
+    /// The config, or else a line for each problem.
+    pub(crate) fn into_config(self) -> Result<Config, Vec<String>> {
+        match self {
+            Lookup::Found(config) => Ok(config),
+            lookup => Err(lookup.problems()),
+        }
+    }
+
     /// A line for each problem.
     pub(crate) fn problems(&self) -> Vec<String> {
         match self {
@@ -48,6 +56,15 @@ pub(crate) fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, dirs.len(), || {
         dirs.iter().map(|dir| canonical(dir)).collect()
     })
+}
+
+/// The config of `dir`, as `of_dirs` gives it, or else a line for each problem.
+pub(crate) fn of_dir(dir: &Path, given: Option<&Config>) -> Result<Config, Vec<String>> {
+    of_dirs(&[dir], given)
+        .into_iter()
+        .next()
+        .expect("one lookup for one directory")
+        .into_config()
 }
 
 /// `given` `count` times, or else the config nearest each of `starts`.
