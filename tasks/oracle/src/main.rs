@@ -6,12 +6,15 @@
 //! Nu parses both versions of a file in the directory of the file before formatting.
 //!
 //! `format` formats files with nuten and asks about each.
+//! Before asking, it checks each `.nu` file for what `nuten_format::invariants` asks of any input.
+//! It checks a file with syntax errors too before skipping it, for the invariants of the parser.
 //! It asks nu too whether nuten reads each `.nuon` file into the value nu reads.
 //! `tasks/oracle/test_data` holds NUON files to run it on.
 //! It takes files, and directories to search for `.nu` and `.nuon` files.
 //! It skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
 //! It skips a `.nuon` file that nu reads and nuten leaves unread too.
 //! It exits with 1 when any other file cannot be checked, or its AST or value differs.
+//! It exits with 1 too when a `.nu` file breaks an invariant.
 //! It exits with 2 when the arguments name no `.nu` or `.nuon` file.
 //!
 //! `compare` asks about a file and the version of it that any formatter wrote.
@@ -36,7 +39,7 @@ use std::{
     process::ExitCode,
 };
 
-use nuten_format::{Config, format};
+use nuten_format::{Config, format, invariants};
 use usage::{Args, Cli, Subcommands};
 
 #[derive(Cli)]
@@ -48,7 +51,7 @@ struct Oracle {
 
 #[derive(Subcommands)]
 enum Command {
-    /// Format files with nuten, and ask nu whether it parses each the same before and after
+    /// Format files with nuten, check the invariants, and ask nu whether formatting keeps the AST
     Format(Format),
     /// Ask nu whether it parses a file the same as the version of it a formatter wrote
     Compare(Compare),
@@ -168,7 +171,8 @@ fn files_to_check(path: &Path, files: &mut Vec<PathBuf>) {
 /// A file whose check did not fail.
 #[derive(Debug)]
 enum Checked {
-    /// Nu parses the same AST before and after formatting, or reads the NUON as nuten does.
+    /// Formatting keeps the invariants, and nu parses the same AST before and after it.
+    /// Or nu reads the NUON as nuten does.
     Passed,
     /// Not checked, for the reason given.
     Skipped(String),
@@ -193,10 +197,23 @@ fn check(path: &Path, max_size: u64) -> Result<Checked, String> {
     {
         return nuon::check(&src);
     }
-    let Ok(output) = format(&src, &Config::default()) else {
-        return Ok(Checked::Skipped("syntax errors".to_string()));
+    let config = Config::default();
+    if let Some(checked) = invariants_verdict(&invariants::check(&src, &config))? {
+        return Ok(checked);
+    }
+    let Ok(output) = format(&src, &config) else {
+        unreachable!("the source has no syntax errors")
     };
     same_ast(&src, &output, dir_of(path)).map(|()| Checked::Passed)
+}
+
+/// The outcome for a `.nu` file that the invariants decide, or `None` to ask nu.
+fn invariants_verdict(checked: &invariants::Checked) -> Result<Option<Checked>, String> {
+    if !checked.violations.is_empty() {
+        let violations: Vec<_> = checked.violations.iter().map(ToString::to_string).collect();
+        return Err(violations.join("; "));
+    }
+    Ok((!checked.syntax_errors.is_empty()).then(|| Checked::Skipped("syntax errors".to_string())))
 }
 
 /// The directory nu parses `path` in, where it finds the modules `path` uses by relative path.
@@ -215,5 +232,62 @@ fn same_ast(before: &str, after: &str, dir: Option<&Path>) -> Result<(), String>
     match ast::difference(&before, &after)? {
         Some(difference) => Err(difference),
         None => Ok(()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nuten_format::{
+        Config,
+        invariants::{self, Violation},
+    };
+
+    use super::invariants_verdict;
+    use crate::Checked;
+
+    fn violation(detail: &str) -> Violation {
+        Violation {
+            invariant: "comment preservation",
+            detail: detail.to_string(),
+        }
+    }
+
+    #[test]
+    fn file_keeping_invariants_is_left_to_nu() {
+        let checked = invariants::check("ls | length\n", &Config::default());
+        assert!(matches!(invariants_verdict(&checked), Ok(None)));
+    }
+
+    #[test]
+    fn file_with_syntax_errors_is_skipped() {
+        let checked = invariants::check("ls |", &Config::default());
+        assert!(matches!(
+            invariants_verdict(&checked),
+            Ok(Some(Checked::Skipped(reason))) if reason == "syntax errors"
+        ));
+    }
+
+    #[test]
+    fn violations_fail_file_in_one_line() {
+        let checked = invariants::Checked {
+            violations: vec![violation("a"), violation("b")],
+            ..invariants::check("ls\n", &Config::default())
+        };
+        assert_eq!(
+            invariants_verdict(&checked).unwrap_err(),
+            "comment preservation: a; comment preservation: b"
+        );
+    }
+
+    #[test]
+    fn violations_fail_file_even_with_syntax_errors() {
+        let checked = invariants::Checked {
+            violations: vec![violation("a")],
+            ..invariants::check("ls |", &Config::default())
+        };
+        assert_eq!(
+            invariants_verdict(&checked).unwrap_err(),
+            "comment preservation: a"
+        );
     }
 }
