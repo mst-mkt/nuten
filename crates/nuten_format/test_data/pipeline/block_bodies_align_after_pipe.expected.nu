@@ -6,9 +6,9 @@ ls
         }
   }
 let x = ls
-| each {|x|
-      $x
-  }
+    | each {|x|
+          $x
+      }
 ls
 | get {
       a: 1

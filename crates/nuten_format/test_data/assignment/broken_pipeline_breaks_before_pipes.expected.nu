@@ -1,9 +1,9 @@
 let x = 1
 a
 | $x = b
-| c
+    | c
 ls
 | $x = a
-| $y = b
+    | $y = b
 a
 | $x = b

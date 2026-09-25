@@ -2,7 +2,7 @@ use std::iter;
 
 use nuten_doc::{
     Element, GroupId, align, align_if_group_breaks, empty_line, expand_parent, group_with_id,
-    hard_line_break, soft_line_break_or_space, space,
+    hard_line_break, indent_if_group_breaks, soft_line_break_or_space, space,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
@@ -81,13 +81,22 @@ impl<'a> Formatter<'a> {
             Some(Alignment::IfGroupBreaks) => vec![align_if_group_breaks(id, 2, aligned)],
             None => aligned,
         };
+        let leading = pipe.into_iter().flatten().chain(aligned).collect();
+        // From the first comment on, each part may start a line of its own.
+        // So each takes its own indent, rather than that of the segment.
         let rest = segment.items[end..]
             .iter()
             .enumerate()
-            .flat_map(|(index, part)| self.part(segment.prev_of(end + index), part));
-        pipe.into_iter()
-            .flatten()
-            .chain(aligned)
+            .flat_map(|(index, part)| {
+                let elements = self.part(segment.prev_of(end + index), part);
+                indent_levels_if_group_breaks(id, part.level, elements)
+            });
+        let level = segment
+            .pipe
+            .or(segment.items.first())
+            .map_or(0, |part| part.level);
+        indent_levels_if_group_breaks(id, level, leading)
+            .into_iter()
             .chain(rest)
             .collect()
     }
@@ -126,6 +135,16 @@ impl<'a> Formatter<'a> {
     }
 }
 
+fn indent_levels_if_group_breaks(
+    id: GroupId,
+    level: u32,
+    elements: Vec<Element<'_>>,
+) -> Vec<Element<'_>> {
+    (0..level).fold(elements, |elements, _| {
+        vec![indent_if_group_breaks(id, elements)]
+    })
+}
+
 fn follows_semicolon(node: &SyntaxNode) -> bool {
     let mut before = node.prev_sibling_or_token();
     while let Some(sibling) = &before
@@ -141,6 +160,8 @@ struct Part {
     child: Child,
     /// Whether it belongs to the element before it, so the pipeline does not end at it.
     joined: bool,
+    /// Its indent level when it starts a line.
+    level: u32,
 }
 
 impl Part {
@@ -200,7 +221,42 @@ impl Part {
 /// The pipes of the first statement the operator takes then format as those of `pipeline`.
 /// The statements below it are left to `assigned`.
 fn parts(pipeline: &SyntaxNode, kept: &Kept) -> Vec<Part> {
-    flatten(pipeline, 0, false, kept)
+    let levels = Levels {
+        head: 0,
+        pipes: 0,
+    };
+    comments_at_level_of_following(flatten(pipeline, 0, false, levels, kept))
+}
+
+/// A comment on a line of its own is about what follows it, so it takes that indent.
+/// `flatten` gives the deeper indent of a value's `|` only to the `|`, not to comments before it.
+fn comments_at_level_of_following(parts: Vec<Part>) -> Vec<Part> {
+    let levels: Vec<_> = parts
+        .iter()
+        .enumerate()
+        .map(|(index, part)| {
+            let following = parts[index..].iter().find(|part| !part.child.is_comment());
+            following.unwrap_or(part).level
+        })
+        .collect();
+    parts
+        .into_iter()
+        .zip(levels)
+        .map(|(part, level)| Part {
+            level,
+            ..part
+        })
+        .collect()
+}
+
+/// The indent levels the parts of a pipeline take when they start a line.
+/// A value starts on the line of its assignment, so only its `|`s go deeper.
+#[derive(Clone, Copy)]
+struct Levels {
+    /// The level of the parts before the pipeline's first `|`.
+    head: u32,
+    /// The level of the parts from the pipeline's first `|` on.
+    pipes: u32,
 }
 
 fn assignment_of(pipeline: &SyntaxNode, kept: &Kept) -> Option<SyntaxNode> {
@@ -221,10 +277,27 @@ fn assigned_children(assignment: &SyntaxNode, kept: &Kept) -> (Vec<Child>, Optio
     (items, first)
 }
 
-fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, kept: &Kept) -> Vec<Part> {
-    children(pipeline.children_with_tokens(), kept)
+fn flatten(
+    pipeline: &SyntaxNode,
+    newlines: u32,
+    joined: bool,
+    levels: Levels,
+    kept: &Kept,
+) -> Vec<Part> {
+    let children: Vec<_> = children(pipeline.children_with_tokens(), kept).collect();
+    let first_pipe = children
+        .iter()
+        .position(|child| child.kind() == SyntaxKind::Pipe)
+        .unwrap_or(children.len());
+    children
+        .into_iter()
         .enumerate()
         .flat_map(|(index, child)| {
+            let level = if index < first_pipe {
+                levels.head
+            } else {
+                levels.pipes
+            };
             let (before, joined) = if index == 0 {
                 (newlines, joined)
             } else {
@@ -241,10 +314,13 @@ fn flatten(pipeline: &SyntaxNode, newlines: u32, joined: bool, kept: &Kept) -> V
                 .and_then(|node| node.syntax().first_child())
                 .filter(is_assignment);
             match assignment {
-                Some(assignment) => flatten_assignment(&assignment, child.newlines, joined, kept),
+                Some(assignment) => {
+                    flatten_assignment(&assignment, child.newlines, joined, level, kept)
+                },
                 None => vec![Part {
                     joined: joined && child.element.as_node().is_some(),
                     child,
+                    level,
                 }],
             }
         })
@@ -255,6 +331,7 @@ fn flatten_assignment(
     assignment: &SyntaxNode,
     newlines: u32,
     joined: bool,
+    level: u32,
     kept: &Kept,
 ) -> Vec<Part> {
     let (items, first) = assigned_children(assignment, kept);
@@ -277,11 +354,16 @@ fn flatten_assignment(
                 NodeOrToken::Node(Node::Pipeline(pipeline))
                     if !kept.keeps(&ast::untyped(&child.element)) =>
                 {
-                    flatten(pipeline.syntax(), child.newlines, true, kept)
+                    let levels = Levels {
+                        head: level,
+                        pipes: level + 1,
+                    };
+                    flatten(pipeline.syntax(), child.newlines, true, levels, kept)
                 },
                 _ => vec![Part {
                     joined: joined && !child.is_comment(),
                     child,
+                    level,
                 }],
             }
         })

@@ -2,7 +2,7 @@
 
 | y
 let y = ls |
-@a x
+    @a x
 
 | z
 ls |
