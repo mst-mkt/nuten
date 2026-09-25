@@ -25,6 +25,7 @@ impl TempDir {
 
     fn file(&self, name: &str, contents: &str) -> PathBuf {
         let path = self.0.join(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, contents).unwrap();
         path
     }
@@ -36,10 +37,10 @@ impl Drop for TempDir {
     }
 }
 
-fn compare(args: &[&PathBuf]) -> Output {
+fn oracle(subcommand: &str, paths: &[&PathBuf]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_nuten-oracle"))
-        .arg("compare")
-        .args(args)
+        .arg(subcommand)
+        .args(paths)
         .output()
         .unwrap()
 }
@@ -63,7 +64,7 @@ fn compare_passes_files_that_differ_only_in_layout() {
     let before = dir.file("before.nu", "ls | length\n");
     let after = dir.file("after.nu", "ls  |  length\n");
 
-    let output = compare(&[&before, &after]);
+    let output = oracle("compare", &[&before, &after]);
 
     assert_eq!(output.status.code(), Some(0), "{output:?}");
 }
@@ -77,7 +78,7 @@ fn compare_fails_on_files_nu_parses_differently() {
     let before = dir.file("before.nu", "ls | length\n");
     let after = dir.file("after.nu", "ls; length\n");
 
-    let output = compare(&[&before, &after]);
+    let output = oracle("compare", &[&before, &after]);
 
     assert_eq!(output.status.code(), Some(1), "{output:?}");
     let stdout = String::from_utf8(output.stdout).unwrap();
@@ -93,7 +94,7 @@ fn compare_fails_on_file_it_cannot_read() {
     let before = dir.file("before.nu", "ls | length\n");
     let after = dir.0.join("missing.nu");
 
-    let output = compare(&[&before, &after]);
+    let output = oracle("compare", &[&before, &after]);
 
     assert_eq!(output.status.code(), Some(1), "{output:?}");
     let stdout = String::from_utf8(output.stdout).unwrap();
@@ -105,9 +106,94 @@ fn compare_takes_exactly_two_files() {
     let dir = TempDir::new();
     let file = dir.file("a.nu", "ls\n");
 
-    let outputs = [compare(&[&file]), compare(&[&file, &file, &file])];
+    let outputs = [
+        oracle("compare", &[&file]),
+        oracle("compare", &[&file, &file, &file]),
+    ];
 
     for output in outputs {
         assert_eq!(output.status.code(), Some(2), "{output:?}");
     }
+}
+
+#[test]
+fn format_passes_file_whose_ast_nuten_keeps() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file("a.nu", "ls|length\n");
+
+    let output = oracle("format", &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("files: 1, failed: 0, skipped: 0"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_skips_file_with_syntax_errors() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file("a.nu", "ls | (\n");
+
+    let output = oracle("format", &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("syntax errors"), "{stderr}");
+    assert!(stderr.contains("skipped: 1"), "{stderr}");
+}
+
+#[test]
+fn format_takes_nu_files_below_directory_but_not_in_hidden_ones() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    dir.file("a.nu", "ls\n");
+    dir.file("sub/b.nu", "ls\n");
+    dir.file("sub/c.txt", "ls\n");
+    dir.file(".hidden/d.nu", "ls\n");
+
+    let output = oracle("format", &[&dir.0]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("files: 2,"), "{stderr}");
+}
+
+#[test]
+fn format_exits_with_2_when_paths_hold_no_nu_file() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    dir.file("a.txt", "ls\n");
+
+    let output = oracle("format", &[&dir.0]);
+
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("no .nu or .nuon files"), "{stderr}");
+}
+
+#[test]
+fn format_checks_file_given_twice_once() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file("a.nu", "ls\n");
+
+    let output = oracle("format", &[&file, &file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("files: 1,"), "{stderr}");
 }
