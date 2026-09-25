@@ -1,7 +1,7 @@
 use std/assert
 use std/testing *
 
-use ../cpus.nu [allowed-cpus any-allowed-cpu parse-cpu-list]
+use ../cpus.nu [allowed-cpus any-allowed-cpu fastest-allowed-cpu parse-cpu-list]
 
 const CPUS = path self ../cpus.nu
 
@@ -29,4 +29,28 @@ def "any-allowed-cpu gives cpu taskset runs on" [] {
 
     let run = ^taskset --cpu-list $actual true | complete
     assert equal $run.exit_code 0 $run.stderr
+}
+
+@test
+def "fastest-allowed-cpu gives allowed cpu no other outruns" [] {
+    let frequency = {|cpu|
+        let path = $"/sys/devices/system/cpu/cpu($cpu)/cpufreq/cpuinfo_max_freq"
+        if ($path | path exists) {
+            open --raw $path | into int
+        } else {
+            0
+        }
+    }
+
+    let actual = fastest-allowed-cpu
+
+    assert ($actual in (allowed-cpus))
+    assert equal (do $frequency $actual) (allowed-cpus | each { do $frequency $in } | math max)
+}
+
+@test
+def "fastest-allowed-cpu gives same cpu every time" [] {
+    let actual = 1..5 | each { fastest-allowed-cpu } | uniq
+
+    assert equal ($actual | length) 1
 }

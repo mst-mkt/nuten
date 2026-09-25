@@ -1,6 +1,7 @@
 use std/assert
 use std/testing *
 
+use ../cpus.nu [allowed-cpus fastest-allowed-cpu]
 source ../nufmt.nu
 
 const NUFMT = path self ../nufmt.nu
@@ -18,6 +19,7 @@ def setup []: nothing -> record {
             name: nuten
             command: $env.NUTEN
             arguments: {|file| [format --stdin-filepath $file -] }
+            directory: {|dir| [format --check $dir] }
         }
         oracle: $env.NUTEN_ORACLE
     }
@@ -35,6 +37,10 @@ def put [dir: path file: string content: oneof<string, binary>]: nothing -> path
     $path
 }
 
+def pair [formatter: record]: nothing -> list<record> {
+    [$formatter ($formatter | update name nufmt)]
+}
+
 def times []: nothing -> list<record> {
     [
         { file: a.nu nuten: 10ms nufmt: 40ms }
@@ -43,12 +49,37 @@ def times []: nothing -> list<record> {
     ]
 }
 
+# Nu's mktemp reads TMPDIR from the environment the process started with, so time-directories runs in a process of its own.
+def time-directories-in-child [
+    tmp: path
+    file: path
+    corpus: path
+    formatter: path
+]: nothing -> record {
+    let script = $"
+        source ($NUFMT | to nuon)
+        let formatter = { name: nuten command: $env.FORMATTER directory: {|dir| [format --check $dir] } }
+        time-directories [$env.FILE] $env.CORPUS [$formatter \($formatter | update name nufmt\)] 1 null
+    "
+    let environment = { TMPDIR: $tmp FILE: $file CORPUS: $corpus FORMATTER: $formatter }
+
+    with-env $environment { ^$nu.current-exe --no-config-file --commands $script | complete }
+}
+
 @test
 def "formatters passes nuten path of file and nufmt stdin flag" [] {
     let actual = formatters /bin/nuten /bin/nufmt
 
     assert equal (do $actual.0.arguments a.nu) [format --stdin-filepath a.nu -]
     assert equal (do $actual.1.arguments a.nu) [--stdin]
+}
+
+@test
+def "formatters checks directory with nuten and dry-runs it with nufmt" [] {
+    let actual = formatters /bin/nuten /bin/nufmt
+
+    assert equal (do $actual.0.directory /d) [format --check /d]
+    assert equal (do $actual.1.directory /d) [--dry-run /d]
 }
 
 @test
@@ -167,9 +198,8 @@ def "excluded groups files by formatter and reason" [] {
 def "time-file times each formatter on file" [] {
     let context = $in
     let file = put $context.dir a.nu "ls|length"
-    let formatters = [$context.nuten ($context.nuten | update name nufmt)]
 
-    let actual = time-file $file $formatters 1
+    let actual = time-file $file (pair $context.nuten) 1
 
     assert equal ($actual | columns) [file nuten nufmt]
     assert equal $actual.file $file
@@ -235,15 +265,254 @@ def "time-file fails naming file when formatter fails" [] {
 
 @test
 def "command-line quotes each word" [] {
-    let formatter = {
-        name: nuten
-        command: "/a b/nuten"
-        arguments: {|file| [--stdin-filepath $file] }
-    }
+    let words = ["/a b/nuten" --stdin-filepath "/c d/it's.nu"]
 
-    let actual = command-line $formatter "/c d/it's.nu"
+    let actual = command-line $words
 
     assert equal $actual "'/a b/nuten' '--stdin-filepath' '/c d/it'\\''s.nu'"
+}
+
+@test
+def "staged-path keeps path of file in corpus" [] {
+    let actual = staged-path /corpus/a/b.nu /corpus 0
+
+    assert equal $actual a/b.nu
+}
+
+@test
+def "staged-path puts file from outside corpus in directory of its own" [] {
+    let actual = [/elsewhere/a.nu /corpus-other/a.nu]
+    | enumerate
+    | each {|entry| staged-path $entry.item /corpus $entry.index }
+
+    assert equal $actual [also/0/a.nu also/1/a.nu]
+}
+
+@test
+def "staged-path drops leading dot from each part" [] {
+    let actual = staged-path /corpus/.github/.hidden.nu /corpus 0
+
+    assert equal $actual _github/_hidden.nu
+}
+
+@test
+def "stage copies each file to its staged path" [] {
+    let context = $in
+    let corpus = $context.dir | path join corpus
+    let inside = put $corpus .dir/a.nu "ls"
+    let outside = put $context.dir b.nu "ls | length"
+
+    let actual = stage [$inside $outside] $corpus
+
+    assert equal (open --raw ($actual | path join _dir/a.nu)) "ls"
+    assert equal (open --raw ($actual | path join also/1/b.nu)) "ls | length"
+    rm --recursive $actual
+}
+
+@test
+def "time-directory runs formatter on directory from inside it" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    mkdir $dir
+    let telling = {
+        name: sh
+        command: sh
+        directory: {|dir| [-c $"pwd > ran-in; echo ($dir) > ran-on"] }
+    }
+
+    time-directory $dir [$telling] 1 []
+
+    assert equal (open ($dir | path join ran-in) | str trim) $dir
+    assert equal (open ($dir | path join ran-on) | str trim) $dir
+}
+
+@test
+def "time-directory takes check that finds change as success" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    put $dir a.nu "ls|length"
+
+    let actual = time-directory $dir [$context.nuten] 1 []
+
+    assert ($actual.nuten > 0sec)
+}
+
+@test
+def "time-directory runs formatter behind prefix" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    mkdir $dir
+    let telling = { name: sh command: sh directory: {|dir| [-c 'echo $PREFIXED > ran'] } }
+
+    time-directory $dir [$telling] 1 [env PREFIXED=yes]
+
+    assert equal (open ($dir | path join ran) | str trim) yes
+}
+
+@test
+def "time-directory fails naming directory when formatter crashes" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    mkdir $dir
+    let crashing = { name: sh command: sh directory: {|dir| [-c 'exit 2'] } }
+
+    let actual = try { time-directory $dir [$crashing] 1 [] } catch {|error| $error.msg }
+
+    assert str contains $actual $"hyperfine failed on ($dir)"
+}
+
+@test
+def "groups gives nu-std and whole staged directory with their files" [] {
+    let context = $in
+    put $context.dir nu-std/a.nu "ls"
+    put $context.dir nu-std/sub/b.nu "ls"
+    put $context.dir other/c.nu "ls"
+
+    let actual = groups $context.dir
+
+    assert equal $actual [
+        { name: nu-std dir: ($context.dir | path join nu-std) files: 2 }
+        { name: all dir: $context.dir files: 3 }
+    ]
+}
+
+@test
+def "groups leaves out group without file" [] {
+    let context = $in
+    put $context.dir other/a.nu "ls"
+
+    let actual = groups $context.dir
+
+    assert equal ($actual | get name) [all]
+}
+
+@test
+def "time-group runs formatters on all allowed cpus and on fastest one" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    mkdir $dir
+    let seen = $context.dir | path join seen
+    let telling = {
+        name: nuten
+        command: sh
+        directory: {|dir| [-c $"grep Cpus_allowed_list /proc/self/status >> ($seen)"] }
+    }
+    let cpus = { all: (allowed-cpus) one: (fastest-allowed-cpu) }
+    let allowed = open /proc/self/status | lines | where $it starts-with Cpus_allowed_list | first
+
+    time-group { name: all dir: $dir files: 0 } (pair $telling) 1 $cpus
+
+    assert equal (open $seen | lines | uniq | sort) (
+        [$allowed $"Cpus_allowed_list:\t($cpus.one)"] | uniq | sort
+    )
+}
+
+@test
+def "time-group gives times, speedups, and gains of both formatters" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    put $dir a.nu "ls"
+    let cpus = { all: (allowed-cpus) one: (fastest-allowed-cpu) }
+
+    let actual = time-group { name: nu-std dir: $dir files: 1 } (pair $context.nuten) 1 $cpus
+
+    assert equal $actual.name nu-std
+    assert equal $actual.files 1
+    assert equal ($actual.all_cpus | columns) [nuten nufmt speedup]
+    assert equal $actual.one_cpu.cpu $cpus.one
+    assert equal $actual.parallel_gain {
+        nuten: ($actual.one_cpu.nuten / $actual.all_cpus.nuten)
+        nufmt: ($actual.one_cpu.nufmt / $actual.all_cpus.nufmt)
+    }
+}
+
+@test
+def "time-group times nothing on one cpu without cpus to pin to" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    put $dir a.nu "ls"
+
+    let actual = time-group { name: all dir: $dir files: 1 } (pair $context.nuten) 1 null
+
+    assert ($actual.all_cpus.nuten > 0sec)
+    assert equal $actual.one_cpu null
+    assert equal $actual.parallel_gain null
+}
+
+@test
+def "pin gives taskset on cpus given" [] {
+    let actual = pin [1 3]
+
+    assert equal $actual [taskset --cpu-list "1,3"]
+}
+
+@test
+def "pin gives nothing without cpus" [] {
+    let actual = pin null
+
+    assert equal $actual []
+}
+
+@test
+def "parallel-gain divides time on one cpu by that on all" [] {
+    let actual = parallel-gain { nuten: 10ms nufmt: 20ms } { nuten: 30ms nufmt: 20ms }
+
+    assert equal $actual { nuten: 3.0 nufmt: 1.0 }
+}
+
+@test
+def "parallel-gain gives nothing without time on one cpu" [] {
+    let actual = parallel-gain { nuten: 10ms nufmt: 20ms } null
+
+    assert equal $actual null
+}
+
+@test
+def "time-directories times groups in staged directory" [] {
+    let context = $in
+    let corpus = $context.dir | path join corpus
+    let file = put $corpus nu-std/a.nu "ls"
+
+    let actual = time-directories [$file] $corpus (pair $context.nuten) 1 null
+
+    assert equal ($actual.directories | get name) [nu-std all]
+}
+
+@test
+def "time-directories removes staged directory" [] {
+    let context = $in
+    let corpus = $context.dir | path join corpus
+    let file = put $corpus a.nu "ls"
+    let tmp = $context.dir | path join tmp
+    mkdir $tmp
+
+    let actual = time-directories-in-child $tmp $file $corpus $context.nuten.command
+
+    assert equal $actual.exit_code 0 $actual.stderr
+    assert equal (ls $tmp) []
+}
+
+@test
+def "time-directories removes staged directory when formatter crashes" [] {
+    let context = $in
+    let corpus = $context.dir | path join corpus
+    let file = put $corpus a.nu "ls"
+    let tmp = $context.dir | path join tmp
+    mkdir $tmp
+    let crashing = put $context.dir crash "#!/bin/sh\nexit 2\n"
+    chmod +x $crashing
+
+    let actual = time-directories-in-child $tmp $file $corpus $crashing
+
+    assert str contains $actual.stderr "hyperfine failed"
+    assert equal (ls $tmp) []
+}
+
+@test
+def "with-speedup divides time of nufmt by that of nuten" [] {
+    let actual = { nuten: 10ms nufmt: 15ms } | with-speedup
+
+    assert equal $actual.speedup 1.5
 }
 
 @test
@@ -345,6 +614,17 @@ def "main takes files under corpus and after it" [] {
 }
 
 @test
+def "main takes file given twice once" [] {
+    let context = $in
+    let file = put $context.dir a.nu "ls"
+
+    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
+    let actual = main $context.dir $file --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle
+
+    assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [$file] }]
+}
+
+@test
 def "main takes relative paths from where it runs" [] {
     let context = $in
     let corpus = $context.dir | path join corpus
@@ -369,6 +649,17 @@ def "main times no file when every file is left out" [] {
     let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
 
     assert equal $actual.timing { files: [] total: null speedup: null }
+}
+
+@test
+def "main times no directory when every file is left out" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+
+    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
+    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
+
+    assert equal $actual.directories []
 }
 
 @test
