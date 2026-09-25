@@ -9,7 +9,8 @@
 //! Before asking, it checks each `.nu` file for what `nuten_format::invariants` asks of any input.
 //! It checks a file with syntax errors too before skipping it, for the invariants of the parser.
 //! It asks nu too whether nuten reads each `.nuon` file into the value nu reads.
-//! `tasks/oracle/test_data` holds NUON files to run it on.
+//! `tasks/oracle/test_data` holds files to run it on.
+//! Its `nufmt` holds the cases nushell/nufmt broke, each headed by the URL of its report.
 //! It takes files, and directories to search for `.nu` and `.nuon` files.
 //! It skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
 //! It skips a `.nuon` file that nu reads and nuten leaves unread too.

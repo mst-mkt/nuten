@@ -110,7 +110,10 @@
             };
             nuten = {
               enable = true;
-              excludes = [ "crates/*/test_data/**" ];
+              excludes = [
+                "crates/*/test_data/**"
+                "tasks/oracle/test_data/**"
+              ];
             };
           };
         }
