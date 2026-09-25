@@ -245,6 +245,7 @@
                   ":"
                   (pkgs.lib.makeBinPath (
                     [
+                      nushell.${system}
                       rustToolchain.${system}
                       pkgs.stdenv.cc
                       pkgs.coreutils
