@@ -1,8 +1,10 @@
-# Measures the work nuten does on each input under valgrind, whose counts hold still between runs unlike time.
+# Compares the work two nuten do on each input under valgrind, whose counts hold still between runs unlike time.
 
 const INPUTS = path self inputs.nuon
 const DEPTH = 64
-const TIME_LIMIT = 100sec
+const METRICS = [instructions allocations allocated_bytes peak_bytes]
+# Code elsewhere can shift the counts a little through inlining, which is no regression.
+const THRESHOLD_PERCENT = 1
 
 const TIMED_OUT = {
     timed_out: true
@@ -12,19 +14,75 @@ const TIMED_OUT = {
     peak_bytes: null
 }
 
-# Prints the instructions and allocations nuten takes on each input.
+# Prints how the work of head differs from that of base on each input, and fails if it grows past the threshold or runs out of time.
 def main [
     corpus: path # The corpus directory, as NUTEN_CORPUS names it
-    nuten: path # The nuten binary to measure
-]: nothing -> table {
+    base: path # The nuten binary to compare against
+    head: path # The nuten binary to compare
+    --time-limit: duration = 100sec # How long one run may take before it is cut off
+]: nothing -> nothing {
     let missing = [valgrind timeout taskset] | where { which $in | is-empty }
     if not ($missing | is-empty) {
         print --stderr $"($missing | str join ', ') not found"
         exit 2
     }
 
-    inputs $corpus (open $INPUTS)
-    | each {|input| { input: $input.name ...(measure $nuten $input $TIME_LIMIT) } }
+    let inputs = inputs $corpus (open $INPUTS)
+    let before = measure-each $base $inputs $time_limit
+    let unmeasured = $before | where timed_out | get input
+    if not ($unmeasured | is-empty) {
+        print --stderr $"base timed out on ($unmeasured | str join ', ')"
+        exit 2
+    }
+    let comparison = compare $before (measure-each $head $inputs $time_limit)
+
+    print $comparison
+    if ($comparison | any { $in.regressed }) {
+        exit 1
+    }
+}
+
+def measure-each [nuten: path inputs: list<record> limit: duration]: nothing -> table {
+    $inputs | each {|input| { input: $input.name ...(measure $nuten $input $limit) } }
+}
+
+def compare [before: table after: table]: nothing -> table {
+    $before
+    | zip $after
+    | each {|pair| compare-input $pair.0 $pair.1 }
+    | flatten
+}
+
+# A timeout has no counts to compare, and is a regression in itself.
+def compare-input [before: record after: record]: nothing -> list<record> {
+    if $after.timed_out {
+        return [
+            {
+                input: $after.input
+                metric: timed_out
+                base: null
+                head: null
+                change_percent: null
+                regressed: true
+            }
+        ]
+    }
+
+    $METRICS
+    | each {|metric|
+          let base = $before | get $metric
+          let head = $after | get $metric
+          let change = ($head - $base) / $base * 100
+
+          {
+              input: $after.input
+              metric: $metric
+              base: $base
+              head: $head
+              change_percent: ($change | math round --precision 2)
+              regressed: ($change > $THRESHOLD_PERCENT)
+          }
+      }
 }
 
 def inputs [corpus: path picks: record]: nothing -> list<record> {

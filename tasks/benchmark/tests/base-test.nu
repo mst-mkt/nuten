@@ -5,6 +5,14 @@ source ../base.nu
 
 const BASE = path self ../base.nu
 
+const PICKS = {
+    largest: a.nu
+    most_interpolations: b.nu
+    most_pipes: a.nu
+    largest_in_stdlib: nu-std/std/c.nu
+    directory: nu-std
+}
+
 @before-each
 def setup []: nothing -> record {
     if $env.NUTEN? == null {
@@ -29,18 +37,29 @@ def put [corpus: path file: string content: string]: nothing -> path {
     $path
 }
 
-def picks []: nothing -> record {
-    {
-        largest: a.nu
-        most_interpolations: b.nu
-        most_pipes: a.nu
-        largest_in_stdlib: nu-std/std/c.nu
-        directory: nu-std
-    }
+# Small files at the picked paths, so what reads them runs in seconds.
+def put-picks [corpus: path picks: record]: nothing -> nothing {
+    $picks | reject directory | values | each {|file| put $corpus $file "ls" } | ignore
+    put $corpus ($picks.directory | path join lib.nu) "ls" | ignore
 }
 
-def put-picks [corpus: path]: nothing -> nothing {
-    picks | reject directory | values | uniq | each {|file| put $corpus $file "ls" } | ignore
+# A nuten that never finishes, since the real one cannot be made slow.
+def sleeper [dir: path]: nothing -> path {
+    let path = $dir | path join sleeper
+    "#!/bin/sh\nexec sleep 10\n" | save $path
+    ^chmod +x $path
+    $path
+}
+
+def measures [instructions: int]: nothing -> record {
+    {
+        input: a.nu
+        timed_out: false
+        instructions: $instructions
+        allocations: 10
+        allocated_bytes: 100
+        peak_bytes: 50
+    }
 }
 
 def input [dir: path source: string]: nothing -> record {
@@ -85,9 +104,9 @@ def "nest wraps value in brackets to depth" [] {
 @test
 def "file-inputs takes each picked file once" [] {
     let context = $in
-    put-picks $context.corpus
+    put-picks $context.corpus $PICKS
 
-    let actual = file-inputs $context.corpus (picks)
+    let actual = file-inputs $context.corpus $PICKS
 
     assert equal ($actual | get name) [a.nu b.nu nu-std/std/c.nu]
 }
@@ -95,10 +114,10 @@ def "file-inputs takes each picked file once" [] {
 @test
 def "file-inputs passes file on stdin with its path" [] {
     let context = $in
-    put-picks $context.corpus
+    put-picks $context.corpus $PICKS
     let file = put $context.corpus a.nu "ls | length"
 
-    let actual = file-inputs $context.corpus (picks) | where name == a.nu | first
+    let actual = file-inputs $context.corpus $PICKS | where name == a.nu | first
 
     assert equal $actual.arguments [format --stdin-filepath $file -]
     assert equal $actual.stdin "ls | length"
@@ -139,9 +158,9 @@ def "nest-inputs makes nu that nuten formats" [] {
 @test
 def "inputs lists files, directory, and nests in turn" [] {
     let context = $in
-    put-picks $context.corpus
+    put-picks $context.corpus $PICKS
 
-    let actual = inputs $context.corpus (picks)
+    let actual = inputs $context.corpus $PICKS
 
     let expected = [
         a.nu
@@ -182,11 +201,8 @@ def "measure takes directory nuten would change" [] {
 @test
 def "measure gives up on run past time limit" [] {
     let context = $in
-    let sleeper = $context.dir | path join sleeper
-    "#!/bin/sh\nexec sleep 10\n" | save $sleeper
-    ^chmod +x $sleeper
 
-    let actual = measure $sleeper (input $context.dir "") 1sec
+    let actual = measure (sleeper $context.dir) (input $context.dir "") 1sec
 
     assert equal $actual $TIMED_OUT
 }
@@ -213,15 +229,80 @@ def "measure fails on input nuten rejects" [] {
 }
 
 @test
-def "main measures every input" [] {
+def "compare gives row for each metric" [] {
+    let actual = compare [(measures 1000)] [(measures 1000)]
+
+    assert equal ($actual | get metric) $METRICS
+}
+
+@test
+def "compare finds no regression in same measures" [] {
+    let actual = compare [(measures 1000)] [(measures 1000)]
+
+    assert equal ($actual | where regressed | length) 0
+}
+
+@test
+def "compare gives change in percent" [] {
+    let actual = compare [(measures 1000)] [(measures 1234)]
+
+    let instructions = $actual | where metric == instructions | first
+    assert equal $instructions.change_percent 23.4
+}
+
+@test
+def "compare marks metric grown past threshold" [] {
+    let actual = compare [(measures 1000)] [(measures 1011)]
+
+    assert equal ($actual | where regressed | get metric) [instructions]
+}
+
+@test
+def "compare lets metric grow within threshold" [] {
+    let actual = compare [(measures 1000)] [(measures 1010)]
+
+    assert equal ($actual | where regressed | length) 0
+}
+
+@test
+def "compare takes shrink as no regression" [] {
+    let actual = compare [(measures 1000)] [(measures 500)]
+
+    assert equal ($actual | where regressed | length) 0
+}
+
+@test
+def "compare marks input head timed out on" [] {
+    let actual = compare [(measures 1000)] [{ input: a.nu ...$TIMED_OUT }]
+
+    let rows = $actual | select input metric regressed
+    assert equal $rows [{ input: a.nu metric: timed_out regressed: true }]
+}
+
+@test
+def "main passes when head does same work as base" [] {
     let context = $in
-    open $INPUTS | reject directory | values | uniq | each {|file| put $context.corpus $file "ls" }
-    put $context.corpus nu-std/std/lib.nu "ls"
+    put-picks $context.corpus (open $INPUTS)
 
-    let actual = main $context.corpus $context.nuten
+    let actual = ^$nu.current-exe $BASE $context.corpus $context.nuten $context.nuten | complete
 
-    assert equal ($actual | get input) (inputs $context.corpus (open $INPUTS) | get name)
-    assert equal ($actual | where timed_out | length) 0
+    assert equal $actual.exit_code 0 $actual.stderr
+    for name in (inputs $context.corpus (open $INPUTS) | get name) {
+        assert str contains $actual.stdout $name
+    }
+}
+
+@test
+def "main exits with 2 naming inputs base times out on" [] {
+    let context = $in
+    put-picks $context.corpus (open $INPUTS)
+    let base = sleeper $context.dir
+
+    let actual = ^$nu.current-exe $BASE --time-limit 1sec $context.corpus $base $context.nuten
+    | complete
+
+    assert equal $actual.exit_code 2
+    assert str contains $actual.stderr "base timed out on"
 }
 
 @test
@@ -229,7 +310,7 @@ def "main exits with 2 naming tools not found" [] {
     let context = $in
 
     let actual = with-env { PATH: [] } {
-        ^$nu.current-exe $BASE $context.corpus $context.nuten | complete
+        ^$nu.current-exe $BASE $context.corpus $context.nuten $context.nuten | complete
     }
 
     assert equal $actual.exit_code 2
