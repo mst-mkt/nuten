@@ -21,13 +21,18 @@ pub enum Element<'a> {
     /// A hard line break here if a line suffix is held back.
     LineSuffixBoundary,
     /// Printed flat when it fits on the line, otherwise with its own `Line`s broken.
-    /// An `Align` after it or inside it can depend on that through `id`.
+    /// An `Indent` or an `Align` after it or inside it can depend on that through `id`.
     Group {
         id: Option<GroupId>,
         elements: Vec<Element<'a>>,
     },
     /// One level deeper after each line break inside.
-    Indent(Vec<Element<'a>>),
+    /// Only when `group` is `None`, or names a group that broke.
+    /// That group must be one around the indent, or one printed before it.
+    Indent {
+        group: Option<GroupId>,
+        elements: Vec<Element<'a>>,
+    },
     /// `columns` further, in spaces, after each line break inside.
     /// Only when `group` is `None`, or names a group that broke.
     /// That group must be one around the alignment, or one printed before it.

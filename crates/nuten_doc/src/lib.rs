@@ -8,8 +8,8 @@ mod printer;
 
 pub use builder::{
     align, align_if_group_breaks, empty_line, empty_lines, expand_parent, group, group_with_id,
-    hard_line_break, indent, line_suffix, line_suffix_boundary, soft_line_break,
-    soft_line_break_or_space, space, text,
+    hard_line_break, indent, indent_if_group_breaks, line_suffix, line_suffix_boundary,
+    soft_line_break, soft_line_break_or_space, space, text,
 };
 pub use element::{Element, GroupId, GroupIds, LineMode, TextWidth};
 pub use flat::{breaks_groups, flat};

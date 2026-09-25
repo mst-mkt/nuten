@@ -194,8 +194,15 @@ impl<'a> Printer<'a> {
                     mode,
                     elements,
                 }),
-                Element::Indent(elements) => {
-                    let indent = self.deeper(indent);
+                Element::Indent {
+                    group,
+                    elements,
+                } => {
+                    let indent = if group.is_none_or(|group| self.group_broke(group)) {
+                        self.deeper(indent)
+                    } else {
+                        indent
+                    };
                     self.push_elements(indent, mode, elements);
                 },
                 Element::Align {
@@ -203,9 +210,7 @@ impl<'a> Printer<'a> {
                     group,
                     elements,
                 } => {
-                    let aligned = group
-                        .is_none_or(|group| self.group_modes.get(&group) == Some(&Mode::Break));
-                    let indent = if aligned {
+                    let indent = if group.is_none_or(|group| self.group_broke(group)) {
                         self.aligned(indent, *columns)
                     } else {
                         indent
@@ -269,7 +274,9 @@ impl<'a> Printer<'a> {
                     Element::Group {
                         elements, ..
                     }
-                    | Element::Indent(elements)
+                    | Element::Indent {
+                        elements, ..
+                    }
                     | Element::Align {
                         elements, ..
                     },
@@ -334,6 +341,10 @@ impl<'a> Printer<'a> {
                 mode,
                 element,
             }));
+    }
+
+    fn group_broke(&self, group: GroupId) -> bool {
+        self.group_modes.get(&group) == Some(&Mode::Break)
     }
 
     fn deeper(&self, indent: Indentation) -> Indentation {
@@ -443,8 +454,8 @@ mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
     use crate::{
         Element, GroupId, align, align_if_group_breaks, empty_line, empty_lines, expand_parent,
-        group, group_with_id, hard_line_break, indent, line_suffix, line_suffix_boundary,
-        soft_line_break, soft_line_break_or_space, space, text,
+        group, group_with_id, hard_line_break, indent, indent_if_group_breaks, line_suffix,
+        line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
     };
 
     /// Wide enough that nothing breaks for want of room.
@@ -1036,6 +1047,42 @@ mod tests {
         ];
         assert_eq!(print(&doc, &WIDE), "aaa | b\nc");
         assert_eq!(print(&doc, &narrow(4)), "aaa\n| b\n  c");
+    }
+
+    #[test]
+    fn indent_on_group_follows_whether_it_broke() {
+        let doc = vec![
+            group_with_id(
+                GroupId(0),
+                vec![
+                    text("aaa"),
+                    indent_if_group_breaks(
+                        GroupId(0),
+                        vec![soft_line_break_or_space(), text("| b")],
+                    ),
+                ],
+            ),
+            indent_if_group_breaks(GroupId(0), vec![hard_line_break(), text("c")]),
+        ];
+        assert_eq!(print(&doc, &WIDE), "aaa | b\nc");
+        assert_eq!(print(&doc, &narrow(4)), "aaa\n  | b\n  c");
+    }
+
+    #[test]
+    fn indent_on_group_needs_it_already_broken() {
+        let in_flat_parent = vec![
+            group(vec![group_with_id(
+                GroupId(3),
+                vec![text("x"), soft_line_break(), text("y")],
+            )]),
+            indent_if_group_breaks(GroupId(3), vec![hard_line_break(), text("b")]),
+        ];
+        assert_eq!(print(&in_flat_parent, &WIDE), "xy\nb");
+        let unprinted = vec![
+            indent_if_group_breaks(GroupId(1), vec![text("a"), hard_line_break(), text("b")]),
+            group_with_id(GroupId(1), vec![text("c"), hard_line_break(), text("d")]),
+        ];
+        assert_eq!(print(&unprinted, &WIDE), "a\nbc\nd");
     }
 
     #[test]

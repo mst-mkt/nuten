@@ -20,7 +20,9 @@ pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
                 Element::Group {
                     elements, ..
                 }
-                | Element::Indent(elements)
+                | Element::Indent {
+                    elements, ..
+                }
                 | Element::Align {
                     elements, ..
                 }
@@ -50,7 +52,9 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
         Element::Group {
             elements, ..
         }
-        | Element::Indent(elements)
+        | Element::Indent {
+            elements, ..
+        }
         | Element::Align {
             elements, ..
         } => flat(elements),
