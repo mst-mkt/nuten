@@ -86,6 +86,24 @@
 
       overlays.default = final: _prev: { nuten = (nutenOf final).package; };
 
+      treefmtModule =
+        {
+          lib,
+          pkgs,
+          mkFormatterModule,
+          ...
+        }:
+        {
+          imports = [
+            (mkFormatterModule {
+              name = "nuten";
+              args = [ "format" ];
+              includes = [ "*.nu" ];
+            })
+          ];
+          programs.nuten.package = lib.mkDefault (nutenOf pkgs).package;
+        };
+
       checks = forAllSystems (system: {
         build = nuten.${system}.package;
         inherit (nuten.${system}) clippy nextest doc;
