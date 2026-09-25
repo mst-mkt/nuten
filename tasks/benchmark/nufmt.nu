@@ -35,6 +35,7 @@ def main [
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
     let oracle = $oracle | path expand
     let corpus = $corpus | path expand
+    let sizes = sizes $formatters
     # macOS has no taskset, so nothing is timed on one CPU there.
     let cpus = if (which taskset | is-empty) {
         null
@@ -55,6 +56,7 @@ def main [
         ...$selection
         timing: $timing
         ...$directories
+        sizes: $sizes
     }
 }
 
@@ -160,10 +162,12 @@ def time-directories [
 ]: nothing -> record {
     let staged = stage $files $corpus
     try {
-        let directories = groups $staged | each {|group| time-group $group $formatters $runs $cpus }
+        let groups = groups $staged
+        let directories = $groups | each {|group| time-group $group $formatters $runs $cpus }
+        let memory = if ($groups | is-empty) { null } else { memory $staged $formatters }
         rm --recursive $staged
 
-        { directories: $directories }
+        { directories: $directories memory: $memory }
     } catch {|error|
         rm --recursive $staged
         error make $error.raw
@@ -295,6 +299,57 @@ def command-line [words: list<string>]: nothing -> string {
     $words
     | each { $"'($in | str replace --all "'" "'\\''")'" }
     | str join ' '
+}
+
+# One run each, since peak memory, unlike time, barely moves from run to run.
+# macOS time cannot write the peak to a file of its own, so nothing is weighed there.
+def memory [dir: path formatters: list<record>]: nothing -> oneof<record, nothing> {
+    if not (has-gnu-time) {
+        return null
+    }
+    cd $dir
+
+    $formatters
+    | each {|formatter| { name: $formatter.name peak: (peak $formatter $dir) } }
+    # Transpose lets an error in a stream it reads slip past a caller's try, so the stream is collected first.
+    | collect
+    | transpose --header-row --as-record
+}
+
+def has-gnu-time []: nothing -> bool {
+    if (which time | is-empty) {
+        return false
+    }
+    let version = ^time --version | complete
+
+    $version.exit_code == 0 and ($version.stdout | str contains 'GNU Time')
+}
+
+# The peak goes to a file of its own, so what the formatter writes to stderr does not mix in.
+def peak [formatter: record dir: path]: nothing -> filesize {
+    let report = mktemp --tmpdir
+    let run = ^time -f %M -o $report $formatter.command ...(do $formatter.directory $dir) | complete
+    let peak = open --raw $report
+    rm $report
+    # Both exit with 1 when a file would change, which is no failure here.
+    if $run.exit_code not-in [0 1] {
+        error make {
+            msg: $"($formatter.name) failed on ($dir) with exit code ($run.exit_code): ($run.stderr)"
+        }
+    }
+
+    $peak | max-rss
+}
+
+# GNU time puts a line about a failing exit before the peak, so the peak is read from the last line.
+def max-rss []: string -> filesize {
+    lines | last | into int | $in * 1KiB
+}
+
+def sizes [formatters: list<record>]: nothing -> record {
+    $formatters
+    | each {|formatter| { name: $formatter.name size: (ls $formatter.command | get 0.size) } }
+    | transpose --header-row --as-record
 }
 
 def with-speedup []: record -> record {

@@ -468,7 +468,7 @@ def "parallel-gain gives nothing without time on one cpu" [] {
 }
 
 @test
-def "time-directories times groups in staged directory" [] {
+def "time-directories times groups and weighs memory in staged directory" [] {
     let context = $in
     let corpus = $context.dir | path join corpus
     let file = put $corpus nu-std/a.nu "ls"
@@ -476,6 +476,7 @@ def "time-directories times groups in staged directory" [] {
     let actual = time-directories [$file] $corpus (pair $context.nuten) 1 null
 
     assert equal ($actual.directories | get name) [nu-std all]
+    assert ($actual.memory.nuten > 0b)
 }
 
 @test
@@ -506,6 +507,80 @@ def "time-directories removes staged directory when formatter crashes" [] {
 
     assert str contains $actual.stderr "hyperfine failed"
     assert equal (ls $tmp) []
+}
+
+@test
+def "max-rss reads kibibytes on last line" [] {
+    let report = "Command exited with non-zero status 1\n4532\n"
+
+    let actual = $report | max-rss
+
+    assert equal $actual 4532KiB
+}
+
+@test
+def "memory gives peak memory of each formatter on directory" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    put $dir a.nu "ls|length"
+
+    let actual = memory $dir (pair $context.nuten)
+
+    assert equal ($actual | columns) [nuten nufmt]
+    assert ($actual.nuten > 0b)
+    assert ($actual.nufmt > 0b)
+}
+
+@test
+def "memory weighs nothing without gnu time" [] {
+    let context = $in
+
+    let actual = with-env { PATH: [] } { memory $context.dir [$context.nuten] }
+
+    assert equal $actual null
+}
+
+@test
+def "memory fails naming formatter that crashes" [] {
+    let context = $in
+    let crashing = { name: sh command: sh directory: {|dir| [-c 'exit 2'] } }
+
+    let actual = try {
+        memory $context.dir [$crashing]
+    } catch {|error|
+        $error.rendered | ansi strip
+    }
+
+    assert str contains $actual $"sh failed on ($context.dir) with exit code 2"
+}
+
+@test
+def "memory runs formatter on directory from inside it" [] {
+    let context = $in
+    let dir = $context.dir | path join staged
+    mkdir $dir
+    let telling = {
+        name: sh
+        command: sh
+        directory: {|dir| [-c $"pwd > ran-in; echo ($dir) > ran-on"] }
+    }
+
+    memory $dir [$telling]
+
+    assert equal (open ($dir | path join ran-in) | str trim) $dir
+    assert equal (open ($dir | path join ran-on) | str trim) $dir
+}
+
+@test
+def "sizes gives size of each binary" [] {
+    let context = $in
+    let nuten = put $context.dir nuten "12345"
+    let nufmt = put $context.dir nufmt "1234567"
+    let formatters = [{ name: nuten command: $nuten } { name: nufmt command: $nufmt }]
+
+    let actual = sizes $formatters
+
+    assert equal $actual { nuten: 5b nufmt: 7b }
 }
 
 @test
@@ -660,6 +735,29 @@ def "main times no directory when every file is left out" [] {
     let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
 
     assert equal $actual.directories []
+}
+
+@test
+def "main weighs no memory when every file is left out" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+
+    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
+    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
+
+    assert equal $actual.memory null
+}
+
+@test
+def "main gives size of each binary" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+    let size = ls $context.nuten.command | get 0.size
+
+    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
+    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
+
+    assert equal $actual.sizes { nuten: $size nufmt: $size }
 }
 
 @test

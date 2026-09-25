@@ -250,6 +250,7 @@
                       pkgs.stdenv.cc
                       pkgs.coreutils
                       pkgs.hyperfine
+                      pkgs.time
                     ]
                     ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                       pkgs.valgrind
