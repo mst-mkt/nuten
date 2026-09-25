@@ -58,6 +58,15 @@ pub(crate) fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     })
 }
 
+/// The config of `file`, as `of_files` gives it, or else a line for each problem.
+pub(crate) fn of_file(file: &Path, given: Option<&Config>) -> Result<Config, Vec<String>> {
+    of_files(&[file], given)
+        .into_iter()
+        .next()
+        .expect("one lookup for one file")
+        .into_config()
+}
+
 /// The config of `dir`, as `of_dirs` gives it, or else a line for each problem.
 pub(crate) fn of_dir(dir: &Path, given: Option<&Config>) -> Result<Config, Vec<String>> {
     of_dirs(&[dir], given)

@@ -27,7 +27,7 @@ use std::{
     fs,
     hash::Hash,
     io::{self, Write},
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     process::ExitCode,
 };
 
@@ -61,6 +61,9 @@ struct Format {
     /// List the files that would change, instead of changing them
     #[usage(long)]
     check: bool,
+    /// Path of the file stdin holds, to find its config file by and to name it in reports
+    #[usage(long)]
+    stdin_filepath: Option<PathBuf>,
     /// Files to format in place; a directory stands for the `.nu` files under it; `-` for stdin
     #[usage(default = ".")]
     paths: Vec<PathBuf>,
@@ -69,7 +72,7 @@ struct Format {
 /// The path that stands for stdin.
 const STDIN_PATH: &str = "-";
 
-/// The name stdin goes by in reports.
+/// The name stdin goes by in reports when no `--stdin-filepath` gives one.
 const STDIN_NAME: &str = "<stdin>";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,7 +104,8 @@ fn run_format(args: &Format) -> ExitCode {
     }
     let mode = if args.check { Mode::Check } else { Mode::Write };
     if reads_stdin(args) {
-        return format_stdin(args.config.as_deref(), mode);
+        let filepath = args.stdin_filepath.as_deref();
+        return format_stdin(filepath, args.config.as_deref(), mode);
     }
     match args.config.as_deref().map(config::load).transpose() {
         Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
@@ -113,11 +117,25 @@ fn reads_stdin(args: &Format) -> bool {
     args.paths.iter().any(|path| path.as_os_str() == STDIN_PATH)
 }
 
-/// The problem with how `args` go together.
+/// The problem with `args`, or with how they go together, that the parser cannot see.
 /// Not `conflicts` of usage, which relates arguments and cannot tell `-` from other paths.
 fn argument_problem(args: &Format) -> Option<String> {
-    (reads_stdin(args) && args.paths.len() > 1)
-        .then(|| "`-` must be the only path, since it reads stdin".to_string())
+    let takes_stdin = reads_stdin(args);
+    let filepath = args.stdin_filepath.as_deref();
+    if takes_stdin && args.paths.len() > 1 {
+        Some("`-` must be the only path, since it reads stdin".to_string())
+    } else if filepath.is_some() && !takes_stdin {
+        Some("`--stdin-filepath` needs `-`, which reads stdin".to_string())
+    } else {
+        filepath
+            .filter(|file| file.file_name().is_none() || file.is_dir())
+            .map(|file| {
+                format!(
+                    "`--stdin-filepath` needs the path of a file, not `{}`",
+                    file.display()
+                )
+            })
+    }
 }
 
 fn print_schema() -> ExitCode {
@@ -145,15 +163,15 @@ fn write_stdout(text: &str) -> Result<(), String> {
     }
 }
 
-/// Formats stdin to stdout, with `config_file` or else the config nearest the current directory.
-fn format_stdin(config_file: Option<&Path>, mode: Mode) -> ExitCode {
-    let name = Path::new(STDIN_NAME);
+/// Formats stdin to stdout, as the file `filepath` if given, with `config_file` if given.
+fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode) -> ExitCode {
+    let name = filepath.unwrap_or(Path::new(STDIN_NAME));
     // Read in full first, so that a writer is not cut off when a config file has a problem.
     let src = io::read_to_string(io::stdin())
         .map_err(|error| vec![format!("{}: {error}", name.display())]);
     let formatted = src.and_then(|src| {
         let given = config_file.map(config::load).transpose()?;
-        let config = config::of_dir(Path::new("."), given.as_ref())?;
+        let config = stdin_config(filepath, given)?;
         let formatted = format_text(name, &src, &config.format)?;
         Ok((src, formatted))
     });
@@ -166,6 +184,54 @@ fn format_stdin(config_file: Option<&Path>, mode: Mode) -> ExitCode {
             Err(problem) => fail(&[problem]),
         },
     }
+}
+
+/// `given`, or else the config nearest the file `filepath`, or the current directory without it.
+fn stdin_config(filepath: Option<&Path>, given: Option<Config>) -> Result<Config, Vec<String>> {
+    match (filepath, given) {
+        (_, Some(given)) => Ok(given),
+        // The same as for a file given as a path, whose config is found where its symlinks lead.
+        (Some(file), None) if file.exists() => config::of_file(file, None),
+        // An editor may not have written the file or its directories yet.
+        (Some(file), None) => config::of_dir(&nearest_existing_dir(file)?, None),
+        (None, None) => config::of_dir(Path::new("."), None),
+    }
+}
+
+/// The deepest existing directory the file `path` would be in.
+/// Each existing directory on the way is resolved, so a `..` after a symlink leaves its target.
+/// A directory that does not exist yet holds no symlink, so a `..` after one resolves as written.
+fn nearest_existing_dir(path: &Path) -> Result<PathBuf, Vec<String>> {
+    let resolve = |dir: &Path| {
+        fs::canonicalize(dir).map_err(|error| vec![format!("{}: {error}", dir.display())])
+    };
+    // Not the file itself, which is no directory to go into even when it is a symlink to one.
+    let parent = path.parent().unwrap_or(Path::new(""));
+    // Not the current directory for an absolute path, since nuten may run in one that is removed.
+    let start = if parent.is_absolute() {
+        PathBuf::new()
+    } else {
+        resolve(Path::new("."))?
+    };
+    let dir = parent
+        .components()
+        .try_fold(start, |dir, component| match component {
+            Component::ParentDir => Ok(dir.parent().map_or(dir.clone(), Path::to_path_buf)),
+            Component::CurDir => Ok(dir),
+            Component::Normal(name) => {
+                let next = dir.join(name);
+                if next.exists() {
+                    resolve(&next)
+                } else {
+                    Ok(next)
+                }
+            },
+            component => Ok(dir.join(component)),
+        })?;
+    let existing = dir.ancestors().find(|dir| dir.is_dir());
+    Ok(existing
+        .expect("a resolved path is under an existing directory")
+        .to_path_buf())
 }
 
 /// Formats the files `paths` name, with `given` or else the nearest config.

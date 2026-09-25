@@ -1878,6 +1878,210 @@ fn format_reports_stdin_formatted_it_cannot_write() {
 }
 
 #[test]
+fn format_takes_config_file_nearest_stdin_filepath_though_file_does_not_exist() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 3}");
+    dir.file("d/nuten.nuon", "{indent_width: 2}");
+    let args = ["--stdin-filepath", "d/new.nu", "-"];
+    let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+    assert!(!dir.path("d/new.nu").exists());
+}
+
+#[test]
+fn format_takes_config_file_nearest_existing_directory_of_stdin_filepath() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{indent_width: 2}");
+    for filepath in ["d/new/new/a.nu", "d/new/../a.nu"] {
+        let args = ["--stdin-filepath", filepath, "-"];
+        let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+        assert_succeeds_quietly(&output);
+        assert_eq!(stdout(&output), "if true {\n  ls\n}\n", "{filepath}");
+        assert!(!dir.path("d/new").exists());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_takes_config_file_where_symlinked_stdin_filepath_leads() {
+    let dir = TempDir::new();
+    dir.file("a/nuten.nuon", "{indent_width: 2}");
+    dir.file("b/nuten.nuon", "{indent_width: 3}");
+    let path = dir.file("a/a.nu", BLOCK);
+    std::os::unix::fs::symlink(&path, dir.path("b/link.nu")).unwrap();
+    let args = ["--stdin-filepath", "b/link.nu", "-"];
+    let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+    assert_eq!(read(&path), BLOCK);
+}
+
+#[test]
+fn format_takes_given_config_file_over_one_nearest_stdin_filepath() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{indent_width: 3}");
+    dir.file("two.nuon", "{indent_width: 2}");
+    let args = ["-c", "two.nuon", "--stdin-filepath", "d/a.nu", "-"];
+    let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+}
+
+#[test]
+fn format_reports_syntax_error_of_stdin_at_stdin_filepath() {
+    let dir = TempDir::new();
+    dir.dir("d");
+    let args = ["--stdin-filepath", "d/a.nu", "-"];
+    let output = format_stdin_in(&dir, &args, b"ls ||");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    let stderr = stderr(&output);
+    let expected = format!("{}:1:4: ", Path::new("d/a.nu").display());
+    assert!(stderr.starts_with(&expected), "{stderr}");
+}
+
+#[test]
+fn format_reports_stdin_that_is_not_utf8_at_stdin_filepath() {
+    let dir = TempDir::new();
+    let args = ["--stdin-filepath", "d/a.nu", "-"];
+    let output = format_stdin_in(&dir, &args, b"ls \xff");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    let stderr = stderr(&output);
+    let expected = format!("{}: ", Path::new("d/a.nu").display());
+    assert!(stderr.starts_with(&expected), "{stderr}");
+}
+
+#[test]
+fn format_check_on_stdin_takes_config_file_nearest_stdin_filepath() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{indent_width: 2}");
+    let args = ["--check", "--stdin-filepath", "d/a.nu", "-"];
+    let output = format_stdin_in(&dir, &args, b"if true {\n  ls\n}\n");
+    assert_succeeds_quietly(&output);
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn format_formats_stdin_whose_filepath_ignore_file_ignores() {
+    let dir = TempDir::new();
+    dir.file(".ignore", "a.nu\n");
+    let args = ["--stdin-filepath", "a.nu", "-"];
+    let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), FORMATTED);
+}
+
+#[test]
+fn format_rejects_stdin_filepath_without_stdin() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    for args in [
+        &["--stdin-filepath", "a.nu", "a.nu"][..],
+        &["--stdin-filepath", "a.nu"],
+    ] {
+        let output = format_in(&dir, args);
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(
+            stderr(&output),
+            "`--stdin-filepath` needs `-`, which reads stdin\n"
+        );
+        assert_eq!(read(&path), UNFORMATTED);
+    }
+}
+
+#[test]
+fn format_rejects_stdin_filepath_of_no_file() {
+    let dir = TempDir::new();
+    dir.dir("d");
+    for filepath in ["", "d", "d/..", "/"] {
+        let args = ["--stdin-filepath", filepath, "-"];
+        let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
+        assert_eq!(output.status.code(), Some(2), "{filepath:?}");
+        assert!(output.stdout.is_empty(), "{filepath:?}");
+        let expected = format!("`--stdin-filepath` needs the path of a file, not `{filepath}`\n");
+        assert_eq!(stderr(&output), expected);
+    }
+}
+
+#[test]
+fn format_rejects_stdin_filepath_before_reading_given_config_file() {
+    let dir = TempDir::new();
+    dir.dir("d");
+    let args = ["-c", "missing.nuon", "--stdin-filepath", "a.nu", "a.nu"];
+    let output = format_in(&dir, &args);
+    assert_eq!(
+        stderr(&output),
+        "`--stdin-filepath` needs `-`, which reads stdin\n"
+    );
+    let args = ["-c", "missing.nuon", "--stdin-filepath", "d", "-"];
+    let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
+    assert_eq!(
+        stderr(&output),
+        "`--stdin-filepath` needs the path of a file, not `d`\n"
+    );
+}
+
+#[test]
+fn format_takes_config_file_where_stdin_filepath_leads_through_dot_dot_after_missing_directory() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 3}");
+    dir.file("ok/nuten.nuon", "{indent_width: 2}");
+    dir.file("wrong/nuten.nuon", "{a: 1}");
+    for (filepath, expected) in [
+        ("ok/nope/../../q.nu", "if true {\n   ls\n}\n"),
+        ("wrong/nope/../../ok/q.nu", "if true {\n  ls\n}\n"),
+        ("nope/x/../../ok/q.nu", "if true {\n  ls\n}\n"),
+    ] {
+        let args = ["--stdin-filepath", filepath, "-"];
+        let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+        assert_succeeds_quietly(&output);
+        assert_eq!(stdout(&output), expected, "{filepath}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_takes_config_file_above_symlink_target_after_stdin_filepath_leaves_missing_directory() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 3}");
+    dir.file("x/nuten.nuon", "{indent_width: 2}");
+    dir.file("x/y/nuten.nuon", "{indent_width: 5}");
+    std::os::unix::fs::symlink(dir.path("x/y"), dir.path("link")).unwrap();
+    for filepath in ["nope/../link/../q.nu", "nope/../link/sub/../../q.nu"] {
+        let args = ["--stdin-filepath", filepath, "-"];
+        let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+        assert_succeeds_quietly(&output);
+        assert_eq!(stdout(&output), "if true {\n  ls\n}\n", "{filepath}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_takes_config_file_beside_symlink_to_root_after_stdin_filepath_leaves_missing_directory() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 2}");
+    std::os::unix::fs::symlink("/", dir.path("rootlink")).unwrap();
+    let args = ["--stdin-filepath", "nope/../rootlink", "-"];
+    let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+}
+
+#[test]
+fn format_takes_config_file_nearest_stdin_filepath_that_leaves_current_directory() {
+    let dir = TempDir::new();
+    dir.file("d/nuten.nuon", "{indent_width: 2}");
+    let name = dir.0.file_name().unwrap().to_str().unwrap();
+    let filepath = format!("../{name}/d/new.nu");
+    let args = ["--stdin-filepath", filepath.as_str(), "-"];
+    let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+}
+
+#[test]
 fn wants_subcommand() {
     let output = nuten(&[]);
     assert_eq!(output.status.code(), Some(2));
