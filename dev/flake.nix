@@ -37,6 +37,11 @@
       url = "github:kurokirasama/nushell_scripts";
       flake = false;
     };
+
+    # Formatter the benchmarks compare against
+    nufmt = {
+      url = "github:nushell/nufmt";
+    };
   };
 
   outputs =
@@ -174,8 +179,14 @@
               rustToolchain.${system}
               pkgs.cargo-insta
               pkgs.cargo-nextest
+              pkgs.hyperfine
+              pkgs.time
               treefmtEval.${system}.config.build.wrapper
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.valgrind # Valgrind is broken on darwin.
             ];
+
             env = {
               NUTEN_CORPUS = pkgs.runCommand "nuten-corpus" { } ''
                 mkdir $out
@@ -203,6 +214,10 @@
           };
         }
       );
+
+      packages = forAllSystems (system: {
+        inherit (inputs.nufmt.packages.${system}) nufmt;
+      });
 
       checks = forAllSystems (system: {
         treefmt = treefmtEval.${system}.config.build.check (inputs.nixpkgs.lib.cleanSource ./..);

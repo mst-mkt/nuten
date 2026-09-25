@@ -154,6 +154,40 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1788297115,
+        "narHash": "sha256-Z+vUNbfd2FIKkWOTkcT7RYlh3oFCnig/d2eXD1SWf2E=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a3116115851d68b8952a2a4221cc25a84e56b532",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-26.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nufmt": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1790211032,
+        "narHash": "sha256-zBMWmUEzubRdgozlHmMO9FvHHDsc81WuVMMXyVP0LyM=",
+        "owner": "nushell",
+        "repo": "nufmt",
+        "rev": "e4ce2f9c7f94fd7adb7f3303ee5a0f53183036ac",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nushell",
+        "repo": "nufmt",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "corpus-kurokirasama-nushell_scripts": "corpus-kurokirasama-nushell_scripts",
@@ -164,6 +198,7 @@
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs",
         "nixpkgs-nushell": "nixpkgs-nushell",
+        "nufmt": "nufmt",
         "treefmt-nix": "treefmt-nix"
       }
     },
