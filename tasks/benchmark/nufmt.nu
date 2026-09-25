@@ -3,7 +3,10 @@
 
 use cpus.nu [allowed-cpus fastest-allowed-cpu]
 
-# Prints which files the comparison takes, which each formatter leaves out and why, and how both fare on the files compared.
+const REPOSITORY = path self ../..
+const LOCK = path self ../../dev/flake.lock
+
+# Prints which files the comparison takes, which each formatter leaves out and why, how both fare on the files compared, and the versions and machine behind the numbers.
 def main [
     corpus: path # The corpus directory, as NUTEN_CORPUS names it
     ...also: path # More files to compare, such as the one nufmt benchmarks itself on
@@ -35,6 +38,8 @@ def main [
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
     let oracle = $oracle | path expand
     let corpus = $corpus | path expand
+    let versions = versions $REPOSITORY $LOCK
+    let environment = environment
     let sizes = sizes $formatters
     # macOS has no taskset, so nothing is timed on one CPU there.
     let cpus = if (which taskset | is-empty) {
@@ -53,6 +58,8 @@ def main [
     let directories = time-directories $selection.compared $corpus $formatters $runs $cpus
 
     {
+        versions: $versions
+        environment: $environment
         ...$selection
         timing: $timing
         ...$directories
@@ -380,4 +387,68 @@ def percentile [percent: number]: list<number> -> number {
     let rank = ($percent * ($sorted | length) / 100 | math ceil) - 1
 
     $sorted | get ([$rank 0] | math max)
+}
+
+def versions [repository: path lock: path]: nothing -> record {
+    { nuten: (nuten-version $repository) ...(locked-versions $lock) }
+}
+
+# The binaries given may be built from anywhere, so nuten is named by the tree this script is in.
+def nuten-version [repository: path]: nothing -> oneof<string, nothing> {
+    if (which git | is-empty) {
+        return null
+    }
+    let described = ^git -C $repository describe --always --dirty | complete
+
+    if $described.exit_code == 0 {
+        $described.stdout | str trim
+    } else {
+        null
+    }
+}
+
+# A corpus path does not tell its version, so the lock that fills NUTEN_CORPUS in the devShell does.
+def locked-versions [lock: path]: nothing -> record {
+    if not ($lock | path exists) {
+        return { nufmt: null nixpkgs-nushell: null corpus: null }
+    }
+    let nodes = open --raw $lock | from json | get nodes
+
+    {
+        nufmt: ($nodes | locked nufmt)
+        nixpkgs-nushell: ($nodes | locked nixpkgs-nushell)
+        corpus: ($nodes | corpus-versions)
+    }
+}
+
+def corpus-versions []: record -> record {
+    let nodes = $in
+
+    $nodes
+    | columns
+    | where $it starts-with corpus-
+    | each {|name| { name: ($name | str replace corpus- '') locked: ($nodes | locked $name) } }
+    | transpose --header-row --as-record
+}
+
+def locked [name: string]: record -> oneof<record, nothing> {
+    let node = $in | get --optional $name
+    if $node == null {
+        return null
+    }
+
+    { rev: $node.locked.rev date: ($node.locked.lastModified * 1_000_000_000 | into datetime) }
+}
+
+# The host name is left out, since the results may be shared.
+def environment []: nothing -> record {
+    let host = sys host
+    let cpus = sys cpu
+
+    {
+        os: $host.long_os_version
+        kernel: $host.kernel_version
+        cpu: ($cpus | first | get brand)
+        cpus: ($cpus | length)
+    }
 }

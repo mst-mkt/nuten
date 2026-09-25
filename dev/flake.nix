@@ -251,6 +251,7 @@
                       pkgs.coreutils
                       pkgs.hyperfine
                       pkgs.time
+                      pkgs.git
                     ]
                     ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                       pkgs.valgrind

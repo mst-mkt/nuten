@@ -5,6 +5,7 @@ use ../cpus.nu [allowed-cpus fastest-allowed-cpu]
 source ../nufmt.nu
 
 const NUFMT = path self ../nufmt.nu
+const DEV_LOCK = path self ../../../dev/flake.lock
 
 @before-each
 def setup []: nothing -> record {
@@ -47,6 +48,20 @@ def times []: nothing -> list<record> {
         { file: b.nu nuten: 20ms nufmt: 20ms }
         { file: c.nu nuten: 20ms nufmt: 30ms }
     ]
+}
+
+def commit [dir: path]: nothing -> string {
+    let config = [
+        user.name=test
+        user.email=test@example.com
+        commit.gpgsign=false
+        core.hooksPath=/dev/null
+    ]
+    let git = [-C $dir ...($config | each { [-c $in] } | flatten)]
+    ^git ...$git init --quiet
+    ^git ...$git add --all
+    ^git ...$git commit --quiet -m test
+    ^git -C $dir rev-parse --short HEAD | str trim
 }
 
 # Nu's mktemp reads TMPDIR from the environment the process started with, so time-directories runs in a process of its own.
@@ -675,6 +690,91 @@ def "percentile does not round whole rank up" [] {
 }
 
 @test
+def "versions reads nufmt, nixpkgs-nushell, and corpus from lock" [] {
+    let context = $in
+    let node = {|rev| { locked: { rev: $rev lastModified: 1700000000 } } }
+    let lock = {
+        nodes: {
+            nufmt: (do $node a)
+            nixpkgs-nushell: (do $node b)
+            corpus-nupm: (do $node c)
+            fenix: (do $node d)
+        }
+    }
+    let path = put $context.dir flake.lock ($lock | to json)
+    let date = 2023-11-14T22:13:20+00:00
+
+    let actual = versions $context.dir $path
+
+    assert equal $actual.nufmt { rev: a date: $date }
+    assert equal $actual.nixpkgs-nushell { rev: b date: $date }
+    assert equal $actual.corpus { nupm: { rev: c date: $date } }
+}
+
+@test
+def "versions gives no version for node lock lacks" [] {
+    let context = $in
+    let path = put $context.dir flake.lock ({ nodes: {} } | to json)
+
+    let actual = versions $context.dir $path
+
+    assert equal $actual.nufmt null
+    assert equal $actual.nixpkgs-nushell null
+}
+
+@test
+def "versions gives no locked version without lock" [] {
+    let context = $in
+
+    let actual = versions $context.dir ($context.dir | path join flake.lock)
+
+    assert equal ($actual | reject nuten) { nufmt: null nixpkgs-nushell: null corpus: null }
+}
+
+@test
+def "versions names nuten by commit of tree it is in" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+    let commit = commit $context.dir
+
+    let actual = versions $context.dir ($context.dir | path join flake.lock)
+
+    assert equal $actual.nuten $commit
+}
+
+@test
+def "versions marks nuten dirty when tree has changes" [] {
+    let context = $in
+    let file = put $context.dir a.nu "ls"
+    let commit = commit $context.dir
+    "ls | length" | save --force $file
+
+    let actual = versions $context.dir ($context.dir | path join flake.lock)
+
+    assert equal $actual.nuten $"($commit)-dirty"
+}
+
+@test
+def "versions gives no nuten version outside git tree" [] {
+    let context = $in
+
+    let actual = with-env { GIT_CEILING_DIRECTORIES: ($context.dir | path dirname) } {
+        versions $context.dir ($context.dir | path join flake.lock)
+    }
+
+    assert equal $actual.nuten null
+}
+
+@test
+def "environment gives machine without host name" [] {
+    let actual = environment
+
+    assert equal ($actual | columns) [os kernel cpu cpus]
+    assert equal $actual.kernel (^uname -r | str trim)
+    assert ($actual.cpus > 0)
+}
+
+@test
 def "main takes files under corpus and after it" [] {
     let context = $in
     let corpus = $context.dir | path join corpus
@@ -758,6 +858,30 @@ def "main gives size of each binary" [] {
     let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
 
     assert equal $actual.sizes { nuten: $size nufmt: $size }
+}
+
+@test
+def "main gives versions nufmt and corpus are locked at" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+    let nodes = open --raw $DEV_LOCK | from json | get nodes
+
+    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
+    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
+
+    assert equal $actual.versions.nufmt.rev $nodes.nufmt.locked.rev
+    assert equal $actual.versions.corpus.nupm.rev $nodes.corpus-nupm.locked.rev
+}
+
+@test
+def "main gives machine it runs on" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+
+    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
+    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
+
+    assert equal $actual.environment.cpus (sys cpu | length)
 }
 
 @test
