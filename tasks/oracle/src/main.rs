@@ -5,7 +5,7 @@
 //! Those show neither `;` nor line breaks between statements.
 //! Nu parses each file in its directory.
 //! Asks nu too whether nuten reads each `.nuon` file into the value nu reads.
-//! `oracle/test_data` holds NUON files to run the oracle on.
+//! `tasks/oracle/test_data` holds NUON files to run the oracle on.
 //!
 //! Takes files, and directories to search for `.nu` and `.nuon` files.
 //! Skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
