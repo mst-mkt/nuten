@@ -19,6 +19,10 @@
       # nushell 0.115
       url = "github:NixOS/nixpkgs/aff8a0b28396750446e5537a96461bc4facdb287";
     };
+    nutest = {
+      url = "github:vyadh/nutest/v1.2.0";
+      flake = false;
+    };
 
     # Corpus for the invariant tests of the parser and formatter
     corpus-nu_scripts = {
@@ -67,6 +71,8 @@
           latest.rustfmt
         ]
       );
+
+      nushell = forAllSystems (system: inputs.nixpkgs-nushell.legacyPackages.${system}.nushell);
 
       treefmtEval = forAllSystems (
         system:
@@ -170,12 +176,11 @@
         system:
         let
           pkgs = inputs.nixpkgs.legacyPackages.${system};
-          nushell = inputs.nixpkgs-nushell.legacyPackages.${system}.nushell;
         in
         {
           default = pkgs.mkShell {
             packages = [
-              nushell
+              nushell.${system}
               rustToolchain.${system}
               pkgs.cargo-insta
               pkgs.cargo-nextest
@@ -188,9 +193,10 @@
             ];
 
             env = {
+              NU_LIB_DIRS = "${inputs.nutest}";
               NUTEN_CORPUS = pkgs.runCommand "nuten-corpus" { } ''
                 mkdir $out
-                cp -r ${nushell.src}/crates/nu-std $out/nu-std
+                cp -r ${nushell.${system}.src}/crates/nu-std $out/nu-std
                 cp -r ${inputs.corpus-nu_scripts} $out/nu_scripts
                 cp -r ${inputs.corpus-nupm} $out/nupm
                 cp -r ${inputs.corpus-tree-sitter-nu}/test/corpus $out/tree-sitter-nu
@@ -218,6 +224,36 @@
       packages = forAllSystems (system: {
         inherit (inputs.nufmt.packages.${system}) nufmt;
       });
+
+      apps = forAllSystems (
+        system:
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.${system};
+          nushellPkgs = inputs.nixpkgs-nushell.legacyPackages.${system};
+        in
+        {
+          test-nu = {
+            type = "app";
+            program = pkgs.lib.getExe (
+              nushellPkgs.writers.writeNuBin "nuten-test-nu" {
+                makeWrapperArgs = [
+                  "--set"
+                  "NU_LIB_DIRS"
+                  "${inputs.nutest}"
+                  "--prefix"
+                  "PATH"
+                  ":"
+                  (pkgs.lib.makeBinPath [
+                    rustToolchain.${system}
+                    pkgs.stdenv.cc
+                  ])
+                ];
+              } ../scripts/test-nu.nu
+            );
+            meta.description = "Run the tests written in nu";
+          };
+        }
+      );
 
       checks = forAllSystems (system: {
         treefmt = treefmtEval.${system}.config.build.check (inputs.nixpkgs.lib.cleanSource ./..);
