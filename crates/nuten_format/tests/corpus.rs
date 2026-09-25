@@ -23,7 +23,7 @@ use crate::support::{caught, files_below};
 /// Nu rejects each of them too.
 const SYNTAX_ERRORS: &[&str] = &[
     // The `{` on line 3 is not closed.
-    "custom-menus/current_session_history_menu.nu",
+    "nu_scripts/custom-menus/current_session_history_menu.nu",
 ];
 
 #[test]

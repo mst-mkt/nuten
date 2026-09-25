@@ -150,18 +150,23 @@
         system:
         let
           pkgs = inputs.nixpkgs.legacyPackages.${system};
+          nushell = inputs.nixpkgs-nushell.legacyPackages.${system}.nushell;
         in
         {
           default = pkgs.mkShell {
             packages = [
+              nushell
               rustToolchain.${system}
               pkgs.cargo-insta
               pkgs.cargo-nextest
               treefmtEval.${system}.config.build.wrapper
-              inputs.nixpkgs-nushell.legacyPackages.${system}.nushell
             ];
             env = {
-              NUTEN_CORPUS = "${inputs.nu_scripts}";
+              NUTEN_CORPUS = pkgs.runCommand "nuten-corpus" { } ''
+                mkdir $out
+                cp -r ${inputs.nu_scripts} $out/nu_scripts
+                cp -r ${nushell.src}/crates/nu-std $out/nu-std
+              '';
             };
             inherit (preCommit.${system}) shellHook;
           };
