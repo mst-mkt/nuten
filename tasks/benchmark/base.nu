@@ -1,5 +1,7 @@
 # Compares the work two nuten do on each input under valgrind, whose counts hold still between runs unlike time.
 
+use cpus.nu any-allowed-cpu
+
 const INPUTS = path self inputs.nuon
 const DEPTH = 64
 const METRICS = [instructions allocations allocated_bytes peak_bytes]
@@ -192,25 +194,6 @@ def run-valgrind [
         error make { msg: $"($input.name) failed under valgrind: ($result.stderr)" }
     }
     $report
-}
-
-# Any one does, and picking at random keeps runs side by side off the same CPU.
-def any-allowed-cpu []: nothing -> int {
-    open /proc/self/status
-    | lines
-    | where $it starts-with Cpus_allowed_list
-    | first
-    | split row ':'
-    | get 1
-    | str trim
-    | split row ','
-    | each {|range|
-          let bounds = $range | split row '-' | into int
-          seq $bounds.0 ($bounds | last)
-      }
-    | flatten
-    | shuffle
-    | first
 }
 
 # Valgrind groups the digits with commas, which into int does not read.

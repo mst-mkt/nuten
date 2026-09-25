@@ -208,14 +208,6 @@ def "measure gives up on run past time limit" [] {
 }
 
 @test
-def "any-allowed-cpu gives cpu taskset runs on" [] {
-    let actual = any-allowed-cpu
-
-    let run = ^taskset --cpu-list $actual true | complete
-    assert equal $run.exit_code 0 $run.stderr
-}
-
-@test
 def "measure fails on input nuten rejects" [] {
     let context = $in
 
