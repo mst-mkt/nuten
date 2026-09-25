@@ -120,6 +120,10 @@ fn reported_paths(output: &Output) -> Vec<String> {
         .collect()
 }
 
+fn stdout(output: &Output) -> String {
+    String::from_utf8(output.stdout.clone()).unwrap()
+}
+
 /// The line the binary reports for `error` at `path`, when it meets the same error.
 fn io_error_line(path: &Path, error: &io::Error) -> String {
     format!("{}: {error}\n", path.display())
@@ -1591,6 +1595,97 @@ fn format_takes_given_config_file_for_current_directory_without_paths() {
 }
 
 #[test]
+fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
+    let dir = TempDir::new();
+    let [z, a] = write_unformatted(&dir, ["z.nu", "d/a.nu"]);
+    let formatted = dir.file("b.nu", FORMATTED);
+    let output = format_in(&dir, &["--check", "z.nu", "b.nu", "d"]);
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert!(output.stderr.is_empty(), "{}", stderr(&output));
+    assert_eq!(stdout(&output), "z.nu\nd/a.nu\n");
+    assert_eq!(read(&z), UNFORMATTED);
+    assert_eq!(read(&a), UNFORMATTED);
+    assert_eq!(read(&formatted), FORMATTED);
+}
+
+#[test]
+fn format_check_succeeds_quietly_when_every_file_is_formatted() {
+    let dir = TempDir::new();
+    dir.file("a.nu", FORMATTED);
+    dir.file("nuten.nuon", "{indent_width: 2}");
+    dir.file("b.nu", "if true {\n  ls\n}\n");
+    let output = format_in(&dir, &["--check"]);
+    assert_succeeds_quietly(&output);
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn format_check_exits_with_2_on_problem_though_files_would_change() {
+    let dir = TempDir::new();
+    let bad = dir.file("bad.nu", "ls ||");
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    let output = format_in(&dir, &["--check", "bad.nu", "a.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(stdout(&output), "a.nu\n");
+    assert!(
+        stderr(&output).starts_with("bad.nu:1:4: "),
+        "{}",
+        stderr(&output)
+    );
+    assert_eq!(read(&bad), "ls ||");
+    assert_eq!(read(&path), UNFORMATTED);
+}
+
+#[test]
+fn format_check_lists_nothing_when_any_config_file_is_wrong() {
+    let dir = TempDir::new();
+    dir.file("bad/nuten.nuon", "{a: 1}");
+    let paths = write_unformatted(&dir, ["bad/a.nu", "ok/b.nu"]);
+    for args in [["--check", "bad", "ok"], ["--check", "ok/b.nu", "bad"]] {
+        let output = format_in(&dir, &args);
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}: {}", stdout(&output));
+    }
+    for path in &paths {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_check_counts_list_as_written_when_reader_closes_first() {
+    let dir = TempDir::new();
+    write_unformatted(&dir, ["a.nu"]);
+    let (reader, writer) = io::pipe().unwrap();
+    drop(reader);
+    let output = nuten_command()
+        .args(["format", "--check", "a.nu"])
+        .current_dir(&dir.0)
+        .stdout(writer)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert!(output.stderr.is_empty());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn format_check_reports_list_it_cannot_write() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    let full = fs::File::options().write(true).open("/dev/full").unwrap();
+    let output = nuten_command()
+        .args(["format", "--check", "a.nu"])
+        .current_dir(&dir.0)
+        .stdout(full)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert!(stderr.starts_with("stdout: "), "{stderr}");
+    assert_eq!(read(&path), UNFORMATTED);
+}
+
+#[test]
 fn wants_subcommand() {
     let output = nuten(&[]);
     assert_eq!(output.status.code(), Some(2));
@@ -1643,5 +1738,6 @@ fn schema_reports_write_error() {
     let full = fs::File::options().write(true).open("/dev/full").unwrap();
     let output = nuten_command().arg("schema").stdout(full).output().unwrap();
     assert_eq!(output.status.code(), Some(2));
-    assert!(!output.stderr.is_empty());
+    let stderr = stderr(&output);
+    assert!(stderr.starts_with("stdout: "), "{stderr}");
 }
