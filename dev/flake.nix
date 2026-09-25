@@ -243,10 +243,17 @@
                   "--prefix"
                   "PATH"
                   ":"
-                  (pkgs.lib.makeBinPath [
-                    rustToolchain.${system}
-                    pkgs.stdenv.cc
-                  ])
+                  (pkgs.lib.makeBinPath (
+                    [
+                      rustToolchain.${system}
+                      pkgs.stdenv.cc
+                      pkgs.coreutils
+                    ]
+                    ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                      pkgs.valgrind
+                      pkgs.util-linux
+                    ]
+                  ))
                 ];
               } ../scripts/test-nu.nu
             );
