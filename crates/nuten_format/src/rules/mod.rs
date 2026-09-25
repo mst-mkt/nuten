@@ -58,7 +58,6 @@ impl Child {
     }
 }
 
-/// The children among `elements`, in source order.
 /// Line breaks at the end belong to no child, so nothing is printed for them.
 /// A run kept as written is one child, its first.
 fn children(
@@ -119,9 +118,6 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     out
 }
 
-/// What every rule reads while a file is formatted.
-/// The source the elements borrow their text from, and the group ids given out so far.
-/// Also the items of expressions laid out ahead, and what `# nuten-ignore` keeps as written.
 struct Formatter<'a> {
     src: &'a str,
     groups: GroupIds,
@@ -227,8 +223,6 @@ impl<'a> Formatter<'a> {
     }
 
     /// Nu lexes a line break inside `( )` as whitespace, so one can fall among these children.
-    /// A `;` touches what comes before it, as it does between statements.
-    /// Only a call that an attribute heads holds one.
     fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(parent.children_with_tokens(), &self.kept).collect();
         self.spaced_children(&items, |_, item| {
@@ -236,7 +230,6 @@ impl<'a> Formatter<'a> {
         })
     }
 
-    /// Children that touch one another, as the pieces of one word do.
     fn touching(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
         parent
             .children_with_tokens()
@@ -288,7 +281,6 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// The children among `elements` on one line, with a `,` and a space between each two.
     fn comma_spaced(&mut self, elements: impl Iterator<Item = SyntaxElement>) -> Vec<Element<'a>> {
         let items: Vec<_> = without_commas(children(elements, &self.kept)).collect();
         items
@@ -371,7 +363,6 @@ fn ends_with_pipe(statement: &SyntaxNode) -> bool {
         .is_some_and(|last| last.kind() == SyntaxKind::Pipe)
 }
 
-/// Whether the last element of the statement is a call that an attribute heads.
 /// The call may end with a command instead, which a blank line closes.
 /// Two blank lines then keep a wider gap than needed, but close it as well.
 fn ends_with_attributed_call(statement: &SyntaxNode) -> bool {
@@ -396,7 +387,6 @@ fn line_break_or_space(item: &Child) -> Element<'static> {
     }
 }
 
-/// What separates the child after `prev` from it: `plain`, but a line break after a comment.
 /// A comment runs to the end of its line.
 fn separator(
     prev: Option<SyntaxKind>,

@@ -24,7 +24,6 @@ pub(crate) enum Event {
 /// Past it nuten keeps the syntax as written, which cannot change what it means.
 const MAX_DEPTH: usize = 128;
 
-/// A pair of one-byte brackets and the kinds of their tokens.
 pub(crate) struct Brackets {
     pub(crate) open: u8,
     pub(crate) close: u8,
@@ -38,7 +37,6 @@ pub(crate) struct Brackets {
 }
 
 impl Brackets {
-    /// Whether `text` starts with the opening bracket and ends with its closer.
     pub(crate) fn wrap(&self, text: &str) -> bool {
         let bytes = text.as_bytes();
         bytes.first() == Some(&self.open) && bytes.last() == Some(&self.close)
@@ -210,7 +208,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// Whether one more level of brackets, or of syntax nested with no brackets, may be read.
     pub(crate) fn can_nest(&self) -> bool {
         self.depth < MAX_DEPTH
     }
@@ -254,17 +251,14 @@ impl<'a> Parser<'a> {
         self.nth_range(0)
     }
 
-    /// The kind of the `n`th token ahead, `0` being the next, or `None` past the end.
     pub(crate) fn nth(&self, n: usize) -> Option<SyntaxKind> {
         self.nth_token(n).map(|token| token.kind)
     }
 
-    /// The text of the `n`th token ahead, `0` being the next, or `None` past the end.
     pub(crate) fn nth_text(&self, n: usize) -> Option<&'a str> {
         self.nth_token(n).map(|token| &self.src[token.range])
     }
 
-    /// The range of the `n`th token ahead, `0` being the next, or `None` past the end.
     pub(crate) fn nth_range(&self, n: usize) -> Option<TextRange> {
         self.nth_token(n).map(|token| token.range)
     }
@@ -440,7 +434,6 @@ impl<'a> Parser<'a> {
         inner.errors
     }
 
-    /// The next token lexed again in `mode`, when it is a word.
     pub(crate) fn relexed(&self, mode: Mode) -> Option<Relexed<'a>> {
         let token = self
             .nth_token(0)
@@ -733,7 +726,6 @@ impl<'a> Parser<'a> {
 
 /// Whether a comment among `tokens` has no whitespace before its `#`.
 /// `tokens` is the inside of a bracketed word of `src`.
-/// The lexer reads such a `#` as no comment when it reads the word.
 fn has_glued_comment(src: &str, tokens: &[Token]) -> bool {
     tokens
         .iter()

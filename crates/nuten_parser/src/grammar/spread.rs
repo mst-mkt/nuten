@@ -29,15 +29,12 @@ impl Target {
     }
 }
 
-/// Whether nu reads `text` as a spread into `target`.
 /// Ported from nu's `extract_spread_list` and `extract_spread_record`.
 pub(super) fn is_spread(text: &str, target: Target) -> bool {
     text.strip_prefix("...")
         .is_some_and(|rest| rest.starts_with(['$', '(', target.bracket()]))
 }
 
-/// The spread ahead, which `is_spread` takes, as a `Spread`: the `...`, then the value.
-/// A word where the value is not one item.
 pub(super) fn spread(p: &mut Parser<'_>, target: Target) {
     let range = p.peek_range().expect("a spread ahead");
     let operator_end = range.start() + TextSize::of("...");

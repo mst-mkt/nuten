@@ -1,19 +1,4 @@
 //! The command-line interface.
-//!
-//! `nuten format` exits with 0 when every file is formatted.
-//! It exits with 2 when any file has syntax errors or cannot be read or written.
-//! It does the same when a directory it walks into cannot be read.
-//! The same goes for an ignore file with a line it cannot read.
-//! The other files are still formatted then.
-//! It formats nothing and exits with 2 when a config file is wrong or cannot be read.
-//! It does the same when it cannot tell whether a config file exists.
-//! The same goes for a file `--config` names without a config extension.
-//! With `--check`, it changes no file.
-//! It then exits with 1 when any file would change and nothing is wrong.
-//! `nuten format -` formats stdin to stdout instead.
-//! It writes nothing to stdout when stdin or its config has a problem.
-//! Any command exits with 2 when stdout cannot be written, unless its reader has closed it.
-//! Any command exits with 2 when the arguments are invalid.
 
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
@@ -69,10 +54,8 @@ struct Format {
     paths: Vec<PathBuf>,
 }
 
-/// The path that stands for stdin.
 const STDIN_PATH: &str = "-";
 
-/// The name stdin goes by in reports when no `--stdin-filepath` gives one.
 const STDIN_NAME: &str = "<stdin>";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +80,6 @@ fn main() -> ExitCode {
     }
 }
 
-/// Formats stdin when the paths are only `-`, or else the files the paths name.
 fn run_format(args: &Format) -> ExitCode {
     if let Some(problem) = argument_problem(args) {
         return fail(&[problem]);
@@ -145,7 +127,6 @@ fn print_schema() -> ExitCode {
     }
 }
 
-/// Reports `problems` to stderr.
 fn fail(problems: &[String]) -> ExitCode {
     for problem in problems {
         eprintln!("{problem}");
@@ -153,7 +134,6 @@ fn fail(problems: &[String]) -> ExitCode {
     ExitCode::from(2)
 }
 
-/// Writes `text` to stdout.
 /// The error is the problem, as a line.
 fn write_stdout(text: &str) -> Result<(), String> {
     match io::stdout().write_all(text.as_bytes()) {
@@ -186,7 +166,6 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
     }
 }
 
-/// `given`, or else the config nearest the file `filepath`, or the current directory without it.
 fn stdin_config(filepath: Option<&Path>, given: Option<Config>) -> Result<Config, Vec<String>> {
     match (filepath, given) {
         (_, Some(given)) => Ok(given),
@@ -198,7 +177,6 @@ fn stdin_config(filepath: Option<&Path>, given: Option<Config>) -> Result<Config
     }
 }
 
-/// The deepest existing directory the file `path` would be in.
 /// Each existing directory on the way is resolved, so a `..` after a symlink leaves its target.
 /// A directory that does not exist yet holds no symlink, so a `..` after one resolves as written.
 fn nearest_existing_dir(path: &Path) -> Result<PathBuf, Vec<String>> {
@@ -234,7 +212,6 @@ fn nearest_existing_dir(path: &Path) -> Result<PathBuf, Vec<String>> {
         .to_path_buf())
 }
 
-/// Formats the files `paths` name, with `given` or else the nearest config.
 fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
     let report = report(paths, given, mode);
     let listed = match mode {
@@ -254,7 +231,6 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
     }
 }
 
-/// `paths`, a line each.
 fn listing(paths: &[PathBuf]) -> String {
     // Lossy for names that are not UTF-8, as the lists of other formatters are.
     paths
@@ -263,7 +239,6 @@ fn listing(paths: &[PathBuf]) -> String {
         .collect()
 }
 
-/// What formatting the files `paths` name comes to, with `given` or else the nearest config.
 fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
     let dirs = files::dirs(paths);
     let dir_lookups: HashMap<_, _> = dirs
@@ -324,7 +299,6 @@ fn report_of(entries: Vec<Entry>, outcomes: Vec<Result<bool, Vec<String>>>) -> R
     }
 }
 
-/// Formats the file `path`, and writes it back when `mode` says to and it changes.
 /// Tells whether it changes.
 /// The error holds a line for each problem.
 fn format_file(path: &Path, config: &FormatConfig, mode: Mode) -> Result<bool, Vec<String>> {
@@ -365,13 +339,11 @@ fn read_regular_file(path: &Path) -> io::Result<String> {
     }
 }
 
-/// `message` headed by the line and column of `offset` in `src`, the text of `path`.
 fn located(path: &Path, src: &str, offset: usize, message: impl Display) -> String {
     let (line, column) = line_column(src, offset);
     format!("{}:{line}:{column}: {message}", path.display())
 }
 
-/// 1-based, the column in characters.
 fn line_column(src: &str, offset: usize) -> (usize, usize) {
     let before = &src[..offset];
     let line = before.matches('\n').count() + 1;

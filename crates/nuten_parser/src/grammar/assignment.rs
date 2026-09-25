@@ -16,7 +16,6 @@ pub(super) enum Assigned {
 }
 
 impl Assigned {
-    /// Whether a token of `kind` ends what the assignment operator takes.
     pub(super) fn ends_at(self, kind: SyntaxKind) -> bool {
         match self {
             Assigned::No => false,
@@ -26,7 +25,6 @@ impl Assigned {
     }
 }
 
-/// Whether an assignment operator comes before the element ends.
 pub(super) fn assignment_ahead(p: &Parser<'_>) -> bool {
     let mut prev = None;
     for kind in p.remaining_kinds().filter(|&kind| !p.is_skipped(kind)) {

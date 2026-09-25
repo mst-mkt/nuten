@@ -10,7 +10,6 @@ pub(super) fn reads_dollar(text: &str, shape: Shape) -> bool {
             .is_some_and(|rest| !rest.starts_with(['"', '\'']))
 }
 
-/// The error nu reports at the variable ahead where it takes `shape`, if any.
 /// The variable is a word of `$` and a name, with no path after it.
 pub(super) fn variable_error(p: &Parser<'_>, shape: Shape) -> Option<ParseErrorKind> {
     let text = p.peek_text()?;

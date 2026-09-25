@@ -31,7 +31,6 @@ pub enum Element<'a> {
     /// `columns` further, in spaces, after each line break inside.
     /// Only when `group` is `None`, or names a group that broke.
     /// That group must be one around the alignment, or one printed before it.
-    /// Zero columns are no alignment.
     /// With tabs, an alignment that a deeper level follows takes a tab instead.
     /// No space then comes before a tab.
     Align {
@@ -52,7 +51,6 @@ pub struct GroupIds {
 }
 
 impl GroupIds {
-    /// An id no group has yet.
     pub fn fresh(&mut self) -> GroupId {
         let id = GroupId(self.next);
         self.next += 1;
@@ -71,7 +69,6 @@ pub enum LineMode {
     Hard { blank_lines: u32 },
 }
 
-/// Columns a text takes on the line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextWidth {
     Width(u32),
@@ -80,7 +77,6 @@ pub enum TextWidth {
 }
 
 impl Element<'_> {
-    /// Whether it breaks every group around it, whatever the width.
     pub(crate) fn forces_break(&self) -> bool {
         matches!(
             self,
@@ -95,10 +91,6 @@ impl Element<'_> {
 }
 
 impl TextWidth {
-    /// Wide characters and emoji sequences take two columns.
-    /// Control characters, tabs included, take one.
-    /// A line break is a `\n`, with or without a `\r` before it.
-    /// A `\r` alone is an ordinary character.
     pub fn of(text: &str) -> TextWidth {
         if text.contains('\n') {
             TextWidth::Multiline

@@ -66,7 +66,6 @@ impl<'a> Formatter<'a> {
         breaks
     }
 
-    /// Whether `expression`, or what holds it up to `element`, is kept as written.
     fn kept_up_to(&self, expression: &SyntaxNode, element: &SyntaxNode) -> bool {
         expression
             .ancestors()
@@ -75,7 +74,6 @@ impl<'a> Formatter<'a> {
             .any(|node| self.kept.keeps(&node.into()))
     }
 
-    /// Each of `items` but a comment as the formatter lays it out.
     fn laid_out_items(&mut self, items: &[Child]) -> Vec<Vec<Element<'a>>> {
         items
             .iter()

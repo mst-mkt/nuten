@@ -89,7 +89,6 @@ fn main() -> ExitCode {
 }
 
 /// `path` if it is not a directory, or else every `.nu` and `.nuon` file below it.
-/// Hidden directories are left aside.
 fn files_to_check(path: &Path, files: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(path).and_then(Iterator::collect::<io::Result<Vec<_>>>) else {
         // A file, or a directory that cannot be read, which `check` reports.

@@ -4,7 +4,6 @@ use std::fmt::{self, Write};
 
 use crate::settings::{Kind, SETTINGS, Setting};
 
-/// The JSON Schema every setting is in.
 pub fn schema() -> String {
     let properties = SETTINGS
         .iter()

@@ -162,7 +162,6 @@ impl Part {
         }
     }
 
-    /// Whether it is an element that an attribute heads, on a line after a `|`.
     fn starts_line_with_attribute(&self) -> bool {
         self.child.newlines > 0
             && self
@@ -289,7 +288,6 @@ fn flatten_assignment(
         .collect()
 }
 
-/// How what follows a `|` is aligned.
 #[derive(Clone, Copy)]
 enum Alignment {
     /// Always, since the `|` starts a line even when the pipeline is on one line.
@@ -308,7 +306,6 @@ struct Segment<'p> {
     align: Option<Alignment>,
 }
 
-/// Whether the `|` before `items` stays at the end of its line.
 fn keeps_pipe_at_line_end(items: &[Part]) -> bool {
     items
         .first()

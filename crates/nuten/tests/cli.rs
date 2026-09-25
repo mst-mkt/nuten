@@ -42,14 +42,12 @@ impl TempDir {
         self.0.join(name)
     }
 
-    /// Creates the directory `name`, with its parents.
     fn dir(&self, name: &str) -> PathBuf {
         let path = self.path(name);
         fs::create_dir_all(&path).unwrap();
         path
     }
 
-    /// Writes the file `name`, creating the directories it is in.
     fn file(&self, name: &str, contents: &str) -> PathBuf {
         let path = self.path(name);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -98,7 +96,6 @@ fn format_in(dir: &TempDir, args: &[&str]) -> Output {
         .unwrap()
 }
 
-/// `nuten format` with `args` from `dir`, with `input` on its stdin.
 /// Not a pipe, whose writer fails when the binary exits before it reads stdin.
 fn format_stdin_command(dir: &TempDir, args: &[&str], input: &[u8]) -> Command {
     let input_path = dir.path("stdin.input");
@@ -112,7 +109,6 @@ fn format_stdin_command(dir: &TempDir, args: &[&str], input: &[u8]) -> Command {
     command
 }
 
-/// Runs `nuten format` with `args` from `dir`, with `input` on its stdin.
 fn format_stdin_in(dir: &TempDir, args: &[&str], input: &[u8]) -> Output {
     format_stdin_command(dir, args, input).output().unwrap()
 }
@@ -128,7 +124,6 @@ fn stderr(output: &Output) -> String {
     String::from_utf8(output.stderr.clone()).unwrap()
 }
 
-/// The path each line of the stderr of `output` reports, before its first `:`.
 fn reported_paths(output: &Output) -> Vec<String> {
     stderr(output)
         .lines()
@@ -561,14 +556,12 @@ fn format_writes_nothing_when_config_file_is_directory() {
     assert_eq!(read(&path), "ls|first");
 }
 
-/// Makes a FIFO at `path`.
 #[cfg(unix)]
 fn fifo(path: &Path) {
     let status = Command::new("mkfifo").arg(path).status().unwrap();
     assert!(status.success());
 }
 
-/// Runs `nuten format` on `paths`, and fails when it has not ended in 10 seconds.
 /// Not `format`, which would hang along with the binary if it read a FIFO.
 #[cfg(unix)]
 fn format_in_time(paths: &[&Path]) -> Output {
@@ -828,7 +821,6 @@ fn format_takes_given_config_for_other_files_when_one_has_syntax_error() {
 const UNFORMATTED: &str = "ls|first";
 const FORMATTED: &str = "ls | first\n";
 
-/// Writes `UNFORMATTED` to each of `names` in `dir`.
 fn write_unformatted<const N: usize>(dir: &TempDir, names: [&str; N]) -> [PathBuf; N] {
     names.map(|name| dir.file(name, UNFORMATTED))
 }

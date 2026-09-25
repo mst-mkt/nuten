@@ -58,8 +58,6 @@ struct IfLink {
 }
 
 /// The `if`s that `items` make when nu reads them as one, in order.
-/// Each is `if`, a condition, and a body in braces.
-/// The body is the item right before the first `else`, or the last item.
 /// After an `else` comes one item, or more items as one expression.
 /// Nu reads that expression as an `if` call where it starts with `if`, which is one more link here.
 /// Nu reads a first item it takes as a block alone, and the rest as more items of the `if` call.

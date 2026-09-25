@@ -75,7 +75,6 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<Streams>, assig
     }
 }
 
-/// The `|` ahead, and the line breaks nu goes on past after it.
 pub(super) fn plain_pipe(p: &mut Parser<'_>, assigned: Assigned) {
     if pipe_ends_file(p) {
         p.bump_error(ParseErrorKind::PipeAtEof);
@@ -109,7 +108,6 @@ pub(super) fn pipe_ends_file(p: &Parser<'_>) -> bool {
     kinds.next().is_none()
 }
 
-/// Whether the `|` ahead is the last token of what an assignment operator takes.
 /// A `;` right after it is left to `SemicolonAfterPipe`.
 fn pipe_ends_assigned(p: &Parser<'_>, assigned: Assigned) -> bool {
     match assigned {
@@ -125,15 +123,12 @@ fn nothing_follows_pipe(p: &Parser<'_>) -> bool {
     after_pipe(p).all(|kind| kind == SyntaxKind::Newline)
 }
 
-/// The kinds after the `|` ahead, the skipped ones left out.
 fn after_pipe(p: &Parser<'_>) -> impl Iterator<Item = SyntaxKind> {
     p.remaining_kinds()
         .filter(|&kind| !p.is_skipped(kind))
         .skip(1)
 }
 
-/// Whether a `|` starts the next line, past any comment lines.
-/// It joins the line before it, along with those comment lines.
 pub(super) fn next_line_starts_with_pipe(p: &Parser<'_>) -> bool {
     line_start(&mut next_lines(p)) == Some(SyntaxKind::Pipe)
 }
@@ -157,7 +152,6 @@ fn next_line_continues(p: &Parser<'_>) -> bool {
     }
 }
 
-/// The tokens after the current line, whitespace left out.
 fn next_lines(p: &Parser<'_>) -> impl Iterator<Item = SyntaxKind> {
     p.remaining_kinds()
         .filter(|&kind| kind != SyntaxKind::Whitespace)
@@ -265,14 +259,12 @@ fn pipeline_element(
     }
 }
 
-/// The items ahead to the statement's end as one `Call` of bare tokens.
 fn call_as_written(p: &mut Parser<'_>, assigned: Assigned) {
     p.start(SyntaxKind::Call);
     rest_of_statement(p, assigned, Parser::bump);
     p.finish();
 }
 
-/// The assignment operator ahead and the statements it takes, one level deeper.
 fn assignment_operator(p: &mut Parser<'_>) {
     p.bump();
     p.deeper(assigned_statements);

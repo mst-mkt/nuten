@@ -21,7 +21,6 @@ pub(super) fn pattern(p: &mut Parser<'_>) {
 }
 
 /// The variable ahead, which binds the name after `prefix`.
-/// It is in an `Error` where nu takes no variable of that name.
 /// Nu takes a `$` alone for a name there, unlike where it reads a variable as a value.
 fn variable(p: &mut Parser<'_>, prefix: &str) {
     let name = p
@@ -35,7 +34,6 @@ fn variable(p: &mut Parser<'_>, prefix: &str) {
     }
 }
 
-/// The tokens inside the brackets of a pattern, the `,` and trivia among them aside.
 fn pattern_tokens<'a>(inner: &Parser<'a>) -> Vec<(Token, &'a str)> {
     inner
         .remaining_tokens()
@@ -43,7 +41,6 @@ fn pattern_tokens<'a>(inner: &Parser<'a>) -> Vec<(Token, &'a str)> {
         .collect()
 }
 
-/// Whether a token of `kind` is one pattern, or a key, where it stands.
 /// Unlike for `is_item`, an `Error` is none, since nuten reads no pattern of its text.
 fn is_pattern_item(kind: SyntaxKind) -> bool {
     kind.is_item() && kind != SyntaxKind::Error
@@ -60,9 +57,6 @@ enum Split {
     Rejected,
 }
 
-/// The `{ }` ahead as a `RecordPattern`.
-/// It stays a word where a field holds a token that is no pattern item.
-/// It is an `Error` where nu cannot split it into fields.
 fn record_pattern(p: &mut Parser<'_>) {
     let Some(bracketed) = p.bracketed(&CURLY, Mode::RecordPattern) else {
         return p.bump();
@@ -76,7 +70,6 @@ fn record_pattern(p: &mut Parser<'_>) {
     }
 }
 
-/// How nu splits the inside of `{ }` into fields.
 fn split(inner: &Parser<'_>) -> Split {
     let tokens = pattern_tokens(inner);
     let fields: Vec<_> =
@@ -122,7 +115,6 @@ impl<'t, 'a> Field<'t, 'a> {
     }
 }
 
-/// The fields of a record pattern, a `RecordField` for each key.
 fn record_pattern_fields(p: &mut Parser<'_>) {
     while let Some((kind, text)) = p.peek().zip(p.peek_text()) {
         if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) {
@@ -146,7 +138,6 @@ fn record_field(p: &mut Parser<'_>) {
     p.finish();
 }
 
-/// The `[ ]` ahead as a `ListPattern`, or as a word where nu reads less than it holds.
 /// Nu splits the patterns at a `|`, and reads none past a `;` or a redirection.
 /// It reads none past a rest either.
 /// It takes `=` as a string, but nuten lexes it as an operator.
@@ -159,7 +150,6 @@ fn list_pattern(p: &mut Parser<'_>) {
     }
 }
 
-/// Whether the inside of `[ ]` holds nothing but patterns, a rest only last.
 fn reads_whole(inner: &Parser<'_>) -> bool {
     let tokens = pattern_tokens(inner);
     let rest = tokens.iter().position(|&(_, text)| is_rest(text));
@@ -172,7 +162,6 @@ fn is_rest(text: &str) -> bool {
     text == ".." || text.starts_with("..$")
 }
 
-/// The patterns of a list pattern, and the rest.
 fn list_pattern_items(p: &mut Parser<'_>) {
     while let Some((kind, text)) = p.peek().zip(p.peek_text()) {
         if matches!(kind, SyntaxKind::Comma | SyntaxKind::Newline) || text == ".." {

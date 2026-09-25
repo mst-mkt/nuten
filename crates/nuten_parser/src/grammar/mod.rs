@@ -110,9 +110,7 @@ enum Shape {
     DefBody,
 }
 
-/// What nu reads a `{ }` as.
 enum Braced {
-    /// With the `RecordSign` it shows.
     Record(RecordSign),
     Block,
     Word,
@@ -125,22 +123,18 @@ impl Shape {
         self != Shape::VariableName
     }
 
-    /// Whether nu reads a `[ ]` as a list where it takes this shape.
     fn reads_list(self) -> bool {
         matches!(self, Shape::Any | Shape::Block | Shape::ExternalArgument)
     }
 
-    /// Whether nu reads a `[ ]` as a table where it takes this shape.
     fn reads_table(self) -> bool {
         self.takes_any_value()
     }
 
-    /// Whether nu reads a `[ ]` here as it does where it takes any value.
     fn takes_any_value(self) -> bool {
         matches!(self, Shape::Any | Shape::Block)
     }
 
-    /// What nu reads a `{ }` as here, given the `RecordSign` its first tokens show.
     fn braced(self, sign: Option<RecordSign>) -> Braced {
         match (self, sign) {
             (Shape::Any, Some(sign))
@@ -159,8 +153,6 @@ impl Shape {
     }
 }
 
-/// An item that is no shell operator, which nu rejects, as `value` reads it.
-/// A spread where nu reads one as an argument.
 fn item(p: &mut Parser<'_>, shape: Shape) {
     let text = p.peek_text();
     if let Some(kind) = text.and_then(shell_operator) {
@@ -199,10 +191,6 @@ const CURLY: Brackets = Brackets {
 };
 
 /// The next token as the value nu reads where it takes `shape`.
-/// A `Binary`, `Range`, `CellPath`, or `Subexpression` where nu reads one.
-/// A `List`, `Table`, `Record`, `Block`, or `Interpolation` too.
-/// Otherwise the token as it is, in an `Error` where nu reports one at a variable.
-///
 /// The `Def` rule reads the one a signature stands in before `value` sees it.
 fn value(p: &mut Parser<'_>, shape: Shape) {
     if let Some(ahead) = binary_ahead(p, shape) {
@@ -230,7 +218,6 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
     }
 }
 
-/// The `[ ]` ahead as nu reads it where it takes `shape`: a `List`, a `Table`, or a word.
 /// `bracketed` is what it holds in list mode.
 fn squared<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     if is_list(bracketed.inner()) {
@@ -242,7 +229,6 @@ fn squared<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     }
 }
 
-/// The `[ ]` ahead as nu reads it where a parameter takes a list: a `List`, a `Table`, or a word.
 /// `bracketed` is what it holds in list mode.
 /// A list of items of another type holds no table, and its items take no `[ ]` or `{ }`.
 fn listed<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, param: Param) {
@@ -259,7 +245,6 @@ fn listed<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, param: Param) {
     p.bump_bracketed(kind, bracketed, items);
 }
 
-/// The `{ }` ahead as nu reads it where it takes `shape`: a `Record`, a `Block`, or a word.
 /// `bracketed` is what it holds in brace mode, which tells a record from the rest.
 fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     match shape.braced(record_sign(bracketed.inner().remaining_tokens())) {
@@ -269,8 +254,6 @@ fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     }
 }
 
-/// The `{ }` ahead as nu reads it where `param` takes it, as `braced` reads it for `shape`.
-/// An empty one is the exception: a `Block` or a `Record`, as `param` tells.
 /// `bracketed` is what it holds in brace mode.
 fn argument_braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape, param: Param) {
     match record_sign(bracketed.inner().remaining_tokens()) {
@@ -280,7 +263,6 @@ fn argument_braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shap
     }
 }
 
-/// How many words the keyword ahead takes up: one, or two with an `export` before it.
 fn keyword_words(p: &Parser<'_>) -> usize {
     1 + usize::from(p.peek_text() == Some("export"))
 }
@@ -295,7 +277,6 @@ fn declaration<'a>(p: &Parser<'a>) -> Option<(&'a str, usize)> {
     (words == 1 || keyword == "const").then_some((keyword, words))
 }
 
-/// How many of `items` nu reads as flags: those before the first item that is not a flag.
 /// Nu reads no flag past a `--`.
 fn leading_flags(items: &[&str]) -> usize {
     let end = items
@@ -320,12 +301,10 @@ fn ends_call(kind: SyntaxKind) -> bool {
     is_file_redirection(kind) || kind == SyntaxKind::Assign || ends_element(kind)
 }
 
-/// Whether an item the call still takes stands ahead.
 fn at_call_item(p: &Parser<'_>) -> bool {
     p.peek().is_some_and(|kind| !ends_call(kind))
 }
 
-/// The texts of the items ahead that a call takes.
 fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
     p.remaining_tokens()
         .filter(|(token, _)| !p.is_skipped(token.kind))
@@ -411,7 +390,6 @@ mod tests {
         );
     }
 
-    /// The tree of `src`, with no errors, and how many nodes of `kind` it holds.
     fn parsed_with(src: &str, kind: SyntaxKind) -> (SyntaxNode, usize) {
         let parsed = parse(src);
         assert!(parsed.errors().is_empty());
@@ -423,7 +401,6 @@ mod tests {
         (tree, count)
     }
 
-    /// The text of the last node of `kind` in `tree`, which must have no child nodes.
     fn innermost(tree: &SyntaxNode, kind: SyntaxKind) -> String {
         let innermost = tree
             .descendants()

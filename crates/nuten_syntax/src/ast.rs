@@ -1,5 +1,4 @@
 //! Typed views over the nodes of the CST, which rowan calls the AST.
-//! One type per node kind, each wrapping a `SyntaxNode` of that kind.
 //! Their accessors read the shape the parser gives a node.
 //! The `NodeShape` invariant holds every tree to that shape, so the accessors can count on it.
 
@@ -46,7 +45,6 @@ macro_rules! typed_nodes {
             }
         )*
 
-        /// Any node, told apart by its kind.
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum Node {
             $($name($name),)*
@@ -77,7 +75,6 @@ macro_rules! typed_nodes {
 
 syntax_kinds!(nodes);
 
-/// A node or a token, the node typed.
 pub type Element = NodeOrToken<Node, SyntaxToken>;
 
 pub fn typed(element: SyntaxElement) -> Element {
@@ -104,9 +101,6 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
 }
 
 /// A node the parser makes of a word enclosed in brackets.
-/// The opening bracket is its first child.
-/// It is the second instead, after the name of a `Type` or the prefix of a `Binary`.
-/// The closing one is its last, whatever comes between.
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
         self.syntax()
@@ -186,13 +180,11 @@ bracketed! {
     ListPattern: LBracket RBracket,
     RecordPattern: LBrace RBrace,
     Type: LAngle RAngle {
-        /// The `<`, right after the name.
         fn open(&self) -> SyntaxToken {
             token_after(&self.name()).expect("a type opens its brackets right after its name")
         }
     },
     Binary: LBracket RBracket {
-        /// The `[`, right after the prefix.
         fn open(&self) -> SyntaxToken {
             token_after(&self.prefix()).expect("a binary opens its brackets right after its prefix")
         }
@@ -276,12 +268,10 @@ fn token_after(token: &SyntaxToken) -> Option<SyntaxToken> {
         .and_then(SyntaxElement::into_token)
 }
 
-/// The kind of `element`, when it is a token and not a node.
 fn kind_if_token(element: &SyntaxElement) -> Option<SyntaxKind> {
     element.as_token().map(SyntaxToken::kind)
 }
 
-/// The closer of the pair `open` starts, among `pairs`.
 fn closer(pairs: &[(SyntaxKind, SyntaxKind)], open: SyntaxKind) -> Option<SyntaxKind> {
     pairs
         .iter()
@@ -294,7 +284,6 @@ fn is_line_trivia(kind: SyntaxKind) -> bool {
 }
 
 impl Block {
-    /// The parameters of a closure, right after the `{`.
     pub fn params(&self) -> Option<ClosureParams> {
         support::child(self.syntax())
     }

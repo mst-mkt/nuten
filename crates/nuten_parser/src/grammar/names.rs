@@ -54,7 +54,6 @@ impl<'a> Names<'a> {
     }
 
     /// These names, inside the block of `tokens` too.
-    /// `src` is the text `tokens` range over.
     /// `skips_newline` is whether a line break there is no more than whitespace.
     pub(crate) fn within(&self, src: &'a str, tokens: &[Token], skips_newline: bool) -> Names<'a> {
         let scope = Scope::of(
@@ -208,7 +207,6 @@ struct Lexeme<'a> {
     start: TextSize,
 }
 
-/// The lexemes of `tokens`, which range over `src`.
 fn lexemes<'a>(src: &'a str, tokens: &[Token]) -> Vec<Lexeme<'a>> {
     tokens
         .iter()
@@ -375,7 +373,6 @@ impl<'a> Scope<'a> {
 
 /// Where each import nuten reads among `statements` starts, with the names it brings.
 /// `statements` are those of a block that stand alone, whose modules are `modules`.
-/// `outer` is the scope around the block.
 fn read_imports<'a>(
     src: &'a str,
     statements: &[&[Lexeme<'a>]],
@@ -444,7 +441,6 @@ fn joins_commands(kind: SyntaxKind) -> bool {
 
 /// What the statement defines, as nu's `parse_def_predecl` reads it.
 /// `None` where nu declares nothing, or where nuten cannot tell the name nu reads.
-/// `src` is the text the lexemes range over.
 fn definition<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Definition<'a>> {
     let start = statement.first()?.start;
     let mut lexemes = statement.iter();
@@ -600,18 +596,14 @@ fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<
     })
 }
 
-/// What a statement of a module body exports.
 #[derive(Debug)]
 enum Export<'a> {
-    /// A command, by the words of its name.
     Command(Vec<&'a str>),
     /// No command, as a `def` with no `export` or an `export const`.
     Nothing,
-    /// What nuten cannot read.
     Unreadable,
 }
 
-/// What the statement at `nth` exports.
 fn exported<'a>(src: &'a str, statements: &[&[Lexeme<'a>]], nth: usize) -> Export<'a> {
     let statement = statements[nth];
     let command = match statement {
@@ -748,7 +740,6 @@ fn imports(lexemes: &[Lexeme<'_>]) -> Vec<TextSize> {
         .collect()
 }
 
-/// Whether a statement of these words imports names.
 fn imports_names<'a>(mut words: impl Iterator<Item = &'a str>) -> bool {
     match unexported(words.by_ref()) {
         Some("use" | "source" | "source-env") => true,
@@ -830,7 +821,6 @@ mod tests {
     };
 
     /// What each word of the last line of `src` takes, as `defined_parameters` reads it.
-    /// `None` where no command a block defines runs, with a signature nuten reads.
     fn defined_takes(src: &str) -> Option<Vec<Option<Takes>>> {
         defined_takes_on(src, src.lines().count() - 1)
     }
@@ -1009,7 +999,6 @@ mod tests {
     }
 
     /// What `read` tells of the last line of `inner`, as a block inside that of `outer`.
-    /// It is given the names there, where the line starts, and its words.
     fn in_nested<T>(
         outer: &str,
         inner: &str,

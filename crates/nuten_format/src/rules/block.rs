@@ -15,7 +15,6 @@ pub(super) struct BlockLayout<'a> {
     pub(super) head: Vec<Element<'a>>,
     pub(super) rest: Vec<Element<'a>>,
     /// Whether it breaks over lines whatever its width.
-    /// It does when the source breaks the body over lines, or the body holds a comment.
     /// A comment the `}` follows on its line ends at a lone `\r`.
     /// As a line suffix it would move past the `}`.
     expand: bool,
@@ -135,7 +134,6 @@ pub(super) fn holds_at_most_one_statement(block: &Block, kept: &Kept) -> bool {
     )
 }
 
-/// Whether the parameters stay as they are.
 fn closure_params_stay_as_is(params: &ClosureParams, kept: &Kept) -> bool {
     holds_stray_token(params, kept) || holds_ignored_token(params)
 }

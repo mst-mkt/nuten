@@ -1,7 +1,4 @@
 //! Snapshot tests of `parse`.
-//! Each input in `test_data` has its dump in a `.snap` file next to it.
-//! Inputs in `test_data/ok` parse without errors.
-//! Inputs in `test_data/err` parse with at least one.
 
 use std::{
     collections::BTreeSet,

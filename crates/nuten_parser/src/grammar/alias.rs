@@ -58,7 +58,6 @@ fn replacement(p: &mut Parser<'_>, assigned: Assigned) {
     p.finish();
 }
 
-/// Whether the items a call takes run to the statement's end.
 fn call_ends_statement(p: &Parser<'_>) -> bool {
     p.remaining_kinds()
         .filter(|&kind| !p.is_skipped(kind))

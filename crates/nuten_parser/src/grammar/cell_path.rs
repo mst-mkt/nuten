@@ -26,12 +26,10 @@ enum Link {
     Separator,
     /// A member, which nu reads as an int or a string.
     Member,
-    /// A token nu rejects where it stands, with its error.
     Rejected(ParseErrorKind),
 }
 
 impl CellPathAhead<'_> {
-    /// Whether nu reads the path to its end, rejecting none of it.
     pub(super) fn rejects_nothing(&self) -> bool {
         !self
             .links
@@ -40,7 +38,6 @@ impl CellPathAhead<'_> {
     }
 }
 
-/// The cell path ahead, when nu reads the word as a value and a path where it takes `shape`.
 /// The word stays whole where nuten does not read it as nu does yet.
 pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPathAhead<'a>> {
     let text = p.peek_text()?;
@@ -98,7 +95,6 @@ enum Expect {
 }
 
 impl Expect {
-    /// What nu makes of the token of `kind` and `text` here.
     /// `None` for a member whose error is not checked here.
     fn read(self, kind: SyntaxKind, text: &str) -> Option<Link> {
         if self == Expect::Member {
@@ -183,7 +179,6 @@ fn member(text: &str) -> Option<Link> {
     }
 }
 
-/// The cell path that `cell_path_ahead` found, with any value as `value` reads it for `shape`.
 /// A member lexed as neither a word nor a string is a `Word`, since nu reads it as a plain string.
 pub(super) fn cell_path<'a>(p: &mut Parser<'a>, ahead: CellPathAhead<'a>, shape: Shape) {
     let CellPathAhead {

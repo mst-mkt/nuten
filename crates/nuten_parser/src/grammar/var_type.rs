@@ -73,7 +73,6 @@ fn var_type_ahead(p: &Parser<'_>, keyword: &str) -> Option<VarType> {
     })
 }
 
-/// Whether the type lexes as one item that `type_` reads as a `Type`.
 /// Emitting it lexes every token after the name, taking in a redirection a `const` leaves out.
 fn reads_as_type(p: &Parser<'_>, var_type: &VarType) -> bool {
     if var_type.redirected {

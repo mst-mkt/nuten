@@ -3,7 +3,6 @@
 use jsonc_parser::{JsonObject, JsonValue, ParseOptions, parse_to_value};
 use nuten_config::{Config, ConfigErrorKind, Format, load, schema};
 
-/// The object the schema `text` is.
 fn root(text: &str) -> JsonObject<'_> {
     let Some(JsonValue::Object(root)) = parse_to_value(text, &ParseOptions::default()).unwrap()
     else {
@@ -12,7 +11,6 @@ fn root(text: &str) -> JsonObject<'_> {
     root
 }
 
-/// Each property of the schema `text`, by its key.
 fn properties(text: &str) -> Vec<(String, JsonObject<'_>)> {
     let Some(JsonValue::Object(properties)) = root(text).take("properties") else {
         panic!("the schema has no properties");

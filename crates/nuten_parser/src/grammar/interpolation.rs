@@ -31,8 +31,6 @@ pub(super) fn interpolation(p: &mut Parser<'_>) {
     });
 }
 
-/// The pieces of `text`, an interpolated string that starts at `start`.
-/// Each `( )` is a `Word`, and each run of text around them an `InterpText`.
 fn pieces(text: &str, start: TextSize) -> Vec<Piece> {
     let range = |bytes: Range<usize>| {
         let offset = |at: usize| start + TextSize::try_from(at).expect("an offset in a token");
@@ -55,7 +53,6 @@ fn pieces(text: &str, start: TextSize) -> Vec<Piece> {
         .collect()
 }
 
-/// Where each `( )` of `text`, an interpolated string, stands.
 /// Ported from nu's `parse_string_interpolation`.
 /// In a `$"` string, a `(` after an odd number of `\` is text.
 /// Inside a `( )`, quotes make nested strings, where only a `"` one takes a `\` escape.

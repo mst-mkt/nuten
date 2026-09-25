@@ -12,15 +12,12 @@ use crate::{
 /// Ported from nu's `parse_binary`, which takes only these, in lower case.
 const PREFIXES: [(&str, u32, usize); 3] = [("0x", 16, 2), ("0o", 8, 3), ("0b", 2, 8)];
 
-/// What nu reads the word ahead as, where it reads a binary.
 pub(super) enum BinaryAhead<'a> {
-    /// A binary, with what it holds.
     Decoded(Bracketed<'a>),
     /// A binary whose items nu cannot decode into bytes, which it reports.
     Undecodable,
 }
 
-/// The binary nu reads the word ahead as where it takes `shape`, if any.
 /// Nu reads a binary only where it takes any value.
 pub(super) fn binary_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<BinaryAhead<'a>> {
     if !shape.takes_any_value() {
@@ -49,7 +46,6 @@ pub(super) fn binary_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<BinaryAhe
     (!holds_semicolon).then_some(BinaryAhead::Decoded(bracketed))
 }
 
-/// The binary `binary_ahead` found, as a `Binary`, or a word in an `Error`.
 pub(super) fn binary<'a>(p: &mut Parser<'a>, ahead: BinaryAhead<'a>) {
     match ahead {
         BinaryAhead::Decoded(bracketed) => p.bump_bracketed(SyntaxKind::Binary, bracketed, |p| {

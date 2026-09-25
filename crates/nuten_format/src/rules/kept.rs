@@ -70,7 +70,6 @@ impl Kept {
     }
 }
 
-/// Whether `comment` is `# nuten-ignore`, alone or followed by whitespace and any text.
 /// Any whitespace counts after the name, since a comment in a CRLF file ends with its `\r`.
 fn ignores(comment: &str) -> bool {
     comment
@@ -143,7 +142,6 @@ fn is_keepable(element: &SyntaxElement) -> bool {
     }
 }
 
-/// `first`, `last`, and the siblings between them.
 fn siblings_between(first: &SyntaxElement, last: &SyntaxElement) -> Vec<SyntaxElement> {
     let end = last.text_range().start();
     iter::successors(Some(first.clone()), SyntaxElement::next_sibling_or_token)
@@ -171,7 +169,6 @@ fn outermost(mut runs: Vec<Vec<SyntaxElement>>) -> Vec<Vec<SyntaxElement>> {
         .collect()
 }
 
-/// The source a run takes, from its first child to its last.
 fn span(run: &[SyntaxElement]) -> TextRange {
     let first = run.first().expect("a run holds a child");
     let last = run.last().expect("a run holds a child");

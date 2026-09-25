@@ -12,7 +12,6 @@ pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
         .map(|elements| elements.into_iter().flatten().collect())
 }
 
-/// Whether `elements` break every group around them, whatever the width.
 /// One inside a `LineSuffix` counts too, since `fits` measures the suffix with the line.
 pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
     elements.iter().any(|element| {

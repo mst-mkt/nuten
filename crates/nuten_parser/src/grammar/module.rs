@@ -20,7 +20,6 @@ pub(super) fn module(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// The `ExportEnv` ahead, where `export-env` takes one `{ }`.
 /// Nu reads nothing past the first item, so a call with more stays as written.
 pub(super) fn export_env(p: &mut Parser<'_>) -> bool {
     if matches!(call_items(p)[..], [_, body] if body.starts_with('{')) {
@@ -44,7 +43,6 @@ fn module_with_body(p: &mut Parser<'_>, words: usize) {
     p.finish();
 }
 
-/// The call ahead with its items as written.
 fn call_as_written(p: &mut Parser<'_>) {
     p.start(SyntaxKind::Call);
     while at_call_item(p) {

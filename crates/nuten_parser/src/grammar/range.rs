@@ -15,7 +15,6 @@ use crate::{
     parser::{Parser, Piece, Relexed},
 };
 
-/// What nu reads the word ahead as, where it reads a range.
 pub(super) enum RangeAhead<'a> {
     /// The range, cut into its values and operators.
     Pieces(Relexed<'a>),
@@ -33,7 +32,6 @@ enum ValuesTaken {
     Numbers,
 }
 
-/// The range nu reads the word ahead as where it takes `shape`, if any.
 /// Nu tries a range on a word with a `$` or a `( )` first wherever it reads a value.
 /// It tries one on another word only where it takes any value.
 /// It reads the one item after `else` or `=>` as the head of an expression, though.
@@ -88,7 +86,6 @@ pub(super) fn range_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<RangeAhead
     p.split(&pieces).map(RangeAhead::Pieces)
 }
 
-/// The range `range_ahead` found: its values as `value` reads them, with the operators among them.
 pub(super) fn range<'a>(p: &mut Parser<'a>, ahead: RangeAhead<'a>) {
     match ahead {
         RangeAhead::Pieces(pieces) => p.bump_relexed(SyntaxKind::Range, pieces, |p| {
@@ -104,7 +101,6 @@ pub(super) fn range<'a>(p: &mut Parser<'a>, ahead: RangeAhead<'a>) {
     }
 }
 
-/// Whether nu reads `text` as a range with numbers alone as its values.
 pub(super) fn is_number_range(text: &str) -> bool {
     operators(text)
         .and_then(|operators| operators.values(text))
@@ -159,7 +155,6 @@ fn operators(text: &str) -> Option<Operators> {
 }
 
 impl Operators {
-    /// Where the values of `text` are.
     /// Nu takes no first value when `text` starts with `..`.
     /// It takes no last value when `text` ends with the spelling of the last operator.
     /// `None` when it takes neither, or when the second value is empty.
@@ -182,7 +177,6 @@ impl Operators {
         })
     }
 
-    /// Whether `text` goes on past the last operator where nu takes no last value.
     fn leaves_tail(&self, text: &str) -> bool {
         let end = self.at + self.len;
         end < text.len() && text.ends_with(&text[self.at..end])
@@ -205,7 +199,6 @@ impl Values {
     }
 }
 
-/// Whether nu reads the text `range` covers as a value of a range without an error of its own.
 /// Nu reads no range where a value reads with an error, so a word holding one stays whole.
 /// Nu reads a record and other values too, then reports that no range takes their type.
 /// Nuten does not check types, so those stay in the word.
@@ -238,7 +231,6 @@ fn reads_variable(piece: &Parser<'_>) -> bool {
     }
 }
 
-/// Whether nu reads a path after the value ahead, rejecting none of it.
 fn path_rejects_nothing(piece: &Parser<'_>) -> bool {
     cell_path_ahead(piece, Shape::Any).is_some_and(|ahead| ahead.rejects_nothing())
 }
@@ -252,7 +244,6 @@ fn absolute(start: TextSize, range: Range<usize>) -> TextRange {
 mod tests {
     use super::operators;
 
-    /// The operators, as `(next, at, len)`, that nu's `parse_range` finds.
     fn found(text: &str) -> Option<(Option<usize>, usize, usize)> {
         operators(text).map(|operators| (operators.next, operators.at, operators.len))
     }

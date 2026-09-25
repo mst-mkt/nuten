@@ -10,7 +10,6 @@ use crate::{
 };
 
 /// The `{ }` ahead that is no record, as a `Block`.
-/// As a word when nu reads no block or closure in it.
 /// `bracketed` is what it holds in block mode.
 pub(super) fn block<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>) {
     if may_be_block(bracketed.inner()) {
@@ -28,8 +27,6 @@ fn may_be_block(inner: &Parser<'_>) -> bool {
     params_start(inner) != Some(SyntaxKind::Pipe) || params_close(inner)
 }
 
-/// Whether the `|` that starts parameters has another `|` after it.
-/// No `;` or shell operator may come between them.
 fn params_close(inner: &Parser<'_>) -> bool {
     inner
         .remaining_tokens()
@@ -54,7 +51,6 @@ pub(super) fn params_start(p: &Parser<'_>) -> Option<SyntaxKind> {
     }
 }
 
-/// Parameters, if any, closing at the next `|`, then statements.
 /// Nu lexes the parameters again and reads them as those of a `def`.
 fn block_items(p: &mut Parser<'_>) {
     match params_start(p) {

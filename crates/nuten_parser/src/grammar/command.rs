@@ -15,8 +15,6 @@ use super::{
 };
 use crate::{ParseErrorKind, lexer::Mode, parser::Parser};
 
-/// A `Call`, an `ExternalCall`, or a keyword syntax such as an `If`, then its arguments.
-/// A value or a `not` where the head would be is an expression: a `MathExpression`, or the value.
 /// Returns the streams it redirects; `None` when there is no command.
 pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     let head = Head::of(p);
@@ -32,7 +30,6 @@ pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     arguments(p, head.redirected(), head.shape(), assigning)
 }
 
-/// What stands where the head of a call would.
 #[derive(Clone, Copy)]
 enum Head {
     /// A file redirection or an assignment operator, which leaves the element with no command.
@@ -52,7 +49,6 @@ impl Head {
         }
     }
 
-    /// The shape of what follows the head, which is an argument only after the head of a call.
     fn shape(self) -> Shape {
         match self {
             Head::Call(shape) => shape,
@@ -99,7 +95,6 @@ pub(super) fn condition(p: &mut Parser<'_>, len: usize) {
     }
 }
 
-/// Whether `expression` reads the items as a `MathExpression`, where nu takes an operator.
 /// Nu reads the first item as a value and takes an operator after it.
 /// A `not` is an operator itself, and takes a term even as the only item.
 fn takes_operator(items: &[&str]) -> bool {
@@ -116,7 +111,6 @@ fn math_expression(p: &mut Parser<'_>) {
     p.finish();
 }
 
-/// The operator ahead and the term it joins to what came before.
 /// An item where nu takes an operator stays as it is written, since nu reads no value there.
 fn joined_term(p: &mut Parser<'_>) {
     // An `Error` token carries the error of its own text, so none is reported over it.
@@ -140,7 +134,6 @@ fn joined_term(p: &mut Parser<'_>) {
     }
 }
 
-/// The `not`s nu reads as prefix operators, then the value they take.
 fn term(p: &mut Parser<'_>) {
     while p.peek_text() == Some("not") {
         if !operator(p) {
@@ -150,7 +143,6 @@ fn term(p: &mut Parser<'_>) {
     item(p, Shape::Any);
 }
 
-/// The operator ahead, or the error where the element holds no term for it.
 /// Returns whether the term it takes is the next item to read.
 fn operator(p: &mut Parser<'_>) -> bool {
     if !takes_term(p) {
@@ -161,7 +153,6 @@ fn operator(p: &mut Parser<'_>) -> bool {
     at_call_item(p)
 }
 
-/// Whether the element holds a term for the operator ahead.
 /// Nu lifts a redirection and the item it takes out of the element, so a term may stand past them.
 /// It stays where it is written, as any item after a redirection does.
 fn takes_term(p: &Parser<'_>) -> bool {
@@ -181,7 +172,6 @@ fn takes_term(p: &Parser<'_>) -> bool {
     false
 }
 
-/// Whether nu's `parse_operator` reads `text` as an operator.
 fn is_operator(text: &str) -> bool {
     operator_precedence(text).is_some()
 }
@@ -240,7 +230,6 @@ fn unknown_operator(text: &str) -> Option<ParseErrorKind> {
     })
 }
 
-/// Whether nu reads `text` as the start of an expression, not as the head of a call.
 /// Ported from nu's `is_math_expression_like`.
 ///
 /// True only where nu reads an expression too: a call read as one loses the shape of its items.
@@ -313,7 +302,6 @@ fn command_shape(name: &str) -> Shape {
     }
 }
 
-/// The head, then the arguments as `shape`.
 /// Where the call runs a command nuten knows the signature of, a `[ ]` is what its parameter takes.
 pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
     let params = call_parameters(p, shape);
@@ -356,7 +344,6 @@ fn call_parameters(p: &Parser<'_>, shape: Shape) -> Vec<Option<Param>> {
     }
 }
 
-/// The argument ahead, with a `[ ]` or an empty `{ }` read as `param` takes it.
 fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
     if let Some(param) = param
         && param.takes != Takes::Word
@@ -374,7 +361,6 @@ fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
     }
 }
 
-/// Starts the `Call`, or the `ExternalCall` where `shape` is external, with the head in it.
 /// Nu reads the head as the name of a command, never as a value.
 pub(super) fn start_call(p: &mut Parser<'_>, shape: Shape) {
     p.start(if shape == Shape::ExternalArgument {
@@ -388,8 +374,6 @@ pub(super) fn start_call(p: &mut Parser<'_>, shape: Shape) {
     }
 }
 
-/// Items as `shape` and `Redirection`s up to the end of the element.
-/// Up to an assignment operator instead when `assigning`.
 /// `redirected` is what the element redirects so far; `None` when it has no command.
 /// Returns what it redirects then.
 pub(super) fn arguments(
@@ -418,9 +402,7 @@ pub(super) fn arguments(
 
 /// `redirected` is what the element redirects so far.
 /// `None` when it has no command for the redirection to apply to.
-///
 /// Nu wants an item right after the operator.
-/// Anything else is a missing target and stays outside the node.
 fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Streams>) {
     p.start(SyntaxKind::Redirection);
     let has_target = p.nth(1).is_some_and(SyntaxKind::is_item)
@@ -447,7 +429,6 @@ fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Str
     p.finish();
 }
 
-/// Stdout and stderr, as what an operator redirects or an element has redirected.
 #[derive(Debug, Clone, Copy, Default)]
 pub(super) struct Streams {
     out: bool,

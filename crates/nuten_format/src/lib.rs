@@ -49,7 +49,6 @@ pub struct FormatError {
 }
 
 /// Formats a whole file.
-/// The output ends with one line break, or is empty when the file is blank.
 pub fn format(src: &str, config: &Config) -> Result<String, FormatError> {
     format_parsed(src, &nuten_parser::parse(src), config)
 }

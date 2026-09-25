@@ -13,17 +13,14 @@ use super::{
 };
 use crate::{ParseErrorKind, lexer::Token, parser::Parser};
 
-/// Whether an item that starts with `@` stands ahead.
 pub(super) fn attribute_ahead(p: &Parser<'_>) -> bool {
     p.peek().zip(p.peek_text()).is_some_and(heads_attribute)
 }
 
-/// Whether the token of `kind` and `text` may head an attribute.
 fn heads_attribute((kind, text): (SyntaxKind, &str)) -> bool {
     kind.is_item() && text.starts_with('@')
 }
 
-/// The element that the attribute ahead heads.
 /// `heads_pipeline` is whether no `|` comes before it.
 /// `assigned` tells where the statement ends, as for the pipeline.
 /// Nu reads the attributes as such only where they head a statement of one element.
@@ -72,14 +69,12 @@ fn attributes(p: &mut Parser<'_>, assigned: Assigned, error: Option<ParseErrorKi
     }
 }
 
-/// Whether another attribute of the element follows the one ahead.
 fn attribute_follows(p: &Parser<'_>, assigned: Assigned) -> bool {
     let mut tokens = lite_tokens(p).skip_while(|&(kind, _)| !ends_statement(kind));
     tokens.next().is_some_and(|(end, _)| !assigned.ends_at(end))
         && tokens.next().is_some_and(heads_attribute)
 }
 
-/// The `AttributeBlock` ahead, where a `def` or an `extern` follows the attributes.
 fn attribute_block(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
     p.start(SyntaxKind::AttributeBlock);
     attributes(p, assigned, None);
@@ -95,7 +90,6 @@ fn attribute_block(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
     }
 }
 
-/// The `Attribute` ahead, its head reporting `error` if given.
 /// Nu looks up `@name` as the command `attr name`.
 fn attribute(p: &mut Parser<'_>, error: Option<ParseErrorKind>) {
     let name = p.peek_text().map_or("", |head| &head[1..]);
@@ -113,7 +107,6 @@ fn attribute(p: &mut Parser<'_>, error: Option<ParseErrorKind>) {
     p.finish();
 }
 
-/// The items after the head of an attribute, as `shape`.
 /// Nu's lite parser takes every token up to the end of the line as an argument, a `|` too.
 /// Unlike after a `|` in a pipeline, a line break right after one ends the attribute.
 /// Nu reports a `|` last in the file even so.
@@ -164,7 +157,6 @@ fn attributed_call(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
 /// What follows the `;` or line break that ends an attribute, as nu's lite parser reads it.
 #[derive(PartialEq, Eq)]
 enum After {
-    /// Another attribute.
     Attribute,
     /// The items of the command.
     Command,
@@ -172,11 +164,9 @@ enum After {
     Pipe,
     /// A file redirection, which nu applies to the attributes as a command.
     Redirection,
-    /// Nothing more of the element.
     Nothing,
 }
 
-/// What follows the `;` or line break ahead, which ends an attribute.
 /// A pipe after a line break is left to the pipeline, since the line break cannot end the call.
 fn after_attribute(p: &Parser<'_>, assigned: Assigned) -> After {
     let mut tokens = lite_tokens(p);
@@ -212,7 +202,6 @@ fn lite_tokens<'a>(p: &Parser<'a>) -> impl Iterator<Item = (SyntaxKind, &'a str)
     })
 }
 
-/// Whether the first line of `lines`, past any comment lines, starts with `|`.
 fn lines_start_with_pipe<'a>(lines: impl Iterator<Item = (Token, &'a str)>) -> bool {
     let mut kinds = lines
         .map(|(token, _)| token.kind)
@@ -229,7 +218,6 @@ struct PastAttributes {
     piped: bool,
 }
 
-/// What follows the attributes that `tokens` start with.
 /// The attributes run to a `;` or a line break, and more of them may follow.
 /// Past them, an assignment operator takes the rest of the statement, a `|` too.
 fn past_attributes<'a>(

@@ -28,14 +28,12 @@ impl TempDir {
         self.0.join(name)
     }
 
-    /// Creates the directory `name`, with its parents.
     fn dir(&self, name: &str) -> PathBuf {
         let path = self.path(name);
         fs::create_dir_all(&path).unwrap();
         path
     }
 
-    /// Writes the file `name`, creating the directories it is in.
     fn file(&self, name: &str) -> PathBuf {
         let path = self.path(name);
         fs::create_dir_all(path.parent().unwrap()).unwrap();

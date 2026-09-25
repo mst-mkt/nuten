@@ -8,7 +8,6 @@ use std::{
     thread,
 };
 
-/// `f` of each of `items`, in their order, run on as many threads as the machine runs at once.
 pub(crate) fn map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
     let threads = thread::available_parallelism()
         .map_or(1, NonZeroUsize::get)

@@ -26,7 +26,6 @@ impl Lookup {
         matches!(self, Lookup::Wrong(_))
     }
 
-    /// The config, or else a line for each problem.
     pub(crate) fn into_config(self) -> Result<Config, Vec<String>> {
         match self {
             Lookup::Found(config) => Ok(config),
@@ -34,7 +33,6 @@ impl Lookup {
         }
     }
 
-    /// A line for each problem.
     pub(crate) fn problems(&self) -> Vec<String> {
         match self {
             Lookup::Found(_) => Vec::new(),
@@ -58,7 +56,6 @@ pub(crate) fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     })
 }
 
-/// The config of `file`, as `of_files` gives it, or else a line for each problem.
 pub(crate) fn of_file(file: &Path, given: Option<&Config>) -> Result<Config, Vec<String>> {
     of_files(&[file], given)
         .into_iter()
@@ -67,7 +64,6 @@ pub(crate) fn of_file(file: &Path, given: Option<&Config>) -> Result<Config, Vec
         .into_config()
 }
 
-/// The config of `dir`, as `of_dirs` gives it, or else a line for each problem.
 pub(crate) fn of_dir(dir: &Path, given: Option<&Config>) -> Result<Config, Vec<String>> {
     of_dirs(&[dir], given)
         .into_iter()
@@ -76,7 +72,6 @@ pub(crate) fn of_dir(dir: &Path, given: Option<&Config>) -> Result<Config, Vec<S
         .into_config()
 }
 
-/// `given` `count` times, or else the config nearest each of `starts`.
 /// `starts` is lazy, since resolving it when `given` would report a path that cannot be resolved.
 /// Formatting reports that path again.
 fn given_or_nearest(
@@ -134,7 +129,6 @@ fn canonical(path: &Path) -> Result<PathBuf, String> {
     fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))
 }
 
-/// The settings in the config file `path`, in the format its extension names.
 /// The error holds a line for each problem.
 pub(crate) fn load(path: &Path) -> Result<Config, Vec<String>> {
     let Some(format) = Format::of_path(path) else {

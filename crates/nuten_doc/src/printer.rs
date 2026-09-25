@@ -34,7 +34,6 @@ impl LineEnding {
         }
     }
 
-    /// What the printer trims from the end of a line before a break of its own.
     /// With `\n` line endings, a `\r` left there would be read again as part of the break.
     const fn trimmed_before_break(self) -> &'static [char] {
         match self {
@@ -44,7 +43,6 @@ impl LineEnding {
     }
 
     /// `line` without what belongs to the `\n` that follows it in a text.
-    /// The `\r` of a `\r\n` does.
     /// With `\n` line endings, so do all the `\r`s before it.
     /// They would be read again as part of the break.
     fn without_break(self, line: &str) -> &str {
@@ -55,11 +53,6 @@ impl LineEnding {
     }
 }
 
-/// Spaces and tabs before a line break of the printer's go, even those of a text.
-/// With `\n` line endings, so do `\r`s before any line break, a text's own included.
-/// The lines inside a text stay as they are otherwise.
-/// Their line breaks come out as the configured line ending.
-/// The output never starts with a line break.
 pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
     let mut printer = Printer {
         options,
@@ -90,14 +83,12 @@ struct Printer<'a> {
     /// Held back for the next line break, in order.
     line_suffixes: Vec<Suffix<'a>>,
     out: String,
-    /// How the groups with an id printed.
     group_modes: HashMap<GroupId, Mode>,
     pending_indent: Option<Indentation>,
     /// Columns taken on the current line, a pending indent included.
     column: u32,
 }
 
-/// The indent of a line.
 #[derive(Debug, Clone, Copy, Default)]
 struct Indentation {
     tabs: u32,
@@ -245,8 +236,6 @@ impl<'a> Printer<'a> {
     /// A hard line break, `ExpandParent`, or multi-line text never fits, even in a `LineSuffix`.
     /// So every group around one breaks.
     /// This replaces a separate pass that marks such groups.
-    /// The width of a `LineSuffix` does not count.
-    /// A `LineSuffixBoundary` after one ends the line, so what follows it is not measured.
     fn fits(&self, elements: &[Element<'_>]) -> bool {
         let Some(mut remaining) = self.options.line_width.checked_sub(self.column) else {
             return false;
@@ -329,7 +318,6 @@ impl<'a> Printer<'a> {
     }
 
     /// Puts the held-back suffixes on the stack, in order, before `then`.
-    /// A `LineSuffix` among them is held back again.
     fn flush_line_suffixes(&mut self, then: Option<Frame<'a>>) {
         if let Some(then) = then {
             self.stack.push(then);
@@ -364,7 +352,6 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// `indent` with `columns` more; none at all for zero columns.
     fn aligned(&self, indent: Indentation, columns: u32) -> Indentation {
         if columns == 0 {
             return indent;
@@ -412,11 +399,6 @@ impl<'a> Printer<'a> {
         })
     }
 
-    /// Ends the line, dropping the spaces and tabs before the break.
-    /// With `\n` line endings, it drops the `\r`s there too.
-    /// Prints `breaks` line breaks, less those the output ends with already.
-    /// A text's own line breaks count among those.
-    /// Prints nothing at the start of the output, which counts as an empty line.
     fn push_line_breaks(&mut self, indent: Indentation, breaks: u32) {
         let trimmed = self
             .out

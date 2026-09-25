@@ -81,7 +81,6 @@ pub struct Violation {
 }
 
 impl Violation {
-    /// The same, with the lexer mode it was found in at the end of the detail.
     fn in_mode(self, mode: Mode) -> Violation {
         Violation {
             invariant: self.invariant,
@@ -121,8 +120,6 @@ pub(crate) const OPERATORS: &[(SyntaxKind, &[&str])] = &[
 
 /// Every violation of the lexer for all of `src` in every mode.
 /// Mode by mode, and in the order of the invariants within one.
-/// Each detail ends with its mode.
-/// Tokens that do not cover the source are reported on their own.
 pub fn lexer_violations(src: &str) -> Vec<Violation> {
     Mode::ALL
         .iter()

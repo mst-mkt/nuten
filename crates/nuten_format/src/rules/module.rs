@@ -15,7 +15,6 @@ impl<'a> Formatter<'a> {
         self.with_body_over_lines(export_env.syntax(), export_env.body().as_ref())
     }
 
-    /// The children of `node`, with `body` broken over lines.
     fn with_body_over_lines(
         &mut self,
         node: &SyntaxNode,

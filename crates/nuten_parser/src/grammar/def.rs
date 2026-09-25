@@ -11,7 +11,6 @@ use crate::{
     parser::{Affix, Bracketed, Brackets, Parser},
 };
 
-/// The `Def` ahead, when nu reads the call as one.
 pub(super) fn def(p: &mut Parser<'_>) -> bool {
     let Some(shape) = def_shape(&call_items(p)) else {
         return false;
@@ -42,7 +41,6 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// The input and output types ahead: `count` items, with their `:` first unless it is attached.
 /// They are an `Error` where nu fails to lex them, and an `IoTypes` where nu pairs them all up.
 fn io_types(p: &mut Parser<'_>, count: usize, attached_colon: bool) {
     if count == 0 {
@@ -63,7 +61,6 @@ fn io_types(p: &mut Parser<'_>, count: usize, attached_colon: bool) {
     let Some((range, lexed)) = io_types_ranges(&items) else {
         return;
     };
-    // Items with an error of their own keep it.
     let own_error = items
         .iter()
         .any(|(token, _)| token.kind == SyntaxKind::Error);
@@ -86,7 +83,6 @@ fn io_types(p: &mut Parser<'_>, count: usize, attached_colon: bool) {
     }
 }
 
-/// Where `items` are, and where the part of them that nu lexes is.
 /// Nu leaves out a `[` first and a `]` last, each on its own, before it lexes them.
 fn io_types_ranges(items: &[(Token, &str)]) -> Option<(TextRange, TextRange)> {
     let (&(first, first_text), &(last, last_text)) = (items.first()?, items.last()?);
@@ -98,20 +94,17 @@ fn io_types_ranges(items: &[(Token, &str)]) -> Option<(TextRange, TextRange)> {
     Some((range, lexed))
 }
 
-/// What the `[ ]` ahead hold, when nu pairs up all the types in them.
 fn bracketed_io_types<'a>(p: &Parser<'a>) -> Option<Bracketed<'a>> {
     let bracketed = p.bracketed(&SQUARE, Mode::IoTypes)?;
     pairs_up(bracketed.inner()).then_some(bracketed)
 }
 
-/// Whether nu pairs up the types in `range`, which no `[ ]` enclose, into at least one pair.
 /// A `,` alone would print as nothing, and leave the `:` with no types after it.
 fn bare_types_pair_up(p: &Parser<'_>, range: TextRange) -> bool {
     let lexed = p.lexed_range(range, Mode::IoTypes);
     lexed.remaining_kinds().any(SyntaxKind::is_item) && pairs_up(&lexed)
 }
 
-/// Whether nu pairs up the types ahead, each input with `->` and an output.
 /// Nu lexes a `,` as whitespace there.
 /// One inside a pair keeps the types as they are, so that a pair holds its three items alone.
 fn pairs_up(p: &Parser<'_>) -> bool {
@@ -127,7 +120,6 @@ fn pairs_up(p: &Parser<'_>) -> bool {
     part == Some(0)
 }
 
-/// The pairs of input and output types, with the `,` among them.
 fn io_type_pairs(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
         if kind == SyntaxKind::Comma {
@@ -143,8 +135,6 @@ fn io_type_pairs(p: &mut Parser<'_>) {
 }
 
 /// Where the parts of a `def` or an `extern` are among `items`, when nu reads them as one.
-/// The keyword, with `export` before it if there, then flags, the name, and the `[ ]` or `( )`.
-/// Then the input and output types after a `:`, and last the body.
 /// Only a `def` has a body, and nu takes it from the last item.
 struct DefShape {
     /// Where the parameters are, the items before them being the keyword, any flags, and the name.
@@ -200,7 +190,6 @@ fn def_shape(items: &[&str]) -> Option<DefShape> {
     })
 }
 
-/// The brackets `item` is enclosed in, when nu takes it for the parameters.
 /// Nu takes `[ ]` and `( )` alike, each opener only with its own closer.
 fn signature_brackets(item: &str) -> Option<&'static Brackets> {
     [&SQUARE, &PAREN]

@@ -1,7 +1,4 @@
 //! Finds a config file, reads the settings from it, and writes the JSON Schema of one.
-//!
-//! A file is read into a `Value` first, whatever its format.
-//! The settings are then taken from that.
 
 mod find;
 mod json;
@@ -64,7 +61,6 @@ impl Format {
         }
     }
 
-    /// The format the extension of `path` names.
     pub fn of_path(path: &Path) -> Option<Format> {
         let extension = path.extension()?;
         Format::ALL
@@ -83,7 +79,6 @@ pub struct ConfigError {
 pub enum ConfigErrorKind {
     /// Text the JSON parser rejects, with what it says.
     Json(String),
-    /// NUON with a syntax error.
     Nuon(ParseErrorKind),
     /// A NUON value of a form nuten does not read, though nu may.
     Unreadable,
@@ -153,8 +148,6 @@ impl fmt::Display for ConfigErrorKind {
     }
 }
 
-/// Reads the settings `text` holds.
-/// A setting it does not hold keeps its default.
 /// The errors come in the order they appear in `text`, and there is at least one.
 /// When `text` cannot be read, only the errors of reading it come, as `read` gives them.
 pub fn load(text: &str, format: Format) -> Result<Config, Vec<ConfigError>> {
@@ -163,7 +156,6 @@ pub fn load(text: &str, format: Format) -> Result<Config, Vec<ConfigError>> {
 
 /// Reads `text` into a value, whatever settings it holds.
 /// The errors come in the order they appear in `text`, and there is at least one.
-/// Errors inside a list or a record hide the duplicate keys of the records around them.
 pub fn read(text: &str, format: Format) -> Result<Value, Vec<ConfigError>> {
     match format {
         Format::Json => json::read(text, json::Dialect::Json),

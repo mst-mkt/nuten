@@ -73,7 +73,6 @@ fn control_shape(items: &[&str]) -> Option<ControlShape> {
     })
 }
 
-/// Where the `in` of a `for` is among `items`.
 /// Nu ends the variable at the first `in` from the variable on.
 /// Only a name ending in `:` takes the items of its type before the `in`.
 /// At least one item of the value comes between the `in` and the body.

@@ -30,7 +30,6 @@ pub(super) enum Takes {
     Word,
 }
 
-/// What one parameter takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Param {
     pub(super) takes: Takes,
@@ -56,7 +55,6 @@ const WORD: Param = param(Takes::Word, false, false);
 const NUMBER: Param = param(Takes::Word, true, false);
 const CLOSURE: Param = param(Takes::Word, false, true);
 
-/// A flag, with what it takes after it if anything.
 #[derive(Debug)]
 struct Flag<'s> {
     /// Empty for a flag with a short name alone.
@@ -104,7 +102,6 @@ impl Signature<'_> {
     }
 }
 
-/// A command by the words of its name.
 #[derive(Debug)]
 struct Command {
     name: &'static [&'static str],
@@ -124,7 +121,6 @@ const fn command(name: &'static [&'static str], signature: Option<Signature<'sta
 /// Every item after the name is a `WORD` when the command has no signature here.
 /// So is every item after the head when the command is none here, since its name is unknown.
 /// A `WORD` reads a word of the name or a flag as it is, since neither is a `[ ]` nor a `{ }`.
-/// Every item is `None` for a keyword nu reads a syntax of.
 /// Nu runs the command of the longest name the items spell.
 pub(super) fn parameters(items: &[&str]) -> Vec<Option<Param>> {
     if spells_keyword(items) {
@@ -143,14 +139,12 @@ pub(super) fn parameters(items: &[&str]) -> Vec<Option<Param>> {
         .collect()
 }
 
-/// Whether `items` start with a keyword nu reads a syntax of.
 fn spells_keyword(items: &[&str]) -> bool {
     items
         .split_first()
         .is_some_and(|(head, rest)| starts_with_parser_keyword(head, rest.first().copied()))
 }
 
-/// The command of the longest name `items` start with.
 fn longest_spelled(items: &[&str]) -> Option<&'static Command> {
     (1..=items.len()).rev().find_map(|len| {
         COMMANDS
@@ -160,7 +154,6 @@ fn longest_spelled(items: &[&str]) -> Option<&'static Command> {
     })
 }
 
-/// What nu takes each of `items` as, the arguments of a call of `signature`.
 /// Ported from the loop of nu's `parse_internal_call` that goes through the arguments.
 fn arguments(signature: &Signature<'_>, items: &[&str]) -> Vec<Option<Param>> {
     let mut taken = vec![None; items.len()];

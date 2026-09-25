@@ -8,9 +8,6 @@ use super::{
 use crate::{lexer::Mode, parser::Parser};
 
 /// The `Match` ahead, when nu reads the call as one.
-/// `match`, then the subject, which nu reads as any value, then the arms.
-/// The arms are a `MatchArms` where nu reads arms.
-/// Otherwise the word stays as it is, which nu rejects.
 pub(super) fn match_(p: &mut Parser<'_>) -> bool {
     let Some(len) = match_shape(&call_items(p)) else {
         return false;
@@ -32,7 +29,6 @@ pub(super) fn match_(p: &mut Parser<'_>) -> bool {
 }
 
 /// How many items a `match` takes when nu reads `items`, `match` first, as one.
-/// The subject, and the arms in braces last.
 fn match_shape(items: &[&str]) -> Option<usize> {
     let last = items.len().checked_sub(1)?;
     (last >= 2 && items[last].starts_with('{')).then_some(items.len())
@@ -85,7 +81,6 @@ fn is_arms(inner: &Parser<'_>) -> bool {
     }
 }
 
-/// The arms, with the `,` between them.
 fn arms(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
         if kind == SyntaxKind::Comma {
@@ -107,7 +102,6 @@ enum ArmHead {
 }
 
 /// One arm: the patterns and the guard, then `=>` and the one item nu takes as what the arm does.
-/// Tokens before `=>` that nu rejects stay as they are.
 fn arm(p: &mut Parser<'_>) {
     p.start(SyntaxKind::MatchArm);
     match arm_head(&arm_tokens(p)) {
@@ -127,7 +121,6 @@ fn arm(p: &mut Parser<'_>) {
     p.finish();
 }
 
-/// The patterns, with a `|` between two of them.
 fn patterns(p: &mut Parser<'_>) {
     pattern(p);
     while p.peek() == Some(SyntaxKind::Pipe) {
@@ -151,7 +144,6 @@ fn guard(p: &mut Parser<'_>) {
     p.bump_bounded(arrow, expression);
 }
 
-/// The kinds and texts of the tokens ahead up to `=>`, the skipped ones aside.
 fn arm_tokens<'a>(p: &Parser<'a>) -> Vec<(SyntaxKind, &'a str)> {
     p.remaining_tokens()
         .filter(|(token, _)| !p.is_skipped(token.kind))

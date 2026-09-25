@@ -38,7 +38,6 @@ pub enum Invariant {
 }
 
 impl Invariant {
-    /// The name in reports.
     pub fn name(self) -> &'static str {
         match self {
             Invariant::Tokens => "token preservation",
@@ -56,7 +55,6 @@ impl Invariant {
     }
 }
 
-/// What asking the invariants of one source finds.
 /// The syntax errors are kept apart from the violations, since a source can have both.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checked {
@@ -67,7 +65,6 @@ pub struct Checked {
     pub syntax_errors: Vec<ParseError>,
 }
 
-/// What asking the invariants of `src` finds, with the violations in their order.
 pub fn check(src: &str, config: &Config) -> Checked {
     let parsed = parse(src);
     Checked {
@@ -76,7 +73,6 @@ pub fn check(src: &str, config: &Config) -> Checked {
     }
 }
 
-/// What `check` puts in `Checked::violations`.
 /// `parsed` is the tree of `src`.
 fn violations(src: &str, parsed: &Parsed, config: &Config) -> Vec<Violation> {
     // The rules read a tree that keeps the invariants of the parser.
@@ -93,7 +89,6 @@ fn violations(src: &str, parsed: &Parsed, config: &Config) -> Vec<Violation> {
     against_output(&parsed.syntax(), &output, config)
 }
 
-/// The invariants of the formatter, asked of the tree of the source against the output.
 fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Violation> {
     let parsed = parse(output);
     if let Some(error) = parsed.errors().first() {
@@ -174,7 +169,6 @@ fn comments(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
     Some(Invariant::Comments.violation(detail))
 }
 
-/// A comment and where it stands: on its own line or not, before a blank line or not.
 #[derive(Debug, PartialEq, Eq)]
 struct Comment {
     /// Without the spaces, tabs, and `\r`s at its end.
@@ -295,7 +289,6 @@ mod tests {
     use super::{Checked, Invariant, Violation, against_output, check};
     use crate::{Config, LineEnding, ParseErrorKind};
 
-    /// The violations of the formatter's invariants for `output` as the output of `src`.
     fn formatter_violations(src: &str, output: &str) -> Vec<Violation> {
         against_output(&parse(src).syntax(), output, &Config::default())
     }
@@ -307,7 +300,6 @@ mod tests {
             .collect()
     }
 
-    /// Neither a violation nor a syntax error.
     /// The syntax errors count too.
     /// A source that has them leaves the violations of the formatter unasked, and so empty.
     fn nothing() -> Checked {

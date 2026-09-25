@@ -23,13 +23,10 @@ enum Expect {
 
 /// What `params` does with the token ahead.
 enum Action {
-    /// Emits it as it is.
     Bump,
     /// Emits it as an `Error`: a `:`, `=`, or `,` where nu takes none, or a `(-f)` after a `,`.
     Reject,
-    /// Emits it as the `ShortFlag` of the parameter being read.
     BumpAsShortFlag,
-    /// Reads it as the type a `:` promised.
     ReadType,
     /// Ends the parameter being read at it, a line break.
     EndParam,
@@ -37,7 +34,6 @@ enum Action {
     StartParam,
 }
 
-/// What encloses the parameters.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Enclosing {
     /// The `[ ]` or `( )` of a `def` or an `extern`, which nu leaves out when it lexes them.
@@ -47,9 +43,6 @@ pub(super) enum Enclosing {
 }
 
 /// The parameters of a signature as nu splits them: a `Param` at each item where nu takes one.
-/// A `Param` holds the `(-f)` as a `ShortFlag`, the `:` and the type, and the `=` and the default.
-/// It holds each of those that nu gives it.
-/// A `:`, an `=`, or a `,` where nu takes none is an `Error`, as is one with nothing after it.
 pub(super) fn params(p: &mut Parser<'_>, enclosing: Enclosing) {
     let mut expect = Expect::Param;
     let mut in_param = false;
@@ -81,8 +74,6 @@ pub(super) fn params(p: &mut Parser<'_>, enclosing: Enclosing) {
 }
 
 /// What `params` does with the token ahead, and what it takes after that.
-/// It decides from what it takes now and whether it is inside a `Param`.
-/// `None` at the end.
 fn step(
     p: &Parser<'_>,
     expect: Expect,
@@ -114,7 +105,6 @@ fn step(
         (SyntaxKind::Word, _) if in_param && is_short_flag(text) => {
             (Action::BumpAsShortFlag, expect)
         },
-        // An item that is no `(-f)` starts a parameter of its own.
         // Nu ignores `|`, `;`, and redirections, which stay where they are.
         _ if kind.is_item() && !starts_short_flag(text) => (Action::StartParam, Expect::Param),
         _ => (Action::Bump, expect),
@@ -123,8 +113,6 @@ fn step(
 
 /// Whether the parameter being read goes on past the line breaks ahead.
 /// It goes on when nu gives it the type or the default value it promised.
-/// It goes on too when a `(-f)`, a type, or a default value comes next.
-/// The `,` that ends it keeps it going as well.
 fn goes_on(p: &Parser<'_>, expect: Expect) -> bool {
     let next = p
         .remaining_tokens()
@@ -158,15 +146,12 @@ pub(super) fn type_(p: &mut Parser<'_>) {
     p.bump_bracketed(SyntaxKind::Type, bracketed, items);
 }
 
-/// Whether `type_` reads the type ahead as a `Type`.
 pub(super) fn is_type(p: &Parser<'_>) -> bool {
     type_ahead(p).is_some()
 }
 
 /// What the `< >` of the `Type` ahead hold, and whether they hold fields.
-/// The name must be one of the four that take parameters.
-/// The `< >` must hold nothing but items, `:`, `,`, and whitespace.
-/// That leaves out a comment: printing the type on one line would put the `>` inside it.
+/// No comment inside: printing the type on one line would put the `>` inside it.
 fn type_ahead<'a>(p: &Parser<'a>) -> Option<(Bracketed<'a>, bool)> {
     let (name, named) = generic_type(p.peek_text())?;
     let bracketed = p.bracketed_affixed(&ANGLE, Mode::TypeParams, Affix::Name(name))?;
@@ -185,7 +170,6 @@ fn type_ahead<'a>(p: &Parser<'a>) -> Option<(Bracketed<'a>, bool)> {
 
 /// The name of the type ahead, and whether its parameters are fields.
 /// `None` unless nu reads the type as one with parameters.
-/// The name is one of `list`, `oneof`, `record`, and `table`, with `< >` around the rest.
 /// A `@` anywhere moves where nu ends the name, which takes a completer after it.
 /// So the `< >` here need not be the one nu reads.
 fn generic_type(text: Option<&str>) -> Option<(usize, bool)> {
@@ -241,7 +225,6 @@ fn type_fields(p: &mut Parser<'_>) {
 }
 
 /// Whether the key just read has a `:` after it, past line breaks.
-/// Such a `:` gives the key the type that follows.
 fn colon_ahead(p: &Parser<'_>) -> bool {
     p.remaining_kinds().find(|kind| !kind.is_trivia()) == Some(SyntaxKind::Colon)
 }

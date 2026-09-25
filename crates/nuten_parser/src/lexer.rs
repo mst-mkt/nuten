@@ -37,14 +37,11 @@ impl LexError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexErrorKind {
     /// A quote or bracket that never closes.
-    /// The range covers the innermost opener, such as `[`, `$"`, or `r#'`.
-    /// In interpolation it covers the outermost unclosed `(` instead.
     Unclosed,
     /// A `]`, `}`, or `)` that does not match the innermost opener.
     /// A `]` with nothing open is the exception.
     UnmatchedCloser,
     /// `r#` not followed by `'`.
-    /// The range covers `r` and the `#`s.
     MissingRawQuote,
 }
 
@@ -172,7 +169,6 @@ impl Mode {
             || self.special_kind(byte).is_some()
     }
 
-    /// Whether the parser skips a line break instead of reading it.
     pub(crate) fn skips_newline(self) -> bool {
         matches!(self, Mode::Paren | Mode::MatchArms | Mode::IoTypes)
     }
@@ -281,7 +277,6 @@ impl<'a> Lexer<'a> {
     }
 
     /// Runs to a terminator outside brackets and strings.
-    /// A redirection also takes the `|` right after it.
     /// On error, the item ends where nu finds it.
     fn item(&mut self) -> Result<SyntaxKind, LexError> {
         if let Some(kind) = self.peek().and_then(|byte| self.mode.special_kind(byte)) {
@@ -367,8 +362,6 @@ impl<'a> Lexer<'a> {
 
     /// Consumes a string after its opening quote.
     /// The opener starts at `start`, on the `$` if interpolated.
-    /// In an interpolated string, `(` opens a subexpression.
-    /// Quotes and parens nest inside it.
     fn string(&mut self, start: usize, quote: u8, interpolated: bool) -> Result<(), LexError> {
         let opener = start..self.pos;
         let mut closers = vec![quote];

@@ -18,7 +18,6 @@ const VCS_DIRS: [&str; 5] = [".git", ".hg", ".svn", ".bzr", ".jj"];
 /// A file to format, or a line for a problem met while looking for files.
 pub(crate) type Entry = Result<PathBuf, String>;
 
-/// The directories among `paths`.
 pub(crate) fn dirs(paths: &[PathBuf]) -> Vec<&Path> {
     paths
         .iter()
@@ -27,7 +26,6 @@ pub(crate) fn dirs(paths: &[PathBuf]) -> Vec<&Path> {
         .collect()
 }
 
-/// The files `paths` name, in their order: a file as it is, and a directory as its `.nu` files.
 /// A directory comes instead as the problems met while walking it, or keeping it from being walked.
 /// `dir_lookups` holds the config of each of `dirs(paths)`, which says how to walk it.
 pub(crate) fn expand(paths: &[PathBuf], dir_lookups: &HashMap<&Path, Lookup>) -> Vec<Entry> {
@@ -60,8 +58,6 @@ fn global_ignore_problems() -> Vec<String> {
         .map_or_else(Vec::new, |error| problem_lines(&error))
 }
 
-/// The `.nu` files under `dir` in path order, and the problems.
-/// Leaves out the files that ignore files ignore when `respect_gitignore`.
 /// Walks no symlink, since a link could lead out of `dir` or back into it.
 /// Hidden files are walked, since config of Nushell lives in them.
 fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Result<PathBuf, String>> {
@@ -105,7 +101,6 @@ fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Result<PathBuf, String>> {
         .collect()
 }
 
-/// The walk results that `error` makes, one for each problem.
 fn failed(error: &ignore::Error) -> Vec<Result<PathBuf, String>> {
     problem_lines(error).into_iter().map(Err).collect()
 }
@@ -138,7 +133,6 @@ fn shown(path: &Path) -> PathBuf {
     }
 }
 
-/// A line for each problem in `error`.
 /// Not the walker's own message, which names the path of an IO error twice.
 fn problem_lines(error: &ignore::Error) -> Vec<String> {
     match error {

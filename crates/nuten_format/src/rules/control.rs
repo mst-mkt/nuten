@@ -32,7 +32,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// The blocks among `items` that are bodies.
 /// A body comes right before an `else` or a `catch`.
 /// The last item but a comment is a body, or what the last `else` takes.
 fn body_blocks(items: &[Child]) -> Vec<&Block> {
@@ -57,9 +56,6 @@ fn body_blocks(items: &[Child]) -> Vec<&Block> {
 }
 
 /// Whether `node`, an `If` or a `Try`, is a statement.
-/// It must be the only element of its pipeline, redirections aside.
-/// That pipeline must be a statement of Root, or of a block.
-/// A block counts only when it holds more than that pipeline, its braces, and its parameters.
 fn is_statement(node: &SyntaxNode) -> bool {
     let Some(pipeline) = node.parent().and_then(|element| element.parent()) else {
         return false;
