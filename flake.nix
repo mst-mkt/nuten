@@ -56,6 +56,12 @@
             // {
               doCheck = false;
               cargoExtraArgs = "--locked --package nuten";
+              meta = {
+                description = "Formatter for Nushell";
+                homepage = "https://github.com/mst-mkt/nuten";
+                license = lib.licenses.mit;
+                mainProgram = "nuten";
+              };
             }
           );
           clippy = craneLib.cargoClippy (
