@@ -15,13 +15,27 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nu_scripts = {
-      url = "github:nushell/nu_scripts";
-      flake = false;
-    };
     nixpkgs-nushell = {
       # nushell 0.115
       url = "github:NixOS/nixpkgs/aff8a0b28396750446e5537a96461bc4facdb287";
+    };
+
+    # Corpus for the invariant tests of the parser and formatter
+    corpus-nu_scripts = {
+      url = "github:nushell/nu_scripts";
+      flake = false;
+    };
+    corpus-nupm = {
+      url = "github:nushell/nupm";
+      flake = false;
+    };
+    corpus-tree-sitter-nu = {
+      url = "github:nushell/tree-sitter-nu";
+      flake = false;
+    };
+    corpus-kurokirasama-nushell_scripts = {
+      url = "github:kurokirasama/nushell_scripts";
+      flake = false;
     };
   };
 
@@ -164,8 +178,11 @@
             env = {
               NUTEN_CORPUS = pkgs.runCommand "nuten-corpus" { } ''
                 mkdir $out
-                cp -r ${inputs.nu_scripts} $out/nu_scripts
                 cp -r ${nushell.src}/crates/nu-std $out/nu-std
+                cp -r ${inputs.corpus-nu_scripts} $out/nu_scripts
+                cp -r ${inputs.corpus-nupm} $out/nupm
+                cp -r ${inputs.corpus-tree-sitter-nu}/test/corpus $out/tree-sitter-nu
+                cp -r ${inputs.corpus-kurokirasama-nushell_scripts} $out/kurokirasama-nushell_scripts
               '';
             };
             inherit (preCommit.${system}) shellHook;

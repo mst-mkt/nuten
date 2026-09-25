@@ -24,6 +24,10 @@ use crate::support::{caught, files_below};
 const SYNTAX_ERRORS: &[&str] = &[
     // The `{` on line 3 is not closed.
     "nu_scripts/custom-menus/current_session_history_menu.nu",
+    // The `+` on line 75 has no right operand.
+    "tree-sitter-nu/expr/binary-expr.nu",
+    // The `-1` on line 166 is a negative index in a cell path.
+    "tree-sitter-nu/expr/cell_path.nu",
 ];
 
 #[test]

@@ -1,5 +1,69 @@
 {
   "nodes": {
+    "corpus-kurokirasama-nushell_scripts": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790293511,
+        "narHash": "sha256-z3EXcHXaQ7qjnUDBNSilNwmWVExT5zW+Zn2M7M6J4C8=",
+        "owner": "kurokirasama",
+        "repo": "nushell_scripts",
+        "rev": "86658c343864f535eb8d34d0938136d7034fc4af",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kurokirasama",
+        "repo": "nushell_scripts",
+        "type": "github"
+      }
+    },
+    "corpus-nu_scripts": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787656855,
+        "narHash": "sha256-vW8Lz9MQwIT7WKv2ZkVTiq+398p20RszGZhIZ3I2kq8=",
+        "owner": "nushell",
+        "repo": "nu_scripts",
+        "rev": "cee236cf46a597b43f36b56ccee5881fc0483c56",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nushell",
+        "repo": "nu_scripts",
+        "type": "github"
+      }
+    },
+    "corpus-nupm": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783899975,
+        "narHash": "sha256-Hz1xqUy/OasAjvzlbqIBPDJc4gA5LufKiU3CdY36I8k=",
+        "owner": "nushell",
+        "repo": "nupm",
+        "rev": "9a28419bf91aadc58999d83e0f6ef8d9dbfa7d9f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nushell",
+        "repo": "nupm",
+        "type": "github"
+      }
+    },
+    "corpus-tree-sitter-nu": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789385262,
+        "narHash": "sha256-kORiz85hud0dCGW+k/qEBew+4493a6Ij8qrT5+mFoGE=",
+        "owner": "nushell",
+        "repo": "tree-sitter-nu",
+        "rev": "4f577aaa735154f934594b598a69ed7b1b707cf6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nushell",
+        "repo": "tree-sitter-nu",
+        "type": "github"
+      }
+    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -90,29 +154,16 @@
         "type": "github"
       }
     },
-    "nu_scripts": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1787656855,
-        "narHash": "sha256-vW8Lz9MQwIT7WKv2ZkVTiq+398p20RszGZhIZ3I2kq8=",
-        "owner": "nushell",
-        "repo": "nu_scripts",
-        "rev": "cee236cf46a597b43f36b56ccee5881fc0483c56",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nushell",
-        "repo": "nu_scripts",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
+        "corpus-kurokirasama-nushell_scripts": "corpus-kurokirasama-nushell_scripts",
+        "corpus-nu_scripts": "corpus-nu_scripts",
+        "corpus-nupm": "corpus-nupm",
+        "corpus-tree-sitter-nu": "corpus-tree-sitter-nu",
         "fenix": "fenix",
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs",
         "nixpkgs-nushell": "nixpkgs-nushell",
-        "nu_scripts": "nu_scripts",
         "treefmt-nix": "treefmt-nix"
       }
     },
