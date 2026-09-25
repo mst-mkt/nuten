@@ -9,7 +9,7 @@ def main []: nothing -> nothing {
 
 # Cargo tells the path, which CARGO_TARGET_DIR may move.
 def build-nuten []: nothing -> path {
-    ^cargo build --package nuten --message-format json
+    ^cargo build --release --package nuten --message-format json
     | lines
     | each { from json }
     | where reason == compiler-artifact and executable? != null
