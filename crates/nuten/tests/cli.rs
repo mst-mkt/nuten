@@ -386,6 +386,17 @@ fn format_takes_defaults_when_config_file_is_only_in_subdirectory() {
 }
 
 #[test]
+fn format_takes_defaults_when_config_file_is_only_above_repository_root() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 2}");
+    dir.dir("a/.git");
+    let path = dir.file("a/b/a.nu", BLOCK);
+    let output = format(&[&path]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert_eq!(read(&path), "if true {\n    ls\n}\n");
+}
+
+#[test]
 fn format_looks_for_config_file_from_current_directory_for_bare_file_name() {
     let dir = TempDir::new();
     dir.file("nuten.nuon", "{indent_width: 2}");

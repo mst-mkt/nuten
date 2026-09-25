@@ -17,7 +17,7 @@ use nuten_syntax::TextRange;
 
 use crate::value::Value;
 pub use crate::{
-    find::{FILE_NAMES, FindError, find},
+    find::{FILE_NAMES, FindError, VCS_DIRS, find},
     schema::schema,
 };
 

@@ -9,11 +9,9 @@ use std::{
 };
 
 use ignore::{DirEntry, WalkBuilder, gitignore::Gitignore};
+use nuten_config::VCS_DIRS;
 
 use crate::config::Lookup;
-
-/// Directories of version control, which hold no code of the author's.
-const VCS_DIRS: [&str; 5] = [".git", ".hg", ".svn", ".bzr", ".jj"];
 
 /// A file to format, or a line for a problem met while looking for files.
 pub(crate) type Entry = Result<PathBuf, String>;
@@ -59,6 +57,7 @@ fn global_ignore_problems() -> Vec<String> {
 }
 
 /// Walks no symlink, since a link could lead out of `dir` or back into it.
+/// Walks no directory of version control, since it holds no code of the author's.
 /// Hidden files are walked, since config of Nushell lives in them.
 fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Result<PathBuf, String>> {
     // Directories covered by an ignore file with lines the walker drops.

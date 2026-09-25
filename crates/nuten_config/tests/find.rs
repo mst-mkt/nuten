@@ -101,6 +101,66 @@ fn file_in_descendant_is_not_found() {
 }
 
 #[test]
+fn file_above_repository_root_is_not_found() {
+    for name in [".git", ".hg", ".svn", ".bzr", ".jj"] {
+        let dir = TempDir::new();
+        dir.file("nuten.nuon");
+        dir.dir(&format!("a/{name}"));
+        assert_eq!(found(&dir.dir("a/b")), None, "{name}");
+    }
+}
+
+#[test]
+fn file_above_repository_root_is_not_found_when_dot_git_is_file() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon");
+    dir.file("a/.git");
+    assert_eq!(found(&dir.dir("a/b")), None);
+}
+
+#[cfg(unix)]
+#[test]
+fn file_above_repository_root_is_not_found_when_dot_git_is_dangling_symlink() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon");
+    std::os::unix::fs::symlink(dir.path("missing"), dir.dir("a").join(".git")).unwrap();
+    assert_eq!(found(&dir.dir("a/b")), None);
+}
+
+#[test]
+fn file_above_repository_root_is_not_found_from_repository_root() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon");
+    dir.dir("a/.git");
+    assert_eq!(found(&dir.path("a")), None);
+}
+
+#[test]
+fn file_at_repository_root_is_found() {
+    let dir = TempDir::new();
+    dir.dir("a/.git");
+    let path = dir.file("a/nuten.nuon");
+    assert_eq!(found(&dir.dir("a/b")), Some(path));
+}
+
+#[test]
+fn file_above_nested_repository_root_is_not_found() {
+    let dir = TempDir::new();
+    dir.dir(".git");
+    dir.file("nuten.nuon");
+    dir.file("a/.git");
+    assert_eq!(found(&dir.dir("a/b")), None);
+}
+
+#[test]
+fn file_above_directory_named_git_without_dot_is_found() {
+    let dir = TempDir::new();
+    let path = dir.file("nuten.nuon");
+    dir.dir("a/git");
+    assert_eq!(found(&dir.dir("a")), Some(path));
+}
+
+#[test]
 fn dot_dot_in_directory_is_taken_as_written() {
     let dir = TempDir::new();
     let path = dir.file("a/nuten.nuon");
