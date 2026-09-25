@@ -23,12 +23,12 @@
         "aarch64-darwin"
       ];
 
-      nuten = forAllSystems (
-        system:
+      nutenOf =
+        pkgs:
         let
-          craneLib = (inputs.crane.mkLib inputs.nixpkgs.legacyPackages.${system}).overrideToolchain (
-            _:
-            inputs.fenix.packages.${system}.stable.withComponents [
+          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain (
+            p:
+            inputs.fenix.packages.${p.stdenv.hostPlatform.system}.stable.withComponents [
               "cargo"
               "rustc"
               "clippy"
@@ -75,13 +75,16 @@
             }
           );
           doc = craneLib.cargoDoc (args // { env.RUSTDOCFLAGS = "--deny warnings"; });
-        }
-      );
+        };
+
+      nuten = forAllSystems (system: nutenOf inputs.nixpkgs.legacyPackages.${system});
     in
     {
       packages = forAllSystems (system: {
         default = nuten.${system}.package;
       });
+
+      overlays.default = final: _prev: { nuten = (nutenOf final).package; };
 
       checks = forAllSystems (system: {
         build = nuten.${system}.package;
