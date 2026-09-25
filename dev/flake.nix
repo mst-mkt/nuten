@@ -119,6 +119,7 @@
             "config"
             "nix"
             "oracle"
+            "benchmark"
           ];
         in
         inputs.git-hooks.lib.${system}.run {
