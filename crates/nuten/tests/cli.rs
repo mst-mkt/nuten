@@ -109,6 +109,17 @@ fn stderr(output: &Output) -> String {
     String::from_utf8(output.stderr.clone()).unwrap()
 }
 
+/// The path each line of the stderr of `output` reports, before its first `:`.
+fn reported_paths(output: &Output) -> Vec<String> {
+    stderr(output)
+        .lines()
+        .map(|line| {
+            let end = line.find(':').expect("a line reports a path");
+            line[..end].to_string()
+        })
+        .collect()
+}
+
 /// The line the binary reports for `error` at `path`, when it meets the same error.
 fn io_error_line(path: &Path, error: &io::Error) -> String {
     format!("{}: {error}\n", path.display())
@@ -1291,31 +1302,106 @@ fn format_reports_unreadable_directory_under_directory_and_continues() {
 
 #[cfg(unix)]
 #[test]
-fn format_reports_problems_of_walking_before_problems_of_formatting() {
-    use std::os::unix::fs::PermissionsExt;
-
+fn format_reports_problems_of_walking_and_of_formatting_in_order_of_paths_given() {
     let dir = TempDir::new();
-    dir.file("a.nu", "ls ||");
-    dir.dir("d/locked");
-    let locked_dir = dir.path("d/locked");
-    fs::set_permissions(&locked_dir, fs::Permissions::from_mode(0o000)).unwrap();
-    let error = fs::read_dir(&locked_dir).err();
-    let output = format_in(&dir, &["a.nu", "d"]);
-    fs::set_permissions(&locked_dir, fs::Permissions::from_mode(0o755)).unwrap();
-    // Root reads a directory without permission, so the test proves nothing then.
-    let Some(error) = error else {
-        return;
-    };
+    dir.file("z.nu", "ls ||");
+    dir.file("y.nu", "ls ||");
+    let ignore = dir.file("d/.ignore", "a{b\n").display().to_string();
+    for (paths, expected) in [
+        (["z.nu", "d", "y.nu"], ["z.nu", &ignore, "y.nu"]),
+        (["y.nu", "z.nu", "d"], ["y.nu", "z.nu", &ignore]),
+    ] {
+        let output = format_in(&dir, &paths);
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(reported_paths(&output), expected, "{}", stderr(&output));
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_problems_met_while_walking_directory_among_its_files() {
+    let dir = TempDir::new();
+    dir.file("d/a.nu", "ls ||");
+    let ignore = dir.file("d/b/.ignore", "a{b\n").display().to_string();
+    dir.file("d/b/x.nu", "ls ||");
+    dir.file("d/c.nu", "ls ||");
+    let output = format_in(&dir, &["d"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    let lines: Vec<_> = stderr.lines().collect();
     assert_eq!(
-        lines[0],
-        io_error_line(Path::new("d/locked"), &error).trim_end(),
-        "{stderr}"
+        reported_paths(&output),
+        ["d/a.nu", &ignore, "d/c.nu"],
+        "{}",
+        stderr(&output)
     );
-    assert!(lines[1].starts_with("a.nu:1:4: "), "{stderr}");
-    assert_eq!(lines.len(), 2, "{stderr}");
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_path_it_cannot_resolve_where_it_is_given() {
+    let dir = TempDir::new();
+    dir.file("z.nu", "ls ||");
+    dir.file("y.nu", "ls ||");
+    let output = format_in(&dir, &["z.nu", "missing/a.nu", "y.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        reported_paths(&output),
+        ["z.nu", "missing/a.nu", "y.nu"],
+        "{}",
+        stderr(&output)
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_wrong_config_file_once_where_first_path_it_configures_is_given() {
+    let dir = TempDir::new();
+    let ignore = dir.file("d/.ignore", "a{b\n").display().to_string();
+    let nuon = dir.file("e/nuten.nuon", "{a: 1}").display().to_string();
+    let paths = write_unformatted(&dir, ["e/a.nu", "e/b.nu"]);
+    for (args, expected) in [
+        (
+            &["d", "e/a.nu", "e/b.nu"][..],
+            &[ignore.as_str(), &nuon][..],
+        ),
+        (&["e/b.nu", "d", "e/a.nu"], &[&nuon, &ignore]),
+        (&["e", "d"], &[&nuon, &ignore]),
+        (&["d", "e"], &[&ignore, &nuon]),
+        (&["e/a.nu", "e"], &[&nuon]),
+    ] {
+        let output = format_in(&dir, args);
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(reported_paths(&output), expected, "{}", stderr(&output));
+        for path in &paths {
+            assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_problem_of_global_excludes_file_once_at_first_directory_respecting_it() {
+    let dir = TempDir::new();
+    let excludes = dir.file("config/git/ignore", "a{b\n").display().to_string();
+    dir.file("z.nu", "ls ||");
+    dir.file("off/nuten.nuon", "{respect_gitignore: false}");
+    dir.file("off/y.nu", "ls ||");
+    let skipped = write_unformatted(&dir, ["on1/a.nu", "on2/a.nu"]);
+    let output = nuten_command()
+        .args(["format", "z.nu", "off", "on1", "on2"])
+        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        reported_paths(&output),
+        ["z.nu", "off/y.nu", &excludes],
+        "{}",
+        stderr(&output)
+    );
+    for path in &skipped {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
 }
 
 #[test]

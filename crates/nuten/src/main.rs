@@ -32,7 +32,7 @@ use nuten_config::{Config, FormatConfig};
 use nuten_format::format;
 use usage::{Args, Cli, Subcommands};
 
-use crate::config::Reported;
+use crate::{config::Lookup, files::Entry};
 
 #[derive(Cli)]
 #[usage(bin = "nuten", version, unknown_flags = "error")]
@@ -84,58 +84,63 @@ fn print_schema() -> ExitCode {
 
 /// Formats the files `paths` name, with the config file `config_file` or else the nearest one.
 fn format_paths(paths: &[PathBuf], config_file: Option<&Path>) -> ExitCode {
-    let Ok(given) = config_file.map(config::load).transpose() else {
-        return ExitCode::from(2);
+    let problems = match config_file.map(config::load).transpose() {
+        Ok(given) => problems(paths, given.as_ref()),
+        Err(problems) => problems,
     };
-    let Ok(respect_gitignore) = respect_gitignore_of_dirs(paths, given.as_ref()) else {
-        return ExitCode::from(2);
-    };
-    let expanded = files::expand(paths, &respect_gitignore);
-    for problem in &expanded.problems {
+    let problems: Vec<_> = unique(problems.iter()).collect();
+    for problem in &problems {
         eprintln!("{problem}");
     }
-    // Also keeps two threads off one file, which could read it halfway written.
-    let files = files::distinct(&expanded.files);
-    let Ok(configs) = config::of_files(&files, given.as_ref()) else {
-        return ExitCode::from(2);
-    };
-    let failures = format_all(&files, &configs);
-    for problem in failures.iter().flatten() {
-        eprintln!("{problem}");
-    }
-    let dirs_resolved = respect_gitignore.values().all(Result::is_ok);
-    if dirs_resolved && expanded.problems.is_empty() && failures.is_empty() {
+    if problems.is_empty() {
         ExitCode::SUCCESS
     } else {
         ExitCode::from(2)
     }
 }
 
-/// Whether to walk each directory among `paths` respecting ignore files, by its path.
-/// Fails as a whole as `config::of_dirs` does.
-fn respect_gitignore_of_dirs<'a>(
-    paths: &'a [PathBuf],
-    given: Option<&Config>,
-) -> Result<HashMap<&'a Path, Result<bool, Reported>>, Reported> {
+/// Formats the files `paths` name, with `given` or else the nearest config.
+/// A line for each problem, at each path given that it concerns, in the order of the paths.
+fn problems(paths: &[PathBuf], given: Option<&Config>) -> Vec<String> {
     let dirs = files::dirs(paths);
-    let configs = config::of_dirs(&dirs, given)?;
-    let respect_gitignore = configs
-        .into_iter()
-        .map(|config| config.map(|config| config.respect_gitignore));
-    Ok(dirs.into_iter().zip(respect_gitignore).collect())
+    let dir_lookups: HashMap<_, _> = dirs
+        .iter()
+        .copied()
+        .zip(config::of_dirs(&dirs, given))
+        .collect();
+    // Also keeps two threads off one file, which could read it halfway written.
+    let entries = files::distinct(files::expand(paths, &dir_lookups));
+    let files: Vec<_> = entries
+        .iter()
+        .filter_map(|entry| entry.as_deref().ok())
+        .collect();
+    let lookups = config::of_files(&files, given);
+    let formats = !dir_lookups.values().chain(&lookups).any(Lookup::is_wrong);
+    let file_problems = format_all(&files, &lookups, formats);
+    problems_of(entries, file_problems)
 }
 
-/// The problems of each of `files` that fails to be formatted, in their order.
-fn format_all(files: &[PathBuf], configs: &[Result<Config, Reported>]) -> Vec<Vec<String>> {
-    let jobs: Vec<_> = files.iter().zip(configs).collect();
-    parallel::map(&jobs, |(path, config)| {
-        // The problem with its config has been reported already, so it adds no line.
-        let config = config.as_ref().map_err(|_| Vec::new());
-        config.and_then(|config| format_file(path, &config.format))
+/// The problems of each of `files`, formatting those whose config is found if `formats`.
+fn format_all(files: &[&Path], lookups: &[Lookup], formats: bool) -> Vec<Vec<String>> {
+    let jobs: Vec<_> = files.iter().zip(lookups).collect();
+    parallel::map(&jobs, |(path, lookup)| match lookup {
+        Lookup::Found(config) if formats => {
+            format_file(path, &config.format).err().unwrap_or_default()
+        },
+        lookup => lookup.problems(),
     })
-    .into_iter()
-    .filter_map(Result::err)
-    .collect()
+}
+
+/// The problems of `entries`, where those of each file come next from `file_problems`.
+fn problems_of(entries: Vec<Entry>, file_problems: Vec<Vec<String>>) -> Vec<String> {
+    let mut file_problems = file_problems.into_iter();
+    entries
+        .into_iter()
+        .flat_map(|entry| match entry {
+            Ok(_) => file_problems.next().expect("problems for each file"),
+            Err(problem) => vec![problem],
+        })
+        .collect()
 }
 
 /// Formats the file `path` in place, and leaves it alone when it is formatted already.

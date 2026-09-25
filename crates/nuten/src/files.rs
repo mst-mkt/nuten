@@ -10,17 +10,13 @@ use std::{
 
 use ignore::{DirEntry, WalkBuilder, gitignore::Gitignore};
 
-use crate::{config::Reported, unique};
+use crate::config::Lookup;
 
 /// Directories of version control, which hold no code of the author's.
 const VCS_DIRS: [&str; 5] = [".git", ".hg", ".svn", ".bzr", ".jj"];
 
-#[derive(Debug)]
-pub(crate) struct Expanded {
-    pub(crate) files: Vec<PathBuf>,
-    /// A line for each problem, each once.
-    pub(crate) problems: Vec<String>,
-}
+/// A file to format, or a line for a problem met while looking for files.
+pub(crate) type Entry = Result<PathBuf, String>;
 
 /// The directories among `paths`.
 pub(crate) fn dirs(paths: &[PathBuf]) -> Vec<&Path> {
@@ -32,39 +28,29 @@ pub(crate) fn dirs(paths: &[PathBuf]) -> Vec<&Path> {
 }
 
 /// The files `paths` name, in their order: a file as it is, and a directory as its `.nu` files.
-/// `respect_gitignore` tells for each of `dirs(paths)` whether to walk it respecting ignore files.
-pub(crate) fn expand(
-    paths: &[PathBuf],
-    respect_gitignore: &HashMap<&Path, Result<bool, Reported>>,
-) -> Expanded {
-    let global_problems = if respect_gitignore
-        .values()
-        .any(|respect| matches!(respect, Ok(true)))
-    {
+/// A directory comes instead as the problems met while walking it, or keeping it from being walked.
+/// `dir_lookups` holds the config of each of `dirs(paths)`, which says how to walk it.
+pub(crate) fn expand(paths: &[PathBuf], dir_lookups: &HashMap<&Path, Lookup>) -> Vec<Entry> {
+    let respects_gitignore =
+        |lookup: &Lookup| matches!(lookup, Lookup::Found(config) if config.respect_gitignore);
+    let global_problems = if dir_lookups.values().any(respects_gitignore) {
         global_ignore_problems()
     } else {
         Vec::new()
     };
-    let found: Vec<_> = paths
+    paths
         .iter()
-        .flat_map(|path| match respect_gitignore.get(path.as_path()) {
+        .flat_map(|path| match dir_lookups.get(path.as_path()) {
             None => vec![Ok(path.clone())],
-            // Not walked, since the config to walk it with is unknown.
-            // The problem has been reported already.
-            Some(Err(_)) => Vec::new(),
             // Not walked, since what the global excludes file of git ignores is unknown.
-            Some(Ok(true)) if !global_problems.is_empty() => Vec::new(),
-            Some(&Ok(respect_gitignore)) => walk(path, respect_gitignore),
+            Some(lookup) if respects_gitignore(lookup) && !global_problems.is_empty() => {
+                global_problems.iter().cloned().map(Err).collect()
+            },
+            Some(Lookup::Found(config)) => walk(path, config.respect_gitignore),
+            // Not walked, since the config to walk it with is unknown.
+            Some(lookup) => lookup.problems().into_iter().map(Err).collect(),
         })
-        .collect();
-    let walk_problems = found.iter().filter_map(|found| found.as_ref().err());
-    let problems = unique(global_problems.iter().chain(walk_problems))
-        .cloned()
-        .collect();
-    Expanded {
-        files: found.into_iter().flatten().collect(),
-        problems,
-    }
+        .collect()
 }
 
 /// The problems with the global excludes file of git, whose lines the walker drops unseen.
@@ -194,13 +180,16 @@ fn innermost(error: &io::Error) -> &io::Error {
         .unwrap_or(error)
 }
 
-/// Each of `files` but those that are the same file as one before them.
-pub(crate) fn distinct(files: &[PathBuf]) -> Vec<PathBuf> {
+/// Each of `entries` but the files that are the same file as one before them.
+pub(crate) fn distinct(entries: Vec<Entry>) -> Vec<Entry> {
     let mut seen = HashSet::new();
-    files
-        .iter()
-        .filter(|file| seen.insert(identity(file)))
-        .cloned()
+    entries
+        .into_iter()
+        .filter(|entry| {
+            entry
+                .as_ref()
+                .map_or(true, |file| seen.insert(identity(file)))
+        })
         .collect()
 }
 

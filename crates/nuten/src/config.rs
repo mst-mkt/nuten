@@ -2,9 +2,7 @@
 
 use std::{
     collections::HashMap,
-    fmt::Display,
     fs,
-    hash::Hash,
     path::{Path, PathBuf},
 };
 
@@ -12,29 +10,41 @@ use nuten_config::{Config, Format, find};
 
 use crate::{located, read_regular_file, unique};
 
-/// A problem already reported to stderr.
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct Reported;
+/// The config of a path, or the problems that keep it from having one.
+#[derive(Debug, Clone)]
+pub(crate) enum Lookup {
+    Found(Config),
+    /// The path cannot be resolved, which puts the config of no other path in doubt.
+    Unresolved(String),
+    /// Its config file is wrong, unreadable, or cannot be told to exist.
+    /// Formatting its files with another config would override the author's.
+    Wrong(Vec<String>),
+}
+
+impl Lookup {
+    pub(crate) fn is_wrong(&self) -> bool {
+        matches!(self, Lookup::Wrong(_))
+    }
+
+    /// A line for each problem.
+    pub(crate) fn problems(&self) -> Vec<String> {
+        match self {
+            Lookup::Found(_) => Vec::new(),
+            Lookup::Unresolved(problem) => vec![problem.clone()],
+            Lookup::Wrong(problems) => problems.clone(),
+        }
+    }
+}
 
 /// The config of each of `files`: `given`, or else from the config file nearest the file.
-/// Reports every problem to stderr.
-/// A file whose config file cannot be looked for gets an error.
-/// Fails as a whole when any config file is wrong, unreadable, or cannot be told to exist.
-/// Formatting with another config then would override the author's.
-pub(crate) fn of_files(
-    files: &[PathBuf],
-    given: Option<&Config>,
-) -> Result<Vec<Result<Config, Reported>>, Reported> {
+pub(crate) fn of_files(files: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, files.len(), || {
         files.iter().map(|file| search_start(file)).collect()
     })
 }
 
 /// The config of each of `dirs`, as `of_files` gives it for a file in the directory.
-pub(crate) fn of_dirs(
-    dirs: &[&Path],
-    given: Option<&Config>,
-) -> Result<Vec<Result<Config, Reported>>, Reported> {
+pub(crate) fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, dirs.len(), || {
         dirs.iter().map(|dir| canonical(dir)).collect()
     })
@@ -46,62 +56,46 @@ pub(crate) fn of_dirs(
 fn given_or_nearest(
     given: Option<&Config>,
     count: usize,
-    starts: impl FnOnce() -> Vec<Result<PathBuf, Reported>>,
-) -> Result<Vec<Result<Config, Reported>>, Reported> {
+    starts: impl FnOnce() -> Vec<Result<PathBuf, String>>,
+) -> Vec<Lookup> {
     match given {
-        Some(given) => Ok(vec![Ok(given.clone()); count]),
+        Some(given) => vec![Lookup::Found(given.clone()); count],
         None => nearest(&starts()),
     }
 }
 
 /// The config in the config file nearest each of `starts`, the directories the search starts from.
-fn nearest(
-    starts: &[Result<PathBuf, Reported>],
-) -> Result<Vec<Result<Config, Reported>>, Reported> {
-    // Both maps are collected in full before `settled`, so that every problem is reported.
-    let found: HashMap<&Path, Result<Option<PathBuf>, Reported>> =
-        unique(starts.iter().flatten().map(PathBuf::as_path))
-            .map(|dir| (dir, find(dir).map_err(|error| report(&error))))
-            .collect();
-    // Not `found.values()`: the problems are reported in the order of `starts`.
+fn nearest(starts: &[Result<PathBuf, String>]) -> Vec<Lookup> {
+    let dirs = unique(starts.iter().flatten().map(PathBuf::as_path));
+    let found: HashMap<&Path, Result<Option<PathBuf>, String>> = dirs
+        .map(|dir| (dir, find(dir).map_err(|error| error.to_string())))
+        .collect();
     let config_files = starts
         .iter()
         .flatten()
         .filter_map(|dir| found[dir.as_path()].as_ref().ok()?.as_deref());
-    let loaded: HashMap<&Path, Result<Config, Reported>> = unique(config_files)
+    let loaded: HashMap<&Path, Result<Config, Vec<String>>> = unique(config_files)
         .map(|file| (file, load(file)))
         .collect();
-    let found = settled(&found)?;
-    let loaded = settled(&loaded)?;
-    let config_of = |dir: &Path| {
-        found[dir]
-            .as_deref()
-            .map_or_else(Config::default, |file| loaded[file].clone())
+    let lookup = |dir: &Path| match &found[dir] {
+        Err(problem) => Lookup::Wrong(vec![problem.clone()]),
+        Ok(None) => Lookup::Found(Config::default()),
+        Ok(Some(file)) => match &loaded[file.as_path()] {
+            Ok(config) => Lookup::Found(config.clone()),
+            Err(problems) => Lookup::Wrong(problems.clone()),
+        },
     };
-    Ok(starts
+    starts
         .iter()
-        .map(|start| {
-            start
-                .as_deref()
-                .map(config_of)
-                .map_err(|reported| *reported)
+        .map(|start| match start {
+            Ok(dir) => lookup(dir),
+            Err(problem) => Lookup::Unresolved(problem.clone()),
         })
-        .collect())
-}
-
-/// Each value of `results`, when none is an error.
-fn settled<K: Copy + Eq + Hash, V>(
-    results: &HashMap<K, Result<V, Reported>>,
-) -> Result<HashMap<K, &V>, Reported> {
-    results
-        .iter()
-        .map(|(key, result)| Ok((*key, result.as_ref().map_err(|reported| *reported)?)))
         .collect()
 }
 
 /// The directory the search for the config file of `file` starts from.
-/// Reports the problem to stderr.
-fn search_start(file: &Path) -> Result<PathBuf, Reported> {
+fn search_start(file: &Path) -> Result<PathBuf, String> {
     let file = canonical(file)?;
     Ok(file
         .parent()
@@ -110,37 +104,30 @@ fn search_start(file: &Path) -> Result<PathBuf, Reported> {
 
 /// `path` with symlinks resolved, since what it names is where they lead.
 /// Resolves `..` too, since `find` reads it as written.
-/// Reports the problem to stderr.
-fn canonical(path: &Path) -> Result<PathBuf, Reported> {
-    fs::canonicalize(path).map_err(|error| report(format!("{}: {error}", path.display())))
+fn canonical(path: &Path) -> Result<PathBuf, String> {
+    fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))
 }
 
 /// The settings in the config file `path`, in the format its extension names.
-/// Reports every problem to stderr.
-pub(crate) fn load(path: &Path) -> Result<Config, Reported> {
+/// The error holds a line for each problem.
+pub(crate) fn load(path: &Path) -> Result<Config, Vec<String>> {
     let Some(format) = Format::of_path(path) else {
         let extensions: Vec<_> = Format::ALL
             .iter()
             .map(|format| format!("`.{}`", format.extension()))
             .collect();
-        return Err(report(format!(
+        return Err(vec![format!(
             "{}: config file needs one of the extensions {}",
             path.display(),
             extensions.join(", ")
-        )));
+        )]);
     };
     let text =
-        read_regular_file(path).map_err(|error| report(format!("{}: {error}", path.display())))?;
+        read_regular_file(path).map_err(|error| vec![format!("{}: {error}", path.display())])?;
     nuten_config::load(&text, format).map_err(|errors| {
-        for error in &errors {
-            let offset = error.range.start().into();
-            report(located(path, &text, offset, &error.kind));
-        }
-        Reported
+        errors
+            .iter()
+            .map(|error| located(path, &text, error.range.start().into(), &error.kind))
+            .collect()
     })
-}
-
-fn report(message: impl Display) -> Reported {
-    eprintln!("{message}");
-    Reported
 }
