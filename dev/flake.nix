@@ -249,6 +249,7 @@
                       rustToolchain.${system}
                       pkgs.stdenv.cc
                       pkgs.coreutils
+                      pkgs.hyperfine
                     ]
                     ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                       pkgs.valgrind

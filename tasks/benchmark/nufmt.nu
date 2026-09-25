@@ -1,7 +1,7 @@
 # Compares nuten with nufmt, over only the files both format without changing what nu parses.
 # A formatter must not win time on a file it fails on or reads differently, so such files are left out for both.
 
-# Prints which files the comparison takes, and which each formatter leaves out and why.
+# Prints which files the comparison takes, which each formatter leaves out and why, and how long each formatter takes on the files compared.
 def main [
     corpus: path # The corpus directory, as NUTEN_CORPUS names it
     ...also: path # More files to compare, such as the one nufmt benchmarks itself on
@@ -9,16 +9,23 @@ def main [
     --nufmt: path # The nufmt binary
     --oracle: path # The nuten-oracle binary, which asks nu whether formatting keeps the AST
     --time-limit: duration = 100sec # How long a formatter may take on one file before it is cut off
+    --runs: int = 5 # How many times each formatter is timed on each file
 ]: nothing -> record {
-    let missing = [[flag value]; [--nuten $nuten] [--nufmt $nufmt] [--oracle $oracle]]
+    let missing_flags = [[flag value]; [--nuten $nuten] [--nufmt $nufmt] [--oracle $oracle]]
     | where value == null
     | get flag
-    if not ($missing | is-empty) {
-        print --stderr $"($missing | str join ', ') not given"
+    if not ($missing_flags | is-empty) {
+        print --stderr $"($missing_flags | str join ', ') not given"
         exit 2
     }
-    if (which timeout | is-empty) {
-        print --stderr "timeout not found"
+    # Hyperfine hangs when asked for no run.
+    if $runs < 1 {
+        print --stderr "--runs must be at least 1"
+        exit 2
+    }
+    let missing_tools = [timeout hyperfine] | where { which $in | is-empty }
+    if not ($missing_tools | is-empty) {
+        print --stderr $"($missing_tools | str join ', ') not found"
         exit 2
     }
 
@@ -26,10 +33,14 @@ def main [
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
     let oracle = $oracle | path expand
 
-    [...(glob ($corpus | path join '**/*.nu')) ...($also | path expand)]
+    let selection = [...(glob ($corpus | path join '**/*.nu')) ...($also | path expand)]
     | par-each {|file| verdict $file $formatters $oracle $time_limit }
     | sort-by file
     | report
+    # One file at a time, since formatters timed side by side would slow each other down.
+    let timing = $selection.compared | each {|file| time-file $file $formatters $runs } | summarize
+
+    { ...$selection timing: $timing }
 }
 
 def formatters [nuten: path nufmt: path]: nothing -> list<record> {
@@ -104,4 +115,63 @@ def excluded []: list<record> -> table {
     | each {|group|
           { formatter: $group.formatter reason: $group.reason files: ($group.items | get file) }
       }
+}
+
+# The median shrugs off a run slowed by something else on the machine.
+def time-file [file: path formatters: list<record> runs: int]: nothing -> record {
+    cd ($file | path dirname)
+    let export = mktemp --tmpdir --suffix .json
+    let commands = $formatters
+    | each {|formatter| [--command-name $formatter.name (command-line $formatter $file)] }
+    | flatten
+    let result = ^hyperfine -N --input $file --warmup 1 --runs $runs --export-json $export ...$commands
+    | complete
+    let exported = open --raw $export
+    rm $export
+    if $result.exit_code != 0 {
+        error make {
+            msg: $"hyperfine failed on ($file) with exit code ($result.exit_code): ($result.stderr)"
+        }
+    }
+    let medians = $exported
+    | from json
+    | get results
+    | select command median
+    | update median { $in * 1sec }
+    | transpose --header-row --as-record
+
+    { file: $file ...$medians }
+}
+
+# Hyperfine splits a command without a shell into words as a shell would, so each is quoted.
+def command-line [formatter: record file: path]: nothing -> string {
+    [$formatter.command ...(do $formatter.arguments $file)]
+    | each { $"'($in | str replace --all "'" "'\\''")'" }
+    | str join ' '
+}
+
+def summarize []: list<record> -> record {
+    let files = $in | each {|timed| $timed | insert speedup ($timed.nufmt / $timed.nuten) }
+    # math median fails on an empty list.
+    if ($files | is-empty) {
+        return { files: [] total: null speedup: null }
+    }
+
+    {
+        files: $files
+        total: { nuten: ($files.nuten | math sum) nufmt: ($files.nufmt | math sum) }
+        speedup: {
+            median: ($files.speedup | math median)
+            p10: ($files.speedup | percentile 10)
+        }
+    }
+}
+
+# Nearest rank rather than interpolation, so the result is always one of the values.
+# Multiplying before dividing keeps a whole rank whole, where float error would let math ceil push it up.
+def percentile [percent: number]: list<number> -> number {
+    let sorted = $in | sort
+    let rank = ($percent * ($sorted | length) / 100 | math ceil) - 1
+
+    $sorted | get ([$rank 0] | math max)
 }
