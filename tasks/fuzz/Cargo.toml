@@ -8,7 +8,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-nuten-parser = { path = "../crates/nuten_parser" }
+nuten-parser = { path = "../../crates/nuten_parser" }
 
 libfuzzer-sys = "0.4"
 
