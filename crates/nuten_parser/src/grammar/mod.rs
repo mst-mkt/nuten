@@ -56,7 +56,7 @@ pub(crate) use self::{
 use crate::{
     ParseErrorKind,
     lexer::Mode,
-    parser::{Bracketed, Brackets, Parser},
+    parser::{Bracketed, Brackets, Enclosed, Parser},
 };
 
 pub(crate) fn file(p: &mut Parser<'_>) {
@@ -207,8 +207,8 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
         && let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)
     {
         squared(p, bracketed, shape);
-    } else if let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace) {
-        braced(p, bracketed, shape);
+    } else if let Some(enclosed) = p.enclosed(&CURLY) {
+        braced(p, enclosed, shape);
     } else if shape.takes_value() && p.peek() == Some(SyntaxKind::InterpString) {
         interpolation(p);
     } else if let Some(error) = variable_error(p, shape) {
@@ -245,21 +245,19 @@ fn listed<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, param: Param) {
     p.bump_bracketed(kind, bracketed, items);
 }
 
-/// `bracketed` is what it holds in brace mode, which tells a record from the rest.
-fn braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
-    match shape.braced(record_sign(bracketed.inner().remaining_tokens())) {
-        Braced::Record(sign) => record(p, bracketed.lexed_in(Mode::Record), sign),
-        Braced::Block => block(p, bracketed.lexed_in(Mode::Block)),
+fn braced<'a>(p: &mut Parser<'a>, enclosed: Enclosed<'a>, shape: Shape) {
+    match shape.braced(record_sign(enclosed.tokens_in(Mode::Brace))) {
+        Braced::Record(sign) => record(p, enclosed.lexed_in(Mode::Record), sign),
+        Braced::Block => block(p, enclosed.lexed_in(Mode::Block)),
         Braced::Word => p.bump(),
     }
 }
 
-/// `bracketed` is what it holds in brace mode.
-fn argument_braced<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape, param: Param) {
-    match record_sign(bracketed.inner().remaining_tokens()) {
-        Some(RecordSign::Empty) if param.closure => block(p, bracketed.lexed_in(Mode::Block)),
-        Some(RecordSign::Empty) => record(p, bracketed.lexed_in(Mode::Record), RecordSign::Empty),
-        _ => braced(p, bracketed, shape),
+fn argument_braced<'a>(p: &mut Parser<'a>, enclosed: Enclosed<'a>, shape: Shape, param: Param) {
+    match record_sign(enclosed.tokens_in(Mode::Brace)) {
+        Some(RecordSign::Empty) if param.closure => block(p, enclosed.lexed_in(Mode::Block)),
+        Some(RecordSign::Empty) => record(p, enclosed.lexed_in(Mode::Record), RecordSign::Empty),
+        _ => braced(p, enclosed, shape),
     }
 }
 

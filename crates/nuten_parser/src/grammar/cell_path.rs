@@ -68,8 +68,8 @@ fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
         [b'$', ..] => reads_dollar(head, shape),
         [b'(', ..] => shape.takes_value() && inner.bracketed(&PAREN, Mode::Paren).is_some(),
         [b'[', ..] => shape.takes_any_value() && inner.bracketed(&SQUARE, Mode::List).is_some(),
-        [b'{', ..] => inner.bracketed(&CURLY, Mode::Brace).is_some_and(|braced| {
-            let sign = record_sign(braced.inner().remaining_tokens());
+        [b'{', ..] => inner.enclosed(&CURLY).is_some_and(|enclosed| {
+            let sign = record_sign(enclosed.tokens_in(Mode::Brace));
             matches!(
                 shape.braced(sign),
                 Braced::Record(RecordSign::ColonSecond | RecordSign::Empty)

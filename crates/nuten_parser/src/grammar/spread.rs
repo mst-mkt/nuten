@@ -66,10 +66,10 @@ fn spread_value(p: &mut Parser<'_>, target: Target) {
         (Target::Record, Some([b'{', ..])) => {
             if let Some(ahead) = cell_path_ahead(p, Shape::Any) {
                 cell_path(p, ahead, Shape::Any);
-            } else if let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace)
-                && let Some(sign) = record_sign(bracketed.inner().remaining_tokens())
+            } else if let Some(enclosed) = p.enclosed(&CURLY)
+                && let Some(sign) = record_sign(enclosed.tokens_in(Mode::Brace))
             {
-                record(p, bracketed.lexed_in(Mode::Record), sign);
+                record(p, enclosed.lexed_in(Mode::Record), sign);
             } else {
                 p.bump();
             }

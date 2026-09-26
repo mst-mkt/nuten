@@ -351,11 +351,11 @@ fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
     {
         listed(p, bracketed, param);
     } else if let Some(param) = param
-        && let Some(bracketed) = p.bracketed(&CURLY, Mode::Brace)
+        && let Some(enclosed) = p.enclosed(&CURLY)
     {
         // `value` would read such a word through `braced` too.
         // A word the brackets enclose is no range, cell path, binary, or variable.
-        argument_braced(p, bracketed, shape, param);
+        argument_braced(p, enclosed, shape, param);
     } else {
         item(p, shape);
     }

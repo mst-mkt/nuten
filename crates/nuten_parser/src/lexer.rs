@@ -190,10 +190,10 @@ pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     }
 }
 
-/// The first token of lexing `range` of `src`, without lexing the rest.
+/// The tokens of lexing `range` of `src`, each lexed only as it is taken.
 /// An `Error` token comes without its error.
-pub(crate) fn lex_first(src: &str, range: TextRange, mode: Mode) -> Option<Token> {
-    Lexer::new(src, range, mode).next()
+pub(crate) fn tokens(src: &str, range: TextRange, mode: Mode) -> impl Iterator<Item = Token> {
+    Lexer::new(src, range, mode)
 }
 
 struct Lexer<'a> {

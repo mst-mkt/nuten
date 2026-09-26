@@ -102,13 +102,37 @@ impl<'a> Bracketed<'a> {
     pub(crate) fn inner(&self) -> &Parser<'a> {
         &self.inner
     }
+}
 
-    /// The same token, with what it holds lexed again in `mode`.
+/// What `Parser::enclosed` found in the next token.
+/// The first tokens inside decide the mode to lex it all in.
+pub(crate) struct Enclosed<'a> {
+    src: &'a str,
+    names: Names<'a>,
+    depth: usize,
+    token: Token,
+    range: TextRange,
+    brackets: &'static Brackets,
+    affix: Affix,
+}
+
+impl<'a> Enclosed<'a> {
+    /// The tokens the brackets hold in `mode`, each lexed only as it is taken.
+    pub(crate) fn tokens_in(&self, mode: Mode) -> impl Iterator<Item = (Token, &'a str)> {
+        let src = self.src;
+        let (_, inside, _) = split(self.range);
+        lexer::tokens(src, inside, mode).map(move |token| (token, &src[token.range]))
+    }
+
+    /// The same token, with what it holds lexed in `mode`.
     pub(crate) fn lexed_in(self, mode: Mode) -> Bracketed<'a> {
         let (_, inside, _) = split(self.range);
         Bracketed {
-            inner: self.inner.nested(inside, mode, self.inner.depth),
-            ..self
+            inner: Parser::lexed(self.src, inside, mode, self.names, self.depth),
+            token: self.token,
+            range: self.range,
+            brackets: self.brackets,
+            affix: self.affix,
         }
     }
 }
@@ -298,7 +322,7 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn lex_first(&self, start: TextSize, mode: Mode) -> Option<Token> {
         let end = self.tokens.last()?.range.end();
-        lexer::lex_first(self.src, TextRange::new(start, end), mode)
+        lexer::tokens(self.src, TextRange::new(start, end), mode).next()
     }
 
     pub(crate) fn lex_error(&self, range: TextRange, mode: Mode) -> Option<LexError> {
@@ -341,6 +365,15 @@ impl<'a> Parser<'a> {
         mode: Mode,
         affix: Affix,
     ) -> Option<Bracketed<'a>> {
+        Some(self.enclosed_affixed(brackets, affix)?.lexed_in(mode))
+    }
+
+    /// As `bracketed`, leaving what the brackets hold to be lexed.
+    pub(crate) fn enclosed(&self, brackets: &'static Brackets) -> Option<Enclosed<'a>> {
+        self.enclosed_affixed(brackets, Affix::None)
+    }
+
+    fn enclosed_affixed(&self, brackets: &'static Brackets, affix: Affix) -> Option<Enclosed<'a>> {
         let token = self.nth_token(0)?;
         if token.kind != SyntaxKind::Word || !self.can_nest() {
             return None;
@@ -349,9 +382,10 @@ impl<'a> Parser<'a> {
         if !brackets.enclose(self.src, range) {
             return None;
         }
-        let (_, inside, _) = split(range);
-        Some(Bracketed {
-            inner: self.nested(inside, mode, self.depth + 1),
+        Some(Enclosed {
+            src: self.src,
+            names: self.names.clone(),
+            depth: self.depth + 1,
             token,
             range,
             brackets,
@@ -585,14 +619,19 @@ impl<'a> Parser<'a> {
 
     /// A parser of `range` of the source lexed in `mode`, inside `depth` brackets.
     fn nested(&self, range: TextRange, mode: Mode, depth: usize) -> Parser<'a> {
-        let lexed = lexer::lex(self.src, range, mode);
-        Parser::new(
-            self.src,
-            lexed,
-            mode.skips_newline(),
-            self.names.clone(),
-            depth,
-        )
+        Parser::lexed(self.src, range, mode, self.names.clone(), depth)
+    }
+
+    /// As `nested`, for a parser not at hand.
+    fn lexed(
+        src: &'a str,
+        range: TextRange,
+        mode: Mode,
+        names: Names<'a>,
+        depth: usize,
+    ) -> Parser<'a> {
+        let lexed = lexer::lex(src, range, mode);
+        Parser::new(src, lexed, mode.skips_newline(), names, depth)
     }
 
     /// A parser of `tokens`, pieces of the tokens here with no lexing error.
