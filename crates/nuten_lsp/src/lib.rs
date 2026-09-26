@@ -302,10 +302,12 @@ fn formatting_at(
         },
         _ => None,
     };
-    if file.is_some_and(|file| config.excludes(&file)) {
-        return Ok(None);
-    }
-    Ok(match nuten_format::format(text, &config.format) {
+    let format = match &file {
+        Some(file) if config.excludes(file) => return Ok(None),
+        Some(file) => config.format_of(file),
+        None => config.format,
+    };
+    Ok(match nuten_format::format(text, &format) {
         Ok(formatted) => Some(edit::between(text, &formatted).into_iter().collect()),
         // Not an error, which the client would show for code that is still being typed.
         Err(_) => None,

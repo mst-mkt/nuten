@@ -27,6 +27,7 @@ pub use crate::{
     lookup::{Lookup, canonical, load_given, of_dirs, of_files, of_text, resolved},
     patterns::{PatternProblem, Patterns},
     schema::schema,
+    settings::Override,
 };
 use crate::{patterns::Place, value::Value};
 
@@ -40,16 +41,19 @@ pub struct Config {
     pub include: Patterns,
     /// The files never formatted, and the directories whose files are never formatted.
     pub exclude: Patterns,
+    /// Settings for the files some patterns pick, in the order they apply.
+    pub overrides: Vec<Override>,
     /// The directory the patterns are relative to, canonical.
     /// None when no pattern needs it or the config is read from text alone.
     /// Only patterns without a `/` then match, and only the name of a file.
     pub root: Option<PathBuf>,
 }
 
-// Built once, since the defaults stand for every file without a config file and a build is slow.
+// Built once, since these stand for every file without a config file and a build is slow.
 static DEFAULT_INCLUDE: LazyLock<Patterns> =
     LazyLock::new(|| Patterns::new(["*.nu"]).expect("the pattern is valid"));
-static NO_PATTERNS: LazyLock<Patterns> =
+/// Also the `exclude` of an override without one.
+pub(crate) static NO_PATTERNS: LazyLock<Patterns> =
     LazyLock::new(|| Patterns::new([]).expect("no pattern has a problem"));
 
 impl Default for Config {
@@ -59,6 +63,7 @@ impl Default for Config {
             respect_gitignore: true,
             include: DEFAULT_INCLUDE.clone(),
             exclude: NO_PATTERNS.clone(),
+            overrides: Vec::new(),
             root: None,
         }
     }
@@ -67,12 +72,14 @@ impl Default for Config {
 impl Config {
     /// Whether how text is formatted depends on the file it is to be written to.
     pub fn depends_on_file(&self) -> bool {
-        !self.exclude.is_empty()
+        !self.exclude.is_empty() || !self.overrides.is_empty()
     }
 
     /// Whether the patterns need `root`, having a `/` or matching the directories above a file.
     pub(crate) fn needs_root(&self) -> bool {
-        self.include.has_anchored() || !self.exclude.is_empty()
+        self.include.has_anchored()
+            || !self.exclude.is_empty()
+            || self.overrides.iter().any(Override::needs_root)
     }
 
     /// Whether formatting a directory takes `file`, a canonical path, unless `exclude` matches.
@@ -83,6 +90,21 @@ impl Config {
     /// Whether `file`, a canonical path, is left alone even when named directly.
     pub fn excludes(&self, file: &Path) -> bool {
         self.exclude.matches_file_or_ancestor(self.place(file))
+    }
+
+    /// How to format `file`, a canonical path, with each override that picks it applied in order.
+    pub fn format_of(&self, file: &Path) -> FormatConfig {
+        let place = self.place(file);
+        // Not from a clone of `self`, since an override changes only the format.
+        let format = Config {
+            format: self.format.clone(),
+            ..Config::default()
+        };
+        self.overrides
+            .iter()
+            .filter(|picking| picking.picks(place))
+            .fold(format, |config, picking| picking.apply(config))
+            .format
     }
 
     fn place<'a>(&self, file: &'a Path) -> Place<'a> {
@@ -161,6 +183,10 @@ pub enum ConfigErrorKind {
         key: &'static str,
         problem: PatternProblem,
     },
+    /// A record of `overrides` that picks no files, lacking `include`.
+    OverrideWithoutInclude,
+    /// A setting in `overrides` that is the same for every file.
+    NotPerFile(&'static str),
 }
 
 impl fmt::Display for ConfigErrorKind {
@@ -204,6 +230,13 @@ impl fmt::Display for ConfigErrorKind {
                 key,
                 problem,
             } => write!(f, "pattern of `{key}` {problem}"),
+            ConfigErrorKind::OverrideWithoutInclude => {
+                f.write_str("record of `overrides` lacks `include`, which picks its files")
+            },
+            ConfigErrorKind::NotPerFile(key) => write!(
+                f,
+                "`{key}` cannot be set in `overrides`, since it is the same for every file"
+            ),
         }
     }
 }

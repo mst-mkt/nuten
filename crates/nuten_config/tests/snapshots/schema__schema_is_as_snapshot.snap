@@ -49,6 +49,51 @@ expression: schema()
       "items": {
         "type": "string"
       }
+    },
+    "overrides": {
+      "description": "Settings for some files, in records of the settings that may differ from file to file. `include` picks the files of a record and `exclude` leaves some of them out, with patterns that match as the top-level ones do. A later record wins over an earlier one where both pick a file.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "include": {
+            "description": "Glob patterns of the files the record is for; they match as those of the top-level `include` do.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exclude": {
+            "description": "Glob patterns of the files, and of the directories whose files, the record is not for though `include` picks them; they match as those of the top-level `exclude` do.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "line_width": {
+            "description": "Columns a line may take before it breaks where it can.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "indent_style": {
+            "description": "Whether to indent with spaces or with tabs.",
+            "enum": ["space", "tab"]
+          },
+          "indent_width": {
+            "description": "Columns per indent level, and per tab when indenting with tabs.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 255
+          },
+          "line_ending": {
+            "description": "What ends each line; line breaks inside a string, a bare word, or an `@example` block stay as written.",
+            "enum": ["lf", "crlf"]
+          }
+        },
+        "required": ["include"],
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false

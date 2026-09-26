@@ -213,6 +213,24 @@ fn formatting_file_exclude_matches_answers_null() {
 }
 
 #[test]
+fn formatting_takes_overrides_for_file_they_pick() {
+    let dir = TempDir::new();
+    dir.file(
+        "nuten.json",
+        r#"{ "overrides": [{ "include": ["d/*.nu"], "indent_width": 2 }] }"#,
+    );
+    let picked = file_uri(&dir.path("d/a.nu"));
+    let other = file_uri(&dir.path("e/a.nu"));
+    let (client, _) = Client::initialized();
+    for (uri, indent) in [(&picked, "  ls\n"), (&other, "    ls\n")] {
+        client.open(uri, "if true {\nls\n}\n");
+        let edits = client.format(uri).unwrap();
+        assert_eq!(edits, Some(vec![edit((1, 0), (2, 0), indent)]), "{uri}");
+    }
+    client.shut_down();
+}
+
+#[test]
 fn formatting_takes_file_include_misses() {
     let dir = TempDir::new();
     dir.file("nuten.json", r#"{ "include": ["*.nush"] }"#);

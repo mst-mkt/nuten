@@ -3,8 +3,12 @@
 //! Each setting says what it takes and what it changes in a `Config`, in one place.
 //! The loader and the JSON Schema both read them from here.
 
+use nuten_syntax::TextRange;
+
 use crate::{
-    Config, ConfigError, ConfigErrorKind, FormatConfig, IndentStyle, LineEnding, Patterns, error,
+    Config, ConfigError, ConfigErrorKind, FormatConfig, IndentStyle, LineEnding, NO_PATTERNS,
+    Patterns, error,
+    patterns::Place,
     value::{self, Field, Value, ValueKind},
 };
 
@@ -14,6 +18,8 @@ pub(crate) struct Setting {
     /// What an editor shows for the key.
     pub(crate) description: &'static str,
     pub(crate) kind: Kind,
+    /// Whether it may differ from file to file, and so be set in `overrides`.
+    pub(crate) per_file: bool,
 }
 
 #[derive(Debug)]
@@ -33,6 +39,10 @@ pub(crate) enum Kind {
     Patterns {
         set: fn(Config, Patterns) -> Config,
     },
+    /// A list of records, each of settings for the files it picks.
+    Overrides {
+        set: fn(Config, Vec<Override>) -> Config,
+    },
     /// Any string, which changes nothing.
     String,
 }
@@ -43,11 +53,12 @@ pub(crate) struct Choice {
     pub(crate) set: fn(Config) -> Config,
 }
 
-pub(crate) const SETTINGS: [Setting; 8] = [
+pub(crate) static SETTINGS: [Setting; 9] = [
     Setting {
         key: "$schema",
         description: "Where an editor finds the JSON Schema; nuten does not read it.",
         kind: Kind::String,
+        per_file: false,
     },
     Setting {
         key: "line_width",
@@ -63,6 +74,7 @@ pub(crate) const SETTINGS: [Setting; 8] = [
                 ..config
             },
         },
+        per_file: true,
     },
     Setting {
         key: "indent_style",
@@ -89,6 +101,7 @@ pub(crate) const SETTINGS: [Setting; 8] = [
                 },
             },
         ]),
+        per_file: true,
     },
     Setting {
         key: "indent_width",
@@ -104,6 +117,7 @@ pub(crate) const SETTINGS: [Setting; 8] = [
                 ..config
             },
         },
+        per_file: true,
     },
     Setting {
         key: "line_ending",
@@ -131,6 +145,7 @@ pub(crate) const SETTINGS: [Setting; 8] = [
                 },
             },
         ]),
+        per_file: true,
     },
     Setting {
         key: "respect_gitignore",
@@ -144,6 +159,7 @@ pub(crate) const SETTINGS: [Setting; 8] = [
                 ..config
             },
         },
+        per_file: false,
     },
     Setting {
         key: "include",
@@ -158,6 +174,7 @@ pub(crate) const SETTINGS: [Setting; 8] = [
                 ..config
             },
         },
+        per_file: false,
     },
     Setting {
         key: "exclude",
@@ -172,34 +189,131 @@ pub(crate) const SETTINGS: [Setting; 8] = [
                 ..config
             },
         },
+        per_file: false,
+    },
+    Setting {
+        key: "overrides",
+        description: "Settings for some files, in records of the settings that may differ from \
+                      file to file. `include` picks the files of a record and `exclude` leaves \
+                      some of them out, with patterns that match as the top-level ones do. A \
+                      later record wins over an earlier one where both pick a file.",
+        kind: Kind::Overrides {
+            set: |config, overrides| Config {
+                overrides,
+                ..config
+            },
+        },
+        per_file: false,
     },
 ];
 
+/// The keys of a record of `overrides` that pick its files, with what an editor shows for each.
+pub(crate) const PICKERS: [(&str, &str); 2] = [
+    (
+        "include",
+        "Glob patterns of the files the record is for; they match as those of the top-level \
+         `include` do.",
+    ),
+    (
+        "exclude",
+        "Glob patterns of the files, and of the directories whose files, the record is not for \
+         though `include` picks them; they match as those of the top-level `exclude` do.",
+    ),
+];
+
+/// A setting given a value it takes.
 #[derive(Debug, Clone)]
-enum Change {
-    Integer(fn(Config, i64) -> Config, i64),
-    Choice(fn(Config) -> Config),
-    Boolean(fn(Config, bool) -> Config, bool),
-    Patterns(fn(Config, Patterns) -> Config, Patterns),
+pub(crate) struct Change {
+    setting: &'static Setting,
+    given: Given,
+}
+
+/// The value a setting is given, in the form it takes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Given {
+    Integer(i64),
+    /// The name of the choice.
+    Choice(&'static str),
+    Boolean(bool),
+    Patterns(Patterns),
+    Overrides(Vec<Override>),
     Nothing,
 }
 
+impl PartialEq for Change {
+    fn eq(&self, other: &Self) -> bool {
+        self.setting.key == other.setting.key && self.given == other.given
+    }
+}
+
+impl Eq for Change {}
+
 impl Change {
-    fn apply(self, config: Config) -> Config {
-        match self {
-            Change::Integer(set, integer) => set(config, integer),
-            Change::Choice(set) => set(config),
-            Change::Boolean(set, boolean) => set(config, boolean),
-            Change::Patterns(set, patterns) => set(config, patterns),
-            Change::Nothing => config,
+    fn apply(&self, config: Config) -> Config {
+        match (&self.setting.kind, &self.given) {
+            (
+                Kind::Integer {
+                    set, ..
+                },
+                &Given::Integer(integer),
+            ) => set(config, integer),
+            (Kind::Choice(choices), Given::Choice(name)) => {
+                let choice = choices.iter().find(|choice| choice.name == *name);
+                (choice.expect("the name is of a choice").set)(config)
+            },
+            (
+                Kind::Boolean {
+                    set,
+                },
+                &Given::Boolean(boolean),
+            ) => set(config, boolean),
+            (
+                Kind::Patterns {
+                    set,
+                },
+                Given::Patterns(patterns),
+            ) => set(config, patterns.clone()),
+            (
+                Kind::Overrides {
+                    set,
+                },
+                Given::Overrides(overrides),
+            ) => set(config, overrides.clone()),
+            (Kind::String, Given::Nothing) => config,
+            _ => unreachable!("a setting is given only a value it takes"),
         }
+    }
+}
+
+/// Settings for the files some patterns pick.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Override {
+    include: Patterns,
+    exclude: Patterns,
+    changes: Vec<Change>,
+}
+
+impl Override {
+    pub(crate) fn picks(&self, place: Place<'_>) -> bool {
+        self.include.matches_file(place) && !self.exclude.matches_file_or_ancestor(place)
+    }
+
+    /// Whether the patterns need the directory they are relative to, as those of a `Config` may.
+    pub(crate) fn needs_root(&self) -> bool {
+        self.include.has_anchored() || !self.exclude.is_empty()
+    }
+
+    pub(crate) fn apply(&self, config: Config) -> Config {
+        self.changes
+            .iter()
+            .fold(config, |config, change| change.apply(config))
     }
 }
 
 pub(crate) fn config(value: &Value) -> Result<Config, Vec<ConfigError>> {
     let changes = value::all(record_fields(value)?.iter().map(change))?;
     Ok(changes
-        .into_iter()
+        .iter()
         .fold(Config::default(), |config, change| change.apply(config)))
 }
 
@@ -222,25 +336,34 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
             field.key_range,
         ));
     };
-    let at_value = |kind| error(kind, field.value.range);
+    let given = given(setting, &field.value)?;
+    Ok(Change {
+        setting,
+        given,
+    })
+}
+
+/// The value `setting` is given in `value`, or the errors that keep it from taking `value`.
+fn given(setting: &'static Setting, value: &Value) -> Result<Given, Vec<ConfigError>> {
+    let at_value = |kind| error(kind, value.range);
     let wrong_type = |expected| {
         at_value(ConfigErrorKind::WrongType {
             key: setting.key,
             expected,
-            found: field.value.kind.name(),
+            found: value.kind.name(),
         })
     };
-    match (&setting.kind, &field.value.kind) {
+    match (&setting.kind, &value.kind) {
         (
             &Kind::Integer {
                 min,
                 max,
-                set,
+                ..
             },
             &ValueKind::Int(integer),
         ) => {
             if (min..=max).contains(&integer) {
-                Ok(Change::Integer(set, integer))
+                Ok(Given::Integer(integer))
             } else {
                 Err(at_value(ConfigErrorKind::OutOfRange {
                     key: setting.key,
@@ -258,7 +381,7 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
         (Kind::Choice(choices), ValueKind::String(string)) => choices
             .iter()
             .find(|choice| choice.name == string)
-            .map(|choice| Change::Choice(choice.set))
+            .map(|choice| Given::Choice(choice.name))
             .ok_or_else(|| {
                 at_value(ConfigErrorKind::UnknownChoice {
                     key: setting.key,
@@ -266,11 +389,11 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
                 })
             }),
         (
-            &Kind::Boolean {
-                set,
+            Kind::Boolean {
+                ..
             },
             &ValueKind::Bool(boolean),
-        ) => Ok(Change::Boolean(set, boolean)),
+        ) => Ok(Given::Boolean(boolean)),
         (
             Kind::Boolean {
                 ..
@@ -278,19 +401,86 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
             _,
         ) => Err(wrong_type("a boolean")),
         (
-            &Kind::Patterns {
-                set,
+            Kind::Patterns {
+                ..
             },
             ValueKind::List(values),
-        ) => Ok(Change::Patterns(set, patterns(setting.key, values)?)),
+        ) => Ok(Given::Patterns(patterns(setting.key, values)?)),
         (
             Kind::Patterns {
                 ..
             },
             _,
         ) => Err(wrong_type("a list of strings")),
-        (Kind::String, ValueKind::String(_)) => Ok(Change::Nothing),
+        (
+            Kind::Overrides {
+                ..
+            },
+            ValueKind::List(values),
+        ) => {
+            let overrides = values.iter().map(|value| match &value.kind {
+                ValueKind::Record(fields) => override_of(fields, value.range),
+                kind => Err(error(
+                    ConfigErrorKind::WrongType {
+                        key: setting.key,
+                        expected: "only records in its list",
+                        found: kind.name(),
+                    },
+                    value.range,
+                )),
+            });
+            Ok(Given::Overrides(value::all(overrides)?))
+        },
+        (
+            Kind::Overrides {
+                ..
+            },
+            _,
+        ) => Err(wrong_type("a list of records")),
+        (Kind::String, ValueKind::String(_)) => Ok(Given::Nothing),
         (Kind::Choice(_) | Kind::String, _) => Err(wrong_type("a string")),
+    }
+}
+
+/// The override in the record of `fields`, which is at `range`.
+fn override_of(fields: &[Field], range: TextRange) -> Result<Override, Vec<ConfigError>> {
+    let changes = value::all(fields.iter().map(override_change))?;
+    let patterns_of = |key| {
+        changes
+            .iter()
+            .find(|change| change.setting.key == key)
+            .map(|change| match &change.given {
+                Given::Patterns(patterns) => patterns.clone(),
+                _ => unreachable!("`{key}` is given patterns"),
+            })
+    };
+    let include = patterns_of("include")
+        .ok_or_else(|| error(ConfigErrorKind::OverrideWithoutInclude, range))?;
+    let exclude = patterns_of("exclude").unwrap_or_else(|| NO_PATTERNS.clone());
+    Ok(Override {
+        include,
+        exclude,
+        changes: changes
+            .into_iter()
+            .filter(|change| change.setting.per_file)
+            .collect(),
+    })
+}
+
+fn is_picker(key: &str) -> bool {
+    PICKERS.iter().any(|(picker, _)| *picker == key)
+}
+
+/// A setting of `field` in a record of `overrides`, or a picker of the record.
+fn override_change(field: &Field) -> Result<Change, Vec<ConfigError>> {
+    let change = change(field)?;
+    if change.setting.per_file || is_picker(change.setting.key) {
+        Ok(change)
+    } else {
+        Err(error(
+            ConfigErrorKind::NotPerFile(change.setting.key),
+            field.key_range,
+        ))
     }
 }
 
@@ -323,6 +513,8 @@ fn patterns(key: &'static str, values: &[Value]) -> Result<Patterns, Vec<ConfigE
 
 #[cfg(test)]
 mod tests {
+    use std::path::{Path, PathBuf};
+
     use super::{Kind, SETTINGS};
     use crate::{
         Config, Format, FormatConfig, IndentStyle, LineEnding, Patterns, load, test_support::errors,
@@ -349,6 +541,7 @@ mod tests {
             respect_gitignore: false,
             include: Patterns::new(["*.nush"]).unwrap(),
             exclude: Patterns::new(["vendor"]).unwrap(),
+            overrides: Vec::new(),
             root: None,
         };
         assert_eq!(load(text, Format::Json), Ok(expected));
@@ -675,6 +868,125 @@ mod tests {
                 ),
             ]
         );
+    }
+
+    fn format_of(text: &str, file: &str) -> FormatConfig {
+        let config = Config {
+            root: Some(PathBuf::from("/r")),
+            ..load(text, Format::Json).unwrap()
+        };
+        config.format_of(Path::new(file))
+    }
+
+    #[test]
+    fn override_changes_format_of_files_it_picks() {
+        let text = r#"{
+            "indent_width": 2,
+            "overrides": [{"include": ["d/*.nu"], "line_width": 80}]
+        }"#;
+        let picked = format_of(text, "/r/d/a.nu");
+        assert_eq!((picked.line_width, picked.indent_width), (80, 2));
+        let other = format_of(text, "/r/e/a.nu");
+        assert_eq!((other.line_width, other.indent_width), (100, 2));
+    }
+
+    #[test]
+    fn override_leaves_out_files_its_exclude_matches() {
+        let text =
+            r#"{"overrides": [{"include": ["*.nu"], "exclude": ["gen"], "indent_width": 2}]}"#;
+        assert_eq!(format_of(text, "/r/a.nu").indent_width, 2);
+        assert_eq!(format_of(text, "/r/gen/a.nu").indent_width, 4);
+    }
+
+    #[test]
+    fn later_override_wins_where_both_pick_file() {
+        let text = r#"{"overrides": [
+            {"include": ["*.nu"], "indent_width": 2, "line_width": 80},
+            {"include": ["a.nu"], "indent_width": 8}
+        ]}"#;
+        let a = format_of(text, "/r/a.nu");
+        assert_eq!((a.indent_width, a.line_width), (8, 80));
+        let b = format_of(text, "/r/b.nu");
+        assert_eq!((b.indent_width, b.line_width), (2, 80));
+    }
+
+    #[test]
+    fn overrides_change_nothing_but_format_of_file() {
+        let text =
+            r#"{"overrides": [{"include": ["d/*.nush"], "exclude": ["e"], "indent_width": 2}]}"#;
+        let config = load(text, Format::Json).unwrap();
+        assert_eq!(config.format, FormatConfig::default());
+        assert_eq!(config.include, Config::default().include);
+        assert_eq!(config.exclude, Config::default().exclude);
+    }
+
+    #[test]
+    fn override_of_no_record_is_reported_at_value() {
+        for (text, message, at) in [
+            (
+                r#"{"overrides": {}}"#,
+                "`overrides` takes a list of records, not a record",
+                "{}",
+            ),
+            (
+                r#"{"overrides": [["a"]]}"#,
+                "`overrides` takes only records in its list, not a list",
+                r#"["a"]"#,
+            ),
+        ] {
+            assert_eq!(
+                errors(text, Format::Json),
+                [(message.to_string(), at)],
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn override_without_include_is_reported_at_record() {
+        let text = r#"{"overrides": [{"exclude": ["a"], "indent_width": 2}]}"#;
+        assert_eq!(
+            errors(text, Format::Json),
+            [(
+                "record of `overrides` lacks `include`, which picks its files".to_string(),
+                r#"{"exclude": ["a"], "indent_width": 2}"#
+            )]
+        );
+    }
+
+    #[test]
+    fn setting_same_for_every_file_is_reported_at_key_in_override() {
+        let text =
+            r#"{"overrides": [{"include": ["a"], "respect_gitignore": false, "overrides": []}]}"#;
+        assert_eq!(
+            errors(text, Format::Json),
+            [
+                (
+                    "`respect_gitignore` cannot be set in `overrides`, since it is the same for \
+                     every file"
+                        .to_string(),
+                    r#""respect_gitignore""#
+                ),
+                (
+                    "`overrides` cannot be set in `overrides`, since it is the same for every file"
+                        .to_string(),
+                    r#""overrides""#
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn every_error_in_overrides_is_reported_in_order() {
+        let text = r#"{"overrides": [
+            {"indent_width": 0, "include": ["!a"]},
+            {"include": ["a"], "x": 1}
+        ]}"#;
+        let reported: Vec<_> = errors(text, Format::Json)
+            .into_iter()
+            .map(|(_, at)| at)
+            .collect();
+        assert_eq!(reported, ["0", r#""!a""#, r#""x""#]);
     }
 
     #[test]

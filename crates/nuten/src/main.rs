@@ -252,7 +252,8 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
         let formatted = match &file {
             // Written back as it is, since the caller takes stdout for what the file is to hold.
             Some(file) if config.excludes(file) => src.clone(),
-            _ => format_text(name, &src, &config.format)?,
+            Some(file) => format_text(name, &src, &config.format_of(file))?,
+            None => format_text(name, &src, &config.format)?,
         };
         Ok((src, formatted))
     });
@@ -392,7 +393,14 @@ fn pick((candidate, lookup): &(Candidate, Lookup)) -> Pick {
 fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Result<bool, Vec<String>>> {
     let files: Vec<_> = jobs.iter().flatten().collect();
     parallel::map(&files, |(candidate, lookup)| match (lookup, mode) {
-        (Lookup::Found(config), Some(mode)) => format_file(&candidate.path, &config.format, mode),
+        (Lookup::Found(config), Some(mode)) => {
+            let format = match &candidate.canonical {
+                Ok(file) => config.format_of(file),
+                // Reading the file reports why it cannot be resolved.
+                Err(_) => config.format.clone(),
+            };
+            format_file(&candidate.path, &format, mode)
+        },
         (Lookup::Found(_), None) => Ok(false),
         (lookup, _) => Err(lookup.problems()),
     })

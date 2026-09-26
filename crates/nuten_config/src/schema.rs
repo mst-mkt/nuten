@@ -2,7 +2,7 @@
 
 use std::fmt::{self, Write};
 
-use crate::settings::{Kind, SETTINGS, Setting};
+use crate::settings::{Kind, PICKERS, SETTINGS, Setting};
 
 pub fn schema() -> String {
     let properties = SETTINGS
@@ -57,13 +57,42 @@ fn property(setting: &Setting) -> Json {
         } => Json::object([description, ("type", Json::String("boolean"))]),
         Kind::Patterns {
             ..
+        } => patterns(description),
+        Kind::Overrides {
+            ..
         } => Json::object([
             description,
             ("type", Json::String("array")),
-            ("items", Json::object([("type", Json::String("string"))])),
+            ("items", override_record()),
         ]),
         Kind::String => Json::object([description, ("type", Json::String("string"))]),
     }
+}
+
+fn patterns(description: (&'static str, Json)) -> Json {
+    Json::object([
+        description,
+        ("type", Json::String("array")),
+        ("items", Json::object([("type", Json::String("string"))])),
+    ])
+}
+
+fn override_record() -> Json {
+    let pickers = PICKERS
+        .map(|(key, description)| (key, patterns(("description", Json::String(description)))));
+    let settings = SETTINGS
+        .iter()
+        .filter(|setting| setting.per_file)
+        .map(|setting| (setting.key, property(setting)));
+    Json::object([
+        ("type", Json::String("object")),
+        (
+            "properties",
+            Json::object(pickers.into_iter().chain(settings)),
+        ),
+        ("required", Json::Array(vec![Json::String("include")])),
+        ("additionalProperties", Json::Bool(false)),
+    ])
 }
 
 #[derive(Debug)]
