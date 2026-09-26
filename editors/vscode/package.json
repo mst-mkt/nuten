@@ -22,6 +22,7 @@
   "publisher": "mst-mkt",
   "files": [
     "dist/extension.cjs",
+    "icon.png",
     "LICENSE"
   ],
   "main": "./dist/extension.cjs",
@@ -73,6 +74,7 @@
   "activationEvents": [
     "onLanguage:nushell"
   ],
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.91.0"
   },
