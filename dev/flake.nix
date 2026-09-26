@@ -251,6 +251,22 @@
             inherit (preCommit.${system}) shellHook;
           };
 
+          vscode = pkgs.mkShell {
+            packages = [
+              rustToolchain.${system}
+              nodejs.${system}
+              pnpm.${system}
+              vite-plus.${system}
+            ];
+            env = pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+              NUTEN_VSCODE = pkgs.writeShellScript "codium-headless" ''
+                unset WAYLAND_DISPLAY
+                exec ${pkgs.xvfb-run}/bin/xvfb-run --auto-servernum \
+                  ${pkgs.vscodium}/lib/vscode/codium --ozone-platform=x11 "$@"
+              '';
+            };
+          };
+
           fuzz = pkgs.mkShell {
             packages = [
               (inputs.fenix.packages.${system}.latest.withComponents [
