@@ -177,7 +177,7 @@ impl From<LexError> for ParseError {
 /// The tree holds every byte of `src`, even when there are errors.
 pub fn parse(src: &str) -> Parsed {
     let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-    tree::build(src, &parser::parse(src, lexed))
+    tree::build(src, parser::parse(src, lexed))
 }
 
 #[cfg(test)]

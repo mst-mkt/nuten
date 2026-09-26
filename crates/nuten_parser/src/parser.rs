@@ -11,11 +11,12 @@ use crate::{
     lexer::{self, LexError, Lexed, Mode, Token},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Event {
     Start(SyntaxKind),
     Token(Token),
-    Error(ParseError),
+    /// Boxed, since the few errors would otherwise make every event three times as large.
+    Error(Box<ParseError>),
     Finish,
 }
 
@@ -720,7 +721,7 @@ impl<'a> Parser<'a> {
 
     fn push_error(&mut self, error: ParseError) {
         self.errors += 1;
-        self.events.push(Event::Error(error));
+        self.events.push(Event::Error(Box::new(error)));
     }
 }
 
