@@ -29,6 +29,18 @@ pub enum Exit {
     WithoutShutdown,
 }
 
+/// The error is the problem, as a line.
+pub fn serve_stdio() -> Result<Exit, String> {
+    let (connection, io_threads) = Connection::stdio();
+    let exit = serve(&connection);
+    // Lets the writer finish, which runs until every sender is gone.
+    drop(connection);
+    io_threads
+        .join()
+        .map_err(|error| format!("stdio: {error}"))?;
+    Ok(exit)
+}
+
 pub fn serve(connection: &Connection) -> Exit {
     if let Err(exit) = initialize(connection) {
         return exit;

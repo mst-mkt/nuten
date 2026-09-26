@@ -265,6 +265,8 @@ dependencies = [
  "ignore",
  "nuten-config",
  "nuten-format",
+ "nuten-lsp",
+ "serde_json",
  "usage-rs",
 ]
 

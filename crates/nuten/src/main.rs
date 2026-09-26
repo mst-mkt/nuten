@@ -19,6 +19,7 @@ use nuten_config::{
     file::{located, read_regular_file},
 };
 use nuten_format::format;
+use nuten_lsp::Exit;
 use usage::{Args, Cli, Subcommands};
 
 use crate::files::Entry;
@@ -36,6 +37,15 @@ enum Command {
     Format(Format),
     /// Print the JSON Schema of a config file
     Schema,
+    /// Serve the Language Server Protocol on stdin and stdout
+    Lsp(Lsp),
+}
+
+#[derive(Args)]
+struct Lsp {
+    /// Serve on stdin and stdout, as by default; accepted for clients that pass it
+    #[usage(long)]
+    stdio: bool,
 }
 
 #[derive(Args)]
@@ -78,6 +88,7 @@ fn main() -> ExitCode {
     match Nuten::parse().command {
         Command::Format(args) => run_format(&args),
         Command::Schema => print_schema(),
+        Command::Lsp(_) => serve_lsp(),
     }
 }
 
@@ -129,6 +140,15 @@ fn argument_problem(args: &Format) -> Option<String> {
 fn print_schema() -> ExitCode {
     match write_stdout(&nuten_config::schema()) {
         Ok(()) => ExitCode::SUCCESS,
+        Err(problem) => fail(&[problem]),
+    }
+}
+
+/// Exits as the protocol asks: 0 after `shutdown`, and 1 without it.
+fn serve_lsp() -> ExitCode {
+    match nuten_lsp::serve_stdio() {
+        Ok(Exit::AfterShutdown) => ExitCode::SUCCESS,
+        Ok(Exit::WithoutShutdown) => ExitCode::from(1),
         Err(problem) => fail(&[problem]),
     }
 }
