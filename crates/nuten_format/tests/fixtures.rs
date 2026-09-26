@@ -15,7 +15,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use nuten_format::{Commas, Config, format, invariants};
+use nuten_format::{Commas, Config, LineEnding, format, invariants};
 
 use crate::support::{caught, files_below};
 
@@ -41,6 +41,10 @@ const CONFIGS: &[(&str, Change)] = &[
     }),
     ("commas/trailing", |config| Config {
         commas: Commas::Trailing,
+        ..config
+    }),
+    ("line_ending/auto", |config| Config {
+        line_ending: LineEnding::Auto,
         ..config
     }),
 ];

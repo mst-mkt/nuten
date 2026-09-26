@@ -3,10 +3,11 @@
 pub mod invariants;
 mod rules;
 
+pub use nuten_doc::IndentStyle;
 use nuten_doc::PrinterOptions;
-pub use nuten_doc::{IndentStyle, LineEnding};
 use nuten_parser::Parsed;
 pub use nuten_parser::{ParseError, ParseErrorKind};
+use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
@@ -44,15 +45,43 @@ pub enum Commas {
     Trailing,
 }
 
-/// Not `PrinterOptions` itself, since `Config` holds settings the printer does not read.
-impl From<&Config> for PrinterOptions {
-    fn from(config: &Config) -> PrinterOptions {
-        PrinterOptions {
-            line_width: config.line_width,
-            indent_style: config.indent_style,
-            indent_width: config.indent_width,
-            line_ending: config.line_ending,
-        }
+/// What ends each line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineEnding {
+    Lf,
+    CrLf,
+    /// That of the first line break between tokens, or `\n` where there is none.
+    Auto,
+}
+
+/// `root` is the tree of the source, which `LineEnding::Auto` reads.
+fn printer_options(config: &Config, root: &SyntaxNode) -> PrinterOptions {
+    let line_ending = match config.line_ending {
+        LineEnding::Lf => nuten_doc::LineEnding::Lf,
+        LineEnding::CrLf => nuten_doc::LineEnding::CrLf,
+        LineEnding::Auto => first_line_ending(root),
+    };
+    PrinterOptions {
+        line_width: config.line_width,
+        indent_style: config.indent_style,
+        indent_width: config.indent_width,
+        line_ending,
+    }
+}
+
+/// Only a line break between tokens tells, since one inside a token stays as written.
+/// The first such break in the output is one the printer makes.
+/// So formatting the output again takes the same line ending.
+fn first_line_ending(root: &SyntaxNode) -> nuten_doc::LineEnding {
+    let crlf = root
+        .descendants_with_tokens()
+        .filter_map(SyntaxElement::into_token)
+        .find(|token| token.kind() == SyntaxKind::Newline)
+        .is_some_and(|newline| newline.text() == "\r\n");
+    if crlf {
+        nuten_doc::LineEnding::CrLf
+    } else {
+        nuten_doc::LineEnding::Lf
     }
 }
 
@@ -75,8 +104,9 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
             errors: parsed.errors().to_vec(),
         });
     }
-    let elements = rules::file(src, &parsed.syntax(), config.commas);
-    Ok(nuten_doc::print(&elements, &PrinterOptions::from(config)))
+    let root = parsed.syntax();
+    let elements = rules::file(src, &root, config.commas);
+    Ok(nuten_doc::print(&elements, &printer_options(config, &root)))
 }
 
 #[cfg(test)]
