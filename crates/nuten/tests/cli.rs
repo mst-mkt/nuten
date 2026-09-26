@@ -1724,6 +1724,31 @@ fn format_takes_config_file_nearest_current_directory_for_stdin() {
     assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
 }
 
+#[cfg(unix)]
+#[test]
+fn format_takes_config_file_nearest_absolute_stdin_filepath_in_removed_current_directory() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", "{indent_width: 2}");
+    let removed = dir.dir("removed");
+    let filepath = dir.path("new/a.nu");
+    let input_path = dir.path("stdin.input");
+    fs::write(&input_path, BLOCK).unwrap();
+    // The shell removes the directory it runs the binary in, which `Command` cannot.
+    let output = Command::new("sh")
+        .args([
+            "-c",
+            r#"cd "$1" && rmdir "$1" && exec "$0" format --stdin-filepath "$2" -"#,
+        ])
+        .arg(env!("CARGO_BIN_EXE_nuten"))
+        .arg(&removed)
+        .arg(&filepath)
+        .stdin(fs::File::open(&input_path).unwrap())
+        .output()
+        .unwrap();
+    assert_succeeds_quietly(&output);
+    assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
+}
+
 #[test]
 fn format_takes_given_config_file_for_stdin() {
     let dir = TempDir::new();

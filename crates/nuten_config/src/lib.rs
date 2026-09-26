@@ -1,7 +1,9 @@
-//! Finds a config file, reads the settings from it, and writes the JSON Schema of one.
+//! Finds the config file of a path, reads the settings from it, and writes the JSON Schema of one.
 
+pub mod file;
 mod find;
 mod json;
+mod lookup;
 mod nuon;
 mod schema;
 mod settings;
@@ -18,6 +20,7 @@ use nuten_syntax::TextRange;
 use crate::value::Value;
 pub use crate::{
     find::{FILE_NAMES, FindError, VCS_DIRS, find},
+    lookup::{Lookup, load_file, of_dirs, of_files, of_text},
     schema::schema,
 };
 

@@ -2,25 +2,26 @@
 
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
-mod config;
 mod files;
 mod parallel;
 
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Display,
     fs,
     hash::Hash,
     io::{self, Write},
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     process::ExitCode,
 };
 
-use nuten_config::{Config, FormatConfig};
+use nuten_config::{
+    Config, FormatConfig, Lookup,
+    file::{located, read_regular_file},
+};
 use nuten_format::format;
 use usage::{Args, Cli, Subcommands};
 
-use crate::{config::Lookup, files::Entry};
+use crate::files::Entry;
 
 #[derive(Cli)]
 #[usage(bin = "nuten", version, unknown_flags = "error")]
@@ -89,7 +90,12 @@ fn run_format(args: &Format) -> ExitCode {
         let filepath = args.stdin_filepath.as_deref();
         return format_stdin(filepath, args.config.as_deref(), mode);
     }
-    match args.config.as_deref().map(config::load).transpose() {
+    match args
+        .config
+        .as_deref()
+        .map(nuten_config::load_file)
+        .transpose()
+    {
         Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
         Err(problems) => fail(&problems),
     }
@@ -150,8 +156,10 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
     let src = io::read_to_string(io::stdin())
         .map_err(|error| vec![format!("{}: {error}", name.display())]);
     let formatted = src.and_then(|src| {
-        let given = config_file.map(config::load).transpose()?;
-        let config = stdin_config(filepath, given)?;
+        let config = match config_file {
+            Some(config_file) => nuten_config::load_file(config_file)?,
+            None => nuten_config::of_text(filepath)?,
+        };
         let formatted = format_text(name, &src, &config.format)?;
         Ok((src, formatted))
     });
@@ -164,53 +172,6 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
             Err(problem) => fail(&[problem]),
         },
     }
-}
-
-fn stdin_config(filepath: Option<&Path>, given: Option<Config>) -> Result<Config, Vec<String>> {
-    match (filepath, given) {
-        (_, Some(given)) => Ok(given),
-        // The same as for a file given as a path, whose config is found where its symlinks lead.
-        (Some(file), None) if file.exists() => config::of_file(file, None),
-        // An editor may not have written the file or its directories yet.
-        (Some(file), None) => config::of_dir(&nearest_existing_dir(file)?, None),
-        (None, None) => config::of_dir(Path::new("."), None),
-    }
-}
-
-/// Each existing directory on the way is resolved, so a `..` after a symlink leaves its target.
-/// A directory that does not exist yet holds no symlink, so a `..` after one resolves as written.
-fn nearest_existing_dir(path: &Path) -> Result<PathBuf, Vec<String>> {
-    let resolve = |dir: &Path| {
-        fs::canonicalize(dir).map_err(|error| vec![format!("{}: {error}", dir.display())])
-    };
-    // Not the file itself, which is no directory to go into even when it is a symlink to one.
-    let parent = path.parent().unwrap_or(Path::new(""));
-    // Not the current directory for an absolute path, since nuten may run in one that is removed.
-    let start = if parent.is_absolute() {
-        PathBuf::new()
-    } else {
-        resolve(Path::new("."))?
-    };
-    let dir = parent
-        .components()
-        .try_fold(start, |dir, component| match component {
-            Component::ParentDir => Ok(dir.parent().map_or(dir.clone(), Path::to_path_buf)),
-            Component::CurDir => Ok(dir),
-            Component::Normal(name) => {
-                let next = dir.join(name);
-                if next.exists() {
-                    resolve(&next)
-                } else {
-                    Ok(next)
-                }
-            },
-            component => Ok(dir.join(component)),
-        })?;
-    // None on a drive of Windows that does not exist.
-    dir.ancestors()
-        .find(|dir| dir.is_dir())
-        .map(Path::to_path_buf)
-        .ok_or_else(|| vec![format!("{}: no directory above it exists", path.display())])
 }
 
 fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
@@ -245,7 +206,7 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
     let dir_lookups: HashMap<_, _> = dirs
         .iter()
         .copied()
-        .zip(config::of_dirs(&dirs, given))
+        .zip(nuten_config::of_dirs(&dirs, given))
         .collect();
     // Also keeps two threads off one file, which could read it halfway written.
     let entries = files::distinct(files::expand(paths, &dir_lookups));
@@ -253,7 +214,7 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
         .iter()
         .filter_map(|entry| entry.as_deref().ok())
         .collect();
-    let lookups = config::of_files(&files, given);
+    let lookups = nuten_config::of_files(&files, given);
     let formats = !dir_lookups.values().chain(&lookups).any(Lookup::is_wrong);
     let outcomes = format_all(&files, &lookups, formats.then_some(mode));
     report_of(entries, outcomes)
@@ -329,40 +290,4 @@ fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, 
 fn unique<T: Copy + Eq + Hash>(items: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
     let mut seen = HashSet::new();
     items.filter(move |item| seen.insert(*item))
-}
-
-/// Not `fs::read_to_string` alone, which waits forever on a FIFO.
-fn read_regular_file(path: &Path) -> io::Result<String> {
-    if fs::metadata(path)?.is_file() {
-        fs::read_to_string(path)
-    } else {
-        Err(io::Error::other("not a regular file"))
-    }
-}
-
-fn located(path: &Path, src: &str, offset: usize, message: impl Display) -> String {
-    let (line, column) = line_column(src, offset);
-    format!("{}:{line}:{column}: {message}", path.display())
-}
-
-fn line_column(src: &str, offset: usize) -> (usize, usize) {
-    let before = &src[..offset];
-    let line = before.matches('\n').count() + 1;
-    let last_line = before.rsplit_once('\n').map_or(before, |(_, last)| last);
-    let column = last_line.chars().count() + 1;
-    (line, column)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::line_column;
-
-    #[test]
-    fn line_column_is_one_based_in_characters() {
-        assert_eq!(line_column("ls |", 3), (1, 4));
-        assert_eq!(line_column("ls\n\nls |", 7), (3, 4));
-        assert_eq!(line_column("ls\r\nls |", 7), (2, 4));
-        assert_eq!(line_column("echo 日本 |", 12), (1, 9));
-        assert_eq!(line_column("", 0), (1, 1));
-    }
 }

@@ -1,18 +1,20 @@
-//! The config each file is formatted with, and each directory is walked with.
+//! The config of each path, from the config file nearest it.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
-use nuten_config::{Config, Format, find};
-
-use crate::{located, read_regular_file, unique};
+use crate::{
+    Config, Format,
+    file::{located, read_regular_file},
+    find,
+};
 
 /// The config of a path, or the problems that keep it from having one.
 #[derive(Debug, Clone)]
-pub(crate) enum Lookup {
+pub enum Lookup {
     Found(Config),
     /// The path cannot be resolved, which puts the config of no other path in doubt.
     Unresolved(String),
@@ -22,18 +24,20 @@ pub(crate) enum Lookup {
 }
 
 impl Lookup {
-    pub(crate) fn is_wrong(&self) -> bool {
+    pub fn is_wrong(&self) -> bool {
         matches!(self, Lookup::Wrong(_))
     }
 
-    pub(crate) fn into_config(self) -> Result<Config, Vec<String>> {
+    /// The error holds a line for each problem.
+    pub fn into_config(self) -> Result<Config, Vec<String>> {
         match self {
             Lookup::Found(config) => Ok(config),
             lookup => Err(lookup.problems()),
         }
     }
 
-    pub(crate) fn problems(&self) -> Vec<String> {
+    /// A line for each problem, none when it found a config.
+    pub fn problems(&self) -> Vec<String> {
         match self {
             Lookup::Found(_) => Vec::new(),
             Lookup::Unresolved(problem) => vec![problem.clone()],
@@ -43,29 +47,42 @@ impl Lookup {
 }
 
 /// The config of each of `files`: `given`, or else from the config file nearest the file.
-pub(crate) fn of_files(files: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
+pub fn of_files(files: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, files.len(), || {
         files.iter().map(|file| search_start(file)).collect()
     })
 }
 
 /// The config of each of `dirs`, as `of_files` gives it for a file in the directory.
-pub(crate) fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
+pub fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, dirs.len(), || {
         dirs.iter().map(|dir| canonical(dir)).collect()
     })
 }
 
-pub(crate) fn of_file(file: &Path, given: Option<&Config>) -> Result<Config, Vec<String>> {
-    of_files(&[file], given)
+/// The config of text not read from a file, such as stdin or a document in an editor.
+/// It is that of `file`, where the text is to be written, or else of the current directory.
+/// The error holds a line for each problem.
+pub fn of_text(file: Option<&Path>) -> Result<Config, Vec<String>> {
+    match file {
+        // Found where its symlinks lead, as for any existing file.
+        Some(file) if file.exists() => of_file(file),
+        // An editor may not have written the file or its directories yet.
+        Some(file) => of_dir(&nearest_existing_dir(file).map_err(|problem| vec![problem])?),
+        None => of_dir(Path::new(".")),
+    }
+}
+
+fn of_file(file: &Path) -> Result<Config, Vec<String>> {
+    of_files(&[file], None)
         .into_iter()
         .next()
         .expect("one lookup for one file")
         .into_config()
 }
 
-pub(crate) fn of_dir(dir: &Path, given: Option<&Config>) -> Result<Config, Vec<String>> {
-    of_dirs(&[dir], given)
+fn of_dir(dir: &Path) -> Result<Config, Vec<String>> {
+    of_dirs(&[dir], None)
         .into_iter()
         .next()
         .expect("one lookup for one directory")
@@ -87,16 +104,19 @@ fn given_or_nearest(
 
 /// The config in the config file nearest each of `starts`, the directories the search starts from.
 fn nearest(starts: &[Result<PathBuf, String>]) -> Vec<Lookup> {
-    let dirs = unique(starts.iter().flatten().map(PathBuf::as_path));
+    let dirs: HashSet<&Path> = starts.iter().flatten().map(PathBuf::as_path).collect();
     let found: HashMap<&Path, Result<Option<PathBuf>, String>> = dirs
+        .into_iter()
         .map(|dir| (dir, find(dir).map_err(|error| error.to_string())))
         .collect();
-    let config_files = starts
+    let config_files: HashSet<&Path> = starts
         .iter()
         .flatten()
-        .filter_map(|dir| found[dir.as_path()].as_ref().ok()?.as_deref());
-    let loaded: HashMap<&Path, Result<Config, Vec<String>>> = unique(config_files)
-        .map(|file| (file, load(file)))
+        .filter_map(|dir| found[dir.as_path()].as_ref().ok()?.as_deref())
+        .collect();
+    let loaded: HashMap<&Path, Result<Config, Vec<String>>> = config_files
+        .into_iter()
+        .map(|file| (file, load_file(file)))
         .collect();
     let lookup = |dir: &Path| match &found[dir] {
         Err(problem) => Lookup::Wrong(vec![problem.clone()]),
@@ -129,8 +149,42 @@ fn canonical(path: &Path) -> Result<PathBuf, String> {
     fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))
 }
 
+/// Each existing directory on the way is resolved, so a `..` after a symlink leaves its target.
+/// A directory that does not exist yet holds no symlink, so a `..` after one resolves as written.
+/// The error is the problem, as a line.
+fn nearest_existing_dir(path: &Path) -> Result<PathBuf, String> {
+    // Not the file itself, which is no directory to go into even when it is a symlink to one.
+    let parent = path.parent().unwrap_or(Path::new(""));
+    // Not the current directory for an absolute path, since nuten may run in one that is removed.
+    let start = if parent.is_absolute() {
+        PathBuf::new()
+    } else {
+        canonical(Path::new("."))?
+    };
+    let dir = parent
+        .components()
+        .try_fold(start, |dir, component| match component {
+            Component::ParentDir => Ok(dir.parent().map_or(dir.clone(), Path::to_path_buf)),
+            Component::CurDir => Ok(dir),
+            Component::Normal(name) => {
+                let next = dir.join(name);
+                if next.exists() {
+                    canonical(&next)
+                } else {
+                    Ok(next)
+                }
+            },
+            component => Ok(dir.join(component)),
+        })?;
+    // None on a drive of Windows that does not exist.
+    dir.ancestors()
+        .find(|dir| dir.is_dir())
+        .map(Path::to_path_buf)
+        .ok_or_else(|| format!("{}: no directory above it exists", path.display()))
+}
+
 /// The error holds a line for each problem.
-pub(crate) fn load(path: &Path) -> Result<Config, Vec<String>> {
+pub fn load_file(path: &Path) -> Result<Config, Vec<String>> {
     let Some(format) = Format::of_path(path) else {
         let extensions: Vec<_> = Format::ALL
             .iter()
@@ -144,7 +198,7 @@ pub(crate) fn load(path: &Path) -> Result<Config, Vec<String>> {
     };
     let text =
         read_regular_file(path).map_err(|error| vec![format!("{}: {error}", path.display())])?;
-    nuten_config::load(&text, format).map_err(|errors| {
+    crate::load(&text, format).map_err(|errors| {
         errors
             .iter()
             .map(|error| located(path, &text, error.range.start().into(), &error.kind))

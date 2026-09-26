@@ -9,9 +9,7 @@ use std::{
 };
 
 use ignore::{DirEntry, WalkBuilder, gitignore::Gitignore};
-use nuten_config::VCS_DIRS;
-
-use crate::config::Lookup;
+use nuten_config::{Lookup, VCS_DIRS};
 
 /// A file to format, or a line for a problem met while looking for files.
 pub(crate) type Entry = Result<PathBuf, String>;
