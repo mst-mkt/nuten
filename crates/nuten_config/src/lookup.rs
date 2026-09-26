@@ -9,7 +9,7 @@ use std::{
 use crate::{
     Config, Format,
     file::{located, read_regular_file},
-    find,
+    find::find_each,
 };
 
 /// The config of a path, or the problems that keep it from having one.
@@ -47,9 +47,16 @@ impl Lookup {
 }
 
 /// The config of each of `files`: `given`, or else from the config file nearest the file.
-pub fn of_files(files: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
+/// Each file is canonical, as `canonical` gives it, or the problem resolving it.
+pub fn of_files(files: &[Result<&Path, &str>], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, files.len(), || {
-        files.iter().map(|file| search_start(file)).collect()
+        files
+            .iter()
+            .map(|file| match file {
+                Ok(file) => Ok(search_start(file)),
+                Err(problem) => Err((*problem).to_string()),
+            })
+            .collect()
     })
 }
 
@@ -74,7 +81,8 @@ pub fn of_text(file: Option<&Path>) -> Result<Config, Vec<String>> {
 }
 
 fn of_file(file: &Path) -> Result<Config, Vec<String>> {
-    of_files(&[file], None)
+    let file = canonical(file).map_err(|problem| vec![problem])?;
+    of_files(&[Ok(&file)], None)
         .into_iter()
         .next()
         .expect("one lookup for one file")
@@ -104,11 +112,7 @@ fn given_or_nearest(
 
 /// The config in the config file nearest each of `starts`, the directories the search starts from.
 fn nearest(starts: &[Result<PathBuf, String>]) -> Vec<Lookup> {
-    let dirs: HashSet<&Path> = starts.iter().flatten().map(PathBuf::as_path).collect();
-    let found: HashMap<&Path, Result<Option<PathBuf>, String>> = dirs
-        .into_iter()
-        .map(|dir| (dir, find(dir).map_err(|error| error.to_string())))
-        .collect();
+    let found = find_each(starts.iter().flatten().map(PathBuf::as_path));
     let config_files: HashSet<&Path> = starts
         .iter()
         .flatten()
@@ -116,7 +120,7 @@ fn nearest(starts: &[Result<PathBuf, String>]) -> Vec<Lookup> {
         .collect();
     let loaded: HashMap<&Path, Result<Config, Vec<String>>> = config_files
         .into_iter()
-        .map(|file| (file, load_file(file)))
+        .map(|file| (file, load_nearest(file)))
         .collect();
     let lookup = |dir: &Path| match &found[dir] {
         Err(problem) => Lookup::Wrong(vec![problem.clone()]),
@@ -135,24 +139,46 @@ fn nearest(starts: &[Result<PathBuf, String>]) -> Vec<Lookup> {
         .collect()
 }
 
-/// The directory the search for the config file of `file` starts from.
-fn search_start(file: &Path) -> Result<PathBuf, String> {
-    let file = canonical(file)?;
-    Ok(file
-        .parent()
-        .map_or_else(|| file.clone(), Path::to_path_buf))
+/// The directory the search for the config file of `file`, a canonical path, starts from.
+fn search_start(file: &Path) -> PathBuf {
+    file.parent().unwrap_or(file).to_path_buf()
 }
 
 /// `path` with symlinks resolved, since what it names is where they lead.
 /// Resolves `..` too, since `find` reads it as written.
-fn canonical(path: &Path) -> Result<PathBuf, String> {
+/// The error is the problem, as a line.
+pub fn canonical(path: &Path) -> Result<PathBuf, String> {
     fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))
 }
 
+/// `file`, which may not exist yet, with the symlinks resolved on the way to it.
+/// It is canonical when `file` exists, as `canonical` gives it.
+/// The error is the problem, as a line.
+pub fn resolved(file: &Path) -> Result<PathBuf, String> {
+    if file.exists() {
+        return canonical(file);
+    }
+    let name = file
+        .file_name()
+        .ok_or_else(|| format!("{}: names no file", file.display()))?;
+    Ok(resolved_dir(file)?.join(name))
+}
+
+/// The error is the problem, as a line.
+fn nearest_existing_dir(path: &Path) -> Result<PathBuf, String> {
+    // None on a drive of Windows that does not exist.
+    resolved_dir(path)?
+        .ancestors()
+        .find(|dir| dir.is_dir())
+        .map(Path::to_path_buf)
+        .ok_or_else(|| format!("{}: no directory above it exists", path.display()))
+}
+
+/// The directory `path` is in, resolved as far as it exists.
 /// Each existing directory on the way is resolved, so a `..` after a symlink leaves its target.
 /// A directory that does not exist yet holds no symlink, so a `..` after one resolves as written.
 /// The error is the problem, as a line.
-fn nearest_existing_dir(path: &Path) -> Result<PathBuf, String> {
+fn resolved_dir(path: &Path) -> Result<PathBuf, String> {
     // Not the file itself, which is no directory to go into even when it is a symlink to one.
     let parent = path.parent().unwrap_or(Path::new(""));
     // Not the current directory for an absolute path, since nuten may run in one that is removed.
@@ -161,7 +187,7 @@ fn nearest_existing_dir(path: &Path) -> Result<PathBuf, String> {
     } else {
         canonical(Path::new("."))?
     };
-    let dir = parent
+    parent
         .components()
         .try_fold(start, |dir, component| match component {
             Component::ParentDir => Ok(dir.parent().map_or(dir.clone(), Path::to_path_buf)),
@@ -175,16 +201,43 @@ fn nearest_existing_dir(path: &Path) -> Result<PathBuf, String> {
                 }
             },
             component => Ok(dir.join(component)),
-        })?;
-    // None on a drive of Windows that does not exist.
-    dir.ancestors()
-        .find(|dir| dir.is_dir())
-        .map(Path::to_path_buf)
-        .ok_or_else(|| format!("{}: no directory above it exists", path.display()))
+        })
+}
+
+/// The config in `path`, the file `--config` names.
+/// Its patterns are relative to the current directory.
+/// The error holds a line for each problem.
+pub fn load_given(path: &Path) -> Result<Config, Vec<String>> {
+    let config = load_file(path)?;
+    // Not resolved unless a pattern needs it, since nuten may run in a directory that is removed.
+    if !config.needs_root() {
+        return Ok(config);
+    }
+    let root = fs::canonicalize(".").map_err(|error| {
+        vec![format!(
+            "{}: its patterns are relative to the current directory, which cannot be resolved: \
+             {error}",
+            path.display()
+        )]
+    })?;
+    Ok(Config {
+        root: Some(root),
+        ..config
+    })
+}
+
+/// The config in `path`, a config file found for a path, with patterns relative to its directory.
+/// `path` is in a canonical directory.
+fn load_nearest(path: &Path) -> Result<Config, Vec<String>> {
+    let config = load_file(path)?;
+    Ok(Config {
+        root: path.parent().map(Path::to_path_buf),
+        ..config
+    })
 }
 
 /// The error holds a line for each problem.
-pub fn load_file(path: &Path) -> Result<Config, Vec<String>> {
+fn load_file(path: &Path) -> Result<Config, Vec<String>> {
     let Some(format) = Format::of_path(path) else {
         let extensions: Vec<_> = Format::ALL
             .iter()

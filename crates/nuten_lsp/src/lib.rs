@@ -293,9 +293,18 @@ fn formatting_at(
     uri: &str,
     text: &str,
 ) -> Result<Option<Vec<TextEdit>>, (ErrorCode, String)> {
+    let failed = |problems: Vec<String>| (ErrorCode::RequestFailed, problems.join("\n"));
     // Found again for each request, so that a config file edited meanwhile is never missed.
-    let config = config_of(place, uri)
-        .map_err(|problems| (ErrorCode::RequestFailed, problems.join("\n")))?;
+    let config = config_of(place, uri).map_err(failed)?;
+    let file = match place {
+        Place::File(path) if config.depends_on_file() => {
+            Some(nuten_config::resolved(path).map_err(|problem| failed(vec![problem]))?)
+        },
+        _ => None,
+    };
+    if file.is_some_and(|file| config.excludes(&file)) {
+        return Ok(None);
+    }
     Ok(match nuten_format::format(text, &config.format) {
         Ok(formatted) => Some(edit::between(text, &formatted).into_iter().collect()),
         // Not an error, which the client would show for code that is still being typed.

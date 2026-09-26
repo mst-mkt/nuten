@@ -5,24 +5,30 @@ mod find;
 mod json;
 mod lookup;
 mod nuon;
+mod patterns;
 mod schema;
 mod settings;
 #[cfg(test)]
 mod test_support;
 pub mod value;
 
-use std::{fmt, path::Path};
+use std::{
+    fmt,
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
 pub use nuten_format::{Config as FormatConfig, IndentStyle, LineEnding};
 use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
-use crate::value::Value;
 pub use crate::{
     find::{FILE_NAMES, FindError, VCS_DIRS, find},
-    lookup::{Lookup, load_file, of_dirs, of_files, of_text},
+    lookup::{Lookup, canonical, load_given, of_dirs, of_files, of_text, resolved},
+    patterns::{PatternProblem, Patterns},
     schema::schema,
 };
+use crate::{patterns::Place, value::Value};
 
 /// What a config file sets.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,14 +36,57 @@ pub struct Config {
     pub format: FormatConfig,
     /// Whether formatting a directory skips the files that ignore files ignore.
     pub respect_gitignore: bool,
+    /// The files formatting a directory takes.
+    pub include: Patterns,
+    /// The files never formatted, and the directories whose files are never formatted.
+    pub exclude: Patterns,
+    /// The directory the patterns are relative to, canonical.
+    /// None when no pattern needs it or the config is read from text alone.
+    /// Only patterns without a `/` then match, and only the name of a file.
+    pub root: Option<PathBuf>,
 }
+
+// Built once, since the defaults stand for every file without a config file and a build is slow.
+static DEFAULT_INCLUDE: LazyLock<Patterns> =
+    LazyLock::new(|| Patterns::new(["*.nu"]).expect("the pattern is valid"));
+static NO_PATTERNS: LazyLock<Patterns> =
+    LazyLock::new(|| Patterns::new([]).expect("no pattern has a problem"));
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             format: FormatConfig::default(),
             respect_gitignore: true,
+            include: DEFAULT_INCLUDE.clone(),
+            exclude: NO_PATTERNS.clone(),
+            root: None,
         }
+    }
+}
+
+impl Config {
+    /// Whether how text is formatted depends on the file it is to be written to.
+    pub fn depends_on_file(&self) -> bool {
+        !self.exclude.is_empty()
+    }
+
+    /// Whether the patterns need `root`, having a `/` or matching the directories above a file.
+    pub(crate) fn needs_root(&self) -> bool {
+        self.include.has_anchored() || !self.exclude.is_empty()
+    }
+
+    /// Whether formatting a directory takes `file`, a canonical path, unless `exclude` matches.
+    pub fn includes(&self, file: &Path) -> bool {
+        self.include.matches_file(self.place(file))
+    }
+
+    /// Whether `file`, a canonical path, is left alone even when named directly.
+    pub fn excludes(&self, file: &Path) -> bool {
+        self.exclude.matches_file_or_ancestor(self.place(file))
+    }
+
+    fn place<'a>(&self, file: &'a Path) -> Place<'a> {
+        Place::of(file, self.root.as_deref())
     }
 }
 
@@ -108,6 +157,10 @@ pub enum ConfigErrorKind {
         key: &'static str,
         choices: Vec<&'static str>,
     },
+    Pattern {
+        key: &'static str,
+        problem: PatternProblem,
+    },
 }
 
 impl fmt::Display for ConfigErrorKind {
@@ -147,6 +200,10 @@ impl fmt::Display for ConfigErrorKind {
                 let choices: Vec<_> = choices.iter().map(|choice| format!("`{choice}`")).collect();
                 write!(f, "`{key}` takes one of {}", choices.join(", "))
             },
+            ConfigErrorKind::Pattern {
+                key,
+                problem,
+            } => write!(f, "pattern of `{key}` {problem}"),
         }
     }
 }

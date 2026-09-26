@@ -11,8 +11,17 @@ use std::{
 use ignore::{DirEntry, WalkBuilder, gitignore::Gitignore};
 use nuten_config::{Lookup, VCS_DIRS};
 
-/// A file to format, or a line for a problem met while looking for files.
-pub(crate) type Entry = Result<PathBuf, String>;
+/// A file that may be formatted, or a line for a problem met while looking for files.
+pub(crate) type Entry = Result<Candidate, String>;
+
+#[derive(Debug)]
+pub(crate) struct Candidate {
+    pub(crate) path: PathBuf,
+    /// `path` with symlinks resolved, or the problem resolving it.
+    pub(crate) canonical: Result<PathBuf, String>,
+    /// Whether it is given directly, rather than found under a directory given.
+    pub(crate) given: bool,
+}
 
 pub(crate) fn dirs(paths: &[PathBuf]) -> Vec<&Path> {
     paths
@@ -35,7 +44,11 @@ pub(crate) fn expand(paths: &[PathBuf], dir_lookups: &HashMap<&Path, Lookup>) ->
     paths
         .iter()
         .flat_map(|path| match dir_lookups.get(path.as_path()) {
-            None => vec![Ok(path.clone())],
+            None => vec![Ok(Candidate {
+                path: path.clone(),
+                canonical: nuten_config::canonical(path),
+                given: true,
+            })],
             // Not walked, since what the global excludes file of git ignores is unknown.
             Some(lookup) if respects_gitignore(lookup) && !global_problems.is_empty() => {
                 global_problems.iter().cloned().map(Err).collect()
@@ -57,10 +70,12 @@ fn global_ignore_problems() -> Vec<String> {
 /// Walks no symlink, since a link could lead out of `dir` or back into it.
 /// Walks no directory of version control, since it holds no code of the author's.
 /// Hidden files are walked, since config of Nushell lives in them.
-fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Result<PathBuf, String>> {
+fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Entry> {
     // Directories covered by an ignore file with lines the walker drops.
     // Their files are left alone, since what those lines ignore is unknown.
     let mut untrusted: Vec<PathBuf> = Vec::new();
+    // Resolved once, since the walk follows no symlink below it.
+    let canonical_dir = nuten_config::canonical(dir);
     WalkBuilder::new(dir)
         .standard_filters(respect_gitignore)
         .hidden(false)
@@ -89,8 +104,15 @@ fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Result<PathBuf, String>> {
                 untrusted.push(path.to_path_buf());
                 return failed(error);
             }
-            if is_nu_file(&entry) {
-                vec![Ok(shown(path))]
+            if is_regular_file(&entry) {
+                let below = path
+                    .strip_prefix(dir)
+                    .expect("the walk yields paths under `dir`");
+                vec![Ok(Candidate {
+                    path: shown(path),
+                    canonical: canonical_dir.clone().map(|dir| dir.join(below)),
+                    given: false,
+                })]
             } else {
                 Vec::new()
             }
@@ -98,7 +120,7 @@ fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Result<PathBuf, String>> {
         .collect()
 }
 
-fn failed(error: &ignore::Error) -> Vec<Result<PathBuf, String>> {
+fn failed(error: &ignore::Error) -> Vec<Entry> {
     problem_lines(error).into_iter().map(Err).collect()
 }
 
@@ -109,11 +131,10 @@ fn is_vcs_dir(entry: &DirEntry) -> bool {
         && VCS_DIRS.iter().any(|name| entry.file_name() == *name)
 }
 
-fn is_nu_file(entry: &DirEntry) -> bool {
+fn is_regular_file(entry: &DirEntry) -> bool {
     entry
         .file_type()
         .is_some_and(|file_type| file_type.is_file())
-        && entry.path().extension() == Some(OsStr::new("nu"))
 }
 
 /// `path` with no `./` before it, as a path in the current directory is written.
@@ -171,15 +192,20 @@ fn innermost(error: &io::Error) -> &io::Error {
         .unwrap_or(error)
 }
 
-/// Each of `entries` but the files that are the same file as one before them.
-pub(crate) fn distinct(entries: Vec<Entry>) -> Vec<Entry> {
-    let mut seen = HashSet::new();
+/// Each of `entries` but those whose file, at `path_of` it, is the same file as one before them.
+/// Nor those that are one of `excluded` under another name, since `exclude` leaves that file alone.
+pub(crate) fn distinct<T>(
+    entries: Vec<Result<T, String>>,
+    excluded: &[PathBuf],
+    path_of: impl Fn(&T) -> &PathBuf,
+) -> Vec<Result<T, String>> {
+    let mut seen: HashSet<_> = excluded.iter().map(|path| identity(path)).collect();
     entries
         .into_iter()
         .filter(|entry| {
             entry
                 .as_ref()
-                .map_or(true, |file| seen.insert(identity(file)))
+                .map_or(true, |file| seen.insert(identity(path_of(file))))
         })
         .collect()
 }

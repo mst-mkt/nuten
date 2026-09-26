@@ -35,6 +35,20 @@ expression: schema()
     "respect_gitignore": {
       "description": "Whether formatting a directory skips the files ignored by `.gitignore`, `.ignore`, the exclude file of the repository, or the global excludes file of git. The config file nearest the directory, or the one `--config` names, decides it for everything under the directory.",
       "type": "boolean"
+    },
+    "include": {
+      "description": "Glob patterns of the files formatting a directory takes, in place of `*.nu`. A pattern without a `/` matches a file name at any depth; one with a `/` matches the path from the directory of the config file, or from the current directory for the config file `--config` names. A file named directly is formatted whether it matches or not.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exclude": {
+      "description": "Glob patterns of the files to leave alone, even when named directly, and of the directories whose files to leave alone. A pattern without a `/` matches a name at any depth; one with a `/` matches the path from the directory of the config file, or from the current directory for the config file `--config` names.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "additionalProperties": false

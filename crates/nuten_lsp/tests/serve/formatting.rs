@@ -182,6 +182,48 @@ fn file_not_yet_written_takes_config_of_nearest_existing_directory() {
     client.shut_down();
 }
 
+#[cfg(unix)]
+#[test]
+fn formatting_file_exclude_matches_where_symlinked_directory_leads_answers_null() {
+    let dir = TempDir::new();
+    dir.file("nuten.json", r#"{ "exclude": ["vendor"] }"#);
+    dir.file("vendor/a.nu", "");
+    std::os::unix::fs::symlink(dir.path("vendor"), dir.path("link")).unwrap();
+    let (client, _) = Client::initialized();
+    for name in ["link/a.nu", "link/new/a.nu"] {
+        let uri = file_uri(&dir.path(name));
+        client.open(&uri, "ls   |   length\n");
+        assert_eq!(client.format(&uri).unwrap(), None, "{name}");
+    }
+    client.shut_down();
+}
+
+#[test]
+fn formatting_file_exclude_matches_answers_null() {
+    let dir = TempDir::new();
+    dir.file("nuten.json", r#"{ "exclude": ["vendor"] }"#);
+    let written = file_uri(&dir.file("vendor/a.nu", ""));
+    let unwritten = file_uri(&dir.path("vendor/new/a.nu"));
+    let (client, _) = Client::initialized();
+    for uri in [&written, &unwritten] {
+        client.open(uri, "ls   |   length\n");
+        assert_eq!(client.format(uri).unwrap(), None, "{uri}");
+    }
+    client.shut_down();
+}
+
+#[test]
+fn formatting_takes_file_include_misses() {
+    let dir = TempDir::new();
+    dir.file("nuten.json", r#"{ "include": ["*.nush"] }"#);
+    let uri = file_uri(&dir.file("a.nu", ""));
+    let (client, _) = Client::initialized();
+    client.open(&uri, "ls  \n");
+    let edits = client.format(&uri).unwrap();
+    assert_eq!(edits, Some(vec![edit((0, 0), (1, 0), "ls\n")]));
+    client.shut_down();
+}
+
 #[test]
 fn wrong_config_file_fails_formatting_with_its_problems() {
     let dir = TempDir::new();

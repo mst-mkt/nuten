@@ -47,6 +47,7 @@ fn schema_allowed_value_loads() {
                 .into(),
             Some("string") => vec!["\"x\"".to_string()],
             Some("boolean") => vec!["true".to_string(), "false".to_string()],
+            Some("array") => vec!["[]".to_string(), "[\"x\", \"y/z\"]".to_string()],
             _ => property
                 .get_array("enum")
                 .expect("a property has a type or choices")
@@ -91,6 +92,15 @@ fn schema_rejected_value_fails_to_load() {
                     matches!(errors[..], [ConfigErrorKind::WrongType { .. }]),
                     "{key}"
                 );
+            },
+            Some("array") => {
+                for value in ["\"x\"", "[1]"] {
+                    let errors = load_one(&key, value).unwrap_err();
+                    assert!(
+                        matches!(errors[..], [ConfigErrorKind::WrongType { .. }]),
+                        "{key}: {value}"
+                    );
+                }
             },
             _ => {
                 let errors = load_one(&key, "\"none of the choices\"").unwrap_err();

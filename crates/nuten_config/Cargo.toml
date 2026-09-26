@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+globset = { workspace = true }
 jsonc-parser = { workspace = true }
 nuten-format = { workspace = true }
 nuten-parser = { workspace = true }

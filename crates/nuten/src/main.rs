@@ -23,7 +23,7 @@ use nuten_lsp::Exit;
 use usage::{Args, Cli, Subcommands, ValueEnum};
 
 use crate::{
-    files::Entry,
+    files::{Candidate, Entry},
     overwrite::{Contents, Failure, OnDisk, overwrite},
 };
 
@@ -141,6 +141,8 @@ struct Report {
     changed: Vec<PathBuf>,
     /// A line for each problem, at each path given that it concerns, in the order of the paths.
     problems: Vec<String>,
+    /// Whether `exclude` left out every file there was to format.
+    all_excluded: bool,
 }
 
 fn main() -> ExitCode {
@@ -164,7 +166,7 @@ fn run_format(args: &Format) -> ExitCode {
     match args
         .config
         .as_deref()
-        .map(nuten_config::load_file)
+        .map(nuten_config::load_given)
         .transpose()
     {
         Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
@@ -237,10 +239,21 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
         .map_err(|error| vec![format!("{}: {error}", name.display())]);
     let formatted = src.and_then(|src| {
         let config = match config_file {
-            Some(config_file) => nuten_config::load_file(config_file)?,
+            Some(config_file) => nuten_config::load_given(config_file)?,
             None => nuten_config::of_text(filepath)?,
         };
-        let formatted = format_text(name, &src, &config.format)?;
+        let file = match filepath {
+            // Not resolved unless it matters, since nuten may run in a directory that is removed.
+            Some(file) if config.depends_on_file() => {
+                Some(nuten_config::resolved(file).map_err(|problem| vec![problem])?)
+            },
+            _ => None,
+        };
+        let formatted = match &file {
+            // Written back as it is, since the caller takes stdout for what the file is to hold.
+            Some(file) if config.excludes(file) => src.clone(),
+            _ => format_text(name, &src, &config.format)?,
+        };
         Ok((src, formatted))
     });
     match (formatted, mode) {
@@ -266,6 +279,10 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
     } else if mode == Mode::Check && !report.changed.is_empty() {
         ExitCode::from(1)
     } else {
+        // Not a problem, since a tool may pass every file it has, whatever the config leaves out.
+        if report.all_excluded {
+            eprintln!("nothing to format, since `exclude` leaves out every file");
+        }
         ExitCode::SUCCESS
     }
 }
@@ -285,56 +302,130 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
         .copied()
         .zip(nuten_config::of_dirs(&dirs, given))
         .collect();
-    // Also keeps two threads off one file, which could read it halfway written.
-    let entries = files::distinct(files::expand(paths, &dir_lookups));
-    let files: Vec<_> = entries
+    let entries = files::expand(paths, &dir_lookups);
+    let canonicals: Vec<_> = entries
         .iter()
-        .filter_map(|entry| entry.as_deref().ok())
+        .filter_map(|entry| {
+            let candidate = entry.as_ref().ok()?;
+            Some(candidate.canonical.as_deref().map_err(String::as_str))
+        })
         .collect();
-    let lookups = nuten_config::of_files(&files, given);
-    let formats = !dir_lookups.values().chain(&lookups).any(Lookup::is_wrong);
-    let outcomes = format_all(&files, &lookups, formats.then_some(mode));
-    report_of(entries, outcomes)
+    let lookups = nuten_config::of_files(&canonicals, given);
+    let (taken, excluded) = taken(with_lookups(entries, lookups));
+    // After the files are picked, since telling two files apart reads each.
+    // Also keeps two threads off one file, which could read it halfway written.
+    let jobs = files::distinct(taken, &excluded, |(candidate, _)| &candidate.path);
+    let all_excluded = !excluded.is_empty() && jobs.is_empty();
+    let formats = !dir_lookups
+        .values()
+        .chain(jobs.iter().flatten().map(|(_, lookup)| lookup))
+        .any(Lookup::is_wrong);
+    let outcomes = format_all(&jobs, formats.then_some(mode));
+    report_of(jobs, outcomes, all_excluded)
 }
 
-/// Whether each of `files` changes, or else a line for each problem with it or its config.
+/// A file with its config, or a line for a problem met while looking for files.
+type Job = Result<(Candidate, Lookup), String>;
+
+/// Each of `entries`, with the file paired with its config.
+/// `lookups` holds the config of each file of `entries`.
+fn with_lookups(entries: Vec<Entry>, lookups: Vec<Lookup>) -> Vec<Job> {
+    let mut lookups = lookups.into_iter();
+    entries
+        .into_iter()
+        .map(|entry| {
+            entry.map(|candidate| {
+                let lookup = lookups.next().expect("a lookup for each file");
+                (candidate, lookup)
+            })
+        })
+        .collect()
+}
+
+/// The jobs to go on with, and the paths of the files `exclude` leaves out.
+fn taken(jobs: Vec<Job>) -> (Vec<Job>, Vec<PathBuf>) {
+    let (taken, left): (Vec<_>, Vec<_>) = jobs
+        .into_iter()
+        .map(|job| {
+            let pick = job.as_ref().map_or(Pick::Take, pick);
+            (job, pick)
+        })
+        .partition(|(_, pick)| *pick == Pick::Take);
+    let excluded = left
+        .into_iter()
+        .filter(|(_, pick)| *pick == Pick::Exclude)
+        .filter_map(|(job, _)| Some(job.ok()?.0.path))
+        .collect();
+    (taken.into_iter().map(|(job, _)| job).collect(), excluded)
+}
+
+/// What becomes of a file, as far as its config tells.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Pick {
+    Take,
+    /// Left out by `exclude`.
+    Exclude,
+    /// Found under a directory, but not taken by `include`.
+    Skip,
+}
+
+/// A config with problems takes the file, so that they are reported.
+fn pick((candidate, lookup): &(Candidate, Lookup)) -> Pick {
+    let Lookup::Found(config) = lookup else {
+        return Pick::Take;
+    };
+    // A file that cannot be resolved is taken, so that reading it reports why.
+    let Ok(file) = &candidate.canonical else {
+        return Pick::Take;
+    };
+    if !candidate.given && !config.includes(file) {
+        Pick::Skip
+    } else if config.excludes(file) {
+        Pick::Exclude
+    } else {
+        Pick::Take
+    }
+}
+
+/// Whether the file of each of `jobs` changes, or a line for each problem with it or its config.
 /// Formats nothing when `mode` is `None`.
-fn format_all(
-    files: &[&Path],
-    lookups: &[Lookup],
-    mode: Option<Mode>,
-) -> Vec<Result<bool, Vec<String>>> {
-    let jobs: Vec<_> = files.iter().zip(lookups).collect();
-    parallel::map(&jobs, |(path, lookup)| match (lookup, mode) {
-        (Lookup::Found(config), Some(mode)) => format_file(path, &config.format, mode),
+fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Result<bool, Vec<String>>> {
+    let files: Vec<_> = jobs.iter().flatten().collect();
+    parallel::map(&files, |(candidate, lookup)| match (lookup, mode) {
+        (Lookup::Found(config), Some(mode)) => format_file(&candidate.path, &config.format, mode),
         (Lookup::Found(_), None) => Ok(false),
         (lookup, _) => Err(lookup.problems()),
     })
 }
 
-/// What `entries` come to, where what formatting each file comes to is next in `outcomes`.
-fn report_of(entries: Vec<Entry>, outcomes: Vec<Result<bool, Vec<String>>>) -> Report {
+/// What `jobs` come to, where what formatting each file comes to is next in `outcomes`.
+fn report_of(
+    jobs: Vec<Job>,
+    outcomes: Vec<Result<bool, Vec<String>>>,
+    all_excluded: bool,
+) -> Report {
     let mut outcomes = outcomes.into_iter();
-    let entry_outcomes: Vec<_> = entries
+    let job_outcomes: Vec<_> = jobs
         .into_iter()
-        .map(|entry| match entry {
-            Ok(path) => outcomes
+        .map(|job| match job {
+            Ok((candidate, _)) => outcomes
                 .next()
                 .expect("an outcome for each file")
-                .map(|changed| changed.then_some(path)),
+                .map(|changed| changed.then_some(candidate.path)),
             Err(problem) => Err(vec![problem]),
         })
         .collect();
     Report {
-        changed: entry_outcomes
+        changed: job_outcomes
             .iter()
             .filter_map(|result| result.as_ref().ok()?.clone())
             .collect(),
-        problems: entry_outcomes
+        problems: job_outcomes
             .into_iter()
             .filter_map(Result::err)
             .flatten()
             .collect(),
+        all_excluded,
     }
 }
 

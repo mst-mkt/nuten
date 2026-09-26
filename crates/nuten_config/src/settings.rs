@@ -4,7 +4,7 @@
 //! The loader and the JSON Schema both read them from here.
 
 use crate::{
-    Config, ConfigError, ConfigErrorKind, FormatConfig, IndentStyle, LineEnding, error,
+    Config, ConfigError, ConfigErrorKind, FormatConfig, IndentStyle, LineEnding, Patterns, error,
     value::{self, Field, Value, ValueKind},
 };
 
@@ -29,6 +29,10 @@ pub(crate) enum Kind {
     Boolean {
         set: fn(Config, bool) -> Config,
     },
+    /// A list of glob patterns.
+    Patterns {
+        set: fn(Config, Patterns) -> Config,
+    },
     /// Any string, which changes nothing.
     String,
 }
@@ -39,7 +43,7 @@ pub(crate) struct Choice {
     pub(crate) set: fn(Config) -> Config,
 }
 
-pub(crate) const SETTINGS: [Setting; 6] = [
+pub(crate) const SETTINGS: [Setting; 8] = [
     Setting {
         key: "$schema",
         description: "Where an editor finds the JSON Schema; nuten does not read it.",
@@ -141,13 +145,42 @@ pub(crate) const SETTINGS: [Setting; 6] = [
             },
         },
     },
+    Setting {
+        key: "include",
+        description: "Glob patterns of the files formatting a directory takes, in place of \
+                      `*.nu`. A pattern without a `/` matches a file name at any depth; one with \
+                      a `/` matches the path from the directory of the config file, or from the \
+                      current directory for the config file `--config` names. A file named \
+                      directly is formatted whether it matches or not.",
+        kind: Kind::Patterns {
+            set: |config, include| Config {
+                include,
+                ..config
+            },
+        },
+    },
+    Setting {
+        key: "exclude",
+        description: "Glob patterns of the files to leave alone, even when named directly, and \
+                      of the directories whose files to leave alone. A pattern without a `/` \
+                      matches a name at any depth; one with a `/` matches the path from the \
+                      directory of the config file, or from the current directory for the \
+                      config file `--config` names.",
+        kind: Kind::Patterns {
+            set: |config, exclude| Config {
+                exclude,
+                ..config
+            },
+        },
+    },
 ];
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum Change {
     Integer(fn(Config, i64) -> Config, i64),
     Choice(fn(Config) -> Config),
     Boolean(fn(Config, bool) -> Config, bool),
+    Patterns(fn(Config, Patterns) -> Config, Patterns),
     Nothing,
 }
 
@@ -157,6 +190,7 @@ impl Change {
             Change::Integer(set, integer) => set(config, integer),
             Change::Choice(set) => set(config),
             Change::Boolean(set, boolean) => set(config, boolean),
+            Change::Patterns(set, patterns) => set(config, patterns),
             Change::Nothing => config,
         }
     }
@@ -243,16 +277,55 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
             },
             _,
         ) => Err(wrong_type("a boolean")),
+        (
+            &Kind::Patterns {
+                set,
+            },
+            ValueKind::List(values),
+        ) => Ok(Change::Patterns(set, patterns(setting.key, values)?)),
+        (
+            Kind::Patterns {
+                ..
+            },
+            _,
+        ) => Err(wrong_type("a list of strings")),
         (Kind::String, ValueKind::String(_)) => Ok(Change::Nothing),
         (Kind::Choice(_) | Kind::String, _) => Err(wrong_type("a string")),
     }
+}
+
+/// The error is at each value that is no string, or else at each pattern with a problem.
+fn patterns(key: &'static str, values: &[Value]) -> Result<Patterns, Vec<ConfigError>> {
+    let written = value::all(values.iter().map(|value| match &value.kind {
+        ValueKind::String(pattern) => Ok(pattern.as_str()),
+        kind => Err(error(
+            ConfigErrorKind::WrongType {
+                key,
+                expected: "only strings in its list",
+                found: kind.name(),
+            },
+            value.range,
+        )),
+    }))?;
+    Patterns::new(written).map_err(|problems| {
+        problems
+            .into_iter()
+            .map(|(index, problem)| ConfigError {
+                kind: ConfigErrorKind::Pattern {
+                    key,
+                    problem,
+                },
+                range: values[index].range,
+            })
+            .collect()
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Kind, SETTINGS};
     use crate::{
-        Config, Format, FormatConfig, IndentStyle, LineEnding, load, test_support::errors,
+        Config, Format, FormatConfig, IndentStyle, LineEnding, Patterns, load, test_support::errors,
     };
 
     #[test]
@@ -262,7 +335,9 @@ mod tests {
             "indent_style": "tab",
             "indent_width": 2,
             "line_ending": "crlf",
-            "respect_gitignore": false
+            "respect_gitignore": false,
+            "include": ["*.nush"],
+            "exclude": ["vendor"]
         }"#;
         let expected = Config {
             format: FormatConfig {
@@ -272,6 +347,9 @@ mod tests {
                 line_ending: LineEnding::CrLf,
             },
             respect_gitignore: false,
+            include: Patterns::new(["*.nush"]).unwrap(),
+            exclude: Patterns::new(["vendor"]).unwrap(),
+            root: None,
         };
         assert_eq!(load(text, Format::Json), Ok(expected));
     }
@@ -521,6 +599,81 @@ mod tests {
         assert_eq!(
             errors("1", Format::Json),
             [("config is an integer, not a record".to_string(), "1")]
+        );
+    }
+
+    #[test]
+    fn include_is_nu_files_and_exclude_is_nothing_by_default() {
+        let config = Config::default();
+        assert_eq!(config.include, Patterns::new(["*.nu"]).unwrap());
+        assert_eq!(config.exclude, Patterns::new([]).unwrap());
+    }
+
+    #[test]
+    fn patterns_take_empty_list() {
+        let config = load(r#"{"include": [], "exclude": []}"#, Format::Json).unwrap();
+        assert_eq!(config.include, Patterns::new([]).unwrap());
+        assert_eq!(config.exclude, Patterns::new([]).unwrap());
+    }
+
+    #[test]
+    fn value_in_patterns_other_than_string_is_reported_at_value() {
+        let text = r#"{"exclude": ["a", 1, null, ["b"]]}"#;
+        assert_eq!(
+            errors(text, Format::Json),
+            [
+                (
+                    "`exclude` takes only strings in its list, not an integer".to_string(),
+                    "1"
+                ),
+                (
+                    "`exclude` takes only strings in its list, not null".to_string(),
+                    "null"
+                ),
+                (
+                    "`exclude` takes only strings in its list, not a list".to_string(),
+                    r#"["b"]"#
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn patterns_of_no_list_are_reported_at_value() {
+        assert_eq!(
+            errors(r#"{"include": "*.nu"}"#, Format::Json),
+            [(
+                "`include` takes a list of strings, not a string".to_string(),
+                r#""*.nu""#
+            )]
+        );
+    }
+
+    #[test]
+    fn each_pattern_with_problem_is_reported_at_pattern() {
+        let text = r#"{"include": ["!a", "", "a/../b", "a[", "ok"]}"#;
+        assert_eq!(
+            errors(text, Format::Json),
+            [
+                (
+                    "pattern of `include` starts with `!`, which negates nothing; `include` picks \
+                     files, and `exclude` leaves them out"
+                        .to_string(),
+                    r#""!a""#
+                ),
+                ("pattern of `include` is empty".to_string(), r#""""#),
+                (
+                    "pattern of `include` has `..`, though patterns match only below the directory \
+                     they are relative to"
+                        .to_string(),
+                    r#""a/../b""#
+                ),
+                (
+                    "pattern of `include` is invalid: unclosed character class; missing ']'"
+                        .to_string(),
+                    r#""a[""#
+                ),
+            ]
         );
     }
 

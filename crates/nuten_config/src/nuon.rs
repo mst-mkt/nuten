@@ -217,6 +217,7 @@ mod tests {
                 line_ending: LineEnding::CrLf,
             },
             respect_gitignore: false,
+            ..Config::default()
         };
         assert_eq!(load(text, Format::Nuon), Ok(expected));
     }
