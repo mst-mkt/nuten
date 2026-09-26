@@ -124,21 +124,10 @@ fn operators(text: &str) -> Option<Operators> {
     if text.starts_with("...") {
         return None;
     }
-    let dotdots: Vec<_> = text
-        .match_indices("..")
-        .map(|(at, _)| at)
-        .filter(|&at| {
-            let before = &text[..at];
-            before
-                .matches('(')
-                .count()
-                .checked_sub(before.matches(')').count())
-                == Some(0)
-        })
-        .collect();
-    let (next, at) = match dotdots[..] {
-        [at] => (None, at),
-        [next, at] => (Some(next), at),
+    let mut dotdots = balanced_dotdots(text);
+    let (next, at) = match (dotdots.next(), dotdots.next(), dotdots.next()) {
+        (Some(at), None, _) => (None, at),
+        (Some(next), Some(at), None) => (Some(next), at),
         _ => return None,
     };
     let len = match text.find("..<") {
@@ -152,6 +141,26 @@ fn operators(text: &str) -> Option<Operators> {
         at,
         len,
     })
+}
+
+/// Where `text` has a `..` with as many `(` before it as `)`.
+/// Each count goes on from the `..` before, since counting from the start for each is quadratic.
+fn balanced_dotdots(text: &str) -> impl Iterator<Item = usize> {
+    text.match_indices("..")
+        .scan((0, 0), |(counted, depth), (at, _)| {
+            *depth += text[*counted..at]
+                .bytes()
+                .map(|byte| match byte {
+                    b'(' => 1,
+                    b')' => -1,
+                    _ => 0,
+                })
+                .sum::<isize>();
+            *counted = at;
+            Some((at, *depth))
+        })
+        .filter(|&(_, depth)| depth == 0)
+        .map(|(at, _)| at)
 }
 
 impl Operators {
