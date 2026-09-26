@@ -5,4 +5,4 @@ def j []: [
     string -> string
 ] { 1 }
 def w []: [int -> record<a: int # c
->] { 1 }
+> ] { 1 }

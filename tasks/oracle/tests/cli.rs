@@ -135,6 +135,36 @@ fn format_passes_file_whose_ast_nuten_keeps() {
 }
 
 #[test]
+fn format_keeps_io_types_seen_by_calls_above_defs() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file(
+        "a.nu",
+        concat!(
+            "def takes-str [x: string] { $x }\n",
+            "takes-str (touching)\n",
+            "takes-str (long-touching)\n",
+            "takes-str (apart)\n",
+            "def touching []: [nothing -> int] { 1 }\n",
+            "def long-touching [--some-long-flag-name: string, --another-long-flag-name: int, ",
+            "--third: int]: [nothing -> int] { 1 }\n",
+            "def apart []: [nothing -> string ] { \"a\" }\n",
+        ),
+    );
+
+    let output = oracle("format", &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("files: 1, failed: 0, skipped: 0"),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn format_skips_file_with_syntax_errors() {
     if nu_missing() {
         return;

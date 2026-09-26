@@ -1,4 +1,6 @@
-use nuten_doc::{Element, soft_line_break, space};
+use std::iter;
+
+use nuten_doc::{Element, flat, soft_line_break_or_space, space};
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxToken,
     ast::{AstNode, Def, IoType, IoTypes},
@@ -29,14 +31,24 @@ impl<'a> Formatter<'a> {
             return vec![self.source(syntax.text_range())];
         }
         match types.brackets() {
+            // A line break before the `]` would part it from the last type.
+            // Breaking between the pairs while the `]` stays on the last line looks like a mistake.
+            // So a list holding a type that cannot be flat stays as written.
+            Some((open, inside, close)) if touches_last_type(&close) => {
+                let elements: Vec<_> = iter::once(self.token(&open))
+                    .chain(self.comma_spaced(inside))
+                    .chain(iter::once(self.token(&close)))
+                    .collect();
+                flat(&elements).unwrap_or_else(|| vec![self.source(syntax.text_range())])
+            },
             Some((open, inside, close)) => {
                 let head = vec![self.token(&open)];
                 self.items(
                     head,
                     inside,
                     false,
-                    soft_line_break,
-                    soft_line_break,
+                    soft_line_break_or_space,
+                    soft_line_break_or_space,
                     &close,
                     true,
                 )
@@ -51,10 +63,13 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether a comment stands inside a pair, or among pairs with no `[ ]` to break the line in.
+/// Whether a comment stands inside a pair, or among pairs that never break the line.
+/// Those have no `[ ]` to break the line in, or have the last type touching the `]`.
 /// Printed on one line with the pairs, it would take in what follows it.
 fn holds_joining_comment(types: &IoTypes) -> bool {
-    let bare = types.brackets().is_none();
+    let unbroken = types
+        .brackets()
+        .is_none_or(|(_, _, close)| touches_last_type(&close));
     types
         .syntax()
         .children_with_tokens()
@@ -62,8 +77,17 @@ fn holds_joining_comment(types: &IoTypes) -> bool {
             NodeOrToken::Node(pair) => pair
                 .children_with_tokens()
                 .any(|part| part.kind() == SyntaxKind::Comment),
-            NodeOrToken::Token(token) => bare && token.kind() == SyntaxKind::Comment,
+            NodeOrToken::Token(token) => unbroken && token.kind() == SyntaxKind::Comment,
         })
+}
+
+/// Whether the last type touches the `]`, with no whitespace, line break, or `,` between them.
+/// For a call above the `def`, nu then reads the type and the `]` as one word, which is `any`.
+/// So whether they touch stays as written while nuten supports a nu that reads them so.
+fn touches_last_type(close: &SyntaxToken) -> bool {
+    close
+        .prev_sibling_or_token()
+        .is_some_and(|prev| prev.kind() == SyntaxKind::IoType)
 }
 
 /// Whether the `:` after the parameters joins them, `rest` being what follows it.

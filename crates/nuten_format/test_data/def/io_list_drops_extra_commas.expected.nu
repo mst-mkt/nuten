@@ -4,6 +4,6 @@ def c []: [
 ] {
     1
 }
-def q []: [int -> int] {
+def q []: [int -> int, string -> string] {
     1
 }
