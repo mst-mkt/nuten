@@ -1,6 +1,6 @@
 //! Prints a document as text.
 
-use std::{collections::HashMap, iter, mem};
+use std::{collections::HashMap, iter, mem, slice};
 
 use crate::{Element, GroupId, LineMode, TextWidth, element::columns};
 
@@ -246,10 +246,10 @@ impl<'a> Printer<'a> {
             return false;
         };
         let mut has_line_suffix = !self.line_suffixes.is_empty();
-        let mut queue: Vec<(Measure, &Element<'_>)> = measured(elements, Measure::Flat).collect();
+        let mut nested = vec![(Measure::Flat, elements.iter())];
         let mut rest = self.stack.iter().rev();
         loop {
-            let next = queue.pop().or_else(|| {
+            let next = next_nested(&mut nested).or_else(|| {
                 rest.next()
                     .map(|frame| (Measure::from(frame.mode), frame.element))
             });
@@ -282,13 +282,13 @@ impl<'a> Printer<'a> {
                     },
                     _,
                 ) => {
-                    queue.extend(measured(elements, measure));
+                    nested.push((measure, elements.iter()));
                     0
                 },
                 (Element::LineSuffix(elements), _) => {
                     has_line_suffix = true;
                     if measure != Measure::Break {
-                        queue.extend(measured(elements, Measure::InSuffix));
+                        nested.push((Measure::InSuffix, elements.iter()));
                     }
                     0
                 },
@@ -441,12 +441,17 @@ fn breaks_line(line_mode: LineMode, mode: Mode) -> bool {
     matches!(line_mode, LineMode::Hard { .. }) || mode == Mode::Break
 }
 
-/// In reverse, for a queue that pops from the end.
-fn measured<'a>(
-    elements: &'a [Element<'a>],
-    measure: Measure,
-) -> impl Iterator<Item = (Measure, &'a Element<'a>)> {
-    elements.iter().rev().map(move |element| (measure, element))
+/// The next element of the innermost list in `nested` with one left, and how it is measured.
+fn next_nested<'a>(
+    nested: &mut Vec<(Measure, slice::Iter<'a, Element<'a>>)>,
+) -> Option<(Measure, &'a Element<'a>)> {
+    while let Some((measure, elements)) = nested.last_mut() {
+        if let Some(element) = elements.next() {
+            return Some((*measure, element));
+        }
+        nested.pop();
+    }
+    None
 }
 
 #[cfg(test)]
