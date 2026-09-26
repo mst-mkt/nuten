@@ -70,6 +70,7 @@ fn is_statement(node: &SyntaxNode) -> bool {
                         SyntaxKind::LBrace | SyntaxKind::RBrace | SyntaxKind::ClosureParams
                     )
             })
+            .take(2)
             .count()
             == 1
     };
