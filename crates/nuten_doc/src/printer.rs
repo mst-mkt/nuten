@@ -483,7 +483,12 @@ fn next_nested<'a>(
 ) -> Option<(Measure, &'a Element<'a>)> {
     while let Some((measure, elements)) = nested.last_mut() {
         if let Some(element) = elements.next() {
-            return Some((*measure, element));
+            let measure = *measure;
+            // Popped at once, so that lists nested last do not pile up their finished parents.
+            if elements.as_slice().is_empty() {
+                nested.pop();
+            }
+            return Some((measure, element));
         }
         nested.pop();
     }
