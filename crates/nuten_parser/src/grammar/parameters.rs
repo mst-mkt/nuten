@@ -443,7 +443,8 @@ fn param_of_type(text: &str) -> Option<Param> {
         .iter()
         .copied()
         .map(reads)
-        .collect::<Option<Vec<_>>>()?;
+        .collect::<Option<Vec<_>>>()
+        .filter(|members| !members.is_empty())?;
     // Nu takes the first type that reads the `[ ]` with no error.
     // A list with an error nuten cannot see, as a variable that is not defined, falls to text.
     // So a `[ ]` stays a word where a type that takes text comes later.
@@ -490,7 +491,8 @@ fn reads(name: &str) -> Option<Reads> {
     })
 }
 
-/// The types of a `oneof`, split at each `,` outside `< >` and `( )`.
+/// The types of a `oneof`, split at each `,` or whitespace outside `< >` and `( )`.
+/// Nu lexes them apart at either.
 fn split_members(text: &str) -> Vec<&str> {
     let mut depth = 0_usize;
     let mut start = 0;
@@ -499,14 +501,18 @@ fn split_members(text: &str) -> Vec<&str> {
         match char {
             '<' | '(' => depth += 1,
             '>' | ')' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => {
-                members.push(text[start..at].trim());
-                start = at + 1;
+            char if depth == 0 && (char == ',' || char.is_whitespace()) => {
+                if start < at {
+                    members.push(&text[start..at]);
+                }
+                start = at + char.len_utf8();
             },
             _ => {},
         }
     }
-    members.push(text[start..].trim());
+    if start < text.len() {
+        members.push(&text[start..]);
+    }
     members
 }
 
@@ -1901,6 +1907,18 @@ mod tests {
     fn oneof_list_before_text_takes_word() {
         // Nu reads the `[ ]` as text where the list has an error it does not report.
         assert_eq!(param_of_type("oneof<list<any>, string>"), Some(WORD));
+    }
+
+    #[test]
+    fn oneof_members_part_at_whitespace_as_at_commas() {
+        for ty in [
+            "oneof<list<any> string>",
+            "oneof<list<any>\tstring>",
+            "oneof< list<any> ,, string >",
+        ] {
+            assert_eq!(param_of_type(ty), Some(WORD), "{ty:?}");
+        }
+        assert_eq!(param_of_type("oneof<record list<any>>"), Some(LIST));
     }
 
     #[test]
