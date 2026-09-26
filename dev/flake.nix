@@ -88,7 +88,15 @@
         system: inputs.nixpkgs.legacyPackages.${system}.pnpm_11.override { nodejs-slim = nodejs.${system}; }
       );
       vite-plus = forAllSystems (
-        system: inputs.nix-vite-plus.packages.${system}.vp.override { nodejs = nodejs.${system}; }
+        system:
+        let
+          vp = inputs.nix-vite-plus.packages.${system}.vp.override { nodejs = nodejs.${system}; };
+          wanted = (inputs.nixpkgs.lib.importJSON ../package.json).devDependencies.vite-plus;
+        in
+        assert inputs.nixpkgs.lib.assertMsg (
+          vp.version == wanted
+        ) "vite-plus in dev/flake.lock (${vp.version}) differs from package.json (${wanted})";
+        vp
       );
 
       treefmtEval = forAllSystems (
@@ -127,6 +135,10 @@
                 "tasks/oracle/test_data/**"
               ];
             };
+          };
+
+          settings.formatter = {
+            oxfmt.command = "${vite-plus.${system}}/node_modules/oxfmt/bin/oxfmt";
           };
         }
       );
