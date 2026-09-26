@@ -29,6 +29,7 @@ unicode-width = "0.2.2"
 usage = { package = "usage-rs", version = "6.9.1", default-features = false, features = [
   "help",
   "diagnostics",
+  "completions",
 ] }
 
 # Not `panic = "abort"`, since the language server catches a panic of the formatter.

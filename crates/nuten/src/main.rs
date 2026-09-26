@@ -20,7 +20,7 @@ use nuten_config::{
 };
 use nuten_format::format;
 use nuten_lsp::Exit;
-use usage::{Args, Cli, Subcommands};
+use usage::{Args, Cli, Subcommands, ValueEnum};
 
 use crate::{
     files::Entry,
@@ -28,7 +28,7 @@ use crate::{
 };
 
 #[derive(Cli)]
-#[usage(bin = "nuten", version, unknown_flags = "error")]
+#[usage(bin = "nuten", version, unknown_flags = "error", completion)]
 struct Nuten {
     #[usage(subcommand)]
     command: Command,
@@ -42,6 +42,43 @@ enum Command {
     Schema,
     /// Serve the Language Server Protocol on stdin and stdout
     Lsp(Lsp),
+    /// Print the completion script for a shell
+    Completions(Completions),
+}
+
+#[derive(Args)]
+struct Completions {
+    /// Shell the script is for
+    #[usage(value_enum)]
+    shell: Shell,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+#[expect(
+    clippy::enum_variant_names,
+    reason = "`PowerShell` is the shell's own name, not a kind of `Shell`"
+)]
+enum Shell {
+    Bash,
+    Elvish,
+    Fish,
+    Nu,
+    #[usage(name = "powershell")]
+    PowerShell,
+    Zsh,
+}
+
+impl From<Shell> for usage::complete::Shell {
+    fn from(shell: Shell) -> Self {
+        match shell {
+            Shell::Bash => Self::Bash,
+            Shell::Elvish => Self::Elvish,
+            Shell::Fish => Self::Fish,
+            Shell::Nu => Self::Nu,
+            Shell::PowerShell => Self::PowerShell,
+            Shell::Zsh => Self::Zsh,
+        }
+    }
 }
 
 #[derive(Args)]
@@ -92,6 +129,7 @@ fn main() -> ExitCode {
         Command::Format(args) => run_format(&args),
         Command::Schema => print(&nuten_config::schema()),
         Command::Lsp(_) => serve_lsp(),
+        Command::Completions(args) => print(&Nuten::completion_script(args.shell.into())),
     }
 }
 

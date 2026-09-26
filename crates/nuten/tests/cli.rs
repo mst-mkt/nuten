@@ -2292,6 +2292,101 @@ fn schema_reports_write_error() {
     assert!(stderr.starts_with("stdout: "), "{stderr}");
 }
 
+#[test]
+fn completions_prints_script_whose_request_names_given_shell() {
+    for shell in ["bash", "elvish", "fish", "nu", "powershell", "zsh"] {
+        let output = nuten(&[OsStr::new("completions"), OsStr::new(shell)]);
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{shell}: {}",
+            stderr(&output)
+        );
+        assert!(output.stderr.is_empty(), "{shell}");
+        let stdout = stdout(&output);
+        let request = format!("__complete_word__ --shell {shell}");
+        // The header comment names the request too, so it alone would pass.
+        let has_request = stdout
+            .lines()
+            .filter(|line| !line.trim_start().starts_with('#'))
+            .any(|line| line.contains(&request));
+        assert!(has_request, "{shell}: {stdout}");
+    }
+}
+
+#[test]
+fn completions_rejects_unknown_shell() {
+    let output = nuten(&[OsStr::new("completions"), OsStr::new("sh")]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn completions_succeeds_when_reader_closes_first() {
+    let (reader, writer) = io::pipe().unwrap();
+    drop(reader);
+    let output = nuten_command()
+        .args(["completions", "nu"])
+        .stdout(writer)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert!(output.stderr.is_empty());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn completions_reports_write_error() {
+    let full = fs::File::options().write(true).open("/dev/full").unwrap();
+    let output = nuten_command()
+        .args(["completions", "nu"])
+        .stdout(full)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert!(stderr.starts_with("stdout: "), "{stderr}");
+}
+
+/// The words nuten offers when a completion script asks it to complete `line`.
+/// Sorted, since the order is up to `usage`, not nuten.
+fn completion_candidates(line: &str) -> Vec<String> {
+    let output = nuten(&["__complete_word__", "--shell", "nu", "--line", line].map(OsStr::new));
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    // A line starting with U+0001 asks the script to complete something else, such as files.
+    let mut candidates: Vec<_> = stdout(&output)
+        .lines()
+        .filter(|answer| !answer.starts_with('\u{1}'))
+        .map(|answer| answer.split('\t').next().unwrap().to_string())
+        .collect();
+    candidates.sort_unstable();
+    candidates
+}
+
+#[test]
+fn complete_word_offers_subcommands() {
+    assert_eq!(
+        completion_candidates("nuten "),
+        ["completions", "format", "lsp", "schema"]
+    );
+}
+
+#[test]
+fn complete_word_offers_subcommand_flags_that_start_with_word() {
+    assert_eq!(
+        completion_candidates("nuten format --c"),
+        ["--check", "--config"]
+    );
+}
+
+#[test]
+fn complete_word_offers_shells_for_completions() {
+    assert_eq!(
+        completion_candidates("nuten completions "),
+        ["bash", "elvish", "fish", "nu", "powershell", "zsh"]
+    );
+}
+
 /// Runs `nuten lsp` from `dir` on `messages`, each framed as the protocol frames it.
 fn lsp_in(dir: &TempDir, args: &[&str], messages: &[Value]) -> Output {
     let input: Vec<u8> = messages
