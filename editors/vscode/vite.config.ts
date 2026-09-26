@@ -9,6 +9,7 @@ export default defineConfig({
       platform: "node",
       deps: {
         neverBundle: ["vscode"],
+        alwaysBundle: [/^vscode-languageclient\//],
       },
       minify: true,
       clean: false,
