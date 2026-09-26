@@ -206,10 +206,11 @@ fn nearest_existing_dir(path: &Path) -> Result<PathBuf, Vec<String>> {
             },
             component => Ok(dir.join(component)),
         })?;
-    let existing = dir.ancestors().find(|dir| dir.is_dir());
-    Ok(existing
-        .expect("a resolved path is under an existing directory")
-        .to_path_buf())
+    // None on a drive of Windows that does not exist.
+    dir.ancestors()
+        .find(|dir| dir.is_dir())
+        .map(Path::to_path_buf)
+        .ok_or_else(|| vec![format!("{}: no directory above it exists", path.display())])
 }
 
 fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
