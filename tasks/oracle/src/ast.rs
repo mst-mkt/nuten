@@ -5,14 +5,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use jsonc_parser::{JsonValue, Map, ParseOptions, parse_to_value};
 
 /// Where what nu parses in `before` and `after` first differs, in one line.
-/// Positions, span ids, line endings, and the layout in the flattened tokens are left aside.
+/// Positions, span ids, and the layout in the flattened tokens are left aside.
 /// `None` when the two are the same.
 /// Fails when either is not JSON.
 pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, String> {
     let (before, after) = (json(before)?, json(after)?);
     let difference = first_difference(
-        without_layout(with_lf(without_positions(before))),
-        without_layout(with_lf(without_positions(after))),
+        without_layout(without_positions(before)),
+        without_layout(without_positions(after)),
     );
     Ok(difference.map(|(pointer, before, after)| {
         let what = if pointer.starts_with("/flat") {
@@ -119,35 +119,6 @@ fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
         items[0] = JsonValue::String(lines.join("\n").into());
     }
     JsonValue::Array(items.into())
-}
-
-/// With each `\n` in a string without the `\r`s before it.
-/// The printer writes line endings everywhere, inside strings too.
-/// With `\n` line endings it drops those `\r`s.
-fn with_lf(value: JsonValue<'_>) -> JsonValue<'_> {
-    match value {
-        JsonValue::String(text) if text.contains("\r\n") => {
-            let text = text
-                .split('\n')
-                .map(|line| line.trim_end_matches('\r'))
-                .collect::<Vec<_>>()
-                .join("\n");
-            JsonValue::String(text.into())
-        },
-        JsonValue::Object(object) => {
-            let map: Map<_, _> = object
-                .take_inner()
-                .into_iter()
-                .map(|(key, value)| (key, with_lf(value)))
-                .collect();
-            JsonValue::Object(map.into())
-        },
-        JsonValue::Array(array) => {
-            let items: Vec<_> = array.into_iter().map(with_lf).collect();
-            JsonValue::Array(items.into())
-        },
-        other => other,
-    }
 }
 
 /// Without the layout in the flattened tokens that formatting may change.
@@ -468,22 +439,20 @@ mod tests {
     }
 
     #[test]
-    fn line_endings_do_not_count() {
-        assert_eq!(
-            difference(
-                r#"{"a": ["x\r\ny"], "flat": [{"content": "x\r\ny", "shape": "shape_string"}]}"#,
-                r#"{"a": ["x\ny"], "flat": [{"content": "x\ny", "shape": "shape_string"}]}"#
+    fn line_breaks_inside_strings_count() {
+        for (before, after) in [
+            (r#"{"a": ["x\r\ny"]}"#, r#"{"a": ["x\ny"]}"#),
+            (
+                r#"{"flat": [{"content": "x\r\ny", "shape": "shape_string"}]}"#,
+                r#"{"flat": [{"content": "x\ny", "shape": "shape_string"}]}"#,
             ),
-            Ok(None)
-        );
-        assert_eq!(
-            difference(r#"{"a": "x\r\r\ny"}"#, r#"{"a": "x\ny"}"#),
-            Ok(None)
-        );
-        assert!(
-            difference(r#"{"a": "x\ry"}"#, r#"{"a": "x\ny"}"#)
-                .unwrap()
-                .is_some()
-        );
+            (r#"{"a": "x\r\r\ny"}"#, r#"{"a": "x\r\ny"}"#),
+            (r#"{"a": "x\ry"}"#, r#"{"a": "x\ny"}"#),
+        ] {
+            assert!(
+                difference(before, after).unwrap().is_some(),
+                "{before} {after}"
+            );
+        }
     }
 }

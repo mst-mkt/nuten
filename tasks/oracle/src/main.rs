@@ -1,6 +1,6 @@
 //! Asks nu whether formatting keeps what it parses.
 //! Each file must give the same AST and the same flattened tokens before and after formatting.
-//! Positions, span ids, line endings, and the layout in the tokens are left aside.
+//! Positions, span ids, and the layout in the tokens are left aside.
 //! The AST refers to the blocks inside by id only, so inside them only the tokens are compared.
 //! Those show neither `;` nor line breaks between statements.
 //! Nu parses both versions of a file in the directory of the file before formatting.
