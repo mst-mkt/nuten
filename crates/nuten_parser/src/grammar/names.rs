@@ -760,7 +760,9 @@ fn unexported<'a>(mut words: impl Iterator<Item = &'a str>) -> Option<&'a str> {
 /// Reads the text, not the tree, which the parser has yet to build.
 /// Taking in a name out of scope only leaves a call read as it was written.
 fn alias_names(src: &str) -> Box<[&str]> {
-    let mut names: Vec<_> = src.split(breaks_statement).filter_map(alias_name).collect();
+    let mut names: Vec<_> = statements_holding(src, "alias")
+        .filter_map(alias_name)
+        .collect();
     names.sort_unstable();
     names.dedup();
     names.into()
@@ -773,7 +775,7 @@ fn alias_names(src: &str) -> Box<[&str]> {
 /// Nu hides a name even outside the block of the `hide`.
 /// Taking in more words than it hides only leaves a call read as it was written.
 fn hidden_words(src: &str) -> Option<Box<[&str]>> {
-    let statements = || src.split(breaks_statement).map(str::split_ascii_whitespace);
+    let statements = || statements_holding(src, "hide").map(str::split_ascii_whitespace);
     if statements().any(|words| {
         words
             .clone()
@@ -799,6 +801,24 @@ fn breaks_statement(char: char) -> bool {
     matches!(char, '\n' | '\r' | ';' | '|' | '{' | '}' | '(' | ')')
 }
 
+/// The statements of `src` that hold `word`, each once, as `breaks_statement` splits them.
+/// `word` holds no character that breaks a statement.
+/// Most files hold no `alias` or `hide`, and finding the word is cheaper than splitting `src`.
+fn statements_holding<'a>(src: &'a str, word: &'a str) -> impl Iterator<Item = &'a str> {
+    let statement_from = move |from: usize| {
+        let at = from + src[from..].find(word)?;
+        let start = src[..at].rfind(breaks_statement).map_or(0, |end| end + 1);
+        let end = src[at..]
+            .find(breaks_statement)
+            .map_or(src.len(), |end| at + end);
+        Some(start..end)
+    };
+    iter::successors(statement_from(0), move |statement| {
+        statement_from(statement.end)
+    })
+    .map(|statement| &src[statement])
+}
+
 /// What nu may put around a name.
 const NAME_QUOTES: [char; 3] = ['"', '\'', '`'];
 
@@ -814,7 +834,7 @@ fn alias_name(statement: &str) -> Option<&str> {
 mod tests {
     use rowan::{TextRange, TextSize};
 
-    use super::{Callee, Names, alias_names};
+    use super::{Callee, Names, alias_names, hidden_words};
     use crate::{
         grammar::parameters::Takes,
         lexer::{self, Mode},
@@ -1478,5 +1498,26 @@ mod tests {
         assert!(alias_names("alias").is_empty());
         assert!(alias_names("export").is_empty());
         assert!(alias_names("export alias").is_empty());
+    }
+
+    #[test]
+    fn alias_names_skip_alias_inside_other_word() {
+        assert_eq!(*alias_names("realias a = ^a\nalias b = ^b"), ["b"]);
+    }
+
+    #[test]
+    fn hidden_words_come_from_every_statement() {
+        assert_eq!(hidden_words("hide a").as_deref(), Some(&["a"][..]));
+        assert_eq!(
+            hidden_words("hide b\nhide c").as_deref(),
+            Some(&["b", "c"][..])
+        );
+        assert_eq!(hidden_words("print hi;hide d").as_deref(), Some(&["d"][..]));
+        assert_eq!(hidden_words("do { hide e }").as_deref(), Some(&["e"][..]));
+    }
+
+    #[test]
+    fn overlay_hide_in_any_statement_hides_every_word() {
+        assert_eq!(hidden_words("hide a\noverlay hide o"), None);
     }
 }
