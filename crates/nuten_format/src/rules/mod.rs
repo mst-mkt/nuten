@@ -140,13 +140,19 @@ impl<'a> Formatter<'a> {
 
     /// The statement, `;`, or comment `item` after what separates it from the last of `before`.
     /// `before` is every child that comes before it.
-    fn statement(&mut self, before: &[Child], item: &Child, at_start: bool) -> Vec<Element<'a>> {
+    fn statement(
+        &mut self,
+        before: &[Child],
+        item: &Child,
+        at_start: bool,
+    ) -> impl Iterator<Item = Element<'a>> + use<'a> {
         let Child {
             element,
             newlines,
         } = item;
         let prev = before.last().map(Child::kind);
         let separator = match (prev, *newlines) {
+            (Some(SyntaxKind::Semicolon), 0) if element.as_node().is_some() => Some(space()),
             (None, _) | (_, 0) => None,
             (_, 1) => Some(hard_line_break()),
             // With one blank line, a `|` starting the next line would join the statement above.
@@ -154,22 +160,15 @@ impl<'a> Formatter<'a> {
             (_, 3..) if reaches_past_blank_line(&ast::untyped(element)) => Some(empty_lines(2)),
             _ => Some(empty_line()),
         };
-        let item = match element {
-            NodeOrToken::Node(_) => {
-                let after_semicolon = prev == Some(SyntaxKind::Semicolon) && *newlines == 0;
-                after_semicolon
-                    .then(space)
-                    .into_iter()
-                    .chain(self.element(element))
-                    .collect()
-            },
+        let elements = match element {
+            NodeOrToken::Node(_) => self.element(element),
             NodeOrToken::Token(child) => match child.kind() {
                 SyntaxKind::Semicolon => vec![self.token(child)],
                 SyntaxKind::Comment => self.comment(child, *newlines, at_start && prev.is_none()),
                 kind => unreachable!("{kind:?} is not among statements"),
             },
         };
-        separator.into_iter().chain(item).collect()
+        separator.into_iter().chain(elements)
     }
 
     fn node(&mut self, node: &Node) -> Vec<Element<'a>> {
@@ -267,16 +266,17 @@ impl<'a> Formatter<'a> {
                         .enumerate()
                         .take_while(|(offset, next)| *offset == 0 || next.newlines == 0)
                         .any(|(_, next)| self.kept.keeps(&ast::untyped(&next.element)));
-                match item.as_comment() {
-                    Some(comment) => self.comment(comment, item.newlines, false),
-                    None if starts_kept_line => iter::once(hard_line_break())
-                        .chain(element(self, &item.element))
-                        .collect(),
-                    None => separator(prev, plain(index, item))
-                        .into_iter()
-                        .chain(element(self, &item.element))
-                        .collect(),
-                }
+                let (lead, elements) = match item.as_comment() {
+                    Some(comment) => (None, self.comment(comment, item.newlines, false)),
+                    None if starts_kept_line => {
+                        (Some(hard_line_break()), element(self, &item.element))
+                    },
+                    None => (
+                        separator(prev, plain(index, item)),
+                        element(self, &item.element),
+                    ),
+                };
+                lead.into_iter().chain(elements)
             })
             .collect()
     }

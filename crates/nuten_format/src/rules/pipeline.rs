@@ -88,7 +88,7 @@ impl<'a> Formatter<'a> {
             .iter()
             .enumerate()
             .flat_map(|(index, part)| {
-                let elements = self.part(segment.prev_of(end + index), part);
+                let elements = self.part(segment.prev_of(end + index), part).collect();
                 indent_levels_if_group_breaks(id, part.level, elements)
             });
         let level = segment
@@ -101,18 +101,20 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    fn part(&mut self, prev: Option<SyntaxKind>, part: &Part) -> Vec<Element<'a>> {
+    fn part(
+        &mut self,
+        prev: Option<SyntaxKind>,
+        part: &Part,
+    ) -> impl Iterator<Item = Element<'a>> + use<'a> {
         let Child {
             element,
             newlines,
         } = &part.child;
-        match element {
-            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => part
-                .keeps_blank_line_after_attribute()
-                .then(empty_line)
-                .into_iter()
-                .chain(self.comment(comment, *newlines, prev.is_none()))
-                .collect(),
+        let (lead, elements) = match element {
+            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => (
+                part.keeps_blank_line_after_attribute().then(empty_line),
+                self.comment(comment, *newlines, prev.is_none()),
+            ),
             // Nu rejects `e>|` and `o+e>|` starting a line, except right after an attribute.
             // So they stay after their element, which the parser puts right before them.
             // After an attribute, one on the same line would be in the attribute instead.
@@ -125,13 +127,11 @@ impl<'a> Formatter<'a> {
                 } else {
                     space()
                 };
-                separator(prev, Some(plain))
-                    .into_iter()
-                    .chain(self.element(element))
-                    .collect()
+                (separator(prev, Some(plain)), self.element(element))
             },
             _ => unreachable!("{:?} is not a child of Pipeline", part.kind()),
-        }
+        };
+        lead.into_iter().chain(elements)
     }
 }
 
