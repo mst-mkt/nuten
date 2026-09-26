@@ -92,16 +92,21 @@ struct Lsp {
 #[usage(args_override_self = false)]
 struct Format {
     /// Config file for all files, instead of the one nearest each file
-    #[usage(short = 'c', long)]
+    #[usage(
+        short = 'c',
+        long,
+        value_hint = usage::ValueHint::FilePath,
+        extensions("nuon", "jsonc", "json")
+    )]
     config: Option<PathBuf>,
     /// List the files that would change, instead of changing them
     #[usage(long)]
     check: bool,
     /// Path of the file stdin holds, to find its config file by and to name it in reports
-    #[usage(long)]
+    #[usage(long, value_hint = usage::ValueHint::FilePath, extensions("nu", "nuon"))]
     stdin_filepath: Option<PathBuf>,
     /// Files to format in place; a directory stands for the `.nu` files under it; `-` for stdin
-    #[usage(default = ".")]
+    #[usage(default = ".", value_hint = usage::ValueHint::FilePath, extensions("nu", "nuon"))]
     paths: Vec<PathBuf>,
 }
 

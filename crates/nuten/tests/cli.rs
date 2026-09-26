@@ -2348,19 +2348,39 @@ fn completions_reports_write_error() {
     assert!(stderr.starts_with("stdout: "), "{stderr}");
 }
 
+/// The lines nuten answers with when a completion script asks it to complete `line`.
+/// A line starting with U+0001 asks the script to complete something else, such as files.
+fn completion_answers(line: &str) -> Vec<String> {
+    let output = nuten(&["__complete_word__", "--shell", "nu", "--line", line].map(OsStr::new));
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    stdout(&output).lines().map(str::to_string).collect()
+}
+
 /// The words nuten offers when a completion script asks it to complete `line`.
 /// Sorted, since the order is up to `usage`, not nuten.
 fn completion_candidates(line: &str) -> Vec<String> {
-    let output = nuten(&["__complete_word__", "--shell", "nu", "--line", line].map(OsStr::new));
-    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
-    // A line starting with U+0001 asks the script to complete something else, such as files.
-    let mut candidates: Vec<_> = stdout(&output)
-        .lines()
+    let mut candidates: Vec<_> = completion_answers(line)
+        .iter()
         .filter(|answer| !answer.starts_with('\u{1}'))
         .map(|answer| answer.split('\t').next().unwrap().to_string())
         .collect();
     candidates.sort_unstable();
     candidates
+}
+
+/// The extensions of the files nuten asks a completion script to complete for `line`.
+/// Sorted, since their order means nothing to a shell.
+fn completion_extensions(line: &str) -> Vec<String> {
+    let answers = completion_answers(line);
+    let mut extensions: Vec<_> = answers
+        .iter()
+        .find_map(|answer| answer.strip_prefix("\u{1}extensions\t"))
+        .unwrap_or_else(|| panic!("no extensions for {line:?}: {answers:?}"))
+        .split('\t')
+        .map(str::to_string)
+        .collect();
+    extensions.sort_unstable();
+    extensions
 }
 
 #[test]
@@ -2385,6 +2405,43 @@ fn complete_word_offers_shells_for_completions() {
         completion_candidates("nuten completions "),
         ["bash", "elvish", "fish", "nu", "powershell", "zsh"]
     );
+}
+
+#[test]
+fn complete_word_asks_for_nu_and_nuon_files_for_paths() {
+    for line in [
+        "nuten format ",
+        "nuten format a.nu ",
+        "nuten format --config a.nuon ",
+        "nuten format -c a.nuon ",
+        "nuten format -- ",
+        "nuten format -- -c ",
+    ] {
+        assert_eq!(completion_extensions(line), ["nu", "nuon"], "{line}");
+    }
+}
+
+#[test]
+fn complete_word_asks_for_nu_and_nuon_files_for_stdin_filepath() {
+    for line in [
+        "nuten format --stdin-filepath ",
+        "nuten format --stdin-filepath=",
+    ] {
+        assert_eq!(completion_extensions(line), ["nu", "nuon"], "{line}");
+    }
+}
+
+#[test]
+fn complete_word_asks_for_config_files_for_config() {
+    let mut expected = nuten_config::Format::ALL.map(nuten_config::Format::extension);
+    expected.sort_unstable();
+    for line in [
+        "nuten format --config ",
+        "nuten format -c ",
+        "nuten format --config=",
+    ] {
+        assert_eq!(completion_extensions(line), expected, "{line}");
+    }
 }
 
 /// Runs `nuten lsp` from `dir` on `messages`, each framed as the protocol frames it.
