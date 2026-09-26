@@ -121,8 +121,9 @@ pub(crate) static SETTINGS: [Setting; 10] = [
     },
     Setting {
         key: "line_ending",
-        description: "What ends each line; line breaks inside a string, a bare word, or an \
-                      `@example` block stay as written.",
+        description: "What ends each line, where `auto` follows the first line break outside a \
+                      string, a bare word, or an `@example` block; line breaks inside those stay \
+                      as written.",
         kind: Kind::Choice(&[
             Choice {
                 name: "lf",
@@ -139,6 +140,16 @@ pub(crate) static SETTINGS: [Setting; 10] = [
                 set: |config| Config {
                     format: FormatConfig {
                         line_ending: LineEnding::CrLf,
+                        ..config.format
+                    },
+                    ..config
+                },
+            },
+            Choice {
+                name: "auto",
+                set: |config| Config {
+                    format: FormatConfig {
+                        line_ending: LineEnding::Auto,
                         ..config.format
                     },
                     ..config
@@ -668,6 +679,10 @@ mod tests {
             config(r#"{"line_ending": "crlf"}"#).format.line_ending,
             LineEnding::CrLf
         );
+        assert_eq!(
+            config(r#"{"line_ending": "auto"}"#).format.line_ending,
+            LineEnding::Auto
+        );
         for (name, commas) in [
             ("none", Commas::None),
             ("inline", Commas::Inline),
@@ -833,7 +848,7 @@ mod tests {
             ),
             (
                 r#"{"line_ending": "cr"}"#,
-                "`line_ending` takes one of `lf`, `crlf`",
+                "`line_ending` takes one of `lf`, `crlf`, `auto`",
                 r#""cr""#,
             ),
             (
@@ -1068,7 +1083,7 @@ mod tests {
                 ),
                 ("unknown key `a`".to_string(), r#""a""#),
                 (
-                    "`line_ending` takes one of `lf`, `crlf`".to_string(),
+                    "`line_ending` takes one of `lf`, `crlf`, `auto`".to_string(),
                     r#""cr""#
                 ),
             ]
