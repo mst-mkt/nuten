@@ -4,8 +4,10 @@
 #![expect(clippy::print_stderr, reason = "what is skipped is reported")]
 
 use std::{
-    env, fs,
-    path::PathBuf,
+    env,
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
     process::{Command, Output},
     sync::atomic::{AtomicUsize, Ordering},
     thread,
@@ -38,8 +40,23 @@ impl Drop for TempDir {
 }
 
 fn oracle(subcommand: &str, paths: &[&PathBuf]) -> Output {
+    run(&[OsStr::new(subcommand)], paths)
+}
+
+fn oracle_with_config(config: &Path, paths: &[&PathBuf]) -> Output {
+    run(
+        &[
+            OsStr::new("format"),
+            OsStr::new("--config"),
+            config.as_os_str(),
+        ],
+        paths,
+    )
+}
+
+fn run(args: &[&OsStr], paths: &[&PathBuf]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_nuten-oracle"))
-        .arg(subcommand)
+        .args(args)
         .args(paths)
         .output()
         .unwrap()
@@ -226,4 +243,55 @@ fn format_checks_file_given_twice_once() {
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(stderr.contains("files: 1,"), "{stderr}");
+}
+
+#[test]
+fn format_takes_config_file_given() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let config = dir.file("nuten.nuon", "{commas: trailing}\n");
+    let file = dir.file("a.nu", "[\n  a\n  b\n]\n");
+
+    let output = oracle_with_config(&config, &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("files: 1, failed: 0, skipped: 0"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_exits_with_2_when_config_file_cannot_be_loaded() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let config = dir.file("nuten.nuon", "{commas: never}\n");
+    let file = dir.file("a.nu", "ls\n");
+
+    let output = oracle_with_config(&config, &[&file]);
+
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("`commas` takes one of"), "{stderr}");
+}
+
+#[test]
+fn format_exits_with_2_when_config_file_is_missing() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let config = dir.0.join("missing.nuon");
+    let file = dir.file("a.nu", "ls\n");
+
+    let output = oracle_with_config(&config, &[&file]);
+
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("missing.nuon"), "{stderr}");
 }

@@ -17,6 +17,8 @@
 //! It exits with 1 when any other file cannot be checked, or its AST or value differs.
 //! It exits with 1 too when a `.nu` file breaks an invariant.
 //! It exits with 2 when the arguments name no `.nu` or `.nuon` file.
+//! It formats with the defaults, or with the config file `--config` names.
+//! It exits with 2 too when that file cannot be loaded.
 //!
 //! `compare` asks about a file and the version of it that any formatter wrote.
 //! It exits with 1 when either cannot be read, or their ASTs differ.
@@ -63,6 +65,9 @@ struct Format {
     /// Skip files larger than this many bytes
     #[usage(long, default = "524288")]
     max_size: u64,
+    /// Config file to format with, instead of the defaults
+    #[usage(long)]
+    config: Option<PathBuf>,
     /// Files, and directories to search for `.nu` and `.nuon` files
     #[usage(required)]
     paths: Vec<PathBuf>,
@@ -89,6 +94,14 @@ fn main() -> ExitCode {
 }
 
 fn run_format(args: &Format) -> ExitCode {
+    let config = match args.config.as_deref().map(nuten_config::load_given) {
+        None => Config::default(),
+        Some(Ok(config)) => config.format,
+        Some(Err(problems)) => {
+            eprintln!("{}", problems.join("\n"));
+            return ExitCode::from(2);
+        },
+    };
     let mut files = Vec::new();
     for path in &args.paths {
         files_to_check(path, &mut files);
@@ -102,7 +115,7 @@ fn run_format(args: &Format) -> ExitCode {
     let (mut failed, mut skipped) = (0, 0);
     for path in &files {
         // The panic hook has printed the message already.
-        let checked = panic::catch_unwind(|| check(path, args.max_size))
+        let checked = panic::catch_unwind(|| check(path, args.max_size, &config))
             .unwrap_or_else(|_| Err("nuten panics".to_string()));
         match checked {
             Ok(Checked::Passed) => {},
@@ -180,7 +193,7 @@ enum Checked {
 }
 
 /// Checks one file; an error says in one line why it fails.
-fn check(path: &Path, max_size: u64) -> Result<Checked, String> {
+fn check(path: &Path, max_size: u64, config: &Config) -> Result<Checked, String> {
     let size = fs::metadata(path).map_err(|error| error.to_string())?.len();
     if size > max_size {
         return Ok(Checked::Skipped(format!("larger than {max_size} bytes")));
@@ -198,11 +211,10 @@ fn check(path: &Path, max_size: u64) -> Result<Checked, String> {
     {
         return nuon::check(&src);
     }
-    let config = Config::default();
-    if let Some(checked) = invariants_verdict(&invariants::check(&src, &config))? {
+    if let Some(checked) = invariants_verdict(&invariants::check(&src, config))? {
         return Ok(checked);
     }
-    let Ok(output) = format(&src, &config) else {
+    let Ok(output) = format(&src, config) else {
         unreachable!("the source has no syntax errors")
     };
     same_ast(&src, &output, dir_of(path)).map(|()| Checked::Passed)
