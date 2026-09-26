@@ -199,6 +199,7 @@
               pkgs.hyperfine
               pkgs.time
               treefmtEval.${system}.config.build.wrapper
+              inputs.nuten.packages.${system}.default
             ]
             ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.valgrind # Valgrind is broken on darwin.
