@@ -2,23 +2,71 @@
 
 use std::{
     cell::Cell,
-    fmt,
-    sync::mpsc::{self, Receiver},
+    env, fmt, fs,
+    path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc::{self, Receiver},
+    },
     thread,
     time::Duration,
 };
 
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response, ResponseError};
 use lsp_types::{
-    InitializeParams, InitializeResult,
-    notification::{Exit as ExitNotification, Initialized, Notification as NotificationKind},
-    request::{Initialize, Request as RequestKind, Shutdown},
+    InitializeParams, InitializeResult, TextEdit,
+    notification::{
+        DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, Exit as ExitNotification,
+        Initialized, Notification as NotificationKind,
+    },
+    request::{Formatting, Initialize, Request as RequestKind, Shutdown},
 };
 use nuten_lsp::Exit;
 use serde_json::{Value, json};
 
 /// Long enough for any answer, so that a server that never answers fails the test.
 const TIMEOUT: Duration = Duration::from_secs(10);
+
+/// A fresh directory for each test, removed when dropped.
+/// Its path has no symlinks, since the paths of config files are reported with symlinks resolved.
+/// No config file is above it.
+#[derive(Debug)]
+pub(crate) struct TempDir(PathBuf);
+
+impl TempDir {
+    pub(crate) fn new() -> TempDir {
+        static COUNT: AtomicUsize = AtomicUsize::new(0);
+        let count = COUNT.fetch_add(1, Ordering::Relaxed);
+        let dir = env::temp_dir().join(format!("nuten-lsp-{}-{count}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let dir = TempDir(fs::canonicalize(&dir).unwrap());
+        let above = nuten_config::find(&dir.0).unwrap();
+        assert_eq!(above, None, "a config file above the temporary directory");
+        dir
+    }
+
+    pub(crate) fn path(&self, name: &str) -> PathBuf {
+        self.0.join(name)
+    }
+
+    pub(crate) fn file(&self, name: &str, contents: &str) -> PathBuf {
+        let path = self.path(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, contents).unwrap();
+        path
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        fs::remove_dir_all(&self.0).ok();
+    }
+}
+
+/// The URI of the file at `path`, which has no character a URI would escape.
+pub(crate) fn file_uri(path: &Path) -> String {
+    format!("file://{}", path.display())
+}
 
 pub(crate) struct Client {
     connection: Connection,
@@ -78,6 +126,36 @@ impl Client {
     pub(crate) fn respond(&self, id: i32) {
         let response = Response::new_ok(RequestId::from(id), Value::Null);
         self.connection.sender.send(response.into()).unwrap();
+    }
+
+    pub(crate) fn open(&self, uri: &str, text: &str) {
+        let document = json!({ "uri": uri, "languageId": "nushell", "version": 0, "text": text });
+        self.notify(
+            DidOpenTextDocument::METHOD,
+            json!({ "textDocument": document }),
+        );
+    }
+
+    pub(crate) fn change(&self, uri: &str, changes: &Value) {
+        let params = json!({
+            "textDocument": { "uri": uri, "version": 1 },
+            "contentChanges": changes,
+        });
+        self.notify(DidChangeTextDocument::METHOD, params);
+    }
+
+    pub(crate) fn close(&self, uri: &str) {
+        let params = json!({ "textDocument": { "uri": uri } });
+        self.notify(DidCloseTextDocument::METHOD, params);
+    }
+
+    pub(crate) fn format(&self, uri: &str) -> Result<Option<Vec<TextEdit>>, ResponseError> {
+        let params = json!({
+            "textDocument": { "uri": uri },
+            "options": { "tabSize": 8, "insertSpaces": false },
+        });
+        self.request(Formatting::METHOD, params)
+            .map(|result| serde_json::from_value(result).unwrap())
     }
 
     pub(crate) fn shut_down(self) -> Exit {

@@ -301,6 +301,8 @@ version = "0.0.0"
 dependencies = [
  "lsp-server",
  "lsp-types",
+ "nuten-config",
+ "nuten-format",
  "serde_json",
 ]
 

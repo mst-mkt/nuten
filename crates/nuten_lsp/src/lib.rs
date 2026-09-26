@@ -1,18 +1,25 @@
-//! A language server for Nushell.
+//! A language server that formats Nushell.
 
-use std::{collections::HashMap, ops::ControlFlow};
+mod edit;
+mod place;
+
+use std::{collections::HashMap, ops::ControlFlow, panic};
 
 use lsp_server::{Connection, ErrorCode, Message, Notification, Request, RequestId, Response};
 use lsp_types::{
     DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    InitializeResult, ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions, Uri,
+    DocumentFormattingParams, InitializeResult, OneOf, ServerCapabilities, ServerInfo,
+    TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, TextEdit, Uri,
     notification::{
         DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, Exit as ExitNotification,
         Notification as NotificationKind,
     },
-    request::{Initialize, Request as RequestKind, Shutdown},
+    request::{Formatting, Initialize, Request as RequestKind, Shutdown},
 };
+use nuten_config::Config;
+
+use crate::place::Place;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Exit {
@@ -79,6 +86,7 @@ fn initialize_result() -> InitializeResult {
                     ..TextDocumentSyncOptions::default()
                 },
             )),
+            document_formatting_provider: Some(OneOf::Left(true)),
             ..ServerCapabilities::default()
         },
         server_info: Some(ServerInfo {
@@ -153,8 +161,49 @@ impl Session {
             };
             (session, Response::new_ok(request.id, ()))
         } else {
-            (self, method_not_found(request.id, &request.method))
+            let response = self.response_to(request);
+            (self, response)
         }
+    }
+
+    /// The response to a request that leaves the session as it is.
+    fn response_to(&self, request: Request) -> Response {
+        let Request {
+            id,
+            method,
+            params,
+        } = request;
+        match method.as_str() {
+            Formatting::METHOD => {
+                match serde_json::from_value::<DocumentFormattingParams>(params) {
+                    Ok(params) => match self.formatting(&params.text_document.uri) {
+                        Ok(edits) => Response::new_ok(id, edits),
+                        Err((code, message)) => Response::new_err(id, code as i32, message),
+                    },
+                    Err(error) => {
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string())
+                    },
+                }
+            },
+            _ => method_not_found(id, &method),
+        }
+    }
+
+    /// The edits that format the document at `uri`, or `None` when it has syntax errors.
+    fn formatting(&self, uri: &Uri) -> Result<Option<Vec<TextEdit>>, (ErrorCode, String)> {
+        let uri_text = uri.as_str();
+        let text = self.documents.get(uri_text).ok_or_else(|| {
+            let problem = "its text is unknown, since it is not open or was changed by a range";
+            (ErrorCode::RequestFailed, format!("{uri_text}: {problem}"))
+        })?;
+        let place = place::of(uri);
+        // The session goes on, since the other documents may still be formatted.
+        panic::catch_unwind(|| formatting_at(&place, uri_text, text)).unwrap_or_else(|_| {
+            Err((
+                ErrorCode::InternalError,
+                format!("{uri_text}: nuten panicked while formatting"),
+            ))
+        })
     }
 
     /// A notification whose params cannot be read is dropped, since it cannot be answered.
@@ -225,6 +274,32 @@ fn method_not_found(id: RequestId, method: &str) -> Response {
         ErrorCode::MethodNotFound as i32,
         format!("unknown method `{method}`"),
     )
+}
+
+fn formatting_at(
+    place: &Place,
+    uri: &str,
+    text: &str,
+) -> Result<Option<Vec<TextEdit>>, (ErrorCode, String)> {
+    // Found again for each request, so that a config file edited meanwhile is never missed.
+    let config = config_of(place, uri)
+        .map_err(|problems| (ErrorCode::RequestFailed, problems.join("\n")))?;
+    Ok(match nuten_format::format(text, &config.format) {
+        Ok(formatted) => Some(edit::between(text, &formatted).into_iter().collect()),
+        // Not an error, which the client would show for code that is still being typed.
+        Err(_) => None,
+    })
+}
+
+fn config_of(place: &Place, uri: &str) -> Result<Config, Vec<String>> {
+    match place {
+        Place::File(path) => nuten_config::of_text(Some(path)),
+        Place::NoFile => nuten_config::of_text(None),
+        // Not the config of another place, which could override the author's.
+        Place::UnknownFile => Err(vec![format!(
+            "{uri}: its file, and so its config, is unknown"
+        )]),
+    }
 }
 
 /// Not applying a range, which a client that syncs whole texts has no reason to send.
