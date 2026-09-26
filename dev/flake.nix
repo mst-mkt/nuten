@@ -15,6 +15,12 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nuten = {
+      # TODO: change to github: when publishing the repository
+      url = "git+ssh://git@github.com/mst-mkt/nuten";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.fenix.follows = "fenix";
+    };
     nixpkgs-nushell = {
       # nushell 0.115
       url = "github:NixOS/nixpkgs/aff8a0b28396750446e5537a96461bc4facdb287";
@@ -77,6 +83,8 @@
       treefmtEval = forAllSystems (
         system:
         inputs.treefmt-nix.lib.evalModule inputs.nixpkgs.legacyPackages.${system} {
+          imports = [ inputs.nuten.treefmtModule ];
+
           projectRootFile = "Cargo.toml";
 
           programs = {
@@ -99,6 +107,10 @@
             };
             oxfmt = {
               enable = true;
+            };
+            nuten = {
+              enable = true;
+              excludes = [ "crates/*/test_data/**" ];
             };
           };
         }

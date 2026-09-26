@@ -64,6 +64,21 @@
         "type": "github"
       }
     },
+    "crane": {
+      "locked": {
+        "lastModified": 1788465171,
+        "narHash": "sha256-Y1/TTVXjYXGF068IThQH9fPSZ0SIE74PABlUxnWTUH0=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "eb35abda9f232cc6610b1d1e3200d15c49b7ac54",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -188,6 +203,30 @@
         "type": "github"
       }
     },
+    "nuten": {
+      "inputs": {
+        "crane": "crane",
+        "fenix": [
+          "fenix"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790380939,
+        "narHash": "sha256-FWCw4bWIOto8uvVC8Nzp2uuD+A0y74sOhGS+XynK39Q=",
+        "ref": "refs/heads/main",
+        "rev": "b79f9e00127b995cc8ea9b5b57bd176ec41c7f5c",
+        "revCount": 336,
+        "type": "git",
+        "url": "ssh://git@github.com/mst-mkt/nuten"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@github.com/mst-mkt/nuten"
+      }
+    },
     "nutest": {
       "flake": false,
       "locked": {
@@ -216,6 +255,7 @@
         "nixpkgs": "nixpkgs",
         "nixpkgs-nushell": "nixpkgs-nushell",
         "nufmt": "nufmt",
+        "nuten": "nuten",
         "nutest": "nutest",
         "treefmt-nix": "treefmt-nix"
       }
