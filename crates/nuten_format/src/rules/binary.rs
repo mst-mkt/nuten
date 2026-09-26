@@ -26,7 +26,7 @@ impl<'a> Formatter<'a> {
         // Breaking before the `]` instead would put items on lines they are not on.
         let one_line_with_comment = !multiline && items.iter().any(Child::is_comment);
         if cr_inside_comment || one_line_with_comment {
-            return vec![self.source(binary.syntax().text_range())];
+            return self.source(binary.syntax().text_range());
         }
         let inner = self.spaced_children(&items, |_, item| {
             Some(match item.newlines {

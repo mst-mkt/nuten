@@ -28,7 +28,7 @@ impl<'a> Formatter<'a> {
     pub(super) fn io_types(&mut self, types: &IoTypes) -> Vec<Element<'a>> {
         let syntax = types.syntax();
         if holds_joining_comment(types) {
-            return vec![self.source(syntax.text_range())];
+            return self.source(syntax.text_range());
         }
         match types.brackets() {
             // A line break before the `]` would part it from the last type.
@@ -39,7 +39,7 @@ impl<'a> Formatter<'a> {
                     .chain(self.comma_spaced(inside))
                     .chain(iter::once(self.token(&close)))
                     .collect();
-                flat(&elements).unwrap_or_else(|| vec![self.source(syntax.text_range())])
+                flat(&elements).unwrap_or_else(|| self.source(syntax.text_range()))
             },
             Some((open, inside, close)) => {
                 let head = vec![self.token(&open)];

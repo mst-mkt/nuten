@@ -109,6 +109,40 @@ mod tests {
     }
 
     #[test]
+    fn crlf_leaves_line_breaks_inside_tokens_as_written() {
+        let crlf = Config {
+            line_ending: LineEnding::CrLf,
+            ..Config::default()
+        };
+        for (src, expected) in [
+            ("echo 'a\nb'\n", "echo 'a\nb'\r\n"),
+            ("echo foo[\n1]bar\n", "echo foo[\n1]bar\r\n"),
+            (
+                "# nuten-ignore\n[1   'a\nb'\n  2]\n",
+                "# nuten-ignore\r\n[1   'a\nb'\r\n  2]\r\n",
+            ),
+        ] {
+            assert_eq!(format(src, &crlf).unwrap(), expected, "{src:?}");
+            let checked = invariants::check(src, &crlf);
+            assert_eq!(checked.violations, [], "{src:?}");
+        }
+    }
+
+    #[test]
+    fn crlf_leaves_line_breaks_inside_example_block_as_written() {
+        let crlf = Config {
+            line_ending: LineEnding::CrLf,
+            ..Config::default()
+        };
+        let src = "@example \"d\" {\n  [1\n  2]\n} --result [1 2]\ndef f [] {}\n";
+        assert_eq!(
+            format(src, &crlf).unwrap(),
+            "@example \"d\" {\n  [1\n  2]\n} --result [1 2]\r\ndef f [] {}\r\n"
+        );
+        assert_eq!(invariants::check(src, &crlf).violations, []);
+    }
+
+    #[test]
     fn nesting_past_depth_limit_keeps_invariants() {
         for src in [
             format!("mut a = 1\n{}1\n", "$a  =  ".repeat(1_000)),

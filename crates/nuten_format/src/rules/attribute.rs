@@ -19,7 +19,7 @@ impl<'a> Formatter<'a> {
                 NodeOrToken::Node(Node::Block(block))
                     if !this.kept.keeps(&ast::untyped(element)) =>
                 {
-                    vec![this.source(block.syntax().text_range())]
+                    this.source(block.syntax().text_range())
                 },
                 element => this.element(element),
             },

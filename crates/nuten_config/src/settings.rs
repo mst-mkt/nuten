@@ -103,7 +103,8 @@ pub(crate) const SETTINGS: [Setting; 6] = [
     },
     Setting {
         key: "line_ending",
-        description: "What ends each line.",
+        description: "What ends each line; line breaks inside a string, a bare word, or an \
+                      `@example` block stay as written.",
         kind: Kind::Choice(&[
             Choice {
                 name: "lf",

@@ -10,6 +10,12 @@ pub enum Element<'a> {
         text: &'a str,
         width: TextWidth,
     },
+    /// Printed byte for byte, its line breaks included.
+    /// `width` is `TextWidth::of(text)`.
+    ExactText {
+        text: &'a str,
+        width: TextWidth,
+    },
     /// A space either way.
     Space,
     Line(LineMode),
@@ -88,6 +94,10 @@ impl Element<'_> {
             Element::Line(LineMode::Hard { .. })
                 | Element::ExpandParent
                 | Element::Text {
+                    width: TextWidth::Multiline,
+                    ..
+                }
+                | Element::ExactText {
                     width: TextWidth::Multiline,
                     ..
                 }

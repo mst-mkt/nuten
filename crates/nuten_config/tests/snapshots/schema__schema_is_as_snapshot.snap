@@ -29,7 +29,7 @@ expression: schema()
       "maximum": 255
     },
     "line_ending": {
-      "description": "What ends each line.",
+      "description": "What ends each line; line breaks inside a string, a bare word, or an `@example` block stay as written.",
       "enum": ["lf", "crlf"]
     },
     "respect_gitignore": {

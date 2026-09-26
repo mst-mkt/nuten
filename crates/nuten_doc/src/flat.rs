@@ -38,11 +38,18 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
             width: TextWidth::Multiline,
             ..
         }
+        | Element::ExactText {
+            width: TextWidth::Multiline,
+            ..
+        }
         | Element::Line(LineMode::Hard {
             ..
         })
         | Element::LineSuffix(_) => None,
         Element::Text {
+            ..
+        }
+        | Element::ExactText {
             ..
         }
         | Element::Space
@@ -65,8 +72,8 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
 mod tests {
     use super::{breaks_groups, flat};
     use crate::{
-        align, expand_parent, group, hard_line_break, indent, line_suffix, line_suffix_boundary,
-        soft_line_break, soft_line_break_or_space, space, text,
+        align, exact_text, expand_parent, group, hard_line_break, indent, line_suffix,
+        line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
     };
 
     #[test]
@@ -85,6 +92,7 @@ mod tests {
                 expand_parent(),
             ]),
             align(2, [space(), line_suffix_boundary()]),
+            exact_text("'a'"),
         ];
         assert_eq!(
             flat(&doc),
@@ -96,6 +104,7 @@ mod tests {
                 text(")"),
                 space(),
                 line_suffix_boundary(),
+                exact_text("'a'"),
             ])
         );
     }
@@ -105,6 +114,7 @@ mod tests {
         for doc in [
             vec![group([text("a"), hard_line_break()])],
             vec![text("a\nb")],
+            vec![exact_text("a\nb")],
             vec![indent([line_suffix([text("# c")])])],
         ] {
             assert_eq!(flat(&doc), None, "{doc:?}");
@@ -119,6 +129,7 @@ mod tests {
             vec![align(2, [text("a\nb")])],
             vec![line_suffix([text("a\nb")])],
             vec![text("a\nb")],
+            vec![exact_text("a\nb")],
         ] {
             assert!(breaks_groups(&doc), "{doc:?}");
         }

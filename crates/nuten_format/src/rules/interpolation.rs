@@ -32,6 +32,6 @@ impl<'a> Formatter<'a> {
         {
             return elements;
         }
-        flat(&elements).unwrap_or_else(|| vec![self.source(syntax.text_range())])
+        flat(&elements).unwrap_or_else(|| self.source(syntax.text_range()))
     }
 }

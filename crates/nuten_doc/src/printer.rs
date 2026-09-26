@@ -53,6 +53,13 @@ impl LineEnding {
     }
 }
 
+/// How the line breaks inside a text come out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TextBreaks {
+    AsLineEnding,
+    AsWritten,
+}
+
 pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
     let mut printer = Printer {
         options,
@@ -162,7 +169,11 @@ impl<'a> Printer<'a> {
                 Element::Text {
                     text,
                     width,
-                } => self.push_text(text, *width),
+                } => self.push_text(text, *width, TextBreaks::AsLineEnding),
+                Element::ExactText {
+                    text,
+                    width,
+                } => self.push_text(text, *width, TextBreaks::AsWritten),
                 Element::Line(line_mode) if breaks_line(*line_mode, mode) => {
                     if self.line_suffixes.is_empty() {
                         let blank_lines = match *line_mode {
@@ -177,7 +188,7 @@ impl<'a> Printer<'a> {
                     }
                 },
                 Element::Space | Element::Line(LineMode::SoftOrSpace) => {
-                    self.push_text(" ", TextWidth::Width(1));
+                    self.push_text(" ", TextWidth::Width(1), TextBreaks::AsLineEnding);
                 },
                 Element::LineSuffixBoundary if !self.line_suffixes.is_empty() => {
                     // In break mode, so that the suffixes measure it as the end of the line.
@@ -267,6 +278,10 @@ impl<'a> Printer<'a> {
                     | Element::Text {
                         width: TextWidth::Multiline,
                         ..
+                    }
+                    | Element::ExactText {
+                        width: TextWidth::Multiline,
+                        ..
                     },
                     Measure::Flat | Measure::InSuffix,
                 ) => return false,
@@ -300,9 +315,20 @@ impl<'a> Printer<'a> {
                         text,
                     },
                     Measure::Break,
-                ) => return columns(self.first_line(text)) <= remaining,
+                ) => return columns(self.first_line(text, TextBreaks::AsLineEnding)) <= remaining,
+                (
+                    Element::ExactText {
+                        width: TextWidth::Multiline,
+                        text,
+                    },
+                    Measure::Break,
+                ) => return columns(self.first_line(text, TextBreaks::AsWritten)) <= remaining,
                 (
                     Element::Text {
+                        width: TextWidth::Width(width),
+                        ..
+                    }
+                    | Element::ExactText {
                         width: TextWidth::Width(width),
                         ..
                     },
@@ -377,10 +403,11 @@ impl<'a> Printer<'a> {
         }
     }
 
-    fn push_text(&mut self, text: &str, width: TextWidth) {
+    fn push_text(&mut self, text: &str, width: TextWidth, breaks: TextBreaks) {
         // The printer trims only before breaks of its own.
         // An indent here would stay at the end of the line.
-        let empty_first_line = width == TextWidth::Multiline && self.first_line(text).is_empty();
+        let empty_first_line =
+            width == TextWidth::Multiline && self.first_line(text, breaks).is_empty();
         if let Some(indent) = self.pending_indent.take().filter(|_| !empty_first_line) {
             self.out.extend(iter::repeat_n('\t', indent.tabs as usize));
             self.out.extend(iter::repeat_n(' ', indent.spaces as usize));
@@ -391,23 +418,32 @@ impl<'a> Printer<'a> {
                 self.column = self.column.saturating_add(width);
             },
             TextWidth::Multiline => {
-                let line_ending = self.options.line_ending;
-                let mut lines = text.split('\n');
-                let last = lines.next_back().unwrap_or_default();
-                for line in lines {
-                    self.out.push_str(line_ending.without_break(line));
-                    self.out.push_str(line_ending.as_str());
+                let (before_last, last) = text
+                    .rsplit_once('\n')
+                    .expect("text over lines holds a line break");
+                match breaks {
+                    TextBreaks::AsLineEnding => {
+                        let line_ending = self.options.line_ending;
+                        for line in before_last.split('\n') {
+                            self.out.push_str(line_ending.without_break(line));
+                            self.out.push_str(line_ending.as_str());
+                        }
+                        self.out.push_str(last);
+                    },
+                    TextBreaks::AsWritten => self.out.push_str(text),
                 }
-                self.out.push_str(last);
                 self.column = columns(last);
             },
         }
     }
 
-    fn first_line<'t>(&self, text: &'t str) -> &'t str {
-        text.split_once('\n').map_or(text, |(first, _)| {
-            self.options.line_ending.without_break(first)
-        })
+    /// With the line broken as written, a `\r` right before the `\n` makes one break with it.
+    fn first_line<'t>(&self, text: &'t str, breaks: TextBreaks) -> &'t str {
+        text.split_once('\n')
+            .map_or(text, |(first, _)| match breaks {
+                TextBreaks::AsLineEnding => self.options.line_ending.without_break(first),
+                TextBreaks::AsWritten => first.strip_suffix('\r').unwrap_or(first),
+            })
     }
 
     fn push_line_breaks(&mut self, indent: Indentation, breaks: u32) {
@@ -458,9 +494,9 @@ fn next_nested<'a>(
 mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
     use crate::{
-        Element, GroupId, align, align_if_group_breaks, empty_line, empty_lines, expand_parent,
-        group, group_with_id, hard_line_break, indent, indent_if_group_breaks, line_suffix,
-        line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
+        Element, GroupId, align, align_if_group_breaks, empty_line, empty_lines, exact_text,
+        expand_parent, group, group_with_id, hard_line_break, indent, indent_if_group_breaks,
+        line_suffix, line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
     };
 
     /// Wide enough that nothing breaks for want of room.
@@ -754,6 +790,7 @@ mod tests {
             vec![expand_parent()],
             vec![hard_line_break()],
             vec![text("\n")],
+            vec![exact_text("\n")],
             vec![indent(vec![group(vec![hard_line_break()])])],
             vec![line_suffix(vec![hard_line_break()])],
         ];
@@ -850,6 +887,47 @@ mod tests {
     }
 
     #[test]
+    fn exact_text_keeps_its_line_breaks() {
+        let doc = vec![exact_text("a\r\nb\nc\r\r\nd"), hard_line_break(), text("e")];
+        assert_eq!(print(&doc, &WIDE), "a\r\nb\nc\r\r\nd\ne");
+        assert_eq!(print(&doc, &CRLF), "a\r\nb\nc\r\r\nd\r\ne");
+    }
+
+    #[test]
+    fn cr_before_line_break_in_exact_text_takes_no_width() {
+        let doc = vec![
+            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
+            exact_text("x\r\ny"),
+        ];
+        assert_eq!(print(&doc, &narrow(4)), "a bx\r\ny");
+        let doc = vec![
+            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
+            exact_text("x\r\r\ny"),
+        ];
+        assert_eq!(print(&doc, &narrow(4)), "a\nbx\r\r\ny");
+    }
+
+    #[test]
+    fn exact_text_over_lines_breaks_enclosing_group() {
+        let doc = vec![group(vec![
+            text("a"),
+            soft_line_break_or_space(),
+            exact_text("b\nc"),
+        ])];
+        assert_eq!(print(&doc, &WIDE), "a\nb\nc");
+    }
+
+    #[test]
+    fn exact_text_resets_column_after_its_last_line_break() {
+        let doc = vec![
+            exact_text("a\r\nbb"),
+            group(vec![text("c"), soft_line_break_or_space(), text("d")]),
+        ];
+        assert_eq!(print(&doc, &narrow(5)), "a\r\nbbc d");
+        assert_eq!(print(&doc, &narrow(4)), "a\r\nbbc\nd");
+    }
+
+    #[test]
     fn line_break_ending_text_collapses_with_hard_line_break() {
         let doc = vec![text("a\n"), hard_line_break(), text("b")];
         assert_eq!(print(&doc, &WIDE), "a\nb");
@@ -868,6 +946,17 @@ mod tests {
             let doc = vec![text("a"), indent(vec![hard_line_break(), text(multiline)])];
             assert_eq!(print(&doc, &WIDE), "a\n\nb", "{multiline:?}");
             assert_eq!(print(&doc, &TABS), "a\n\nb", "{multiline:?}");
+        }
+        for multiline in ["\nb", "\r\nb"] {
+            let doc = vec![
+                text("a"),
+                indent(vec![hard_line_break(), exact_text(multiline)]),
+            ];
+            assert_eq!(
+                print(&doc, &WIDE),
+                format!("a\n{multiline}"),
+                "{multiline:?}"
+            );
         }
     }
 

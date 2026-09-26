@@ -102,7 +102,7 @@ impl<'a> Formatter<'a> {
     fn closure_params(&mut self, params: &ClosureParams) -> Vec<Element<'a>> {
         let syntax = params.syntax();
         if closure_params_stay_as_is(params, &self.kept) {
-            return vec![self.source(syntax.text_range())];
+            return self.source(syntax.text_range());
         }
         let items: Vec<_> =
             without_commas(children(syntax.children_with_tokens(), &self.kept)).collect();

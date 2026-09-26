@@ -9,6 +9,13 @@ pub fn text(text: &str) -> Element<'_> {
     }
 }
 
+pub fn exact_text(text: &str) -> Element<'_> {
+    Element::ExactText {
+        text,
+        width: TextWidth::of(text),
+    }
+}
+
 pub fn space() -> Element<'static> {
     Element::Space
 }

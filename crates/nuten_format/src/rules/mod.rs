@@ -19,10 +19,11 @@ mod subexpression;
 use std::{collections::HashMap, iter, mem};
 
 use nuten_doc::{
-    Element, GroupIds, empty_line, empty_lines, hard_line_break, line_suffix, space, text,
+    Element, GroupIds, empty_line, empty_lines, exact_text, hard_line_break, line_suffix, space,
+    text,
 };
 use nuten_syntax::{
-    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange,
+    NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange, WalkEvent,
     ast::{self, AstNode, Node},
 };
 
@@ -104,6 +105,7 @@ fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item =
 pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     let mut formatter = Formatter {
         src,
+        root: root.clone(),
         groups: GroupIds::default(),
         laid_out_ahead: HashMap::new(),
         kept: Kept::of(src, root),
@@ -120,6 +122,8 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
 
 struct Formatter<'a> {
     src: &'a str,
+    /// The tree of `src`.
+    root: SyntaxNode,
     groups: GroupIds,
     /// The items of each expression a pipeline laid out to tell its tail.
     /// They stay until the expression takes them.
@@ -298,7 +302,7 @@ impl<'a> Formatter<'a> {
 
     fn element(&mut self, element: &ast::Element) -> Vec<Element<'a>> {
         match (self.kept.member(&ast::untyped(element)), element) {
-            (Some(Member::First(run)), _) => vec![self.source(run)],
+            (Some(Member::First(run)), _) => self.source(run),
             (Some(Member::Rest), _) => Vec::new(),
             (None, NodeOrToken::Node(node)) => self.node(node),
             (None, NodeOrToken::Token(token)) => vec![self.token(token)],
@@ -318,12 +322,83 @@ impl<'a> Formatter<'a> {
     }
 
     fn token(&self, token: &SyntaxToken) -> Element<'a> {
-        self.source(token.text_range())
+        let source = &self.src[token.text_range()];
+        if spans_lines(token) {
+            exact_text(source)
+        } else {
+            text(source)
+        }
     }
 
-    fn source(&self, range: TextRange) -> Element<'a> {
-        text(&self.src[range])
+    /// The source in `range`, with the line breaks nu reads as layout printed as the line ending.
+    fn source(&self, range: TextRange) -> Vec<Element<'a>> {
+        let exact = exact_ranges(&self.root, range);
+        let gaps = iter::once(range.start())
+            .chain(exact.iter().map(|exact| exact.end()))
+            .zip(
+                exact
+                    .iter()
+                    .map(|exact| exact.start())
+                    .chain(iter::once(range.end())),
+            )
+            .map(|(start, end)| TextRange::new(start, end));
+        let exact_texts = exact
+            .iter()
+            .map(|&exact| Some(exact_text(&self.src[exact])))
+            .chain(iter::once(None));
+        gaps.zip(exact_texts)
+            .flat_map(|(gap, exact_text)| {
+                let gap = (!gap.is_empty()).then(|| text(&self.src[gap]));
+                gap.into_iter().chain(exact_text)
+            })
+            .collect()
     }
+}
+
+/// Nu reads the line breaks inside such a token as part of its value, byte for byte.
+/// Only a `Newline` holds one that is layout.
+fn spans_lines(token: &SyntaxToken) -> bool {
+    token.kind() != SyntaxKind::Newline && token.text().contains('\n')
+}
+
+/// The parts of `range` whose line breaks nu reads as part of a value, in order.
+/// `range` holds whole elements.
+fn exact_ranges(root: &SyntaxNode, range: TextRange) -> Vec<TextRange> {
+    let within = match root.covering_element(range) {
+        NodeOrToken::Node(node) => node,
+        NodeOrToken::Token(token) => token.parent().expect("a token has a parent"),
+    };
+    let mut walk = within.preorder_with_tokens();
+    iter::from_fn(|| {
+        while let Some(event) = walk.next() {
+            let WalkEvent::Enter(element) = event else {
+                continue;
+            };
+            let element_range = element.text_range();
+            match &element {
+                // Only the covering node reaches past `range`, so walk into it.
+                _ if element_range.contains_range(range) && element_range != range => {},
+                _ if !range.contains_range(element_range) => walk.skip_subtree(),
+                NodeOrToken::Node(_) if is_attribute_block(&element) => {
+                    walk.skip_subtree();
+                    return Some(element_range);
+                },
+                NodeOrToken::Token(token) if spans_lines(token) => return Some(element_range),
+                _ => {},
+            }
+        }
+        None
+    })
+    .collect()
+}
+
+/// Nu takes the text of an `@example` block, line breaks and all, into the code of the example.
+/// The blocks of other attributes count too, since `attribute` prints every one as written.
+fn is_attribute_block(element: &SyntaxElement) -> bool {
+    element.kind() == SyntaxKind::Block
+        && element
+            .parent()
+            .is_some_and(|parent| parent.kind() == SyntaxKind::Attribute)
 }
 
 /// Whether the last statement before `item` still reaches a line-start `|` after one blank line.
