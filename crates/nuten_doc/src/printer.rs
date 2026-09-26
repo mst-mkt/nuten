@@ -228,6 +228,16 @@ impl<'a> Printer<'a> {
                     };
                     self.push_elements(indent, mode, elements);
                 },
+                Element::IfBreak {
+                    broken,
+                    flat,
+                } => {
+                    let elements = match mode {
+                        Mode::Flat => flat,
+                        Mode::Break => broken,
+                    };
+                    self.push_elements(indent, mode, elements);
+                },
                 Element::Group {
                     id,
                     elements,
@@ -298,6 +308,24 @@ impl<'a> Printer<'a> {
                     _,
                 ) => {
                     nested.push((measure, elements.iter()));
+                    0
+                },
+                (
+                    Element::IfBreak {
+                        broken, ..
+                    },
+                    Measure::Break,
+                ) => {
+                    nested.push((measure, broken.iter()));
+                    0
+                },
+                (
+                    Element::IfBreak {
+                        flat, ..
+                    },
+                    Measure::Flat | Measure::InSuffix,
+                ) => {
+                    nested.push((measure, flat.iter()));
                     0
                 },
                 (Element::LineSuffix(elements), _) => {
@@ -502,8 +530,9 @@ mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
     use crate::{
         Element, GroupId, align, align_if_group_breaks, empty_line, empty_lines, exact_text,
-        expand_parent, group, group_with_id, hard_line_break, indent, indent_if_group_breaks,
-        line_suffix, line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
+        expand_parent, group, group_with_id, hard_line_break, if_break, indent,
+        indent_if_group_breaks, line_suffix, line_suffix_boundary, soft_line_break,
+        soft_line_break_or_space, space, text,
     };
 
     /// Wide enough that nothing breaks for want of room.
@@ -731,6 +760,60 @@ mod tests {
         ])];
         assert_eq!(print(&doc, &narrow(7)), "aa bbcc");
         assert_eq!(print(&doc, &narrow(6)), "aa\nbb\ncc");
+    }
+
+    #[test]
+    fn if_break_prints_side_of_mode_around_it() {
+        let doc = vec![group(vec![
+            text("a"),
+            if_break(vec![text("!")], vec![text("?")]),
+            soft_line_break_or_space(),
+            text("b"),
+        ])];
+        assert_eq!(print(&doc, &WIDE), "a? b");
+        assert_eq!(print(&doc, &narrow(3)), "a!\nb");
+        let outside_group = vec![if_break(vec![text("!")], vec![text("?")])];
+        assert_eq!(print(&outside_group, &WIDE), "!");
+    }
+
+    #[test]
+    fn group_measures_flat_side_of_if_break() {
+        let doc = vec![group(vec![
+            text("a"),
+            if_break(Vec::new(), vec![text("bbb")]),
+            soft_line_break(),
+            text("c"),
+        ])];
+        assert_eq!(print(&doc, &narrow(5)), "abbbc");
+        assert_eq!(print(&doc, &narrow(4)), "a\nc");
+    }
+
+    #[test]
+    fn rest_of_line_measures_broken_side_of_if_break() {
+        let doc = vec![
+            group(vec![text("a"), soft_line_break(), text("b")]),
+            if_break(vec![text("ccc")], Vec::new()),
+        ];
+        assert_eq!(print(&doc, &narrow(5)), "abccc");
+        assert_eq!(print(&doc, &narrow(4)), "a\nbccc");
+    }
+
+    #[test]
+    fn line_suffix_measures_flat_side_of_if_break() {
+        let breaks_when_broken = vec![group(vec![
+            text("a"),
+            line_suffix(vec![if_break(vec![hard_line_break()], vec![text("!")])]),
+            soft_line_break(),
+            text("c"),
+        ])];
+        assert_eq!(print(&breaks_when_broken, &WIDE), "ac!");
+        let breaks_when_flat = vec![group(vec![
+            text("a"),
+            line_suffix(vec![if_break(vec![text("!")], vec![hard_line_break()])]),
+            soft_line_break(),
+            text("c"),
+        ])];
+        assert_eq!(print(&breaks_when_flat, &WIDE), "a!\nc");
     }
 
     #[test]

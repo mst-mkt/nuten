@@ -13,6 +13,7 @@ pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
 }
 
 /// One inside a `LineSuffix` counts too, since `fits` measures the suffix with the line.
+/// One on the broken side of an `IfBreak` does not, since that side prints only once they broke.
 pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
     elements.iter().any(|element| {
         element.forces_break()
@@ -25,6 +26,9 @@ pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
                 }
                 | Element::Align {
                     elements, ..
+                }
+                | Element::IfBreak {
+                    flat: elements, ..
                 }
                 | Element::LineSuffix(elements) => breaks_groups(elements),
                 _ => false,
@@ -64,6 +68,9 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
         }
         | Element::Align {
             elements, ..
+        }
+        | Element::IfBreak {
+            flat: elements, ..
         } => flat(elements),
     }
 }
@@ -72,7 +79,7 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
 mod tests {
     use super::{breaks_groups, flat};
     use crate::{
-        align, exact_text, expand_parent, group, hard_line_break, indent, line_suffix,
+        align, exact_text, expand_parent, group, hard_line_break, if_break, indent, line_suffix,
         line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
     };
 
@@ -93,6 +100,7 @@ mod tests {
             ]),
             align(2, [space(), line_suffix_boundary()]),
             exact_text("'a'"),
+            if_break([hard_line_break()], [text(",")]),
         ];
         assert_eq!(
             flat(&doc),
@@ -105,6 +113,7 @@ mod tests {
                 space(),
                 line_suffix_boundary(),
                 exact_text("'a'"),
+                text(","),
             ])
         );
     }
@@ -130,12 +139,14 @@ mod tests {
             vec![line_suffix([text("a\nb")])],
             vec![text("a\nb")],
             vec![exact_text("a\nb")],
+            vec![if_break([], [hard_line_break()])],
         ] {
             assert!(breaks_groups(&doc), "{doc:?}");
         }
         for doc in [
             vec![group([text("a"), soft_line_break_or_space(), text("b")])],
             vec![line_suffix([text("# c")])],
+            vec![if_break([hard_line_break()], [])],
         ] {
             assert!(!breaks_groups(&doc), "{doc:?}");
         }

@@ -26,6 +26,11 @@ pub enum Element<'a> {
     LineSuffix(Vec<Element<'a>>),
     /// A hard line break here if a line suffix is held back.
     LineSuffixBoundary,
+    /// `broken` where the `Line`s around it break, `flat` where they print flat.
+    IfBreak {
+        broken: Vec<Element<'a>>,
+        flat: Vec<Element<'a>>,
+    },
     /// Printed flat when it fits on the line, otherwise with its own `Line`s broken.
     /// An `Indent` or an `Align` after it or inside it can depend on that through `id`.
     Group {

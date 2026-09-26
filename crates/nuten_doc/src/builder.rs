@@ -54,6 +54,16 @@ pub fn line_suffix_boundary() -> Element<'static> {
     Element::LineSuffixBoundary
 }
 
+pub fn if_break<'a>(
+    broken: impl IntoIterator<Item = Element<'a>>,
+    flat: impl IntoIterator<Item = Element<'a>>,
+) -> Element<'a> {
+    Element::IfBreak {
+        broken: broken.into_iter().collect(),
+        flat: flat.into_iter().collect(),
+    }
+}
+
 pub fn group<'a>(elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
     Element::Group {
         id: None,
