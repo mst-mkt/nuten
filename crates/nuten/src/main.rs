@@ -90,7 +90,7 @@ struct Report {
 fn main() -> ExitCode {
     match Nuten::parse().command {
         Command::Format(args) => run_format(&args),
-        Command::Schema => print_schema(),
+        Command::Schema => print(&nuten_config::schema()),
         Command::Lsp(_) => serve_lsp(),
     }
 }
@@ -140,8 +140,8 @@ fn argument_problem(args: &Format) -> Option<String> {
     }
 }
 
-fn print_schema() -> ExitCode {
-    match write_stdout(&nuten_config::schema()) {
+fn print(text: &str) -> ExitCode {
+    match write_stdout(text) {
         Ok(()) => ExitCode::SUCCESS,
         Err(problem) => fail(&[problem]),
     }
@@ -190,10 +190,7 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
         (Err(problems), _) => fail(&problems),
         (Ok((src, formatted)), Mode::Check) if formatted != src => ExitCode::from(1),
         (Ok(_), Mode::Check) => ExitCode::SUCCESS,
-        (Ok((_, formatted)), Mode::Write) => match write_stdout(&formatted) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(problem) => fail(&[problem]),
-        },
+        (Ok((_, formatted)), Mode::Write) => print(&formatted),
     }
 }
 
