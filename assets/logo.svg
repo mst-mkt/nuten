@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="512" height="512" role="img">
+  <title>Nuten</title>
+  <defs>
+    <linearGradient id="gn" gradientUnits="userSpaceOnUse" x1="32" y1="128" x2="256" y2="368">
+      <stop offset="0" stop-color="#00B2FF"/>
+      <stop offset="1" stop-color="#2244FF"/>
+    </linearGradient>
+    <linearGradient id="gu" gradientUnits="userSpaceOnUse" x1="368" y1="32" x2="144" y2="272">
+      <stop offset="0" stop-color="#4DFF8E"/>
+      <stop offset="1" stop-color="#00DB5B"/>
+    </linearGradient>
+    <linearGradient id="go" gradientUnits="userSpaceOnUse" x1="144" y1="128" x2="256" y2="272">
+      <stop offset="0" stop-color="#F2FFFC"/>
+      <stop offset="1" stop-color="#5CFFD8"/>
+    </linearGradient>
+    <path id="n" d="M32 240A112 112 0 0 1 256 240V344A24 24 0 0 1 232 368H56A24 24 0 0 1 32 344Z"/>
+    <path id="u" d="M168 32H344A24 24 0 0 1 368 56V160A112 112 0 0 1 144 160V56A24 24 0 0 1 168 32Z"/>
+    <clipPath id="clip-n">
+      <use href="#n"/>
+    </clipPath>
+  </defs>
+  <use href="#n" fill="url(#gn)" fill-opacity="0.7"/>
+  <use href="#u" fill="url(#gu)" fill-opacity="0.7"/>
+  <use href="#u" fill="url(#go)" fill-opacity="0.82" clip-path="url(#clip-n)"/>
+</svg>
