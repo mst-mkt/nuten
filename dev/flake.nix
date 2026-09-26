@@ -146,6 +146,7 @@
             "nix"
             "oracle"
             "benchmark"
+            "lsp"
           ];
         in
         inputs.git-hooks.lib.${system}.run {
