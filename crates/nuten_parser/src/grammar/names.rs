@@ -56,19 +56,28 @@ impl<'a> Names<'a> {
     /// These names, inside the block of `tokens` too.
     /// `skips_newline` is whether a line break there is no more than whitespace.
     pub(crate) fn within(&self, src: &'a str, tokens: &[Token], skips_newline: bool) -> Names<'a> {
-        let scope = Scope::of(
-            src,
-            &lexemes(src, tokens),
-            skips_newline,
-            self.scope.clone(),
+        let scope_of = || {
+            Scope::of(
+                src,
+                &lexemes(src, tokens),
+                skips_newline,
+                self.scope.clone(),
+            )
+        };
+        // Most blocks hold no scope word, and reading their statements takes several allocations.
+        let holds_scope_word = tokens
+            .iter()
+            .any(|token| SCOPE_WORDS.contains(&&src[token.range]));
+        debug_assert!(
+            holds_scope_word || scope_of().is_empty(),
+            "a block with no scope word declares and imports nothing"
         );
+        let scope = holds_scope_word
+            .then(scope_of)
+            .filter(|scope| !scope.is_empty());
         Names {
             file: Rc::clone(&self.file),
-            scope: if scope.is_empty() {
-                self.scope.clone()
-            } else {
-                Some(Rc::new(scope))
-            },
+            scope: scope.map(Rc::new).or_else(|| self.scope.clone()),
         }
     }
 
@@ -218,6 +227,9 @@ fn lexemes<'a>(src: &'a str, tokens: &[Token]) -> Vec<Lexeme<'a>> {
         })
         .collect()
 }
+
+/// The words a block needs one of for its `Scope` to hold anything.
+const SCOPE_WORDS: [&str; 6] = ["def", "extern", "module", "use", "source", "source-env"];
 
 /// A block of statements, with what nu declares before it reads them and what they import.
 struct Scope<'a> {
