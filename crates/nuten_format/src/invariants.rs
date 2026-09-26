@@ -16,9 +16,8 @@ use crate::{Config, ParseError, format_parsed};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
-    /// Line endings inside a token do not count, since the printer rewrites them.
-    /// Nor do the `\r`s before them, which it trims with `\n` line endings.
-    /// Nor do `Comma` tokens, which separate items as whitespace does in lists, records and types.
+    /// `Comma` tokens are left aside too.
+    /// They separate items as whitespace does in lists, records and types.
     /// So a `,` the formatter prints in a type without one in the source goes unseen here.
     /// Only the nu oracle tells whether it went where nu reads it as a separator.
     /// A `ShortFlag` counts as one with the token before it.
@@ -118,15 +117,11 @@ fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
             .filter_map(SyntaxElement::into_token)
             .filter(|token| !token.kind().is_trivia() && token.kind() != SyntaxKind::Comma);
         for token in tokens {
-            let text = token
-                .text()
-                .split('\n')
-                .map(|line| line.trim_end_matches('\r'))
-                .collect::<Vec<_>>()
-                .join("\n");
             match leaves.last_mut() {
-                Some((_, last)) if token.kind() == SyntaxKind::ShortFlag => last.push_str(&text),
-                _ => leaves.push((token.kind(), text)),
+                Some((_, last)) if token.kind() == SyntaxKind::ShortFlag => {
+                    last.push_str(token.text());
+                },
+                _ => leaves.push((token.kind(), token.text().to_string())),
             }
         }
         leaves
@@ -370,9 +365,18 @@ mod tests {
     }
 
     #[test]
-    fn line_endings_inside_token_are_ignored() {
-        assert_eq!(formatter_violations("'a\r\nb'\r\n", "'a\nb'\n"), []);
-        assert_eq!(formatter_violations("'a\r\r\nb'\n", "'a\nb'\n"), []);
+    fn line_breaks_inside_token_count() {
+        for (src, output) in [
+            ("'a\r\nb'\r\n", "'a\nb'\n"),
+            ("'a\r\r\nb'\n", "'a\r\nb'\n"),
+            ("'a\nb'\n", "'a\r\nb'\n"),
+        ] {
+            assert_eq!(
+                invariant_names(&formatter_violations(src, output)),
+                [Invariant::Tokens.name()],
+                "{src:?}"
+            );
+        }
     }
 
     #[test]
