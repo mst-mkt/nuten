@@ -151,6 +151,14 @@ mod tests {
                 "foo\n\n\nls |\n\n\n| length\n",
                 "foo\n\nls |\n\n\n| length\n",
             ),
+            (
+                "do {\n    ls |\n    # a\n    # b\n\n\n    | length\n}\n",
+                "do {\n    ls |\n    # a\n    # b\n\n\n    | length\n}\n",
+            ),
+            (
+                "do {\n    ls |\n    # a\n\n    # b\n\n\n    | length\n}\n",
+                "do {\n    ls |\n    # a\n\n    # b\n\n    | length\n}\n",
+            ),
         ] {
             assert_eq!(
                 format(src, &Config::default()).unwrap(),

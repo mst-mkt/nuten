@@ -329,30 +329,37 @@ impl<'a> Formatter<'a> {
 /// Whether the last statement before `item` still reaches a line-start `|` after one blank line.
 /// A `|` it ends with does while no blank line has come since, as in the source.
 /// So does a call that an attribute heads, since nu goes on past one blank line after it.
-/// It reads the siblings with nothing kept, since a run kept as written hides all but its first.
+/// It reads the siblings in the tree rather than the children before it.
+/// Among the children, a run kept as written leaves only its first.
 fn reaches_past_blank_line(item: &SyntaxElement) -> bool {
-    let siblings = item
-        .parent()
-        .into_iter()
-        .flat_map(|parent| parent.children_with_tokens())
-        .take_while(|sibling| sibling != item);
-    let before: Vec<_> = children(siblings, &Kept::default()).collect();
-    before
-        .iter()
-        .rev()
-        .find_map(|child| match &child.element {
+    siblings_before(item)
+        .filter(|sibling| !matches!(sibling.kind(), SyntaxKind::Whitespace | SyntaxKind::Newline))
+        .find_map(|sibling| match &sibling {
             // A closure's parameters are a sibling before its first statement, not a statement.
-            NodeOrToken::Node(statement) => {
-                let statement = statement.syntax();
-                Some(
-                    statement.kind() == SyntaxKind::Pipeline
-                        && (ends_with_pipe(statement) || ends_with_attributed_call(statement)),
-                )
-            },
-            NodeOrToken::Token(_) if child.newlines > 1 => Some(false),
+            NodeOrToken::Node(statement) => Some(
+                statement.kind() == SyntaxKind::Pipeline
+                    && (ends_with_pipe(statement) || ends_with_attributed_call(statement)),
+            ),
+            NodeOrToken::Token(_) if newlines_before(&sibling) > 1 => Some(false),
             NodeOrToken::Token(_) => None,
         })
         .unwrap_or(false)
+}
+
+/// The siblings before `element`, nearest first.
+fn siblings_before(element: &SyntaxElement) -> impl Iterator<Item = SyntaxElement> {
+    iter::successors(
+        element.prev_sibling_or_token(),
+        SyntaxElement::prev_sibling_or_token,
+    )
+}
+
+/// The `newlines` the `Child` of `element` would have with nothing kept.
+fn newlines_before(element: &SyntaxElement) -> usize {
+    siblings_before(element)
+        .filter(|sibling| sibling.kind() != SyntaxKind::Whitespace)
+        .take_while(|sibling| sibling.kind() == SyntaxKind::Newline)
+        .count()
 }
 
 /// Whether the statement ends with a `|`, even one inside the call an alias stands for.
