@@ -2,3 +2,6 @@ packages:
   - editors/*
 
 savePrefix: ""
+
+allowBuilds:
+  "@vscode/vsce-sign": false
