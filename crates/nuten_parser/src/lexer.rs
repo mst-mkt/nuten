@@ -197,7 +197,7 @@ pub(crate) fn lex_first(src: &str, range: TextRange, mode: Mode) -> Option<Token
 }
 
 struct Lexer<'a> {
-    src: &'a [u8],
+    src: &'a str,
     pos: usize,
     mode: Mode,
     errors: Vec<LexError>,
@@ -238,7 +238,7 @@ impl<'a> Lexer<'a> {
             "range splits a char"
         );
         Lexer {
-            src: &src.as_bytes()[..usize::from(range.end())],
+            src: &src[..usize::from(range.end())],
             pos: usize::from(range.start()),
             mode,
             errors: Vec::new(),
@@ -246,7 +246,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn rest(&self) -> &'a [u8] {
-        &self.src[self.pos..]
+        &self.src.as_bytes()[self.pos..]
     }
 
     fn peek(&self) -> Option<u8> {
@@ -270,9 +270,10 @@ impl<'a> Lexer<'a> {
     }
 
     fn comment(&mut self) -> SyntaxKind {
-        while self.peek().is_some() && !self.at_newline() {
-            self.pos += 1;
-        }
+        let rest = &self.src[self.pos..];
+        self.pos += rest.find('\n').map_or(rest.len(), |newline| {
+            newline - usize::from(rest[..newline].ends_with('\r'))
+        });
         SyntaxKind::Comment
     }
 
@@ -291,7 +292,7 @@ impl<'a> Lexer<'a> {
             && !(closers.is_empty() && self.mode.is_terminator(byte))
         {
             let at = self.pos;
-            let prev = self.src[start..at].last().copied();
+            let prev = self.src.as_bytes()[start..at].last().copied();
             self.pos += 1;
             match byte {
                 b'#' if starts_comment_after(prev) => {
@@ -336,12 +337,12 @@ impl<'a> Lexer<'a> {
         if let Some(&(_, at)) = closers.last() {
             return Err(LexError::new(LexErrorKind::Unclosed, at..at + 1));
         }
-        if self.peek() == Some(b'|') && is_redirection(&self.src[start..self.pos]) {
+        if self.peek() == Some(b'|') && is_redirection(&self.src.as_bytes()[start..self.pos]) {
             self.pos += 1;
         }
         Ok(match leading_string {
             Some((kind, end)) if end == self.pos => kind,
-            _ => operator_kind(&self.src[start..self.pos]).unwrap_or(SyntaxKind::Word),
+            _ => operator_kind(&self.src.as_bytes()[start..self.pos]).unwrap_or(SyntaxKind::Word),
         })
     }
 
@@ -1357,6 +1358,10 @@ mod tests {
         assert_eq!(
             lexed_ranges("a\r\n", range(0, 2)),
             [(Word, range(0, 1)), (Whitespace, range(1, 2))]
+        );
+        assert_eq!(
+            lexed_ranges("# ab\n", range(0, 3)),
+            [(Comment, range(0, 3))]
         );
         assert_eq!(
             lexed_ranges(r#""a b""#, range(0, 3)),
