@@ -6,8 +6,8 @@
 use nuten_syntax::TextRange;
 
 use crate::{
-    Config, ConfigError, ConfigErrorKind, FormatConfig, IndentStyle, LineEnding, NO_PATTERNS,
-    Patterns, error,
+    Commas, Config, ConfigError, ConfigErrorKind, FormatConfig, IndentStyle, LineEnding,
+    NO_PATTERNS, Patterns, error,
     patterns::Place,
     value::{self, Field, Value, ValueKind},
 };
@@ -53,7 +53,7 @@ pub(crate) struct Choice {
     pub(crate) set: fn(Config) -> Config,
 }
 
-pub(crate) static SETTINGS: [Setting; 9] = [
+pub(crate) static SETTINGS: [Setting; 10] = [
     Setting {
         key: "$schema",
         description: "Where an editor finds the JSON Schema; nuten does not read it.",
@@ -139,6 +139,55 @@ pub(crate) static SETTINGS: [Setting; 9] = [
                 set: |config| Config {
                     format: FormatConfig {
                         line_ending: LineEnding::CrLf,
+                        ..config.format
+                    },
+                    ..config
+                },
+            },
+        ]),
+        per_file: true,
+    },
+    Setting {
+        key: "commas",
+        description: "Where a `,` goes among the items of lists, records, tables, parameters, and \
+                      type parameters: nowhere, between items on one line, between items, or also \
+                      after the last item when they break over lines.",
+        kind: Kind::Choice(&[
+            Choice {
+                name: "none",
+                set: |config| Config {
+                    format: FormatConfig {
+                        commas: Commas::None,
+                        ..config.format
+                    },
+                    ..config
+                },
+            },
+            Choice {
+                name: "inline",
+                set: |config| Config {
+                    format: FormatConfig {
+                        commas: Commas::Inline,
+                        ..config.format
+                    },
+                    ..config
+                },
+            },
+            Choice {
+                name: "always",
+                set: |config| Config {
+                    format: FormatConfig {
+                        commas: Commas::Always,
+                        ..config.format
+                    },
+                    ..config
+                },
+            },
+            Choice {
+                name: "trailing",
+                set: |config| Config {
+                    format: FormatConfig {
+                        commas: Commas::Trailing,
                         ..config.format
                     },
                     ..config
@@ -517,7 +566,8 @@ mod tests {
 
     use super::{Kind, SETTINGS};
     use crate::{
-        Config, Format, FormatConfig, IndentStyle, LineEnding, Patterns, load, test_support::errors,
+        Commas, Config, Format, FormatConfig, IndentStyle, LineEnding, Patterns, load,
+        test_support::errors,
     };
 
     #[test]
@@ -527,6 +577,7 @@ mod tests {
             "indent_style": "tab",
             "indent_width": 2,
             "line_ending": "crlf",
+            "commas": "trailing",
             "respect_gitignore": false,
             "include": ["*.nush"],
             "exclude": ["vendor"]
@@ -537,7 +588,7 @@ mod tests {
                 indent_style: IndentStyle::Tab,
                 indent_width: 2,
                 line_ending: LineEnding::CrLf,
-                ..FormatConfig::default()
+                commas: Commas::Trailing,
             },
             respect_gitignore: false,
             include: Patterns::new(["*.nush"]).unwrap(),
@@ -617,6 +668,16 @@ mod tests {
             config(r#"{"line_ending": "crlf"}"#).format.line_ending,
             LineEnding::CrLf
         );
+        for (name, commas) in [
+            ("none", Commas::None),
+            ("inline", Commas::Inline),
+            ("always", Commas::Always),
+            ("trailing", Commas::Trailing),
+        ] {
+            let text = format!(r#"{{"commas": "{name}"}}"#);
+            let config = load(&text, Format::Json).unwrap();
+            assert_eq!(config.format.commas, commas, "{text}");
+        }
     }
 
     #[test]
@@ -774,6 +835,11 @@ mod tests {
                 r#"{"line_ending": "cr"}"#,
                 "`line_ending` takes one of `lf`, `crlf`",
                 r#""cr""#,
+            ),
+            (
+                r#"{"commas": "never"}"#,
+                "`commas` takes one of `none`, `inline`, `always`, `trailing`",
+                r#""never""#,
             ),
         ] {
             assert_eq!(

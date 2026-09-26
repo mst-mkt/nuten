@@ -173,7 +173,7 @@ fn unreadable(range: TextRange) -> Vec<ConfigError> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Config, ConfigErrorKind, Format, FormatConfig, IndentStyle, LineEnding, load, read,
+        Commas, Config, ConfigErrorKind, Format, FormatConfig, IndentStyle, LineEnding, load, read,
         test_support,
         value::{Value, ValueKind},
     };
@@ -206,7 +206,7 @@ mod tests {
             "    line_width: 80 # c\n",
             "    'indent_style': tab,\n",
             "    \"indent_width\": 2, `line_ending`: \"crlf\"\n",
-            "    respect_gitignore: false\n",
+            "    commas: none respect_gitignore: false\n",
             "}\n",
         );
         let expected = Config {
@@ -215,7 +215,7 @@ mod tests {
                 indent_style: IndentStyle::Tab,
                 indent_width: 2,
                 line_ending: LineEnding::CrLf,
-                ..FormatConfig::default()
+                commas: Commas::None,
             },
             respect_gitignore: false,
             ..Config::default()

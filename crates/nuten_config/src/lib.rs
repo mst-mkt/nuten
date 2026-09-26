@@ -18,7 +18,7 @@ use std::{
     sync::LazyLock,
 };
 
-pub use nuten_format::{Config as FormatConfig, IndentStyle, LineEnding};
+pub use nuten_format::{Commas, Config as FormatConfig, IndentStyle, LineEnding};
 use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 

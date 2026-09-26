@@ -32,6 +32,10 @@ expression: schema()
       "description": "What ends each line; line breaks inside a string, a bare word, or an `@example` block stay as written.",
       "enum": ["lf", "crlf"]
     },
+    "commas": {
+      "description": "Where a `,` goes among the items of lists, records, tables, parameters, and type parameters: nowhere, between items on one line, between items, or also after the last item when they break over lines.",
+      "enum": ["none", "inline", "always", "trailing"]
+    },
     "respect_gitignore": {
       "description": "Whether formatting a directory skips the files ignored by `.gitignore`, `.ignore`, the exclude file of the repository, or the global excludes file of git. The config file nearest the directory, or the one `--config` names, decides it for everything under the directory.",
       "type": "boolean"
@@ -89,6 +93,10 @@ expression: schema()
           "line_ending": {
             "description": "What ends each line; line breaks inside a string, a bare word, or an `@example` block stay as written.",
             "enum": ["lf", "crlf"]
+          },
+          "commas": {
+            "description": "Where a `,` goes among the items of lists, records, tables, parameters, and type parameters: nowhere, between items on one line, between items, or also after the last item when they break over lines.",
+            "enum": ["none", "inline", "always", "trailing"]
           }
         },
         "required": ["include"],
