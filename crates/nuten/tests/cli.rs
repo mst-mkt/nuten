@@ -122,6 +122,16 @@ fn read(path: &Path) -> String {
     fs::read_to_string(path).unwrap()
 }
 
+/// Sorted, since `read_dir` yields them in no set order.
+fn names_in(dir: &Path) -> Vec<String> {
+    let mut names: Vec<_> = fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect();
+    names.sort_unstable();
+    names
+}
+
 fn stderr(output: &Output) -> String {
     String::from_utf8(output.stderr.clone()).unwrap()
 }
@@ -169,6 +179,115 @@ fn format_leaves_formatted_file_alone() {
     let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
     assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn format_leaves_nothing_beside_file_it_rewrites() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    let output = format(&[&path]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+    assert_eq!(names_in(&dir.0), ["a.nu"]);
+}
+
+#[test]
+fn format_reports_read_only_file_and_leaves_its_directory_unchanged() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    let mut permissions = fs::metadata(&path).unwrap().permissions();
+    permissions.set_readonly(true);
+    fs::set_permissions(&path, permissions).unwrap();
+    // Root writes a read-only file, so the test proves nothing then.
+    let Some(error) = fs::OpenOptions::new().write(true).open(&path).err() else {
+        return;
+    };
+    let output = format(&[&path]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(stderr(&output), io_error_line(&path, &error));
+    assert_eq!(read(&path), UNFORMATTED);
+    assert_eq!(names_in(&dir.0), ["a.nu"]);
+}
+
+#[test]
+fn format_rewrites_file_under_each_of_its_hard_links() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    let other = dir.path("b.nu");
+    fs::hard_link(&path, &other).unwrap();
+    let output = format(&[&path]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&other), FORMATTED);
+    assert_eq!(names_in(&dir.0), ["a.nu", "b.nu"]);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_keeps_permissions_of_file_it_rewrites() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o751)).unwrap();
+    let output = format(&[&path]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+    let mode = fs::metadata(&path).unwrap().permissions().mode();
+    assert_eq!(mode & 0o7777, 0o751);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_rewrites_file_through_symlink_and_keeps_symlink() {
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["a.nu"]);
+    let link = dir.path("link.nu");
+    std::os::unix::fs::symlink(&path, &link).unwrap();
+    let output = format(&[&link]);
+    assert_succeeds_quietly(&output);
+    assert!(fs::symlink_metadata(&link).unwrap().is_symlink());
+    assert_eq!(read(&path), FORMATTED);
+    assert_eq!(names_in(&dir.0), ["a.nu", "link.nu"]);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_rewrites_file_in_directory_it_cannot_write() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new();
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let locked = dir.path("d");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o555)).unwrap();
+    let denied = fs::File::create(locked.join("probe")).is_err();
+    let output = format(&[&path]);
+    // Made writable again before any check, so that the directory is removed even when one fails.
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+    // Root writes a directory without permission, so the test proves nothing then.
+    if !denied {
+        return;
+    }
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+    assert_eq!(names_in(&locked), ["a.nu"]);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_rewrites_file_whose_name_leaves_no_room_for_backup() {
+    let dir = TempDir::new();
+    // 250 bytes, which fits in NAME_MAX but leaves no room for a backup's suffix.
+    let name = "a".repeat(247) + ".nu";
+    let path = dir.path(&name);
+    // A filesystem with shorter names holds no such file, so the test proves nothing then.
+    match fs::write(&path, UNFORMATTED) {
+        Err(error) if error.kind() == io::ErrorKind::InvalidFilename => return,
+        written => written.unwrap(),
+    }
+    let output = format(&[&path]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&path), FORMATTED);
+    assert_eq!(names_in(&dir.0), [name]);
 }
 
 #[test]

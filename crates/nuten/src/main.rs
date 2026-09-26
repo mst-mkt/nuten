@@ -3,11 +3,11 @@
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
 mod files;
+mod overwrite;
 mod parallel;
 
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     hash::Hash,
     io::{self, Write},
     path::{Path, PathBuf},
@@ -22,7 +22,10 @@ use nuten_format::format;
 use nuten_lsp::Exit;
 use usage::{Args, Cli, Subcommands};
 
-use crate::files::Entry;
+use crate::{
+    files::Entry,
+    overwrite::{Contents, Failure, OnDisk, overwrite},
+};
 
 #[derive(Cli)]
 #[usage(bin = "nuten", version, unknown_flags = "error")]
@@ -289,9 +292,29 @@ fn format_file(path: &Path, config: &FormatConfig, mode: Mode) -> Result<bool, V
     let formatted = format_text(path, &src, config)?;
     let changed = formatted != src;
     if changed && mode == Mode::Write {
-        fs::write(path, formatted).map_err(io_problem)?;
+        overwrite(&OnDisk(path), src.as_bytes(), formatted.as_bytes())
+            .map_err(|failure| vec![overwrite_problem(path, &failure)])?;
     }
     Ok(changed)
+}
+
+/// The line reporting `failure` at `path`.
+fn overwrite_problem(path: &Path, failure: &Failure) -> String {
+    let (path, error) = (path.display(), &failure.error);
+    match (
+        failure.contents,
+        failure.backup.as_deref().map(Path::display),
+    ) {
+        (Contents::New, Some(backup)) => {
+            format!("{backup}: {error}; {path} is formatted, but this backup of it is left behind")
+        },
+        (Contents::Broken, Some(backup)) => {
+            format!("{path}: {error}; its old contents are in {backup}")
+        },
+        (Contents::Broken, None) => format!("{path}: {error}; it may be left partly written"),
+        (Contents::Old, Some(backup)) => format!("{path}: {error}; {backup} is left behind"),
+        (_, None) => format!("{path}: {error}"),
+    }
 }
 
 /// `src`, the text of `path`, formatted.
@@ -310,4 +333,46 @@ fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, 
 fn unique<T: Copy + Eq + Hash>(items: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
     let mut seen = HashSet::new();
     items.filter(move |item| seen.insert(*item))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        io,
+        path::{Path, PathBuf},
+    };
+
+    use super::overwrite_problem;
+    use crate::overwrite::{Contents, Failure};
+
+    #[test]
+    fn overwrite_problem_says_what_file_and_backup_hold() {
+        let cases = [
+            (Contents::Old, None, "a.nu: e"),
+            (Contents::Old, Some("b"), "a.nu: e; b is left behind"),
+            (
+                Contents::New,
+                Some("b"),
+                "b: e; a.nu is formatted, but this backup of it is left behind",
+            ),
+            (
+                Contents::Broken,
+                Some("b"),
+                "a.nu: e; its old contents are in b",
+            ),
+            (
+                Contents::Broken,
+                None,
+                "a.nu: e; it may be left partly written",
+            ),
+        ];
+        for (contents, backup, expected) in cases {
+            let failure = Failure {
+                error: io::Error::other("e"),
+                contents,
+                backup: backup.map(PathBuf::from),
+            };
+            assert_eq!(overwrite_problem(Path::new("a.nu"), &failure), expected);
+        }
+    }
 }
