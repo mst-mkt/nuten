@@ -355,9 +355,11 @@ impl<'a> Printer<'a> {
         if let Some(then) = then {
             self.stack.push(then);
         }
-        for suffix in mem::take(&mut self.line_suffixes).into_iter().rev() {
+        let mut suffixes = mem::take(&mut self.line_suffixes);
+        for suffix in suffixes.drain(..).rev() {
             self.push_elements(suffix.indent, suffix.mode, suffix.elements);
         }
+        self.line_suffixes = suffixes;
     }
 
     fn push_elements(&mut self, indent: Indentation, mode: Mode, elements: &'a [Element<'a>]) {
