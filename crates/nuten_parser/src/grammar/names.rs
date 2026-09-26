@@ -787,8 +787,9 @@ fn alias_names(src: &str) -> Box<[&str]> {
 /// Nu hides a name even outside the block of the `hide`.
 /// Taking in more words than it hides only leaves a call read as it was written.
 fn hidden_words(src: &str) -> Option<Box<[&str]>> {
-    let statements = || statements_holding(src, "hide").map(str::split_ascii_whitespace);
-    if statements().any(|words| {
+    let statements: Vec<_> = statements_holding(src, "hide").collect();
+    if statements.iter().any(|statement| {
+        let words = statement.split_ascii_whitespace();
         words
             .clone()
             .zip(words.skip(1))
@@ -796,8 +797,14 @@ fn hidden_words(src: &str) -> Option<Box<[&str]>> {
     }) {
         return None;
     }
-    let mut words: Vec<_> = statements()
-        .flat_map(|words| words.skip_while(|&word| word != "hide").skip(1))
+    let mut words: Vec<_> = statements
+        .iter()
+        .flat_map(|statement| {
+            statement
+                .split_ascii_whitespace()
+                .skip_while(|&word| word != "hide")
+                .skip(1)
+        })
         .map(|word| word.trim_matches(HIDDEN_TRIM))
         .collect();
     words.sort_unstable();
