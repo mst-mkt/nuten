@@ -172,6 +172,7 @@
             "benchmark"
             "lsp"
             "vscode"
+            "assets"
           ];
         in
         inputs.git-hooks.lib.${system}.run {
