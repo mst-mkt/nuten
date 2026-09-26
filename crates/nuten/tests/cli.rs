@@ -2236,6 +2236,31 @@ fn format_takes_config_file_nearest_stdin_filepath_that_leaves_current_directory
 }
 
 #[test]
+fn format_help_examples_each_succeed_quietly_on_formatted_files() {
+    let help = stdout(&format_in(&TempDir::new(), &["--help"]));
+    let examples: Vec<_> = help
+        .lines()
+        .filter_map(|line| line.trim_start().strip_prefix("$ "))
+        .collect();
+    assert!(!examples.is_empty(), "{help}");
+    for example in examples {
+        let args: Vec<_> = example
+            .strip_prefix("nuten format")
+            .unwrap_or_else(|| panic!("{example}: not a run of `nuten format`"))
+            .split_whitespace()
+            .collect();
+        let dir = TempDir::new();
+        dir.file("src/a.nu", FORMATTED);
+        let output = format_stdin_in(&dir, &args, FORMATTED.as_bytes());
+        assert_eq!(
+            (output.status.code(), stderr(&output).as_str()),
+            (Some(0), ""),
+            "{example}"
+        );
+    }
+}
+
+#[test]
 fn wants_subcommand() {
     let output = nuten(&[]);
     assert_eq!(output.status.code(), Some(2));

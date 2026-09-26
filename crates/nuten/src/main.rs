@@ -37,6 +37,20 @@ struct Nuten {
 #[derive(Subcommands)]
 enum Command {
     /// Format files in place or check them, or format stdin to stdout
+    #[usage(
+        example(
+            "nuten format",
+            header = "Format the `.nu` files under the current directory"
+        ),
+        example(
+            "nuten format --check",
+            header = "List the files that would change, without changing them"
+        ),
+        example(
+            "nuten format --stdin-filepath src/a.nu -",
+            header = "Format stdin as the file it holds, as an editor does"
+        )
+    )]
     Format(Format),
     /// Print the JSON Schema of a config file
     Schema,
