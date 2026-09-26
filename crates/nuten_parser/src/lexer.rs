@@ -364,30 +364,34 @@ impl<'a> Lexer<'a> {
     /// The opener starts at `start`, on the `$` if interpolated.
     fn string(&mut self, start: usize, quote: u8, interpolated: bool) -> Result<(), LexError> {
         let opener = start..self.pos;
-        let mut closers = vec![quote];
+        // The quote stays off the stack, so that a string nesting nothing takes no allocation.
+        let mut nested = Vec::new();
         let mut outer_paren = None;
-        while let Some(&closer) = closers.last() {
+        loop {
+            let closer = nested.last().copied().unwrap_or(quote);
             match (closer, self.rest()) {
                 (_, []) => break,
                 // Nu ends the item before a final `\` in the outermost string.
-                (b'"', [b'\\']) if closers.len() == 1 => break,
+                (b'"', [b'\\']) if nested.is_empty() => break,
                 (b'"', [b'\\', _, ..]) => self.pos += 1,
-                (b')', &[inner @ (b'\'' | b'"' | b'`'), ..]) => closers.push(inner),
-                (b')', [b'(', ..]) => closers.push(b')'),
+                (b')', &[inner @ (b'\'' | b'"' | b'`'), ..]) => nested.push(inner),
+                (b')', [b'(', ..]) => nested.push(b')'),
                 (_, &[byte, ..]) if byte == closer => {
-                    closers.pop();
+                    if nested.pop().is_none() {
+                        self.pos += 1;
+                        return Ok(());
+                    }
                 },
-                (_, [b'(', ..]) if interpolated && closers.len() == 1 => {
-                    closers.push(b')');
+                (_, [b'(', ..]) if interpolated && nested.is_empty() => {
+                    nested.push(b')');
                     outer_paren = Some(self.pos);
                 },
                 _ => {},
             }
             self.pos += 1;
         }
-        let range = match (closers.as_slice(), outer_paren) {
-            ([], _) => return Ok(()),
-            ([_, _, ..], Some(at)) => at..at + 1,
+        let range = match (nested.as_slice(), outer_paren) {
+            ([_, ..], Some(at)) => at..at + 1,
             _ => opener,
         };
         Err(LexError::new(LexErrorKind::Unclosed, range))
