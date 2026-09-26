@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/cell_path/literal_head.nu
 ---
-Root@0..44
+Root@0..54
   Pipeline@0..7
     PipelineElement@0..7
       CellPath@0..7
@@ -65,3 +65,18 @@ Root@0..44
         Dot@41..42 "."
         Word@42..43 "a"
   Newline@43..44 "\n"
+  Pipeline@44..53
+    PipelineElement@44..53
+      CellPath@44..53
+        Record@44..51
+          LBrace@44..45 "{"
+          RecordField@45..50
+            Word@45..46 "a"
+            Comma@46..47 ","
+            Colon@47..48 ":"
+            Whitespace@48..49 " "
+            Word@49..50 "1"
+          RBrace@50..51 "}"
+        Dot@51..52 "."
+        Word@52..53 "a"
+  Newline@53..54 "\n"

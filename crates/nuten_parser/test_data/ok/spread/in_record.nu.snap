@@ -2,7 +2,7 @@
 source: crates/nuten_parser/tests/parse.rs
 input_file: crates/nuten_parser/test_data/ok/spread/in_record.nu
 ---
-Root@0..99
+Root@0..112
   Pipeline@0..55
     PipelineElement@0..55
       Record@0..55
@@ -101,3 +101,20 @@ Root@0..99
           Word@90..97 "{|x| 1}"
         RBrace@97..98 "}"
   Newline@98..99 "\n"
+  Pipeline@99..111
+    PipelineElement@99..111
+      Record@99..111
+        LBrace@99..100 "{"
+        Spread@100..110
+          SpreadOperator@100..103 "..."
+          Record@103..110
+            LBrace@103..104 "{"
+            RecordField@104..109
+              Word@104..105 "a"
+              Comma@105..106 ","
+              Colon@106..107 ":"
+              Whitespace@107..108 " "
+              Word@108..109 "1"
+            RBrace@109..110 "}"
+        RBrace@110..111 "}"
+  Newline@111..112 "\n"
