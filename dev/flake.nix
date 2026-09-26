@@ -147,6 +147,7 @@
             "oracle"
             "benchmark"
             "lsp"
+            "vscode"
           ];
         in
         inputs.git-hooks.lib.${system}.run {
