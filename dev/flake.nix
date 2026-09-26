@@ -29,6 +29,10 @@
       url = "github:vyadh/nutest/v1.2.0";
       flake = false;
     };
+    nix-vite-plus = {
+      url = "github:ryoppippi/nix-vite-plus";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Corpus for the invariant tests of the parser and formatter
     corpus-nu_scripts = {
@@ -79,6 +83,13 @@
       );
 
       nushell = forAllSystems (system: inputs.nixpkgs-nushell.legacyPackages.${system}.nushell);
+      nodejs = forAllSystems (system: inputs.nixpkgs.legacyPackages.${system}.nodejs-slim_26);
+      pnpm = forAllSystems (
+        system: inputs.nixpkgs.legacyPackages.${system}.pnpm_11.override { nodejs-slim = nodejs.${system}; }
+      );
+      vite-plus = forAllSystems (
+        system: inputs.nix-vite-plus.packages.${system}.vp.override { nodejs = nodejs.${system}; }
+      );
 
       treefmtEval = forAllSystems (
         system:
@@ -199,6 +210,9 @@
             packages = [
               nushell.${system}
               rustToolchain.${system}
+              nodejs.${system}
+              pnpm.${system}
+              vite-plus.${system}
               pkgs.cargo-insta
               pkgs.cargo-nextest
               pkgs.hyperfine
