@@ -3,6 +3,7 @@
 
 /target
 /result
+node_modules
 
 *.snap.new
 *.pending-snap

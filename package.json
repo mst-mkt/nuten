@@ -1,0 +1,20 @@
+{
+  "name": "nuten",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "vite-plus": "1.0.0-rc.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11",
+      "onFail": "ignore"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^26",
+      "onFail": "error"
+    }
+  }
+}
