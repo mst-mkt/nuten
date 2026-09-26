@@ -118,6 +118,7 @@
             };
             oxfmt = {
               enable = true;
+              excludes = [ "pnpm-lock.yaml" ];
             };
             nuten = {
               enable = true;
