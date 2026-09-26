@@ -15,12 +15,35 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use nuten_format::{Config, format, invariants};
+use nuten_format::{Commas, Config, format, invariants};
 
 use crate::support::{caught, files_below};
 
 const INPUT_SUFFIX: &str = ".input.nu";
 const EXPECTED_SUFFIX: &str = ".expected.nu";
+
+/// Below it, each directory of `CONFIGS` holds fixtures that format with its config.
+/// Elsewhere, fixtures format with the default.
+const CONFIGS_DIR: &str = "config";
+
+/// Makes the config of a directory from the default.
+type Change = fn(Config) -> Config;
+
+/// Each directory, below `CONFIGS_DIR`, with how its config differs from the default.
+const CONFIGS: &[(&str, Change)] = &[
+    ("commas/none", |config| Config {
+        commas: Commas::None,
+        ..config
+    }),
+    ("commas/always", |config| Config {
+        commas: Commas::Always,
+        ..config
+    }),
+    ("commas/trailing", |config| Config {
+        commas: Commas::Trailing,
+        ..config
+    }),
+];
 
 #[test]
 fn test_data_holds_only_fixture_files() {
@@ -41,10 +64,12 @@ fn fixture_files_format_to_expected_keeping_invariants() {
     let names = files_below_test_data();
     let stems: BTreeSet<_> = names.iter().filter_map(|name| stem_of(name)).collect();
     assert!(!stems.is_empty(), "no fixtures");
-    let config = Config::default();
     let failures: Vec<_> = stems
         .iter()
-        .flat_map(|stem| Fixture::of(stem).failures(&config))
+        .flat_map(|stem| match config_of(stem) {
+            Ok(config) => Fixture::of(stem).failures(&config),
+            Err(problem) => vec![problem],
+        })
         .collect();
     assert!(
         failures.is_empty(),
@@ -63,6 +88,20 @@ fn files_below_test_data() -> Vec<PathBuf> {
 
 fn test_data() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("test_data")
+}
+
+/// The config of the fixture `stem`: that of its directory below `CONFIGS_DIR`, or the default.
+fn config_of(stem: &str) -> Result<Config, String> {
+    let configs_dir = Path::new(CONFIGS_DIR);
+    let stem = Path::new(stem);
+    if !stem.starts_with(configs_dir) {
+        return Ok(Config::default());
+    }
+    CONFIGS
+        .iter()
+        .find(|(dir, _)| stem.starts_with(configs_dir.join(dir)))
+        .map(|(_, change)| change(Config::default()))
+        .ok_or_else(|| format!("{}\nnot below a directory of CONFIGS", stem.display()))
 }
 
 /// The fixture `name` belongs to, whichever of its two files it names.

@@ -7,6 +7,7 @@ use nuten_syntax::{
 };
 
 use super::{Child, Formatter, children, line_break_or_space};
+use crate::Commas;
 
 impl<'a> Formatter<'a> {
     pub(super) fn def(&mut self, def: &Def) -> Vec<Element<'a>> {
@@ -30,13 +31,14 @@ impl<'a> Formatter<'a> {
         if holds_joining_comment(types) {
             return self.source(syntax.text_range());
         }
+        // A `,` between the pairs whatever `commas` says, since `->` leaves no cue where one ends.
         match types.brackets() {
             // A line break before the `]` would part it from the last type.
             // Breaking between the pairs while the `]` stays on the last line looks like a mistake.
             // So a list holding a type that cannot be flat stays as written.
             Some((open, inside, close)) if touches_last_type(&close) => {
                 let elements: Vec<_> = iter::once(self.token(&open))
-                    .chain(self.comma_spaced(inside))
+                    .chain(self.one_line_items(inside, |_| true))
                     .chain(iter::once(self.token(&close)))
                     .collect();
                 flat(&elements).unwrap_or_else(|| self.source(syntax.text_range()))
@@ -50,10 +52,10 @@ impl<'a> Formatter<'a> {
                     soft_line_break_or_space,
                     soft_line_break_or_space,
                     &close,
-                    true,
+                    Commas::Always,
                 )
             },
-            None => self.comma_spaced(syntax.children_with_tokens()),
+            None => self.one_line_items(syntax.children_with_tokens(), |_| true),
         }
     }
 

@@ -1,1 +1,1 @@
-use (ls | get 0) [a b]
+use (ls | get 0) [a, b]

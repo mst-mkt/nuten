@@ -112,8 +112,11 @@ impl<'a> Formatter<'a> {
             .flat_map(|(index, item)| {
                 let prev = index.checked_sub(1).map(|prev| items[prev].kind());
                 let separator = match (prev, item.kind()) {
-                    (Some(SyntaxKind::Param), SyntaxKind::Param) => vec![text(","), space()],
-                    (Some(SyntaxKind::Pipe), SyntaxKind::Pipe) => vec![space()],
+                    (Some(SyntaxKind::Param), SyntaxKind::Param) if self.commas.on_one_line() => {
+                        vec![text(","), space()]
+                    },
+                    (Some(SyntaxKind::Param), SyntaxKind::Param)
+                    | (Some(SyntaxKind::Pipe), SyntaxKind::Pipe) => vec![space()],
                     _ => Vec::new(),
                 };
                 separator.into_iter().chain(self.element(&item.element))

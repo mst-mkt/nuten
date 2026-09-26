@@ -1,5 +1,5 @@
 def prefix [...x] {}
-prefix longer [1 2]
+prefix longer [1, 2]
 module later {
     export def "prefix longer" [] {}
 }

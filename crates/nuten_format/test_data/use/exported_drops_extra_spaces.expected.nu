@@ -1,1 +1,1 @@
-export use std [assert log]
+export use std [assert, log]

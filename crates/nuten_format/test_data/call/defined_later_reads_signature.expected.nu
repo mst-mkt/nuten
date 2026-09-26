@@ -1,4 +1,4 @@
-later [1 2]
+later [1, 2]
 def later [x: list] {
     $x
 }

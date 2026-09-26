@@ -1,3 +1,3 @@
-[{ ls } { pwd }]
+[{ ls }, { pwd }]
 { a: { ls } }
 echo [{ ls }]

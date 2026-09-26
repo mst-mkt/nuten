@@ -1,4 +1,4 @@
 (
     use m.nu
-    [a b]
+    [a, b]
 )

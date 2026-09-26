@@ -33,7 +33,16 @@ impl<'a> Formatter<'a> {
     pub(super) fn type_(&mut self, type_: &Type) -> Vec<Element<'a>> {
         let head = [self.token(&type_.name()), self.token(&type_.open())];
         let close = self.token(&type_.close());
-        let params = self.comma_spaced(type_.inside());
+        let takes_commas = self.commas.on_one_line();
+        // Without the `,`, nu would read the `:` as that of a key before it.
+        let params = self.one_line_items(type_.inside(), |param| {
+            takes_commas
+                || param
+                    .element
+                    .as_node()
+                    .and_then(|param| param.syntax().first_token())
+                    .is_some_and(|first| first.kind() == SyntaxKind::Colon)
+        });
         head.into_iter()
             .chain(params)
             .chain(iter::once(close))

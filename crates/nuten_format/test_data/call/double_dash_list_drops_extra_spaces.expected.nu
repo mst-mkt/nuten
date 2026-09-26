@@ -1,1 +1,1 @@
-print -- -n [a b]
+print -- -n [a, b]

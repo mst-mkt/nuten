@@ -389,7 +389,7 @@ mod tests {
 
     #[test]
     fn separator_commas_are_ignored() {
-        assert_eq!(formatter_violations("[a, b,]\n", "[a b]\n"), []);
+        assert_eq!(formatter_violations("[a b,]\n", "[a, b]\n"), []);
         assert_eq!(
             formatter_violations("[a\n, # c\nb]\n", "[\n    a\n    # c\n    b\n]\n"),
             []

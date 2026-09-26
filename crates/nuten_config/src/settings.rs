@@ -537,6 +537,7 @@ mod tests {
                 indent_style: IndentStyle::Tab,
                 indent_width: 2,
                 line_ending: LineEnding::CrLf,
+                ..FormatConfig::default()
             },
             respect_gitignore: false,
             include: Patterns::new(["*.nush"]).unwrap(),

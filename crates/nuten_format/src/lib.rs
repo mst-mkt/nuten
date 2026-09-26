@@ -16,6 +16,7 @@ pub struct Config {
     /// Columns per indent level, and per tab when indenting with tabs.
     pub indent_width: u8,
     pub line_ending: LineEnding,
+    pub commas: Commas,
 }
 
 impl Default for Config {
@@ -25,11 +26,25 @@ impl Default for Config {
             indent_style: IndentStyle::Space,
             indent_width: 4,
             line_ending: LineEnding::Lf,
+            commas: Commas::Inline,
         }
     }
 }
 
-/// Not `PrinterOptions` itself: `Config` will hold settings the printer does not read.
+/// Where a `,` goes among the items of lists, records, tables, parameters, and type parameters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Commas {
+    /// Nowhere.
+    None,
+    /// Between items on one line.
+    Inline,
+    /// Between items.
+    Always,
+    /// Between items, and after the last when they break over lines.
+    Trailing,
+}
+
+/// Not `PrinterOptions` itself, since `Config` holds settings the printer does not read.
 impl From<&Config> for PrinterOptions {
     fn from(config: &Config) -> PrinterOptions {
         PrinterOptions {
@@ -60,7 +75,7 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
             errors: parsed.errors().to_vec(),
         });
     }
-    let elements = rules::file(src, &parsed.syntax());
+    let elements = rules::file(src, &parsed.syntax(), config.commas);
     Ok(nuten_doc::print(&elements, &PrinterOptions::from(config)))
 }
 

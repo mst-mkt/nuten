@@ -1,2 +1,2 @@
-def h [c: closure r: record] {}
+def h [c: closure, r: record] {}
 h {} {}

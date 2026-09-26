@@ -31,6 +31,7 @@ use self::{
     kept::{Kept, Member},
     parenthesized::breaks_by_width,
 };
+use crate::Commas;
 
 /// A child of a container: neither whitespace nor a line break.
 struct Child {
@@ -102,13 +103,14 @@ fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item =
 }
 
 /// `root` is the tree of `src`, with no `Error` element.
-pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
+pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode, commas: Commas) -> Vec<Element<'a>> {
     let mut formatter = Formatter {
         src,
         root: root.clone(),
         groups: GroupIds::default(),
         laid_out_ahead: HashMap::new(),
         kept: Kept::of(src, root),
+        commas,
     };
     let statements: Vec<_> = children(root.children_with_tokens(), &formatter.kept).collect();
     let mut out = formatter.statements(&statements, true);
@@ -118,6 +120,13 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode) -> Vec<Element<'a>> {
     );
     out.push(hard_line_break());
     out
+}
+
+impl Commas {
+    /// Whether items that never break over lines take a `,` between them.
+    fn on_one_line(self) -> bool {
+        self != Commas::None
+    }
 }
 
 struct Formatter<'a> {
@@ -130,6 +139,7 @@ struct Formatter<'a> {
     /// Laying them out again would double the work at each level of nested `( )`.
     laid_out_ahead: HashMap<SyntaxNode, Vec<Vec<Element<'a>>>>,
     kept: Kept,
+    commas: Commas,
 }
 
 impl<'a> Formatter<'a> {
@@ -285,17 +295,23 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    fn comma_spaced(&mut self, elements: impl Iterator<Item = SyntaxElement>) -> Vec<Element<'a>> {
+    /// Items on one line, with a `,` before each item but the first that `comma_before` takes.
+    fn one_line_items(
+        &mut self,
+        elements: impl Iterator<Item = SyntaxElement>,
+        comma_before: impl Fn(&Child) -> bool,
+    ) -> Vec<Element<'a>> {
         let items: Vec<_> = without_commas(children(elements, &self.kept)).collect();
         items
             .iter()
             .enumerate()
             .flat_map(|(index, item)| {
-                let comma = (index > 0).then(|| [text(","), space()]);
-                comma
-                    .into_iter()
-                    .flatten()
-                    .chain(self.element(&item.element))
+                let separator = match index {
+                    0 => Vec::new(),
+                    _ if comma_before(item) => vec![text(","), space()],
+                    _ => vec![space()],
+                };
+                separator.into_iter().chain(self.element(&item.element))
             })
             .collect()
     }

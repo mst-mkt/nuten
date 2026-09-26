@@ -14,7 +14,7 @@ let condition = (
 )
 let last = (
     $alpha > 0
-    and ([$beta $gamma $delta $epsilon $zeta $eta $theta $iota $kappa $lambda $mu] | length) > 0
+    and ([$beta, $gamma, $delta, $epsilon, $zeta, $eta, $theta, $iota, $kappa] | length) > 0
 )
 let either = (
     $alpha == 1 and $beta == 2
