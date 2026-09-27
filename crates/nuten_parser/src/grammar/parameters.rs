@@ -1,4 +1,4 @@
-//! The parameters of the commands nu 0.115.1 has.
+//! The parameters of the commands nu has.
 //! Only as far as they tell how nu reads a `[ ]` or an empty `{ }`.
 //!
 //! Only a command with a parameter that takes a `[ ]` as a list is here.

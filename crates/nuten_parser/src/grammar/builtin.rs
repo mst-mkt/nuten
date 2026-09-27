@@ -1,4 +1,4 @@
-//! The names nu 0.115.1 resolves to a command of its own.
+//! The names nu resolves to a command of its own.
 //!
 //! Nu registers the parent of a subcommand as a command too, so `str` stands for `str trim`.
 //! A plugin is left out: it is registered per user, and nu runs an unregistered one externally.

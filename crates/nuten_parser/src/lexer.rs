@@ -857,7 +857,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits each input.
+    /// How nu splits each input.
     const NU_SPLITS: &[(&str, &[&str])] = &[
         ("foo#bar", &["foo#bar"]),
         ("foo #bar", &["foo", "#bar"]),
@@ -916,7 +916,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of a subexpression.
+    /// How nu splits the inside of a subexpression.
     const NU_PAREN_SPLITS: &[(&str, &[&str])] = &[
         ("a\nb", &["a", "b"]),
         ("a\r\nb", &["a", "b"]),
@@ -935,7 +935,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of a list.
+    /// How nu splits the inside of a list.
     const NU_LIST_SPLITS: &[(&str, &[&str])] = &[
         ("a,b", &["a", "b"]),
         ("a,,b", &["a", "b"]),
@@ -968,7 +968,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of a record where it reads a key or its `:`.
+    /// How nu splits the inside of a record where it reads a key or its `:`.
     const NU_RECORD_SPLITS: &[(&str, &[&str])] = &[
         ("a: 1", &["a", ":", "1"]),
         ("a:1,b:2", &["a", ":", "1", "b", ":", "2"]),
@@ -991,7 +991,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of `{ }` to tell a record from a closure or a block.
+    /// How nu splits the inside of `{ }` to tell a record from a closure or a block.
     const NU_BRACE_SPLITS: &[(&str, &[&str])] = &[
         ("a: 1", &["a", ":", "1"]),
         ("a :b", &["a", ":", "b"]),
@@ -1010,7 +1010,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits a value of a record.
+    /// How nu splits a value of a record.
     const NU_RECORD_VALUE_SPLITS: &[(&str, &[&str])] = &[
         ("b:c", &["b:c"]),
         ("b:c,d", &["b:c", "d"]),
@@ -1026,7 +1026,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the type of a variable.
+    /// How nu splits the type of a variable.
     const NU_VAR_TYPE_SPLITS: &[(&str, &[&str])] = &[
         ("record<a: int, b: string>", &["record<a: int, b: string>"]),
         ("int, string", &["int", ",", "string"]),
@@ -1044,7 +1044,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the input and output types after a signature.
+    /// How nu splits the input and output types after a signature.
     const NU_IO_TYPES_SPLITS: &[(&str, &[&str])] = &[
         (
             "int -> string, nothing -> int",
@@ -1073,7 +1073,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of the `< >` of a type.
+    /// How nu splits the inside of the `< >` of a type.
     const NU_TYPE_PARAMS_SPLITS: &[(&str, &[&str])] = &[
         (
             "a: int, b: string",
@@ -1095,7 +1095,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of the `{ }` of a `match`.
+    /// How nu splits the inside of the `{ }` of a `match`.
     const NU_MATCH_ARMS_SPLITS: &[(&str, &[&str])] = &[
         ("1 => a, 2 => b", &["1", "=>", "a", "2", "=>", "b"]),
         ("1\n=> a", &["1", "=>", "a"]),
@@ -1116,7 +1116,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits a value and the path into it.
+    /// How nu splits a value and the path into it.
     const NU_CELL_PATH_SPLITS: &[(&str, &[&str])] = &[
         ("$x.a", &["$x", ".", "a"]),
         (
@@ -1152,7 +1152,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits what comes before the first `..` of a range.
+    /// How nu splits what comes before the first `..` of a range.
     const NU_RANGE_FROM_SPLITS: &[(&str, &[&str])] = &[
         ("1", &["1"]),
         ("-1.5", &["-1", ".", "5"]),
@@ -1198,7 +1198,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of the `[ ]` of a binary.
+    /// How nu splits the inside of the `[ ]` of a binary.
     const NU_BINARY_SPLITS: &[(&str, &[&str])] = &[
         ("ff 00", &["ff", "00"]),
         ("ff,00", &["ff", "00"]),
@@ -1220,7 +1220,7 @@ mod tests {
         }
     }
 
-    /// How nu 0.115.1 splits the inside of the `{ }` of a record pattern.
+    /// How nu splits the inside of the `{ }` of a record pattern.
     const NU_RECORD_PATTERN_SPLITS: &[(&str, &[&str])] = &[
         ("a: 1, $b", &["a", ":", "1", "$b"]),
         ("a:b:c", &["a", ":", "b", ":", "c"]),
