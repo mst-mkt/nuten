@@ -47,6 +47,15 @@ pub(crate) fn from_nuon(src: &str) -> Result<String, String> {
     run("from nuon | to json -r", src, None)
 }
 
+/// The value nu reads from the NUON `src`, written as NUON again.
+/// Unlike JSON, NUON tells a date from a string and a filesize from an integer.
+/// Fails, in one line, when nu does.
+pub(crate) fn value_as_nuon(src: &str) -> Result<String, String> {
+    // The line break nu prints after the NUON is no part of the value.
+    run("from nuon | to nuon", src, None)
+        .map(|written| written.strip_suffix('\n').unwrap_or(&written).to_string())
+}
+
 /// What `script` writes to stdout with `src` as its input.
 /// Nu runs in `dir`, if given.
 /// Fails, in one line, when nu does.

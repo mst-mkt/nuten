@@ -198,6 +198,82 @@ fn format_skips_file_with_syntax_errors() {
 }
 
 #[test]
+fn format_passes_nuon_file_whose_value_nuten_keeps() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file("a.nuon", "{a: 1,\n b: [x 'y' true null]}\n");
+
+    let output = oracle("format", &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("files: 1, failed: 0, skipped: 0"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_passes_nuon_file_nu_and_nuten_both_reject() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file("a.nuon", "{a: 1} | length\n");
+
+    let output = oracle("format", &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("files: 1, failed: 0, skipped: 0"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_passes_nuon_file_with_syntax_errors_nu_rejects_too() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file("a.nuon", "{a: (\n");
+
+    let output = oracle("format", &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("files: 1, failed: 0, skipped: 0"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_skips_nuon_file_nuten_leaves_unread_after_asking_about_its_formatting() {
+    if nu_missing() {
+        return;
+    }
+    let dir = TempDir::new();
+    let file = dir.file("a.nuon", "{a: 1.5,\n b: 2}\n");
+
+    let output = oracle("format", &[&file]);
+
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("formatting keeps what nu reads; nuten does not read it"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("files: 1, failed: 0, skipped: 1"),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn format_takes_nu_files_below_directory_but_not_in_hidden_ones() {
     if nu_missing() {
         return;

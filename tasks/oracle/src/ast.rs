@@ -36,16 +36,19 @@ pub(crate) fn excerpt(value: JsonValue<'_>) -> String {
             let keys: BTreeSet<_> = object.take_inner().into_keys().collect();
             format!("an object with keys {keys:?}")
         },
-        JsonValue::String(text) => {
-            let text = format!("{text:?}");
-            match text.char_indices().nth(200) {
-                Some((end, _)) => format!("{}…", &text[..end]),
-                None => text,
-            }
-        },
+        JsonValue::String(text) => quoted(&text),
         JsonValue::Number(number) => number.to_string(),
         JsonValue::Boolean(boolean) => boolean.to_string(),
         JsonValue::Null => "null".to_string(),
+    }
+}
+
+/// `text` quoted, cut to 200 characters.
+pub(crate) fn quoted(text: &str) -> String {
+    let text = format!("{text:?}");
+    match text.char_indices().nth(200) {
+        Some((end, _)) => format!("{}…", &text[..end]),
+        None => text,
     }
 }
 
@@ -272,10 +275,21 @@ fn first_difference<'a>(
 mod tests {
     use jsonc_parser::JsonValue;
 
-    use super::{difference, first_difference, json, without_layout, without_positions, words};
+    use super::{
+        difference, first_difference, json, quoted, without_layout, without_positions, words,
+    };
 
     fn value(text: &str) -> JsonValue<'_> {
         json(text).unwrap()
+    }
+
+    #[test]
+    fn quoted_cuts_after_200_chars() {
+        assert_eq!(quoted(""), "\"\"");
+        assert_eq!(quoted("a\nb"), "\"a\\nb\"");
+        assert_eq!(quoted(&"x".repeat(198)), format!("\"{}\"", "x".repeat(198)));
+        assert_eq!(quoted(&"x".repeat(199)), format!("\"{}…", "x".repeat(199)));
+        assert_eq!(quoted(&"é".repeat(300)), format!("\"{}…", "é".repeat(199)));
     }
 
     #[test]
