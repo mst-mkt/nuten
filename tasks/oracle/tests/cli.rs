@@ -203,7 +203,10 @@ fn format_passes_nuon_file_whose_value_nuten_keeps() {
         return;
     }
     let dir = TempDir::new();
-    let file = dir.file("a.nuon", "{a: 1,\n b: [x 'y' true null]}\n");
+    let file = dir.file(
+        "a.nuon",
+        "{a: 1,\n b: [x 'y' true null 1.5 nan inf], c: {d: {}}}\n",
+    );
 
     let output = oracle("format", &[&file]);
 
@@ -257,7 +260,7 @@ fn format_skips_nuon_file_nuten_leaves_unread_after_asking_about_its_formatting(
         return;
     }
     let dir = TempDir::new();
-    let file = dir.file("a.nuon", "{a: 1.5,\n b: 2}\n");
+    let file = dir.file("a.nuon", "{a: 1kb,\n b: 2}\n");
 
     let output = oracle("format", &[&file]);
 

@@ -1,0 +1,10 @@
+{
+    paths: [*.nu, **/*.nuon, script.nu, a.b.c, .hidden, ., .., ..., ...a, a..b, ../x, ~/x, ~, /, ./]
+    punctuation: [x?y, x=y, a[0], a{b}, a#b, a\b, a'b', a"b"c, `a`b, ``, !a, %s, @a, a$b, &, ^a, ^, <a>, a>b]
+    letters: [é, 日本, v1, kb, e5, 1e, true1, nulls, True, Null, `a b`]
+    signs: [_, -, +, -x, --, +x, --1, 1-, +1kb, +0x1]
+    almost_numbers: [1.0.0, 1-2, 1s, 1mo, 1secs, 5minutes, 1kb2, 1.0., 1e5.5, 0XFF, 0B1, 1kb$, 1Kb$, 1$kb, 1$sec, 1Sec, 1SEC]
+    almost_dates: [2024-1-1, 2024-01-01-x, 2024-02-30, 2023-02-29, 1900-02-29, 2100-02-29, 2024-04-31, 2024-13-01, 2024-01-32, 10000-01-01, 12345-1]
+    almost_ranges: [1..a, a..1, ..x, x.., a..b..c]
+    colons: [a:b, 12:30]
+}

@@ -1,5 +1,6 @@
 //! Finds the config file of a path, reads the settings from it, and writes the JSON Schema of one.
 
+mod escape;
 pub mod file;
 mod find;
 mod json;
@@ -11,6 +12,7 @@ mod settings;
 #[cfg(test)]
 mod test_support;
 pub mod value;
+mod word;
 
 use std::{
     fmt,
@@ -195,9 +197,8 @@ impl fmt::Display for ConfigErrorKind {
             ConfigErrorKind::Json(message) => f.write_str(message),
             ConfigErrorKind::Nuon(kind) => fmt::Display::fmt(kind, f),
             ConfigErrorKind::Unreadable => f.write_str(
-                "value nuten does not read; it reads decimal integers, `true`, `false`, `null`, \
-                 words of letters, digits, `_`, and `-` that start with a letter, \
-                 strings without escapes, lists, and records",
+                "value nuten does not read; it reads strings, integers, floats, `true`, `false`, \
+                 `null`, lists, and records as nu does, and rejects what nu rejects",
             ),
             ConfigErrorKind::ExtraValue => f.write_str("value after the first; NUON holds one"),
             ConfigErrorKind::DuplicateKey(key) => write!(f, "duplicate key `{key}`"),

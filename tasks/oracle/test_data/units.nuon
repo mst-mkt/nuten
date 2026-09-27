@@ -1,0 +1,4 @@
+{
+    filesizes: [1kb, 1KB, 1Kb, 1kib, 1KiB, 2b, 2B, 1eb, 5EB, 1pb, .5kb, -1kb, 1e3kb, 1.5kb, 1_kb, 1e400kb]
+    durations: [1ns, 1us, 1µs, 1μs, 1ms, 1sec, 10min, 1hr, 3day, 1wk, 1.5day, 1e3sec]
+}

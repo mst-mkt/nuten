@@ -1,0 +1,10 @@
+{
+    punctuation: "\"\'\\\/\(\)\{\}\$\^\#\|\~"
+    control: "\a\b\e\f\n\r\t\0"
+    hex: "\x41\xc3\xa9"
+    unicode: "\u{61}\u{1F600}\u{10FFFF}\u{+62}"
+    single: 'a\nb\"'
+    backtick: `a\nb`
+    raw: r#'a\nb'#
+    raw_hashes: r##'a'#b'##
+}

@@ -1,13 +1,14 @@
 //! Reads NUON, the values nu writes as nu code.
 //!
 //! Nu reads any value its parser gives without running code.
-//! Nuten reads only the forms it knows nu to read the same way, and reports any other.
+//! Nuten reads each value as nu does, and reports the ones of a type no setting takes.
 
 use nuten_syntax::{NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange};
 
 use crate::{
-    ConfigError, ConfigErrorKind, error,
+    ConfigError, ConfigErrorKind, error, escape,
     value::{self, Field, Value, ValueKind},
+    word::{self, Place, Word},
 };
 
 pub(crate) fn read(text: &str) -> Result<Value, Vec<ConfigError>> {
@@ -38,27 +39,28 @@ pub(crate) fn read(text: &str) -> Result<Value, Vec<ConfigError>> {
 /// The value `element` is, bare of any command or redirection.
 fn element_value(element: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
     match &significant(element)[..] {
-        [value] => self::value(value),
+        [value] => self::value(value, Place::Item),
         _ => Err(unreadable(element.text_range())),
     }
 }
 
-fn value(element: &SyntaxElement) -> Result<Value, Vec<ConfigError>> {
-    match element {
-        NodeOrToken::Token(token) => scalar(token)
-            .map(|kind| Value {
-                kind,
-                range: token.text_range(),
-            })
-            .ok_or_else(|| unreadable(element.text_range())),
-        NodeOrToken::Node(node) if node.kind() == SyntaxKind::Record => record(node),
-        NodeOrToken::Node(node) if node.kind() == SyntaxKind::List => list(node),
-        NodeOrToken::Node(_) => Err(unreadable(element.text_range())),
-    }
+fn value(element: &SyntaxElement, place: Place) -> Result<Value, Vec<ConfigError>> {
+    let range = element.text_range();
+    let kind = match element {
+        NodeOrToken::Token(token) => scalar(token, place),
+        NodeOrToken::Node(node) if node.kind() == SyntaxKind::Record => return record(node),
+        NodeOrToken::Node(node) if node.kind() == SyntaxKind::List => return list(node),
+        NodeOrToken::Node(_) => None,
+    };
+    kind.map(|kind| Value {
+        kind,
+        range,
+    })
+    .ok_or_else(|| unreadable(range))
 }
 
 fn list(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
-    let values = value::all(items(node).iter().map(value))?;
+    let values = value::all(items(node).iter().map(|item| value(item, Place::Item)))?;
     Ok(Value {
         kind: ValueKind::List(values),
         range: node.text_range(),
@@ -81,67 +83,58 @@ fn field(node: &SyntaxNode) -> Result<Field, Vec<ConfigError>> {
     if colon.kind() != SyntaxKind::Colon {
         return Err(unreadable(node.text_range()));
     }
-    // As keys, nu reads `true` as an error and `1` as a string, unlike as values.
-    // `scalar` gives neither as a string, so both are left unread.
-    let Some(ValueKind::String(key_text)) = scalar(key) else {
+    let Some(key_text) = self::key(key) else {
         return Err(unreadable(key.text_range()));
     };
     Ok(Field {
         key: key_text,
         key_range: key.text_range(),
-        value: self::value(value)?,
+        value: self::value(value, Place::RecordValue)?,
     })
 }
 
-/// What a lone token reads as, or `None` for a form nuten does not read.
-fn scalar(token: &SyntaxToken) -> Option<ValueKind> {
+/// The key `token` is, or `None` for one nu rejects.
+/// Nu reads a key as a string whatever it looks like, but for `true`, `false`, and `null`.
+fn key(token: &SyntaxToken) -> Option<String> {
     let text = token.text();
     match token.kind() {
-        SyntaxKind::Word => word(text),
-        SyntaxKind::String => quoted(text).map(|content| ValueKind::String(content.to_string())),
+        SyntaxKind::Word => match word::read(text, Place::Item) {
+            Word::Value(ValueKind::String(key)) => Some(key),
+            Word::Value(ValueKind::Bool(_) | ValueKind::Null) | Word::Rejected => None,
+            Word::Value(_) | Word::Typed(_) => Some(text.to_string()),
+        },
+        SyntaxKind::String => quoted(text),
         _ => None,
     }
 }
 
-fn word(text: &str) -> Option<ValueKind> {
-    match text {
-        "true" => Some(ValueKind::Bool(true)),
-        "false" => Some(ValueKind::Bool(false)),
-        "null" => Some(ValueKind::Null),
-        // Nu reads one too large for an `i64` as a float, which nuten leaves unread.
-        _ if is_decimal_integer(text) => text.parse().ok().map(ValueKind::Int),
-        _ => is_bare_string(text).then(|| ValueKind::String(text.to_string())),
+/// What a lone token reads as, or `None` for one nu rejects, or of a type no setting takes.
+fn scalar(token: &SyntaxToken, place: Place) -> Option<ValueKind> {
+    let text = token.text();
+    match token.kind() {
+        SyntaxKind::Word => match word::read(text, place) {
+            Word::Value(kind) => Some(kind),
+            Word::Typed(_) | Word::Rejected => None,
+        },
+        SyntaxKind::String => quoted(text).map(ValueKind::String),
+        SyntaxKind::RawString => Some(ValueKind::String(raw(text).to_string())),
+        _ => None,
     }
 }
 
-/// Nuten leaves unread the `_` among digits and the radix prefixes that nu reads as well.
-fn is_decimal_integer(text: &str) -> bool {
-    let digits = text.strip_prefix(['+', '-']).unwrap_or(text);
-    !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
-}
-
-/// A leading `_` or digit may make a number, as `_1` does.
-/// Nu reads `inf`, `nan`, and the like as floats, whatever their letter case.
-/// Nu drops every `_` before it reads a float, so `n_an` is one too.
-fn is_bare_string(text: &str) -> bool {
-    text.chars()
-        .next()
-        .is_some_and(|first| first.is_ascii_alphabetic())
-        && text
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '_' | '-'))
-        && text.replace('_', "").parse::<f64>().is_err()
-}
-
-/// Nu's escapes are left unread rather than decoded again here.
-/// A wrong decoding would change a setting unseen.
-fn quoted(text: &str) -> Option<&str> {
+/// The content of a `"..."`, `'...'`, or `` `...` `` string, or `None` where nu rejects an escape.
+fn quoted(text: &str) -> Option<String> {
     let content = &text[1..text.len() - 1];
     match text.as_bytes()[0] {
-        b'"' => (!content.contains('\\')).then_some(content),
-        b'\'' | b'`' => Some(content),
-        _ => None,
+        b'"' => escape::unescape(content),
+        _ => Some(content.to_string()),
     }
+}
+
+/// The content of an `r#'...'#` string, with as many `#` on each side.
+fn raw(text: &str) -> &str {
+    let hashes = text[1..].bytes().take_while(|byte| *byte == b'#').count();
+    &text[hashes + 2..text.len() - hashes - 1]
 }
 
 fn significant(node: &SyntaxNode) -> Vec<SyntaxElement> {
@@ -173,8 +166,8 @@ fn unreadable(range: TextRange) -> Vec<ConfigError> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Commas, Config, ConfigErrorKind, Format, FormatConfig, IndentStyle, LineEnding, load, read,
-        test_support,
+        Commas, Config, ConfigErrorKind, Format, FormatConfig, IndentStyle, LineEnding, Patterns,
+        load, read, test_support,
         value::{Value, ValueKind},
     };
 
@@ -196,6 +189,10 @@ mod tests {
             panic!("{text} is no record");
         };
         fields.into_iter().next().unwrap().value.kind
+    }
+
+    fn string(text: &str) -> ValueKind {
+        ValueKind::String(text.to_string())
     }
 
     #[test]
@@ -262,106 +259,91 @@ mod tests {
     }
 
     #[test]
-    fn decimal_word_is_int() {
-        for (text, int) in [
-            ("{a: 5}", 5),
-            ("{a: -5}", -5),
-            ("{a: +5}", 5),
-            ("{a: 05}", 5),
-            ("{a: -0}", 0),
-            ("{a: 9223372036854775807}", i64::MAX),
-            ("{a: -9223372036854775808}", i64::MIN),
+    fn bare_patterns_are_read() {
+        let text = "{include: [*.nu, **/*.nuon, src/a.nu], exclude: [vendor/x, .cache]}";
+        let config = load(text, Format::Nuon).unwrap();
+        assert_eq!(
+            config.include,
+            Patterns::new(["*.nu", "**/*.nuon", "src/a.nu"]).unwrap()
+        );
+        assert_eq!(
+            config.exclude,
+            Patterns::new(["vendor/x", ".cache"]).unwrap()
+        );
+    }
+
+    #[test]
+    fn word_is_what_nu_reads_it_as() {
+        for (text, kind) in [
+            ("{a: 5}", ValueKind::Int(5)),
+            ("{a: -5}", ValueKind::Int(-5)),
+            ("{a: 1_000}", ValueKind::Int(1000)),
+            ("{a: 0x64}", ValueKind::Int(100)),
+            ("{a: 1.5}", ValueKind::Float(1.5)),
+            ("{a: 1e2}", ValueKind::Float(100.0)),
+            ("{a: true}", ValueKind::Bool(true)),
+            ("{a: null}", ValueKind::Null),
+            ("{a: tab}", string("tab")),
+            ("{a: script.nu}", string("script.nu")),
+            ("{a: ../x}", string("../x")),
+            ("{a: é}", string("é")),
+            ("{a: x\"y\"}", string("x\"y\"")),
+            ("{a: 0.2.0}", string("0.2.0")),
         ] {
-            assert_eq!(field_value(text), ValueKind::Int(int), "{text}");
+            assert_eq!(field_value(text), kind, "{text}");
         }
     }
 
     #[test]
-    fn keyword_word_is_bool_or_null() {
-        assert_eq!(field_value("{a: true}"), ValueKind::Bool(true));
-        assert_eq!(field_value("{a: false}"), ValueKind::Bool(false));
-        assert_eq!(field_value("{a: null}"), ValueKind::Null);
-    }
-
-    #[test]
-    fn bare_word_is_string() {
-        for text in [
-            "tab", "crlf", "TRUE", "Null", "a-b", "a_b-c", "x-", "e5", "in", "if", "not", "e_",
-            "in_", "i_n", "inf_x", "inf-", "na-n",
-        ] {
-            let record = format!("{{a: {text}}}");
-            assert_eq!(
-                field_value(&record),
-                ValueKind::String(text.to_string()),
-                "{text}"
-            );
-        }
-    }
-
-    #[test]
-    fn quoted_string_without_escapes_is_its_content() {
+    fn quoted_string_is_its_content_with_escapes_decoded() {
         for (text, content) in [
             (r#"{a: "x y"}"#, "x y"),
             (r"{a: 'x\ty'}", r"x\ty"),
             ("{a: `x y`}", "x y"),
             (r#"{a: ""}"#, ""),
             ("{a: \"x\r\ny\"}", "x\r\ny"),
+            (r#"{a: "t\u{61}b"}"#, "tab"),
+            (r#"{a: "a\tb\\"}"#, "a\tb\\"),
         ] {
-            assert_eq!(
-                field_value(text),
-                ValueKind::String(content.to_string()),
-                "{text}"
-            );
+            assert_eq!(field_value(text), string(content), "{text}");
+        }
+    }
+
+    #[test]
+    fn raw_string_is_its_content() {
+        for (text, content) in [
+            ("{a: r#'x'#}", "x"),
+            ("{a: r##'x'##}", "x"),
+            ("{a: r#'a\\n'b'#}", "a\\n'b"),
+            ("{a: r#''#}", ""),
+        ] {
+            assert_eq!(field_value(text), string(content), "{text}");
         }
     }
 
     #[test]
     fn list_holds_its_items() {
-        let ValueKind::List(items) = field_value("{a: [lf, 1\n # c\n 'x',]}") else {
+        let ValueKind::List(items) = field_value("{a: [lf, 1\n # c\n 'x', a:b,]}") else {
             panic!("no list");
         };
         let kinds: Vec<_> = items.into_iter().map(|item| item.kind).collect();
         assert_eq!(
             kinds,
-            [
-                ValueKind::String("lf".to_string()),
-                ValueKind::Int(1),
-                ValueKind::String("x".to_string())
-            ]
+            [string("lf"), ValueKind::Int(1), string("x"), string("a:b")]
         );
     }
 
     #[test]
-    fn value_nu_may_read_otherwise_is_unreadable() {
+    fn value_of_type_no_setting_takes_is_unreadable() {
         for value in [
-            "0x64",
-            "0b11",
-            "1_000",
-            "_1",
-            "1.5",
-            "1e2",
-            "inf",
-            "NaN",
-            "-inf",
-            "inf_",
-            "i_nf",
-            "n_an",
-            "NaN_",
-            "infinity",
             "1kb",
             "1sec",
             "2024-01-01",
-            "0.2.0",
-            "9223372036854775808",
-            "r#'x'#",
-            r#"$"x""#,
-            "(1)",
-            "$x",
-            r#"x"y""#,
-            "é",
             "1..2",
-            "{|| 1}",
+            "..2",
+            "0x[ff]",
             "[[a]; [1]]",
+            "$.a",
         ] {
             let text = format!("{{a: {value}}}");
             assert_eq!(errors(&text), [(unreadable(), value)], "{text}");
@@ -369,16 +351,55 @@ mod tests {
     }
 
     #[test]
-    fn quoted_string_with_any_escape_is_unreadable() {
-        for value in [r#""\n""#, r#""\t""#, r#""\"""#, r#""\\""#, r#""t\u{61}b""#] {
+    fn value_nu_rejects_is_unreadable() {
+        for value in [
+            "$x",
+            "$\"x\"",
+            "(1)",
+            "{|| 1}",
+            "a(b)",
+            "a:b",
+            "0xg",
+            "1-2b",
+            "\"a\"b",
+            r#""\q""#,
+            r#""\xff""#,
+        ] {
             let text = format!("{{a: {value}}}");
             assert_eq!(errors(&text), [(unreadable(), value)], "{text}");
         }
     }
 
     #[test]
-    fn key_nu_may_read_otherwise_is_unreadable() {
-        for key in ["true", "null", "1", "inf", "$schema", r#""a\tb""#] {
+    fn key_of_any_word_but_keyword_is_string() {
+        for (key, expected) in [
+            ("1", "1"),
+            ("1.5", "1.5"),
+            ("inf", "inf"),
+            ("2024-01-01", "2024-01-01"),
+            ("1kb", "1kb"),
+            ("*.nu", "*.nu"),
+            ("-x", "-x"),
+            (r#""a\tb""#, "a\tb"),
+            ("`a b`", "a b"),
+        ] {
+            let text = format!("{{{key}: 1}}");
+            let Ok(Value {
+                kind: ValueKind::Record(fields),
+                ..
+            }) = read(&text, Format::Nuon)
+            else {
+                panic!("{text} is no record");
+            };
+            assert_eq!(fields[0].key, expected, "{text}");
+        }
+    }
+
+    #[test]
+    fn key_nu_rejects_is_unreadable() {
+        for key in [
+            "true", "false", "null", "$schema", "a(b)", "r#'x'#", r#""\q""#,
+        ] {
             let text = format!("{{{key}: 1}}");
             assert_eq!(errors(&text), [(unreadable(), key)], "{text}");
         }

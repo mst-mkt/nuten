@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn nuten_leaving_unread_what_nu_reads_is_skipped() {
-        let checked = reading_verdict(nuten("{a: 0x64}"), Ok(r#"{"a": 100}"#.to_string()));
+        let checked = reading_verdict(nuten("{a: 1kb}"), Ok(r#"{"a": 1000}"#.to_string()));
         assert!(matches!(checked, Ok(Checked::Skipped(_))));
     }
 
