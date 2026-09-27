@@ -17,7 +17,7 @@ const startClient = async (outputChannel: LogOutputChannel) => {
     "nuten",
     "Nuten",
     { command, args: ["lsp"] },
-    { documentSelector: [{ language: "nushell" }], outputChannel },
+    { documentSelector: [{ language: "nushell" }, { language: "nuon" }], outputChannel },
   );
 
   await client.start().catch(reportStartFailure);

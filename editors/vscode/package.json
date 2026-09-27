@@ -48,6 +48,16 @@
         "extensions": [
           ".nu"
         ]
+      },
+      {
+        "id": "nuon",
+        "aliases": [
+          "NUON",
+          "nuon"
+        ],
+        "extensions": [
+          ".nuon"
+        ]
       }
     ],
     "configuration": {
@@ -74,6 +84,7 @@
     }
   },
   "activationEvents": [
+    "onLanguage:nuon",
     "onLanguage:nushell"
   ],
   "icon": "icon.png",
