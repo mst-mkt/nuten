@@ -96,7 +96,7 @@ fn differing_byte(a: &str, b: &str) -> usize {
 
 /// Nuten must read the value nu reads, or reject what nu rejects.
 /// Where nu reads what nuten leaves unread, the file is skipped.
-/// `nu` is the JSON nu writes of what it reads, or why it fails.
+/// `nu` is the JSON of what nu reads described with its types, or why it fails.
 fn reading_verdict(
     nuten: Result<Value, Vec<ConfigError>>,
     nu: Result<String, String>,
@@ -105,7 +105,7 @@ fn reading_verdict(
         (Ok(value), Ok(json)) => match difference(&ast::json(&json)?, &value) {
             Some((pointer, nu, nuten)) => Err(format!(
                 "nu and nuten read differently at {pointer:?}: {} against {}",
-                ast::excerpt(nu.clone()),
+                described(nu),
                 excerpt(nuten)
             )),
             None => Ok(Checked::Passed),
@@ -132,43 +132,75 @@ fn reading_verdict(
 }
 
 /// Where `nu` and `nuten` first differ, as a JSON pointer, with the two values there.
+/// `nu` is what `describe -d` writes: the `type`, then the `columns` of a record or the `value`.
+/// The types are compared first, so that `1` and `1.0` differ though they print the same.
 /// The order of keys is left aside, since the parser of nu's JSON keeps none.
 fn difference<'n, 'j, 'v>(
     nu: &'n JsonValue<'j>,
     nuten: &'v Value,
 ) -> Option<(String, &'n JsonValue<'j>, &'v Value)> {
-    match (nu, &nuten.kind) {
-        (JsonValue::Object(object), ValueKind::Record(fields)) => {
-            let same_keys = object.len() == fields.len()
-                && fields.iter().all(|field| object.get(&field.key).is_some());
+    let differ = || Some((String::new(), nu, nuten));
+    match member(nu, "type") {
+        Some(JsonValue::String(nu_type)) if nu_type.as_ref() == type_name(&nuten.kind) => {},
+        _ => return differ(),
+    }
+    match (&nuten.kind, member(nu, "columns"), member(nu, "value")) {
+        (ValueKind::Record(fields), Some(JsonValue::Object(columns)), _) => {
+            let same_keys = columns.len() == fields.len()
+                && fields.iter().all(|field| columns.get(&field.key).is_some());
             if !same_keys {
-                return Some((String::new(), nu, nuten));
+                return differ();
             }
             fields.iter().find_map(|field| {
                 let (pointer, nu, nuten) = difference(
-                    object.get(&field.key).expect("the keys are the same"),
+                    columns.get(&field.key).expect("the keys are the same"),
                     &field.value,
                 )?;
                 Some((format!("/{}{pointer}", field.key), nu, nuten))
             })
         },
-        (JsonValue::Array(array), ValueKind::List(items)) if array.len() == items.len() => array
-            .iter()
-            .zip(items)
-            .enumerate()
-            .find_map(|(index, (nu, nuten))| {
-                let (pointer, nu, nuten) = difference(nu, nuten)?;
-                Some((format!("/{index}{pointer}"), nu, nuten))
-            }),
-        (nu, kind) => (!same_scalar(nu, kind)).then_some((String::new(), nu, nuten)),
+        (ValueKind::List(items), _, Some(JsonValue::Array(array)))
+            if array.len() == items.len() =>
+        {
+            array
+                .iter()
+                .zip(items)
+                .enumerate()
+                .find_map(|(index, (nu, nuten))| {
+                    let (pointer, nu, nuten) = difference(nu, nuten)?;
+                    Some((format!("/{index}{pointer}"), nu, nuten))
+                })
+        },
+        (kind, _, Some(value)) if same_scalar(value, kind) => None,
+        _ => differ(),
     }
 }
 
+/// The `type` nu describes a value of `kind` with.
+fn type_name(kind: &ValueKind) -> &'static str {
+    match kind {
+        ValueKind::Record(_) => "record",
+        ValueKind::List(_) => "list",
+        ValueKind::String(_) => "string",
+        ValueKind::Int(_) => "int",
+        ValueKind::Float(_) => "float",
+        ValueKind::Bool(_) => "bool",
+        ValueKind::Null => "nothing",
+    }
+}
+
+fn member<'a, 'j>(node: &'a JsonValue<'j>, key: &str) -> Option<&'a JsonValue<'j>> {
+    match node {
+        JsonValue::Object(object) => object.get(key),
+        _ => None,
+    }
+}
+
+/// Whether `nu`, the `value` nu describes a scalar with, is the one `nuten` holds.
 fn same_scalar(nu: &JsonValue<'_>, nuten: &ValueKind) -> bool {
     match (nu, nuten) {
         (JsonValue::String(nu), ValueKind::String(nuten)) => nu == nuten,
         (JsonValue::Number(nu), ValueKind::Int(nuten)) => nu.parse() == Ok(*nuten),
-        // Nuten reads no float from NUON yet; these keep the comparison whole for when it does.
         (JsonValue::Number(nu), ValueKind::Float(nuten)) => nu.parse() == Ok(*nuten),
         // Nu writes a float that is not finite as null.
         (JsonValue::Null, ValueKind::Float(nuten)) => !nuten.is_finite(),
@@ -178,19 +210,36 @@ fn same_scalar(nu: &JsonValue<'_>, nuten: &ValueKind) -> bool {
     }
 }
 
-/// `value` in one line, in nuten's words for what `ast::excerpt` writes of nu's side.
+/// The value `nu` describes, in one line: its type, then its keys, its length, or its value.
+fn described(nu: &JsonValue<'_>) -> String {
+    let Some(JsonValue::String(nu_type)) = member(nu, "type") else {
+        return ast::excerpt(nu.clone());
+    };
+    match (nu_type.as_ref(), member(nu, "columns"), member(nu, "value")) {
+        ("record", Some(JsonValue::Object(columns)), _) => {
+            let keys: BTreeSet<_> = columns.clone().take_inner().into_keys().collect();
+            format!("a record with keys {keys:?}")
+        },
+        ("list", _, Some(JsonValue::Array(items))) => format!("a list of length {}", items.len()),
+        (_, _, Some(value)) => format!("{nu_type} {}", ast::excerpt(value.clone())),
+        _ => nu_type.to_string(),
+    }
+}
+
+/// `value` in one line, in the words `described` uses for nu's side.
 fn excerpt(value: &Value) -> String {
+    let scalar = |text: String| format!("{} {text}", type_name(&value.kind));
     match &value.kind {
         ValueKind::Record(fields) => {
             let keys: BTreeSet<_> = fields.iter().map(|field| field.key.as_str()).collect();
             format!("a record with keys {keys:?}")
         },
         ValueKind::List(items) => format!("a list of length {}", items.len()),
-        ValueKind::String(text) => ast::quoted(text),
-        ValueKind::Int(int) => int.to_string(),
-        ValueKind::Float(float) => float.to_string(),
-        ValueKind::Bool(boolean) => boolean.to_string(),
-        ValueKind::Null => "null".to_string(),
+        ValueKind::String(text) => scalar(ast::quoted(text)),
+        ValueKind::Int(int) => scalar(int.to_string()),
+        ValueKind::Float(float) => scalar(format!("{float:?}")),
+        ValueKind::Bool(boolean) => scalar(boolean.to_string()),
+        ValueKind::Null => scalar("null".to_string()),
     }
 }
 
@@ -374,37 +423,88 @@ mod tests {
         );
     }
 
+    /// `describe -d` of a record whose fields are `columns`, as JSON.
+    fn record(columns: &str) -> String {
+        format!(r#"{{"type": "record", "columns": {{{columns}}}}}"#)
+    }
+
     #[test]
     fn reading_same_value_passes() {
-        let src = "{a: [1, x, true, null], b: {}, 'c d': \"é\"}";
-        let json = r#"{"b": {}, "c d": "é", "a": [1, "x", true, null]}"#;
+        let src = "{a: [1, x, true, null, 1.5], b: {}, 'c d': \"é\"}";
+        let nu = record(concat!(
+            r#""b": {"type": "record", "columns": {}}, "#,
+            r#""c d": {"type": "string", "value": "é"}, "#,
+            r#""a": {"type": "list", "value": [{"type": "int", "value": 1}, "#,
+            r#"{"type": "string", "value": "x"}, {"type": "bool", "value": true}, "#,
+            r#"{"type": "nothing", "value": null}, {"type": "float", "value": 1.5}]}"#,
+        ));
         assert!(matches!(
-            reading_verdict(nuten(src), Ok(json.to_string())),
+            reading_verdict(nuten(src), Ok(nu)),
             Ok(Checked::Passed)
         ));
     }
 
     #[test]
     fn different_value_fails_at_first_difference() {
-        for (src, json, message) in [
+        for (src, columns, message) in [
             (
                 "{a: [1, x]}",
-                r#"{"a": [1, "y"]}"#,
-                r#"at "/a/1": "y" against "x""#,
-            ),
-            ("{a: 1}", r#"{"a": "1"}"#, r#"at "/a": "1" against 1"#),
-            (
-                "{a: [1]}",
-                r#"{"a": [1, 2]}"#,
-                r#"at "/a": an array of length 2 against a list of length 1"#,
+                concat!(
+                    r#""a": {"type": "list", "value": [{"type": "int", "value": 1}, "#,
+                    r#"{"type": "string", "value": "y"}]}"#
+                ),
+                r#"at "/a/1": string "y" against string "x""#,
             ),
             (
                 "{a: 1}",
-                r#"{"b": 1}"#,
-                r#"at "": an object with keys {"b"} against a record with keys {"a"}"#,
+                r#""a": {"type": "string", "value": "1"}"#,
+                r#"at "/a": string "1" against int 1"#,
+            ),
+            (
+                "{a: 1}",
+                r#""a": {"type": "float", "value": 1.0}"#,
+                r#"at "/a": float 1.0 against int 1"#,
+            ),
+            (
+                "{a: 1.0}",
+                r#""a": {"type": "int", "value": 1}"#,
+                r#"at "/a": int 1 against float 1.0"#,
+            ),
+            (
+                "{a: 1}",
+                r#""a": {"type": "int", "value": 2}"#,
+                r#"at "/a": int 2 against int 1"#,
+            ),
+            (
+                "{a: 1.5}",
+                r#""a": {"type": "float", "value": 2.5}"#,
+                r#"at "/a": float 2.5 against float 1.5"#,
+            ),
+            (
+                "{a: true}",
+                r#""a": {"type": "bool", "value": false}"#,
+                r#"at "/a": bool false against bool true"#,
+            ),
+            (
+                "{a: [1]}",
+                concat!(
+                    r#""a": {"type": "list", "value": [{"type": "int", "value": 1}, "#,
+                    r#"{"type": "int", "value": 2}]}"#
+                ),
+                r#"at "/a": a list of length 2 against a list of length 1"#,
+            ),
+            (
+                "{a: 1}",
+                r#""b": {"type": "int", "value": 1}"#,
+                r#"at "": a record with keys {"b"} against a record with keys {"a"}"#,
+            ),
+            (
+                "{a: {}}",
+                r#""a": {"type": "list", "value": []}"#,
+                r#"at "/a": a list of length 0 against a record with keys {}"#,
             ),
         ] {
-            let error = reading_verdict(nuten(src), Ok(json.to_string())).unwrap_err();
+            let error = reading_verdict(nuten(src), Ok(record(columns))).unwrap_err();
             assert!(error.ends_with(message), "{src}: {error}");
         }
     }
@@ -426,14 +526,15 @@ mod tests {
 
     #[test]
     fn nuten_leaving_unread_what_nu_reads_is_skipped() {
-        let checked = reading_verdict(nuten("{a: 1kb}"), Ok(r#"{"a": 1000}"#.to_string()));
+        let nu = Ok(record(r#""a": {"type": "filesize", "value": 1000}"#));
+        let checked = reading_verdict(nuten("{a: 1kb}"), nu);
         assert!(matches!(checked, Ok(Checked::Skipped(_))));
     }
 
     #[test]
     fn nuten_rejecting_what_nu_reads_fails() {
         for src in ["{a: 1, a: 2}", "{}; 1", "{a: 0x1, b: {c: 1, c: 2}}"] {
-            let checked = reading_verdict(nuten(src), Ok("{}".to_string()));
+            let checked = reading_verdict(nuten(src), Ok(record("")));
             assert!(
                 checked
                     .unwrap_err()
@@ -445,10 +546,25 @@ mod tests {
 
     #[test]
     fn nu_reading_more_keys_fails() {
-        let checked = reading_verdict(nuten("{a: 1}"), Ok(r#"{"a": 1, "b": 2}"#.to_string()));
-        assert!(checked.unwrap_err().ends_with(
-            r#"at "": an object with keys {"a", "b"} against a record with keys {"a"}"#
+        let nu = Ok(record(
+            r#""a": {"type": "int", "value": 1}, "b": {"type": "int", "value": 2}"#,
         ));
+        let checked = reading_verdict(nuten("{a: 1}"), nu);
+        assert!(
+            checked.unwrap_err().ends_with(
+                r#"at "": a record with keys {"a", "b"} against a record with keys {"a"}"#
+            )
+        );
+    }
+
+    #[test]
+    fn description_without_type_fails() {
+        let checked = reading_verdict(nuten("{a: 1}"), Ok(r#"{"a": 1}"#.to_string()));
+        assert!(
+            checked
+                .unwrap_err()
+                .ends_with(r#"at "": an object with keys {"a"} against a record with keys {"a"}"#)
+        );
     }
 
     #[test]

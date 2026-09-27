@@ -41,10 +41,12 @@ pub(crate) fn ast(src: &str, dir: Option<&Path>) -> Result<String, String> {
     )
 }
 
-/// The value nu reads from the NUON `src`, as JSON text.
+/// The value nu reads from the NUON `src`, described with its types, as JSON text.
+/// `describe -d` writes each value as an object with its `type`.
+/// Beside it stand a scalar's `value`, a record's `columns`, or a list's items as `value`.
 /// Fails, in one line, when nu does.
 pub(crate) fn from_nuon(src: &str) -> Result<String, String> {
-    run("from nuon | to json -r", src, None)
+    run("from nuon | describe -d | to json -r", src, None)
 }
 
 /// The value nu reads from the NUON `src`, written as NUON again.
