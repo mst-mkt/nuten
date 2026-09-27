@@ -1,4 +1,4 @@
-//! Every UTF-8 `.nu` file of the corpus must keep the invariants of the parser.
+//! Every UTF-8 `.nu` and `.nuon` file of the corpus must keep the invariants of the parser.
 //! Unless it has syntax errors, it must keep those of the formatter too.
 //! Exactly the files in `SYNTAX_ERRORS` have syntax errors.
 //! The corpus is the directory `NUTEN_CORPUS` names, which the devShell sets.
@@ -40,9 +40,20 @@ fn every_file_keeps_invariants_with_syntax_errors_as_listed() {
     // None of its scripts lives in one.
     let paths: Vec<_> = files_below(&dir, &|subdir| !name_of(subdir).starts_with('.'))
         .into_iter()
-        .filter(|path| name_of(path).ends_with(".nu"))
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "nu" || extension == "nuon")
+        })
         .collect();
-    assert!(!paths.is_empty(), "no .nu files in {}", dir.display());
+    for extension in ["nu", "nuon"] {
+        assert!(
+            paths
+                .iter()
+                .any(|path| path.extension().is_some_and(|found| found == extension)),
+            "no .{extension} files in {}",
+            dir.display()
+        );
+    }
 
     let config = Config::default();
     let mut problems = Vec::new();
