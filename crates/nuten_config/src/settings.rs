@@ -224,10 +224,10 @@ pub(crate) static SETTINGS: [Setting; 10] = [
     Setting {
         key: "include",
         description: "Glob patterns of the files formatting a directory takes, in place of \
-                      `*.nu`. A pattern without a `/` matches a file name at any depth; one with \
-                      a `/` matches the path from the directory of the config file, or from the \
-                      current directory for the config file `--config` names. A file named \
-                      directly is formatted whether it matches or not.",
+                      `*.nu` and `*.nuon`. A pattern without a `/` matches a file name at any \
+                      depth; one with a `/` matches the path from the directory of the config \
+                      file, or from the current directory for the config file `--config` names. \
+                      A file named directly is formatted whether it matches or not.",
         kind: Kind::Patterns {
             set: |config, include| Config {
                 include,
@@ -878,9 +878,9 @@ mod tests {
     }
 
     #[test]
-    fn include_is_nu_files_and_exclude_is_nothing_by_default() {
+    fn include_is_nu_and_nuon_files_and_exclude_is_nothing_by_default() {
         let config = Config::default();
-        assert_eq!(config.include, Patterns::new(["*.nu"]).unwrap());
+        assert_eq!(config.include, Patterns::new(["*.nu", "*.nuon"]).unwrap());
         assert_eq!(config.exclude, Patterns::new([]).unwrap());
     }
 

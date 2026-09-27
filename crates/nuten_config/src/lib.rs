@@ -51,7 +51,7 @@ pub struct Config {
 
 // Built once, since these stand for every file without a config file and a build is slow.
 static DEFAULT_INCLUDE: LazyLock<Patterns> =
-    LazyLock::new(|| Patterns::new(["*.nu"]).expect("the pattern is valid"));
+    LazyLock::new(|| Patterns::new(["*.nu", "*.nuon"]).expect("the patterns are valid"));
 /// Also the `exclude` of an override without one.
 pub(crate) static NO_PATTERNS: LazyLock<Patterns> =
     LazyLock::new(|| Patterns::new([]).expect("no pattern has a problem"));

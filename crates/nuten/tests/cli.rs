@@ -968,10 +968,22 @@ fn assert_succeeds_quietly(output: &Output) {
 }
 
 #[test]
-fn format_formats_nu_files_under_directory() {
+fn format_formats_nu_and_nuon_files_under_directory() {
     let dir = TempDir::new();
-    let nu = write_unformatted(&dir, ["d/a.nu", "d/e/f/b.nu"]);
-    let other = write_unformatted(&dir, ["d/a.txt", "d/a.nu.bak", "d/nu", "d/e/NU.NU", "a.nu"]);
+    let nu = write_unformatted(&dir, ["d/a.nu", "d/e/f/b.nu", "d/c.nuon", "d/e/f/d.nuon"]);
+    let other = write_unformatted(
+        &dir,
+        [
+            "d/a.txt",
+            "d/a.nu.bak",
+            "d/nu",
+            "d/nuon",
+            "d/e/NU.NU",
+            "d/e/A.NUON",
+            "a.nu",
+            "a.nuon",
+        ],
+    );
     let output = format_in(&dir, &["d"]);
     assert_succeeds_quietly(&output);
     for path in &nu {
@@ -1412,6 +1424,17 @@ fn format_takes_nearest_config_file_for_each_file_under_directory() {
 }
 
 #[test]
+fn format_formats_config_file_under_directory_after_reading_it() {
+    let dir = TempDir::new();
+    let config = dir.file("d/nuten.nuon", "{indent_width: 2}");
+    let path = dir.file("d/a.nu", BLOCK);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds_quietly(&output);
+    assert_eq!(read(&config), "{ indent_width: 2 }\n");
+    assert_eq!(read(&path), "if true {\n  ls\n}\n");
+}
+
+#[test]
 fn format_writes_nothing_when_config_file_under_directory_is_wrong() {
     let dir = TempDir::new();
     let nuon = dir.file("d/e/nuten.nuon", "{a: 1}");
@@ -1654,7 +1677,7 @@ fn format_takes_respect_gitignore_from_given_config_file() {
 #[test]
 fn format_reads_no_config_file_of_directory_when_given_config_file() {
     let dir = TempDir::new();
-    dir.file("d/nuten.nuon", "{");
+    dir.file("d/nuten.nuon", "{ indent_width: 8 }\n");
     dir.file("two.nuon", "{indent_width: 2}");
     let path = dir.file("d/a.nu", BLOCK);
     let output = format_in(&dir, &["-c", "two.nuon", "d"]);
@@ -1895,7 +1918,8 @@ fn format_leaves_symlink_given_directly_alone_when_exclude_matches_where_it_lead
 #[test]
 fn format_leaves_file_alone_under_every_name_when_exclude_matches_one() {
     let dir = TempDir::new();
-    dir.file("nuten.nuon", r#"{exclude: ["vendor"]}"#);
+    // The config file excludes itself, so that `.` holds nothing but excluded files.
+    dir.file("nuten.nuon", "{ exclude: [vendor, \"nuten.nuon\"] }\n");
     let [path] = write_unformatted(&dir, ["vendor/a.nu"]);
     fs::hard_link(&path, dir.path("b.nu")).unwrap();
     for args in [
@@ -2162,14 +2186,15 @@ fn format_takes_given_config_file_for_current_directory_without_paths() {
 #[test]
 fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
     let dir = TempDir::new();
-    let [z, a] = write_unformatted(&dir, ["z.nu", "d/a.nu"]);
+    let [z, a, c] = write_unformatted(&dir, ["z.nu", "d/a.nu", "d/c.nuon"]);
     let formatted = dir.file("b.nu", FORMATTED);
     let output = format_in(&dir, &["--check", "z.nu", "b.nu", "d"]);
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
     assert!(output.stderr.is_empty(), "{}", stderr(&output));
-    assert_eq!(stdout(&output), "z.nu\nd/a.nu\n");
+    assert_eq!(stdout(&output), "z.nu\nd/a.nu\nd/c.nuon\n");
     assert_eq!(read(&z), UNFORMATTED);
     assert_eq!(read(&a), UNFORMATTED);
+    assert_eq!(read(&c), UNFORMATTED);
     assert_eq!(read(&formatted), FORMATTED);
 }
 
@@ -2177,7 +2202,7 @@ fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
 fn format_check_succeeds_quietly_when_every_file_is_formatted() {
     let dir = TempDir::new();
     dir.file("a.nu", FORMATTED);
-    dir.file("nuten.nuon", "{indent_width: 2}");
+    dir.file("nuten.nuon", "{ indent_width: 2 }\n");
     dir.file("b.nu", "if true {\n  ls\n}\n");
     let output = format_in(&dir, &["--check"]);
     assert_succeeds_quietly(&output);

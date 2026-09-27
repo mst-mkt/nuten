@@ -183,7 +183,10 @@
             (mkFormatterModule {
               name = "nuten";
               args = [ "format" ];
-              includes = [ "*.nu" ];
+              includes = [
+                "*.nu"
+                "*.nuon"
+              ];
             })
           ];
 

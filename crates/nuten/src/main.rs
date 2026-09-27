@@ -40,7 +40,7 @@ enum Command {
     #[usage(
         example(
             "nuten format",
-            header = "Format the `.nu` files under the current directory"
+            header = "Format the `.nu` and `.nuon` files under the current directory"
         ),
         example(
             "nuten format --check",
@@ -119,7 +119,8 @@ struct Format {
     /// Path of the file stdin holds, to find its config file by and to name it in reports
     #[usage(long, value_hint = usage::ValueHint::FilePath, extensions("nu", "nuon"))]
     stdin_filepath: Option<PathBuf>,
-    /// Files to format in place; a directory stands for the `.nu` files under it; `-` for stdin
+    /// Files to format in place; a directory stands for the `.nu` and `.nuon` files under it;
+    /// `-` for stdin
     #[usage(default = ".", value_hint = usage::ValueHint::FilePath, extensions("nu", "nuon"))]
     paths: Vec<PathBuf>,
 }

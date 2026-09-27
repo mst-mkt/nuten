@@ -177,7 +177,7 @@ fn write_over(file: &mut (impl Write + Seek + SetLen), contents: &[u8]) -> io::R
     file.set_len(contents.len() as u64)
 }
 
-/// Not ending in `.nu`, so that a backup left behind is not formatted as a file of its own.
+/// Not ending in `.nu` or `.nuon`, so that formatting the directory skips a backup left behind.
 fn next_backup_path(path: &Path, name: &OsStr) -> PathBuf {
     static BACKUPS_NAMED: AtomicUsize = AtomicUsize::new(0);
     let count = BACKUPS_NAMED.fetch_add(1, Ordering::Relaxed);

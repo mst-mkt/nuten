@@ -41,7 +41,7 @@ expression: schema()
       "type": "boolean"
     },
     "include": {
-      "description": "Glob patterns of the files formatting a directory takes, in place of `*.nu`. A pattern without a `/` matches a file name at any depth; one with a `/` matches the path from the directory of the config file, or from the current directory for the config file `--config` names. A file named directly is formatted whether it matches or not.",
+      "description": "Glob patterns of the files formatting a directory takes, in place of `*.nu` and `*.nuon`. A pattern without a `/` matches a file name at any depth; one with a `/` matches the path from the directory of the config file, or from the current directory for the config file `--config` names. A file named directly is formatted whether it matches or not.",
       "type": "array",
       "items": {
         "type": "string"
