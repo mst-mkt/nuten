@@ -78,17 +78,17 @@ pub(super) fn expression(p: &mut Parser<'_>) {
     }
 }
 
-/// The `len` items ahead as nu reads the condition of an `if` or a `while`.
+/// The `items` ahead as nu reads the condition of an `if` or a `while`.
 /// Nu reads the flags first as those of the keyword, then the rest as one expression.
 /// The items after the condition are other arguments, so the expression takes none of them.
-pub(super) fn condition(p: &mut Parser<'_>, len: usize) {
-    let flags = leading_flags(&call_items(p)[..len]);
+pub(super) fn condition(p: &mut Parser<'_>, items: &[&str]) {
+    let flags = leading_flags(items);
     for _ in 0..flags {
         p.bump();
     }
-    if flags < len {
+    if flags < items.len() {
         let end = p
-            .nth_range(len - flags - 1)
+            .nth_range(items.len() - flags - 1)
             .expect("a condition ahead")
             .end();
         p.bump_bounded(end, expression);

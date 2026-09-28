@@ -5,7 +5,8 @@ use crate::parser::Parser;
 
 /// The `For`, `While`, `Loop`, or `Try` ahead, when nu reads the call as one.
 pub(super) fn control(p: &mut Parser<'_>) -> bool {
-    let Some(shape) = control_shape(&call_items(p)) else {
+    let items = call_items(p);
+    let Some(shape) = control_shape(&items) else {
         return false;
     };
     p.start(shape.kind);
@@ -14,7 +15,7 @@ pub(super) fn control(p: &mut Parser<'_>) -> bool {
         for_variable(p);
     }
     if shape.kind == SyntaxKind::While {
-        condition(p, shape.values_at - 1);
+        condition(p, &items[1..shape.values_at]);
     }
     for at in shape.values_at..shape.len {
         if at + 1 == shape.len || (shape.has_catch && at == 1) {

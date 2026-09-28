@@ -17,7 +17,7 @@ pub(super) fn if_(p: &mut Parser<'_>) -> bool {
     let mut at = 0;
     for link in &chain {
         p.bump();
-        condition(p, link.body - at - 1);
+        condition(p, &items[at + 1..link.body]);
         value(p, Shape::Block);
         at = link.body + 1;
         if link.has_else {
