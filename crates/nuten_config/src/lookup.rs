@@ -252,9 +252,12 @@ fn load_file(path: &Path) -> Result<Config, Vec<String>> {
     let text =
         read_regular_file(path).map_err(|error| vec![format!("{}: {error}", path.display())])?;
     crate::load(&text, format).map_err(|errors| {
-        errors
-            .iter()
-            .map(|error| located(path, &text, error.range.start().into(), &error.kind))
-            .collect()
+        located(
+            path,
+            &text,
+            errors
+                .iter()
+                .map(|error| (error.range.start().into(), &error.kind)),
+        )
     })
 }

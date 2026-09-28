@@ -475,11 +475,14 @@ fn overwrite_problem(path: &Path, failure: &Failure) -> String {
 /// The error holds a line for each syntax error.
 fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, Vec<String>> {
     format(src, config).map_err(|errors| {
-        errors
-            .errors
-            .iter()
-            .map(|error| located(path, src, error.range.start().into(), error.kind))
-            .collect()
+        located(
+            path,
+            src,
+            errors
+                .errors
+                .iter()
+                .map(|error| (error.range.start().into(), error.kind)),
+        )
     })
 }
 

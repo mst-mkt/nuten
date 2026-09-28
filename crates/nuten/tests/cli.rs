@@ -387,6 +387,27 @@ fn format_reports_files_in_order_given() {
 }
 
 #[test]
+fn format_reports_every_syntax_error_of_file_in_order_of_position() {
+    let dir = TempDir::new();
+    let bad = dir.file("bad.nu", "ls ||\n\n日 || x\n");
+    let output = format(&[&bad]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    let heads: Vec<_> = stderr
+        .lines()
+        .map(|line| &line[..line.find(": ").unwrap()])
+        .collect();
+    assert_eq!(
+        heads,
+        [
+            format!("{}:1:4", bad.display()),
+            format!("{}:3:3", bad.display())
+        ],
+        "{stderr}"
+    );
+}
+
+#[test]
 fn format_reports_file_given_by_several_paths_once() {
     let dir = TempDir::new();
     dir.dir("a");
