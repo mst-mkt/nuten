@@ -184,9 +184,13 @@ fn arguments(signature: &Signature<'_>, items: &[&str]) -> Vec<Option<Param>> {
                 at += 1;
                 taken[at] = Some(value);
             }
-        } else if is_spread(item, Target::List) {
-            // A spread fills the positional parameters up to the rest, where nu takes one.
-            if signature.rest.is_some() && positional >= signature.required.len() {
+        } else if is_spread(item, Target::List) || is_spread(item, Target::Record) {
+            // Nu takes a `{ }` spread as flags, and a `$` or `( )` one where the command has flags.
+            // Every command has `--help`, which nu leaves out of that check.
+            let has_flags = signature.flags.iter().any(|flag| flag.long != "help");
+            let spreads_list =
+                is_spread(item, Target::List) && (!is_spread(item, Target::Record) || !has_flags);
+            if spreads_list && signature.rest.is_some() && positional >= signature.required.len() {
                 positional = signature.required.len() + signature.optional.len();
             }
         } else {
@@ -2024,12 +2028,12 @@ mod tests {
     fn spread_moves_to_rest_after_required_parameters() {
         // `do` takes a closure, then any number of arguments.
         assert_eq!(
-            parameters(&["do", "{}", "...$x", "[a]"]),
+            parameters(&["do", "{}", "...[1]", "[a]"]),
             [None, Some(CLOSURE), None, Some(LIST)]
         );
         // A spread before the closure fills nothing.
         assert_eq!(
-            parameters(&["do", "...$x", "[a]"]),
+            parameters(&["do", "...[1]", "[a]"]),
             [None, None, Some(CLOSURE)]
         );
     }
@@ -2170,6 +2174,79 @@ mod tests {
         assert_eq!(
             flag_with_default.arguments(&["--d", "[a]"]),
             [None, Some(WORD)]
+        );
+    }
+
+    #[test]
+    fn record_spread_fills_no_positional_parameter() {
+        use Item::{Colon, Word};
+        let signature = declared(&[
+            Word("a"),
+            Colon,
+            Word("string"),
+            Word("b"),
+            Colon,
+            Word("list"),
+            Word("--flag"),
+        ])
+        .unwrap();
+        assert_eq!(
+            signature.arguments(&["...{flag: true}", "x", "[b]"]),
+            [None, Some(WORD), Some(LIST)]
+        );
+        // Nu rejects a `{ }` spread without flags.
+        // It fills no positional parameter there either.
+        let with_rest = declared(&OPTIONAL_LIST_THEN_REST).unwrap();
+        assert_eq!(
+            with_rest.arguments(&["...{a: 1}", "[b]"]),
+            [None, Some(LIST)]
+        );
+    }
+
+    /// `a?: list, ...r: int`
+    const OPTIONAL_LIST_THEN_REST: [Item<'static>; 6] = [
+        Item::Word("a?"),
+        Item::Colon,
+        Item::Word("list"),
+        Item::Word("...r"),
+        Item::Colon,
+        Item::Word("int"),
+    ];
+
+    fn with_flag(flag: &'static str) -> Declared<'static> {
+        declared(&[&OPTIONAL_LIST_THEN_REST[..], &[Item::Word(flag)]].concat()).unwrap()
+    }
+
+    #[test]
+    fn variable_or_subexpression_spread_fills_parameters_up_to_rest_only_without_flags() {
+        let without_flags = declared(&OPTIONAL_LIST_THEN_REST).unwrap();
+        for spread in ["...$x", "...($x)"] {
+            assert_eq!(
+                without_flags.arguments(&[spread, "[b]"]),
+                [None, Some(NUMBER)],
+                "{spread}"
+            );
+            assert_eq!(
+                with_flag("--flag").arguments(&[spread, "[b]"]),
+                [None, Some(LIST)],
+                "{spread}"
+            );
+        }
+    }
+
+    #[test]
+    fn declared_help_flag_counts_as_no_flag_for_spread() {
+        assert_eq!(
+            with_flag("--help").arguments(&["...$x", "[b]"]),
+            [None, Some(NUMBER)]
+        );
+    }
+
+    #[test]
+    fn list_spread_fills_parameters_up_to_rest_even_with_flags() {
+        assert_eq!(
+            with_flag("--flag").arguments(&["...[1]", "[b]"]),
+            [None, Some(NUMBER)]
         );
     }
 
