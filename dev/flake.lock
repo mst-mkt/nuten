@@ -303,11 +303,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790380939,
-        "narHash": "sha256-FWCw4bWIOto8uvVC8Nzp2uuD+A0y74sOhGS+XynK39Q=",
+        "lastModified": 1790610636,
+        "narHash": "sha256-xWOyil1RIx64cf8nRkfYF6k99+RQkHlyxqJJTuVmAxM=",
         "ref": "refs/heads/main",
-        "rev": "b79f9e00127b995cc8ea9b5b57bd176ec41c7f5c",
-        "revCount": 336,
+        "rev": "106d85a34fa3268c6abc51310e2bec09b9b8bebd",
+        "revCount": 417,
         "type": "git",
         "url": "ssh://git@github.com/mst-mkt/nuten"
       },
