@@ -40,7 +40,7 @@
               root = ./.;
               inherit fileset;
             };
-          cargoSources = craneLib.fileset.commonCargoSources ./.;
+          cargoSources = lib.fileset.difference (craneLib.fileset.commonCargoSources ./.) ./tasks/fuzz;
           testData = lib.fileset.fileFilter (file: file.hasExt "nu" || file.hasExt "snap") ./crates;
           commonArgs = {
             src = sourceOf cargoSources;
