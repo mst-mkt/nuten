@@ -34,3 +34,23 @@ fn command(server: &str, nuten: Option<String>) -> Result<zed::Command> {
         env: Vec::new(),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::command;
+
+    #[test]
+    fn nuten_on_path_serves_lsp() {
+        let command = command("nuten", Some("/usr/bin/nuten".to_string())).unwrap();
+        assert_eq!(command.command, "/usr/bin/nuten");
+        assert_eq!(command.args, ["lsp"]);
+        assert!(command.env.is_empty());
+    }
+
+    #[test]
+    fn missing_nuten_error_shows_binary_setting_of_server_with_lsp_argument() {
+        let error = command("nuten-dev", None).unwrap_err();
+        assert!(error.contains("`lsp.nuten-dev.binary`"), "{error}");
+        assert!(error.contains(r#""arguments": ["lsp"]"#), "{error}");
+    }
+}
