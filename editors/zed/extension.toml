@@ -1,0 +1,10 @@
+id = "nuten-lsp"
+name = "Nuten"
+description = "A formatter for Nushell. Robust, fast, and tiny."
+version = "0.0.0"
+schema_version = 1
+authors = ["mst-mkt"]
+repository = "https://github.com/mst-mkt/nuten"
+
+[language_servers.nuten]
+languages = ["Nu"]
