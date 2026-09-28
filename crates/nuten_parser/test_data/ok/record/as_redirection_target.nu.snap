@@ -46,5 +46,12 @@ Root@0..43
             Word@33..34 "1"
           RBrace@34..35 "}"
       Whitespace@35..36 " "
-      Word@36..42 "{b: 2}"
+      Record@36..42
+        LBrace@36..37 "{"
+        RecordField@37..41
+          Word@37..38 "b"
+          Colon@38..39 ":"
+          Whitespace@39..40 " "
+          Word@40..41 "2"
+        RBrace@41..42 "}"
   Newline@42..43 "\n"

@@ -24,7 +24,14 @@ Root@0..42
         ExternalCall@11..22
           Word@11..15 "^cmd"
           Whitespace@15..16 " "
-          Word@16..22 "{a: 1}"
+          Record@16..22
+            LBrace@16..17 "{"
+            RecordField@17..21
+              Word@17..18 "a"
+              Colon@18..19 ":"
+              Whitespace@19..20 " "
+              Word@20..21 "1"
+            RBrace@21..22 "}"
         Whitespace@22..23 " "
         Assign@23..24 "="
         Whitespace@24..25 " "

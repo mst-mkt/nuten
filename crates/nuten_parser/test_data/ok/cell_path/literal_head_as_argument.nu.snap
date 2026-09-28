@@ -27,5 +27,15 @@ Root@0..38
       ExternalCall@23..37
         Word@23..28 "^echo"
         Whitespace@28..29 " "
-        Word@29..37 "{a: 1}.b"
+        CellPath@29..37
+          Record@29..35
+            LBrace@29..30 "{"
+            RecordField@30..34
+              Word@30..31 "a"
+              Colon@31..32 ":"
+              Whitespace@32..33 " "
+              Word@33..34 "1"
+            RBrace@34..35 "}"
+          Dot@35..36 "."
+          Word@36..37 "b"
   Newline@37..38 "\n"

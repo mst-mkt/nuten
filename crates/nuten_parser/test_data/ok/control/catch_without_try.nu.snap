@@ -8,5 +8,13 @@ Root@0..13
       ExternalCall@0..12
         Word@0..5 "catch"
         Whitespace@5..6 " "
-        Word@6..12 "{ ls }"
+        Block@6..12
+          LBrace@6..7 "{"
+          Whitespace@7..8 " "
+          Pipeline@8..10
+            PipelineElement@8..10
+              Call@8..10
+                Word@8..10 "ls"
+          Whitespace@10..11 " "
+          RBrace@11..12 "}"
   Newline@12..13 "\n"

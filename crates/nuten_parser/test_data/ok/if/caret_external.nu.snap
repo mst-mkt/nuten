@@ -10,5 +10,10 @@ Root@0..13
         Whitespace@3..4 " "
         Word@4..8 "true"
         Whitespace@8..9 " "
-        Word@9..12 "{1}"
+        Block@9..12
+          LBrace@9..10 "{"
+          Pipeline@10..11
+            PipelineElement@10..11
+              Word@10..11 "1"
+          RBrace@11..12 "}"
   Newline@12..13 "\n"

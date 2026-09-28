@@ -1,0 +1,32 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/external_braces_as_values.nu
+---
+Root@0..28
+  Pipeline@0..27
+    PipelineElement@0..27
+      ExternalCall@0..27
+        Word@0..5 "^echo"
+        Whitespace@5..6 " "
+        Block@6..14
+          LBrace@6..7 "{"
+          ClosureParams@7..10
+            Pipe@7..8 "|"
+            Param@8..9
+              Word@8..9 "x"
+            Pipe@9..10 "|"
+          Whitespace@10..11 " "
+          Pipeline@11..13
+            PipelineElement@11..13
+              Word@11..13 "$x"
+          RBrace@13..14 "}"
+        Whitespace@14..15 " "
+        Record@15..22
+          LBrace@15..16 "{"
+          Spread@16..21
+            SpreadOperator@16..19 "..."
+            Word@19..21 "$x"
+          RBrace@21..22 "}"
+        Whitespace@22..23 " "
+        Word@23..27 "{a}b"
+  Newline@27..28 "\n"

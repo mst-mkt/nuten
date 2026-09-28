@@ -68,5 +68,8 @@ Root@0..76
       ExternalCall@64..75
         Word@64..69 "^echo"
         Whitespace@69..70 " "
-        Word@70..75 "{   }"
+        Record@70..75
+          LBrace@70..71 "{"
+          Whitespace@71..74 "   "
+          RBrace@74..75 "}"
   Newline@75..76 "\n"

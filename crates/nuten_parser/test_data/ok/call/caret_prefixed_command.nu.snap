@@ -35,5 +35,12 @@ Root@0..50
       ExternalCall@38..49
         Word@38..41 "^ls"
         Whitespace@41..42 " "
-        Word@42..49 "{a:  1}"
+        Record@42..49
+          LBrace@42..43 "{"
+          RecordField@43..48
+            Word@43..44 "a"
+            Colon@44..45 ":"
+            Whitespace@45..47 "  "
+            Word@47..48 "1"
+          RBrace@48..49 "}"
   Newline@49..50 "\n"

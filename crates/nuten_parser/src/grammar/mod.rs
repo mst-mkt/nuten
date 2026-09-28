@@ -80,7 +80,7 @@ enum Shape {
     Any,
     /// An argument of a command nu resolves to one of its own.
     /// A `[ ]` stays a word, since the signature may take it as a string.
-    /// A `{ }` is never a string, unlike for an external command.
+    /// A `{ }` is never a string, unlike a `[ ]`.
     /// An empty one stays a word, and so does one with a spread first.
     /// Only the signature tells a record from a closure there.
     /// An argument like `...$x` stays a word as well.
@@ -99,7 +99,8 @@ enum Shape {
     /// What a `let`, a `mut`, or a `const` takes before its operator: the name and any type.
     /// Nu reads those as written, never as a value, so not even `( )` is one.
     VariableName,
-    /// An argument of an external command: a `[ ]` is a list, and a `{ }` a string.
+    /// An argument of an external command: a `[ ]` is a list.
+    /// A `{ }` is a record or a block, as where nu takes any value.
     /// A `...` before a `$`, a `( )`, or a `[ ]` makes a spread, as in a list.
     ExternalArgument,
     /// A block or a closure: the body of a keyword syntax, what `else` takes, what an arm does.
@@ -137,16 +138,17 @@ impl Shape {
 
     fn braced(self, sign: Option<RecordSign>) -> Braced {
         match (self, sign) {
-            (Shape::Any, Some(sign))
+            (Shape::Any | Shape::ExternalArgument, Some(sign))
             | (Shape::KnownArgument | Shape::Block, Some(sign @ RecordSign::ColonSecond)) => {
                 Braced::Record(sign)
             },
             (Shape::KnownArgument, Some(RecordSign::SpreadFirst | RecordSign::Empty))
             | (Shape::RowCondition, Some(_))
-            | (Shape::UnknownArgument | Shape::VariableName | Shape::ExternalArgument, _) => {
-                Braced::Word
-            },
-            (Shape::Any | Shape::KnownArgument | Shape::RowCondition, None)
+            | (Shape::UnknownArgument | Shape::VariableName, _) => Braced::Word,
+            (
+                Shape::Any | Shape::ExternalArgument | Shape::KnownArgument | Shape::RowCondition,
+                None,
+            )
             | (Shape::Block, None | Some(RecordSign::SpreadFirst | RecordSign::Empty))
             | (Shape::DefBody, _) => Braced::Block,
         }

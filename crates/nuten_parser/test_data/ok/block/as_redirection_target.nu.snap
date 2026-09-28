@@ -8,7 +8,13 @@ Root@0..20
       ExternalCall@0..10
         Word@0..5 "^echo"
         Whitespace@5..6 " "
-        Word@6..10 "{ls}"
+        Block@6..10
+          LBrace@6..7 "{"
+          Pipeline@7..9
+            PipelineElement@7..9
+              Call@7..9
+                Word@7..9 "ls"
+          RBrace@9..10 "}"
       Whitespace@10..11 " "
       Redirection@11..19
         OutGt@11..13 "o>"

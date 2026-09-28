@@ -33,7 +33,13 @@ Root@0..112
           Whitespace@34..35 " "
           Pipe@35..36 "|"
           Whitespace@36..37 " "
-          Word@37..42 "{a:1}"
+          Record@37..42
+            LBrace@37..38 "{"
+            RecordField@38..41
+              Word@38..39 "a"
+              Colon@39..40 ":"
+              Word@40..41 "1"
+            RBrace@41..42 "}"
   Newline@42..43 "\n"
   Pipeline@43..65
     PipelineElement@43..65
@@ -86,5 +92,11 @@ Root@0..112
           Whitespace@101..102 " "
           ErrGtPipe@102..105 "e>|"
           Whitespace@105..106 " "
-          Word@106..111 "{a:1}"
+          Record@106..111
+            LBrace@106..107 "{"
+            RecordField@107..110
+              Word@107..108 "a"
+              Colon@108..109 ":"
+              Word@109..110 "1"
+            RBrace@110..111 "}"
   Newline@111..112 "\n"

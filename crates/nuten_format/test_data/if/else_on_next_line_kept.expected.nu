@@ -1,4 +1,4 @@
 if $x {
     1
 }
-else {  2  }
+else { 2 }

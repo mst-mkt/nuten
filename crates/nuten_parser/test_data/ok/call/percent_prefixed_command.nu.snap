@@ -31,14 +31,28 @@ Root@0..84
       ExternalCall@27..42
         Word@27..34 "%nosuch"
         Whitespace@34..35 " "
-        Word@35..42 "{a:  1}"
+        Record@35..42
+          LBrace@35..36 "{"
+          RecordField@36..41
+            Word@36..37 "a"
+            Colon@37..38 ":"
+            Whitespace@38..40 "  "
+            Word@40..41 "1"
+          RBrace@41..42 "}"
   Newline@42..43 "\n"
   Pipeline@43..65
     PipelineElement@43..65
       ExternalCall@43..65
         Word@43..49 "%where"
         Whitespace@49..50 " "
-        Word@50..57 "{a:  1}"
+        Record@50..57
+          LBrace@50..51 "{"
+          RecordField@51..56
+            Word@51..52 "a"
+            Colon@52..53 ":"
+            Whitespace@53..55 "  "
+            Word@55..56 "1"
+          RBrace@56..57 "}"
         Whitespace@57..58 " "
         List@58..65
           LBracket@58..59 "["
