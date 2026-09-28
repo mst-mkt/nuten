@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -95,5 +95,19 @@ suite("formatting", () => {
 
     await setPath(undefined);
     await eventually(() => format(unformatted), formatted);
+  });
+
+  test("path_without_lsp_subcommand_is_not_started_as_server", async () => {
+    const path = join(await directory, "nuten-without-lsp");
+    const invocations = `${path}.invocations`;
+    await writeFile(invocations, "");
+    await writeFile(path, `#!/bin/sh\necho "$@" >> '${invocations}'\nexit 2\n`, { mode: 0o755 });
+
+    await setPath(path);
+    await eventually(() => readFile(invocations, "utf8"), "lsp --help\n");
+
+    await setPath(undefined);
+    await eventually(() => format(unformatted), formatted);
+    assert.equal(await readFile(invocations, "utf8"), "lsp --help\n");
   });
 });

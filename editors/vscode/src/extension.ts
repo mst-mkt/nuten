@@ -1,18 +1,29 @@
+import { execFile } from "node:child_process";
 import { type ExtensionContext, type LogOutputChannel, commands, window, workspace } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 
-const reportStartFailure = () => {
-  void window
-    .showErrorMessage("Failed to start nuten. Check the `nuten.path` setting.", "Open Settings")
-    .then((selection) => {
-      if (selection !== undefined) {
-        void commands.executeCommand("workbench.action.openSettings", "nuten.path");
-      }
-    });
+const reportStartFailure = (message: string) => {
+  void window.showErrorMessage(message, "Open Settings").then((selection) => {
+    if (selection !== undefined) {
+      void commands.executeCommand("workbench.action.openSettings", "nuten.path");
+    }
+  });
+};
+
+const lacksLspSubcommand = (command: string) => {
+  return new Promise<boolean>((resolve) => {
+    execFile(command, ["lsp", "--help"], { timeout: 5_000 }, (error) => resolve(error?.code === 2));
+  }).catch(() => false);
 };
 
 const startClient = async (outputChannel: LogOutputChannel) => {
   const command = workspace.getConfiguration("nuten").get<string>("path", "nuten");
+
+  if (await lacksLspSubcommand(command)) {
+    reportStartFailure(`\`${command}\` has no \`lsp\` subcommand. Update nuten.`);
+    return;
+  }
+
   const client = new LanguageClient(
     "nuten",
     "Nuten",
@@ -20,13 +31,15 @@ const startClient = async (outputChannel: LogOutputChannel) => {
     { documentSelector: [{ language: "nushell" }, { language: "nuon" }], outputChannel },
   );
 
-  await client.start().catch(reportStartFailure);
+  await client
+    .start()
+    .catch(() => reportStartFailure("Failed to start nuten. Check the `nuten.path` setting."));
 
   return client;
 };
 
-const stopClient = async (client: LanguageClient) => {
-  if (client.isRunning()) {
+const stopClient = async (client: LanguageClient | undefined) => {
+  if (client?.isRunning()) {
     await client.dispose();
   }
 };
