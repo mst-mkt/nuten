@@ -257,7 +257,7 @@ impl<'a> Formatter<'a> {
         items: &[Child],
         plain: impl Fn(usize, &Child) -> Option<Element<'static>>,
     ) -> Vec<Element<'a>> {
-        self.spaced_children_by(items, plain, Self::element)
+        self.spaced_children_by(items, plain, |this, _, element| this.element(element))
     }
 
     /// As `spaced_children`, with each child but a comment laid out by `element`.
@@ -265,7 +265,7 @@ impl<'a> Formatter<'a> {
         &mut self,
         items: &[Child],
         plain: impl Fn(usize, &Child) -> Option<Element<'static>>,
-        mut element: impl FnMut(&mut Self, &ast::Element) -> Vec<Element<'a>>,
+        mut element: impl FnMut(&mut Self, usize, &ast::Element) -> Vec<Element<'a>>,
     ) -> Vec<Element<'a>> {
         items
             .iter()
@@ -283,11 +283,11 @@ impl<'a> Formatter<'a> {
                 let (lead, elements) = match item.as_comment() {
                     Some(comment) => (None, self.comment(comment, item.newlines, false)),
                     None if starts_kept_line => {
-                        (Some(hard_line_break()), element(self, &item.element))
+                        (Some(hard_line_break()), element(self, index, &item.element))
                     },
                     None => (
                         separator(prev, plain(index, item)),
-                        element(self, &item.element),
+                        element(self, index, &item.element),
                     ),
                 };
                 lead.into_iter().chain(elements)

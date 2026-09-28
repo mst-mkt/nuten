@@ -22,7 +22,7 @@ impl<'a> Formatter<'a> {
                     && joins_parameters(item, &items[index + 1..], has_body);
                 (!joined).then(|| line_break_or_space(item))
             },
-            |this, element| this.element_or_body(element, body.as_ref()),
+            |this, _, element| this.element_or_body(element, body.as_ref()),
         )
     }
 

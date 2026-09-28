@@ -15,7 +15,7 @@ impl<'a> Formatter<'a> {
         self.spaced_children_by(
             &items,
             |_, item| Some(line_break_or_space(item)),
-            |this, element| match element {
+            |this, _, element| match element {
                 NodeOrToken::Node(Node::Block(block))
                     if !this.kept.keeps(&ast::untyped(element)) =>
                 {

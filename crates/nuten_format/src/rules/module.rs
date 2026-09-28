@@ -24,7 +24,7 @@ impl<'a> Formatter<'a> {
         self.spaced_children_by(
             &items,
             |_, item| Some(line_break_or_space(item)),
-            |this, element| this.element_or_body(element, body),
+            |this, _, element| this.element_or_body(element, body),
         )
     }
 }

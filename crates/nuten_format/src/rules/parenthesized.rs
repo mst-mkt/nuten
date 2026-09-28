@@ -41,7 +41,7 @@ impl<'a> Formatter<'a> {
                     line_break_or_space(item)
                 })
             },
-            |_, _| {
+            |_, _, _| {
                 laid_out
                     .next()
                     .expect("`spaced_children_by` lays out each item but a comment, in order")

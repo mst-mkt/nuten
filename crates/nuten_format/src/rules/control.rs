@@ -9,50 +9,42 @@ use super::{Child, Formatter, block::holds_at_most_one_statement, children, line
 impl<'a> Formatter<'a> {
     pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(keyword.children_with_tokens(), &self.kept).collect();
-        let bodies = body_blocks(&items);
         let expand = !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try)
             || is_statement(keyword)
-            || bodies
-                .iter()
+            || (0..items.len())
+                .filter_map(|index| body_at(&items, index))
                 .any(|body| !holds_at_most_one_statement(body, &self.kept));
         let out = self.spaced_children_by(
             &items,
             |_, item| Some(line_break_or_space(item)),
-            |this, element| match element {
-                NodeOrToken::Node(Node::Block(block))
-                    if bodies.contains(&block) && !this.kept.keeps(&ast::untyped(element)) =>
-                {
-                    let layout = this.block_layout(block);
+            |this, index, element| match body_at(&items, index) {
+                Some(body) if !this.kept.keeps(&ast::untyped(element)) => {
+                    let layout = this.block_layout(body);
                     layout.head.into_iter().chain(layout.rest).collect()
                 },
-                element => this.element(element),
+                _ => this.element(element),
             },
         );
         vec![group(out.into_iter().chain(expand.then(expand_parent)))]
     }
 }
 
+/// The block at `index` among `items`, when it is a body.
 /// A body comes right before an `else` or a `catch`.
 /// The last item but a comment is a body, or what the last `else` takes.
-fn body_blocks(items: &[Child]) -> Vec<&Block> {
-    items
+fn body_at(items: &[Child], index: usize) -> Option<&Block> {
+    let NodeOrToken::Node(Node::Block(block)) = &items[index].element else {
+        return None;
+    };
+    items[index + 1..]
         .iter()
-        .enumerate()
-        .filter(|(index, _)| {
-            items[index + 1..]
-                .iter()
-                .find(|next| !next.is_comment())
-                .is_none_or(|next| {
-                    next.element.as_token().is_some_and(|next| {
-                        next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
-                    })
-                })
+        .find(|next| !next.is_comment())
+        .is_none_or(|next| {
+            next.element.as_token().is_some_and(|next| {
+                next.kind() == SyntaxKind::Word && matches!(next.text(), "else" | "catch")
+            })
         })
-        .filter_map(|(_, item)| match &item.element {
-            NodeOrToken::Node(Node::Block(block)) => Some(block),
-            _ => None,
-        })
-        .collect()
+        .then_some(block)
 }
 
 /// Whether `node`, an `If` or a `Try`, is a statement.
