@@ -26,7 +26,7 @@ impl Default for Config {
             line_width: 100,
             indent_style: IndentStyle::Space,
             indent_width: 4,
-            line_ending: LineEnding::Lf,
+            line_ending: LineEnding::Auto,
             commas: Commas::Inline,
         }
     }
@@ -131,8 +131,15 @@ mod tests {
 
     #[test]
     fn output_ends_with_one_line_break() {
-        for src in ["ls", "ls\n", "ls \n\n", "ls\r\n", "\n\nls\n\n\n"] {
+        for src in ["ls", "ls\n", "ls \n\n", "\n\nls\n\n\n"] {
             assert_eq!(format(src, &Config::default()).unwrap(), "ls\n", "{src:?}");
+        }
+        for src in ["ls\r\n", "ls\r\n\r\n", "\r\nls\r\n"] {
+            assert_eq!(
+                format(src, &Config::default()).unwrap(),
+                "ls\r\n",
+                "{src:?}"
+            );
         }
     }
 

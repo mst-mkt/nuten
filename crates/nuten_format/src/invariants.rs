@@ -594,14 +594,14 @@ mod tests {
 
     #[test]
     fn line_ending_change_is_reported_by_byte() {
-        let violations = formatter_violations("ls\n", "ls\r\n");
+        let violations = formatter_violations("ls\nls\n", "ls\nls\r\n");
         assert_eq!(
             invariant_names(&violations),
             [Invariant::Idempotency.name()]
         );
         assert_eq!(
             violations[0].detail,
-            "the output differs from byte 2 when formatted again"
+            "the output differs from byte 5 when formatted again"
         );
     }
 

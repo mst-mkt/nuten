@@ -43,8 +43,8 @@ const CONFIGS: &[(&str, Change)] = &[
         commas: Commas::Trailing,
         ..config
     }),
-    ("line_ending/auto", |config| Config {
-        line_ending: LineEnding::Auto,
+    ("line_ending/lf", |config| Config {
+        line_ending: LineEnding::Lf,
         ..config
     }),
 ];
