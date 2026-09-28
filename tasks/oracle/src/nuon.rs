@@ -95,7 +95,7 @@ fn differing_byte(a: &str, b: &str) -> usize {
 }
 
 /// Nuten must read the value nu reads, or reject what nu rejects.
-/// Where nu reads what nuten leaves unread, the file is skipped.
+/// Where nuten's parser reads a file otherwise than nu, the file is skipped.
 /// `nu` is the JSON of what nu reads described with its types, or why it fails.
 fn reading_verdict(
     nuten: Result<Value, Vec<ConfigError>>,
@@ -117,12 +117,12 @@ fn reading_verdict(
             let unread = errors.iter().all(|error| {
                 matches!(
                     error.kind,
-                    ConfigErrorKind::Nuon(_) | ConfigErrorKind::Unreadable
+                    ConfigErrorKind::Nuon(_) | ConfigErrorKind::Rejected
                 )
             });
             if unread {
                 Ok(Checked::Skipped(format!(
-                    "nuten does not read it: {message}"
+                    "nuten parses it otherwise than nu: {message}"
                 )))
             } else {
                 Err(format!("nuten rejects what nu reads: {message}"))
@@ -186,6 +186,12 @@ fn type_name(kind: &ValueKind) -> &'static str {
         ValueKind::Float(_) => "float",
         ValueKind::Bool(_) => "bool",
         ValueKind::Null => "nothing",
+        ValueKind::Filesize => "filesize",
+        ValueKind::Duration => "duration",
+        ValueKind::Date => "datetime",
+        ValueKind::Range => "range",
+        ValueKind::Binary => "binary",
+        ValueKind::CellPath => "cell-path",
     }
 }
 
@@ -205,7 +211,17 @@ fn same_scalar(nu: &JsonValue<'_>, nuten: &ValueKind) -> bool {
         // Nu writes a float that is not finite as null.
         (JsonValue::Null, ValueKind::Float(nuten)) => !nuten.is_finite(),
         (JsonValue::Boolean(nu), ValueKind::Bool(nuten)) => nu == nuten,
-        (JsonValue::Null, ValueKind::Null) => true,
+        // Nuten holds no value for these kinds, so their type alone is compared.
+        (JsonValue::Null, ValueKind::Null)
+        | (
+            _,
+            ValueKind::Filesize
+            | ValueKind::Duration
+            | ValueKind::Date
+            | ValueKind::Range
+            | ValueKind::Binary
+            | ValueKind::CellPath,
+        ) => true,
         _ => false,
     }
 }
@@ -240,6 +256,12 @@ fn excerpt(value: &Value) -> String {
         ValueKind::Float(float) => scalar(format!("{float:?}")),
         ValueKind::Bool(boolean) => scalar(boolean.to_string()),
         ValueKind::Null => scalar("null".to_string()),
+        ValueKind::Filesize
+        | ValueKind::Duration
+        | ValueKind::Date
+        | ValueKind::Range
+        | ValueKind::Binary
+        | ValueKind::CellPath => type_name(&value.kind).to_string(),
     }
 }
 
@@ -525,10 +547,37 @@ mod tests {
     }
 
     #[test]
-    fn nuten_leaving_unread_what_nu_reads_is_skipped() {
-        let nu = Ok(record(r#""a": {"type": "filesize", "value": 1000}"#));
-        let checked = reading_verdict(nuten("{a: 1kb}"), nu);
+    fn nuten_parsing_otherwise_than_nu_is_skipped() {
+        let nu = Ok(record(r#""a": {"type": "int", "value": 1}"#));
+        let checked = reading_verdict(nuten("{a: $x}"), nu);
         assert!(matches!(checked, Ok(Checked::Skipped(_))));
+    }
+
+    #[test]
+    fn typed_value_passes_by_type() {
+        let src = "{a: 1kb, b: 1sec, c: 2024-01-01, d: 1..2, e: 0x[ff], f: $.a}";
+        let nu = Ok(record(concat!(
+            r#""a": {"type": "filesize", "value": 1000}, "#,
+            r#""b": {"type": "duration", "value": 1000000000}, "#,
+            r#""c": {"type": "datetime", "value": "2024-01-01T00:00:00+00:00"}, "#,
+            r#""d": {"type": "range", "value": "1..2"}, "#,
+            r#""e": {"type": "binary", "value": [255]}, "#,
+            r#""f": {"type": "cell-path", "value": "$.a"}"#,
+        )));
+        assert!(matches!(
+            reading_verdict(nuten(src), nu),
+            Ok(Checked::Passed)
+        ));
+    }
+
+    #[test]
+    fn typed_value_of_other_type_fails_by_type() {
+        let nu = Ok(record(r#""a": {"type": "int", "value": 1}"#));
+        let error = reading_verdict(nuten("{a: 1kb}"), nu).unwrap_err();
+        assert!(
+            error.ends_with(r#"at "/a": int 1 against filesize"#),
+            "{error}"
+        );
     }
 
     #[test]

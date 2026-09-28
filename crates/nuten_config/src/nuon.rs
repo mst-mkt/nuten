@@ -1,7 +1,7 @@
 //! Reads NUON, the values nu writes as nu code.
 //!
 //! Nu reads any value its parser gives without running code.
-//! Nuten reads each value as nu does, and reports the ones of a type no setting takes.
+//! Nuten reads each value as nu does, by type alone where no setting takes the type.
 
 use nuten_syntax::{NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange};
 
@@ -40,7 +40,7 @@ pub(crate) fn read(text: &str) -> Result<Value, Vec<ConfigError>> {
 fn element_value(element: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
     match &significant(element)[..] {
         [value] => self::value(value, Place::Item),
-        _ => Err(unreadable(element.text_range())),
+        _ => Err(rejected(element.text_range())),
     }
 }
 
@@ -48,15 +48,121 @@ fn value(element: &SyntaxElement, place: Place) -> Result<Value, Vec<ConfigError
     let range = element.text_range();
     let kind = match element {
         NodeOrToken::Token(token) => scalar(token, place),
-        NodeOrToken::Node(node) if node.kind() == SyntaxKind::Record => return record(node),
-        NodeOrToken::Node(node) if node.kind() == SyntaxKind::List => return list(node),
-        NodeOrToken::Node(_) => None,
+        NodeOrToken::Node(node) => match node.kind() {
+            SyntaxKind::Record => return record(node),
+            SyntaxKind::List => return list(node),
+            SyntaxKind::Table => return table(node),
+            SyntaxKind::Range => has_bare_bounds(node).then_some(ValueKind::Range),
+            SyntaxKind::Binary => Some(ValueKind::Binary),
+            // A cell path literal starts with a lone `$`; any other starts with a variable.
+            SyntaxKind::CellPath => node
+                .first_token()
+                .is_some_and(|head| head.text() == "$")
+                .then_some(ValueKind::CellPath),
+            _ => None,
+        },
     };
     kind.map(|kind| Value {
         kind,
         range,
     })
-    .ok_or_else(|| unreadable(range))
+    .ok_or_else(|| rejected(range))
+}
+
+/// Whether every bound of the range `node` is a bare word.
+/// Nu rejects a range with a variable or a subexpression as a bound.
+fn has_bare_bounds(node: &SyntaxNode) -> bool {
+    node.children_with_tokens()
+        .filter(|child| !child.kind().is_trivia())
+        .all(|child| match child {
+            NodeOrToken::Token(token) => {
+                token.kind() == SyntaxKind::RangeOperator
+                    || (token.kind() == SyntaxKind::Word && !token.text().starts_with('$'))
+            },
+            NodeOrToken::Node(_) => false,
+        })
+}
+
+/// Nu reads a table as the list of its rows, each a record with the columns as its keys.
+fn table(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
+    let parts: Vec<_> = items(node)
+        .into_iter()
+        .filter(|part| part.kind() != SyntaxKind::Semicolon)
+        .collect();
+    let [NodeOrToken::Node(header), rows @ ..] = &parts[..] else {
+        return Err(rejected(node.text_range()));
+    };
+    let columns = value::all(items(header).iter().map(column))?;
+    let duplicates: Vec<_> = columns
+        .iter()
+        .enumerate()
+        .filter(|(index, column)| {
+            columns[..*index]
+                .iter()
+                .any(|before| before.name == column.name)
+        })
+        .flat_map(|(_, column)| {
+            error(
+                ConfigErrorKind::DuplicateKey(column.name.clone()),
+                column.range,
+            )
+        })
+        .collect();
+    if !duplicates.is_empty() {
+        return Err(duplicates);
+    }
+    let rows = value::all(rows.iter().map(|row| self::row(row, &columns)))?;
+    Ok(Value {
+        kind: ValueKind::List(rows),
+        range: node.text_range(),
+    })
+}
+
+/// A column of a table, with where its name is written.
+struct Column {
+    name: String,
+    range: TextRange,
+}
+
+/// Nu reads a column as any value, then takes only a string.
+/// A raw string does not count as one there.
+fn column(element: &SyntaxElement) -> Result<Column, Vec<ConfigError>> {
+    let range = element.text_range();
+    match element {
+        NodeOrToken::Token(token) if token.kind() != SyntaxKind::RawString => {
+            match scalar(token, Place::Item) {
+                Some(ValueKind::String(name)) => Ok(Column {
+                    name,
+                    range,
+                }),
+                _ => Err(rejected(range)),
+            }
+        },
+        _ => Err(rejected(range)),
+    }
+}
+
+/// A row must be a list with a cell for each column.
+fn row(element: &SyntaxElement, columns: &[Column]) -> Result<Value, Vec<ConfigError>> {
+    let range = element.text_range();
+    let cells = match element {
+        NodeOrToken::Node(node) if node.kind() == SyntaxKind::List => items(node),
+        _ => return Err(rejected(range)),
+    };
+    if cells.len() != columns.len() {
+        return Err(rejected(range));
+    }
+    let fields = value::all(columns.iter().zip(&cells).map(|(column, cell)| {
+        Ok(Field {
+            key: column.name.clone(),
+            key_range: column.range,
+            value: value(cell, Place::Item)?,
+        })
+    }))?;
+    Ok(Value {
+        kind: ValueKind::Record(fields),
+        range,
+    })
 }
 
 fn list(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
@@ -70,7 +176,7 @@ fn list(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
 fn record(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
     let fields = value::all(items(node).iter().map(|item| match item {
         NodeOrToken::Node(field) if field.kind() == SyntaxKind::RecordField => self::field(field),
-        _ => Err(unreadable(item.text_range())),
+        _ => Err(rejected(item.text_range())),
     }))?;
     value::record(fields, node.text_range())
 }
@@ -78,13 +184,13 @@ fn record(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
 fn field(node: &SyntaxNode) -> Result<Field, Vec<ConfigError>> {
     let parts = significant(node);
     let [NodeOrToken::Token(key), NodeOrToken::Token(colon), value] = &parts[..] else {
-        return Err(unreadable(node.text_range()));
+        return Err(rejected(node.text_range()));
     };
     if colon.kind() != SyntaxKind::Colon {
-        return Err(unreadable(node.text_range()));
+        return Err(rejected(node.text_range()));
     }
     let Some(key_text) = self::key(key) else {
-        return Err(unreadable(key.text_range()));
+        return Err(rejected(key.text_range()));
     };
     Ok(Field {
         key: key_text,
@@ -101,20 +207,20 @@ fn key(token: &SyntaxToken) -> Option<String> {
         SyntaxKind::Word => match word::read(text, Place::Item) {
             Word::Value(ValueKind::String(key)) => Some(key),
             Word::Value(ValueKind::Bool(_) | ValueKind::Null) | Word::Rejected => None,
-            Word::Value(_) | Word::Typed(_) => Some(text.to_string()),
+            Word::Value(_) => Some(text.to_string()),
         },
         SyntaxKind::String => quoted(text),
         _ => None,
     }
 }
 
-/// What a lone token reads as, or `None` for one nu rejects, or of a type no setting takes.
+/// What a lone token reads as, or `None` for one nu rejects.
 fn scalar(token: &SyntaxToken, place: Place) -> Option<ValueKind> {
     let text = token.text();
     match token.kind() {
         SyntaxKind::Word => match word::read(text, place) {
             Word::Value(kind) => Some(kind),
-            Word::Typed(_) | Word::Rejected => None,
+            Word::Rejected => None,
         },
         SyntaxKind::String => quoted(text).map(ValueKind::String),
         SyntaxKind::RawString => Some(ValueKind::String(raw(text).to_string())),
@@ -159,8 +265,8 @@ fn items(node: &SyntaxNode) -> Vec<SyntaxElement> {
         .collect()
 }
 
-fn unreadable(range: TextRange) -> Vec<ConfigError> {
-    error(ConfigErrorKind::Unreadable, range)
+fn rejected(range: TextRange) -> Vec<ConfigError> {
+    error(ConfigErrorKind::Rejected, range)
 }
 
 #[cfg(test)]
@@ -175,8 +281,8 @@ mod tests {
         test_support::errors(text, Format::Nuon)
     }
 
-    fn unreadable() -> String {
-        ConfigErrorKind::Unreadable.to_string()
+    fn rejected() -> String {
+        ConfigErrorKind::Rejected.to_string()
     }
 
     /// What the one field of the record `text` holds.
@@ -334,26 +440,147 @@ mod tests {
     }
 
     #[test]
-    fn value_of_type_no_setting_takes_is_unreadable() {
-        for value in [
-            "1kb",
-            "1sec",
-            "2024-01-01",
-            "1..2",
-            "..2",
-            "0x[ff]",
-            "[[a]; [1]]",
-            "$.a",
+    fn value_of_type_no_setting_takes_is_read_by_type() {
+        for (value, kind) in [
+            ("1kb", ValueKind::Filesize),
+            ("1sec", ValueKind::Duration),
+            ("2024-01-01", ValueKind::Date),
+            ("1..2", ValueKind::Range),
+            ("..2", ValueKind::Range),
+            ("0x[ff]", ValueKind::Binary),
+            ("0x[]", ValueKind::Binary),
+            ("$.a", ValueKind::CellPath),
+            ("$.a.0?", ValueKind::CellPath),
         ] {
             let text = format!("{{a: {value}}}");
-            assert_eq!(errors(&text), [(unreadable(), value)], "{text}");
+            assert_eq!(field_value(&text), kind, "{text}");
         }
     }
 
     #[test]
-    fn value_nu_rejects_is_unreadable() {
+    fn setting_given_type_it_does_not_take_is_reported_by_type() {
+        for (value, found) in [
+            ("1kb", "a filesize"),
+            ("1sec", "a duration"),
+            ("2024-01-01", "a date"),
+            ("1..2", "a range"),
+            ("0x[ff]", "a binary"),
+            ("$.a", "a cell path"),
+        ] {
+            let text = format!("{{line_width: {value}}}");
+            let message = format!("`line_width` takes an integer, not {found}");
+            assert_eq!(errors(&text), [(message, value)], "{text}");
+        }
+    }
+
+    /// The rows of the table `text` holds, each as its fields' keys and kinds.
+    fn rows(text: &str) -> Vec<Vec<(String, ValueKind)>> {
+        let ValueKind::List(rows) = field_value(text) else {
+            panic!("{text} holds no table");
+        };
+        rows.into_iter()
+            .map(|row| {
+                let ValueKind::Record(fields) = row.kind else {
+                    panic!("{text} has a row that is no record");
+                };
+                fields
+                    .into_iter()
+                    .map(|field| (field.key, field.value.kind))
+                    .collect()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn table_is_list_of_records_keyed_by_its_columns() {
+        assert_eq!(
+            rows("{a: [[b, \"c d\", e.f]; [1 x 2] [true, null, \"g\"]]}"),
+            [
+                vec![
+                    ("b".to_string(), ValueKind::Int(1)),
+                    ("c d".to_string(), string("x")),
+                    ("e.f".to_string(), ValueKind::Int(2)),
+                ],
+                vec![
+                    ("b".to_string(), ValueKind::Bool(true)),
+                    ("c d".to_string(), ValueKind::Null),
+                    ("e.f".to_string(), string("g")),
+                ],
+            ]
+        );
+        let nested = rows("{a: [[b, c]; [[2] {g: 1}]]}");
+        assert!(matches!(&nested[0][0].1, ValueKind::List(items) if items.len() == 1));
+        assert!(matches!(&nested[0][1].1, ValueKind::Record(fields) if fields[0].key == "g"));
+        assert_eq!(rows("{a: [[]; []]}"), [Vec::new()]);
+        assert_eq!(
+            rows("{a: [[b]; [x:y]]}"),
+            [vec![("b".to_string(), string("x:y"))]]
+        );
+        assert_eq!(
+            rows("{a: [[b]; [1], [2],]}"),
+            [
+                vec![("b".to_string(), ValueKind::Int(1))],
+                vec![("b".to_string(), ValueKind::Int(2))],
+            ]
+        );
+    }
+
+    #[test]
+    fn table_row_with_other_number_of_cells_is_rejected() {
+        for (text, at) in [
+            ("{a: [[b c]; [1]]}", "[1]"),
+            ("{a: [[b]; [1 2]]}", "[1 2]"),
+            ("{a: [[]; [1]]}", "[1]"),
+        ] {
+            assert_eq!(errors(text), [(rejected(), at)], "{text}");
+        }
+    }
+
+    #[test]
+    fn table_column_that_is_no_string_is_rejected() {
+        for (text, at) in [
+            ("{a: [[1]; [1]]}", "1"),
+            ("{a: [[true]; [1]]}", "true"),
+            ("{a: [[2024-01-01]; [1]]}", "2024-01-01"),
+            ("{a: [[r#'b'#]; [1]]}", "r#'b'#"),
+            ("{a: [[[b]]; [1]]}", "[b]"),
+        ] {
+            assert_eq!(errors(text), [(rejected(), at)], "{text}");
+        }
+    }
+
+    #[test]
+    fn table_duplicate_column_is_reported_at_later_column() {
+        assert_eq!(
+            errors("{a: [[b, 'b']; [1 2]]}"),
+            [("duplicate key `b`".to_string(), "'b'")]
+        );
+    }
+
+    #[test]
+    fn table_reports_every_duplicate_column_before_its_rows() {
+        assert_eq!(
+            errors("{a: [[b, \"b\", c, 'c']; [1]]}"),
+            [
+                ("duplicate key `b`".to_string(), "\"b\""),
+                ("duplicate key `c`".to_string(), "'c'"),
+            ]
+        );
+    }
+
+    #[test]
+    fn table_cell_nu_rejects_is_rejected() {
+        assert_eq!(errors("{a: [[b]; [$x]]}"), [(rejected(), "$x")]);
+    }
+
+    #[test]
+    fn value_nu_rejects_is_rejected() {
         for value in [
             "$x",
+            "$x.a",
+            "$x..2",
+            "(1)..2",
+            "1..$x",
             "$\"x\"",
             "(1)",
             "{|| 1}",
@@ -366,7 +593,7 @@ mod tests {
             r#""\xff""#,
         ] {
             let text = format!("{{a: {value}}}");
-            assert_eq!(errors(&text), [(unreadable(), value)], "{text}");
+            assert_eq!(errors(&text), [(rejected(), value)], "{text}");
         }
     }
 
@@ -396,24 +623,24 @@ mod tests {
     }
 
     #[test]
-    fn key_nu_rejects_is_unreadable() {
+    fn key_nu_rejects_is_rejected() {
         for key in [
             "true", "false", "null", "$schema", "a(b)", "r#'x'#", r#""\q""#,
         ] {
             let text = format!("{{{key}: 1}}");
-            assert_eq!(errors(&text), [(unreadable(), key)], "{text}");
+            assert_eq!(errors(&text), [(rejected(), key)], "{text}");
         }
     }
 
     #[test]
-    fn irregular_entry_is_unreadable() {
+    fn irregular_entry_is_rejected() {
         for (text, at) in [
             ("{a: 1 b}", &["b"][..]),
             ("{a: 1; b: 2}", &["; b:", "2"]),
             ("{...$x}", &["...$x"]),
             ("{a: 1} o> x", &["{a: 1} o> x"]),
         ] {
-            let expected: Vec<_> = at.iter().map(|at| (unreadable(), *at)).collect();
+            let expected: Vec<_> = at.iter().map(|at| (rejected(), *at)).collect();
             assert_eq!(errors(text), expected, "{text}");
         }
     }
@@ -503,8 +730,8 @@ mod tests {
     }
 
     #[test]
-    fn byte_order_mark_is_unreadable() {
+    fn byte_order_mark_is_rejected() {
         let text = "\u{feff}{}";
-        assert_eq!(errors(text), [(unreadable(), text)]);
+        assert_eq!(errors(text), [(rejected(), text)]);
     }
 }

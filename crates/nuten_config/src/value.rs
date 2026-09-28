@@ -22,6 +22,14 @@ pub enum ValueKind {
     Float(f64),
     Bool(bool),
     Null,
+
+    /// This and the kinds below hold no value, since no setting takes one.
+    Filesize,
+    Duration,
+    Date,
+    Range,
+    Binary,
+    CellPath,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,6 +51,12 @@ impl ValueKind {
             ValueKind::Float(_) => "a float",
             ValueKind::Bool(_) => "a boolean",
             ValueKind::Null => "null",
+            ValueKind::Filesize => "a filesize",
+            ValueKind::Duration => "a duration",
+            ValueKind::Date => "a date",
+            ValueKind::Range => "a range",
+            ValueKind::Binary => "a binary",
+            ValueKind::CellPath => "a cell path",
         }
     }
 }

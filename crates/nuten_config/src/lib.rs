@@ -156,8 +156,9 @@ pub enum ConfigErrorKind {
     /// Text the JSON parser rejects, with what it says.
     Json(String),
     Nuon(ParseErrorKind),
-    /// A NUON value of a form nuten does not read, though nu may.
-    Unreadable,
+    /// A NUON value nu rejects.
+    /// Or one nuten's parser reads otherwise than nu does, which only the nu oracle can tell.
+    Rejected,
     /// A second value in a NUON file.
     ExtraValue,
     DuplicateKey(String),
@@ -196,10 +197,7 @@ impl fmt::Display for ConfigErrorKind {
         match self {
             ConfigErrorKind::Json(message) => f.write_str(message),
             ConfigErrorKind::Nuon(kind) => fmt::Display::fmt(kind, f),
-            ConfigErrorKind::Unreadable => f.write_str(
-                "value nuten does not read; it reads strings, integers, floats, `true`, `false`, \
-                 `null`, lists, and records as nu does, and rejects what nu rejects",
-            ),
+            ConfigErrorKind::Rejected => f.write_str("value nu rejects"),
             ConfigErrorKind::ExtraValue => f.write_str("value after the first; NUON holds one"),
             ConfigErrorKind::DuplicateKey(key) => write!(f, "duplicate key `{key}`"),
             ConfigErrorKind::NotRecord {

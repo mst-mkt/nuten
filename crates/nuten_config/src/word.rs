@@ -20,18 +20,8 @@ pub(crate) enum Place {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Word {
     Value(ValueKind),
-    /// A value of a type no setting takes.
-    Typed(Type),
     /// Nu rejects the word.
     Rejected,
-}
-
-/// A type of value nu reads that no setting takes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Type {
-    Filesize,
-    Duration,
-    Date,
 }
 
 /// The suffixes nu takes for a filesize, in the order it looks for them in the word made uppercase.
@@ -64,7 +54,7 @@ pub(crate) fn read(text: &str, place: Place) -> Word {
         return word;
     }
     if is_datetime(text) {
-        return Word::Typed(Type::Date);
+        return Word::Value(ValueKind::Date);
     }
     if let Some(word) = number(text) {
         return word;
@@ -98,22 +88,26 @@ fn typed_by_unit(text: &str) -> Option<Word> {
     let filesize = if text.starts_with("0x") {
         None
     } else {
-        number_before_unit(&text.to_ascii_uppercase(), &FILESIZE_UNITS, Type::Filesize)
+        number_before_unit(
+            &text.to_ascii_uppercase(),
+            &FILESIZE_UNITS,
+            ValueKind::Filesize,
+        )
     };
-    filesize.or_else(|| number_before_unit(text, &DURATION_UNITS, Type::Duration))
+    filesize.or_else(|| number_before_unit(text, &DURATION_UNITS, ValueKind::Duration))
 }
 
-/// `Typed(kind)` where one of `units` ends `text` and the number before it is well formed.
+/// `Value(kind)` where one of `units` ends `text` and the number before it is well formed.
 /// `Rejected` where that number is malformed.
 /// `None` where no unit ends `text`, or a `$` ends the number, which nu leaves to the next shape.
-fn number_before_unit(text: &str, units: &[&str], kind: Type) -> Option<Word> {
+fn number_before_unit(text: &str, units: &[&str], kind: ValueKind) -> Option<Word> {
     let unit = units.iter().find(|unit| text.ends_with(*unit))?;
     let number = without_underscores(&text[..text.len() - unit.len()]);
     if number.ends_with('$') {
         return None;
     }
     Some(if number.parse::<f64>().is_ok() {
-        Word::Typed(kind)
+        Word::Value(kind)
     } else {
         Word::Rejected
     })
@@ -245,7 +239,7 @@ fn without_underscores(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Place, Type, Word, is_datetime, read};
+    use super::{Place, Word, is_datetime, read};
     use crate::value::ValueKind;
 
     fn item(text: &str) -> Word {
@@ -457,7 +451,7 @@ mod tests {
             "1kb", "1KB", "1Kb", "1kib", "1KiB", "2b", "2B", "1eb", "1pb", ".5kb", "-1kb", "1e3kb",
             "1.5kb", "1_kb", "1e400kb",
         ] {
-            assert_eq!(item(text), Word::Typed(Type::Filesize), "{text}");
+            assert_eq!(item(text), Word::Value(ValueKind::Filesize), "{text}");
         }
         for text in [
             "1ns",
@@ -473,7 +467,7 @@ mod tests {
             "1.5day",
             "1e3sec",
         ] {
-            assert_eq!(item(text), Word::Typed(Type::Duration), "{text}");
+            assert_eq!(item(text), Word::Value(ValueKind::Duration), "{text}");
         }
         assert_eq!(item("0x10b"), Word::Value(ValueKind::Int(267)));
     }
@@ -505,7 +499,7 @@ mod tests {
             "2024-01-01T00:00:00.5",
             "2024-01-01T00:00:00.123456789012",
         ] {
-            assert_eq!(item(text), Word::Typed(Type::Date), "{text}");
+            assert_eq!(item(text), Word::Value(ValueKind::Date), "{text}");
         }
     }
 

@@ -14,7 +14,7 @@
 //! Its `nufmt` holds the cases nushell/nufmt broke, each headed by the URL of its report.
 //! It takes files, and directories to search for `.nu` and `.nuon` files.
 //! It skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
-//! It asks about formatting before it skips a `.nuon` file that nu reads and nuten leaves unread.
+//! It asks about formatting before it skips a `.nuon` file nuten parses otherwise than nu.
 //! It exits with 1 when any other file cannot be checked, or its AST or value differs.
 //! It exits with 1 too when a file breaks an invariant.
 //! It exits with 2 when the arguments name no `.nu` or `.nuon` file.

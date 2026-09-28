@@ -205,7 +205,7 @@ fn format_passes_nuon_file_whose_value_nuten_keeps() {
     let dir = TempDir::new();
     let file = dir.file(
         "a.nuon",
-        "{a: 1,\n b: [x 'y' true null 1.5 nan inf], c: {d: {}}}\n",
+        "{a: 1,\n b: [x 'y' true null 1.5 nan inf], c: {d: {}}, e: 2024-01-01}\n",
     );
 
     let output = oracle("format", &[&file]);
@@ -255,19 +255,20 @@ fn format_passes_nuon_file_with_syntax_errors_nu_rejects_too() {
 }
 
 #[test]
-fn format_skips_nuon_file_nuten_leaves_unread_after_asking_about_its_formatting() {
+fn format_skips_nuon_file_nuten_parses_otherwise_after_asking_about_its_formatting() {
     if nu_missing() {
         return;
     }
     let dir = TempDir::new();
-    let file = dir.file("a.nuon", "{a: 1kb,\n b: 2}\n");
+    // Nuten's parser keeps `[a;b]` one word, which nu reads as the list of `a`.
+    let file = dir.file("a.nuon", "[a;b]\n");
 
     let output = oracle("format", &[&file]);
 
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(
-        stderr.contains("formatting keeps what nu reads; nuten does not read it"),
+        stderr.contains("formatting keeps what nu reads; nuten parses it otherwise than nu"),
         "{stderr}"
     );
     assert!(
