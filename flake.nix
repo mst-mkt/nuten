@@ -154,8 +154,48 @@
           };
         });
 
+      zedExtensionChecksOf =
+        pkgs:
+        let
+          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain (
+            p:
+            with inputs.fenix.packages.${p.stdenv.hostPlatform.system};
+            combine [
+              (stable.withComponents [
+                "cargo"
+                "rustc"
+                "clippy"
+              ])
+              targets.wasm32-wasip2.stable.rust-std
+            ]
+          );
+          commonArgs = {
+            src = craneLib.cleanCargoSource ./editors/zed;
+            strictDeps = true;
+          };
+          wasmArgs = commonArgs // {
+            CARGO_BUILD_TARGET = "wasm32-wasip2";
+            doCheck = false;
+          };
+          wasm = wasmArgs // {
+            cargoArtifacts = craneLib.buildDepsOnly wasmArgs;
+          };
+        in
+        {
+          zed-extension = craneLib.buildPackage wasm;
+          zed-extension-clippy = craneLib.cargoClippy (
+            wasm // { cargoClippyExtraArgs = "--all-targets -- --deny warnings"; }
+          );
+          zed-extension-test = craneLib.cargoTest (
+            commonArgs // { cargoArtifacts = craneLib.buildDepsOnly commonArgs; }
+          );
+        };
+
       nuten = forAllSystems (system: nutenOf inputs.nixpkgs.legacyPackages.${system});
       vscodeExtension = forAllSystems (system: vscodeExtensionOf inputs.nixpkgs.legacyPackages.${system});
+      zedExtensionChecks = forAllSystems (
+        system: zedExtensionChecksOf inputs.nixpkgs.legacyPackages.${system}
+      );
     in
     {
       packages = forAllSystems (system: {
@@ -218,10 +258,14 @@
           ];
         };
 
-      checks = forAllSystems (system: {
-        build = nuten.${system}.package;
-        inherit (nuten.${system}) clippy nextest doc;
-        vscode-extension = vscodeExtension.${system};
-      });
+      checks = forAllSystems (
+        system:
+        {
+          build = nuten.${system}.package;
+          inherit (nuten.${system}) clippy nextest doc;
+          vscode-extension = vscodeExtension.${system};
+        }
+        // zedExtensionChecks.${system}
+      );
     };
 }
