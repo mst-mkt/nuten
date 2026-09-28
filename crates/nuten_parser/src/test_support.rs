@@ -1,15 +1,16 @@
 //! Inputs shared by tests, and a way to ask nu.
 
-use std::process::Command;
+use std::{env, process::Command};
 
 /// What nu prints for `pipeline`, line by line.
-/// `None` when nu cannot be run, so that a machine without it still runs every other test.
+/// `None` when nu cannot be run and `NUTEN_TEST_SKIP_NU` is set.
 /// Nu failing means the pipeline no longer asks what it meant to, which must not pass.
 pub(crate) fn asked(pipeline: &str) -> Option<Vec<String>> {
-    let output = Command::new("nu")
-        .args(["-n", "-c", pipeline])
-        .output()
-        .ok()?;
+    let output = match Command::new("nu").args(["-n", "-c", pipeline]).output() {
+        Ok(output) => output,
+        Err(_) if env::var_os("NUTEN_TEST_SKIP_NU").is_some() => return None,
+        Err(error) => panic!("nu: {error}; set NUTEN_TEST_SKIP_NU to skip the tests that need nu"),
+    };
     assert!(
         output.status.success(),
         "{pipeline}: {}",

@@ -2,7 +2,7 @@
 //! Unless it has syntax errors, it must keep those of the formatter too.
 //! Exactly the files in `SYNTAX_ERRORS` have syntax errors.
 //! The corpus is the directory `NUTEN_CORPUS` names, which the devShell sets.
-//! Without it the test is skipped.
+//! Without it the test fails, unless `NUTEN_TEST_SKIP_CORPUS` is set to skip it.
 
 #![expect(clippy::print_stderr, reason = "what is skipped is reported")]
 
@@ -33,6 +33,10 @@ const SYNTAX_ERRORS: &[&str] = &[
 #[test]
 fn every_file_keeps_invariants_with_syntax_errors_as_listed() {
     let Some(dir) = env::var_os("NUTEN_CORPUS").map(PathBuf::from) else {
+        assert!(
+            env::var_os("NUTEN_TEST_SKIP_CORPUS").is_some(),
+            "NUTEN_CORPUS is not set; set NUTEN_TEST_SKIP_CORPUS to skip the corpus"
+        );
         eprintln!("skipping the corpus: NUTEN_CORPUS is not set");
         return;
     };

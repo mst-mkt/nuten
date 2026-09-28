@@ -397,17 +397,21 @@ mod tests {
         );
     }
 
-    /// The crane build that runs the tests has no nu.
+    /// The crane build that runs the tests has no nu, and sets `NUTEN_TEST_SKIP_NU` to say so.
     fn nu_missing() -> bool {
-        let missing = nu::check_version().is_err();
-        if missing {
+        let checked = nu::check_version();
+        if let Err(error) = &checked {
+            assert!(
+                std::env::var_os("NUTEN_TEST_SKIP_NU").is_some(),
+                "{error}; set NUTEN_TEST_SKIP_NU to skip the tests that need nu"
+            );
             let test = std::thread::current()
                 .name()
                 .unwrap_or_default()
                 .to_string();
-            eprintln!("skipping {test}: nu is not on PATH");
+            eprintln!("skipping {test}: {error}");
         }
-        missing
+        checked.is_err()
     }
 
     #[test]

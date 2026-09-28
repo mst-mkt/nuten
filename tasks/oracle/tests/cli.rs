@@ -1,5 +1,5 @@
 //! Runs the binary on files in a temporary directory.
-//! Without nu on PATH the tests that need it are skipped.
+//! Without nu on PATH the tests that need it fail, unless `NUTEN_TEST_SKIP_NU` is set to skip them.
 
 #![expect(clippy::print_stderr, reason = "what is skipped is reported")]
 
@@ -62,10 +62,14 @@ fn run(args: &[&OsStr], paths: &[&PathBuf]) -> Output {
         .unwrap()
 }
 
-/// The crane build that runs the tests has no nu.
+/// The crane build that runs the tests has no nu, and sets `NUTEN_TEST_SKIP_NU` to say so.
 fn nu_missing() -> bool {
     let missing = Command::new("nu").arg("--version").output().is_err();
     if missing {
+        assert!(
+            env::var_os("NUTEN_TEST_SKIP_NU").is_some(),
+            "nu is not on PATH; set NUTEN_TEST_SKIP_NU to skip the tests that need nu"
+        );
         let test = thread::current().name().unwrap_or_default().to_string();
         eprintln!("skipping {test}: nu is not on PATH");
     }
