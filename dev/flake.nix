@@ -78,6 +78,7 @@
             "rust-src"
             "rust-analyzer"
           ])
+          targets.wasm32-wasip2.stable.rust-std
           latest.rustfmt
         ]
       );
