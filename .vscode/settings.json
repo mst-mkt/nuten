@@ -22,6 +22,12 @@
   "[nix]": {
     "editor.defaultFormatter": "jnoortheen.nix-ide"
   },
+  "[nushell]": {
+    "editor.defaultFormatter": "mst-mkt.nuten-vscode"
+  },
+  "[nuon]": {
+    "editor.defaultFormatter": "mst-mkt.nuten-vscode"
+  },
   "[typescript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode",
     "editor.codeActionsOnSave": {
