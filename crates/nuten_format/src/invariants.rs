@@ -23,9 +23,12 @@ pub enum Invariant {
     /// A `ShortFlag` counts as one with the token before it.
     /// The formatter may join the two, as nu reads them.
     Tokens,
-    /// The output has the comments of the source, in order.
+    /// The output has the comments of the source, in order, each after as many tokens as it was.
+    /// Moving one past a token can change what nu reads it as documenting.
     /// Each stands on its own line or at the end of a line, as it was.
     /// Between statements or the arms of a `match`, a blank line follows it or not, as it was.
+    /// Its text, its place, and these two are all nu reads to describe a command or a parameter.
+    /// So does the description of a module, which nu reads from the comments at the top of a file.
     /// Spaces and tabs at the end of a comment do not count, since the printer trims them.
     /// Nor do `\r`s there, which it trims with `\n` line endings.
     /// Nor do blank lines at the end of the file, a block, the arms, or a subexpression.
@@ -108,28 +111,36 @@ fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Viola
     .collect()
 }
 
-fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
-    // The leaves rather than the lexer's tokens, since the parser relabels some.
-    fn leaves(tree: &SyntaxNode) -> Vec<(SyntaxKind, String)> {
-        let mut leaves: Vec<(SyntaxKind, String)> = Vec::new();
-        let tokens = tree
-            .descendants_with_tokens()
-            .filter_map(SyntaxElement::into_token)
-            .filter(|token| !token.kind().is_trivia() && token.kind() != SyntaxKind::Comma);
-        for token in tokens {
-            match leaves.last_mut() {
-                Some((_, last)) if token.kind() == SyntaxKind::ShortFlag => {
-                    last.push_str(token.text());
-                },
-                _ => leaves.push((token.kind(), token.text().to_string())),
-            }
+/// Whether a token of `kind` is one of those `Tokens` compares, given whether any stands before it.
+/// A `ShortFlag` after one is part of that one instead.
+fn counted(kind: SyntaxKind, first: bool) -> bool {
+    !kind.is_trivia() && kind != SyntaxKind::Comma && (first || kind != SyntaxKind::ShortFlag)
+}
+
+/// The tokens `Tokens` compares, in order.
+/// The leaves rather than the lexer's tokens, since the parser relabels some.
+fn tokens_of(tree: &SyntaxNode) -> Vec<(SyntaxKind, String)> {
+    let mut leaves: Vec<(SyntaxKind, String)> = Vec::new();
+    for token in tree
+        .descendants_with_tokens()
+        .filter_map(SyntaxElement::into_token)
+    {
+        if counted(token.kind(), leaves.is_empty()) {
+            leaves.push((token.kind(), token.text().to_string()));
+        } else if let Some((_, last)) = leaves.last_mut()
+            && token.kind() == SyntaxKind::ShortFlag
+        {
+            last.push_str(token.text());
         }
-        leaves
     }
+    leaves
+}
+
+fn tokens(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
     fn describe((kind, text): &(SyntaxKind, String)) -> String {
         format!("{kind:?} {text:?}")
     }
-    let (source, output) = (leaves(tree), leaves(output_tree));
+    let (source, output) = (tokens_of(tree), tokens_of(output_tree));
     let index = mismatch(&source, &output);
     let detail = match (source.get(index), output.get(index)) {
         (None, None) => return None,
@@ -168,6 +179,8 @@ fn comments(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
 struct Comment {
     /// Without the spaces, tabs, and `\r`s at its end.
     text: String,
+    /// How many of the tokens `Tokens` compares stand before it.
+    tokens_before: usize,
     own_line: bool,
     /// False inside a statement and at the end of the file, a block, or a subexpression.
     blank_line_after: bool,
@@ -181,8 +194,12 @@ impl fmt::Display for Comment {
         } else {
             "at the end of a line"
         })?;
+        match self.tokens_before {
+            1 => f.write_str(" after 1 token")?,
+            count => write!(f, " after {count} tokens")?,
+        }
         if self.blank_line_after {
-            f.write_str(" with a blank line after it")?;
+            f.write_str(", followed by a blank line")?;
         }
         Ok(())
     }
@@ -215,6 +232,14 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
         .filter_map(SyntaxElement::into_token)
         .filter(|token| !matches!(token.kind(), SyntaxKind::Whitespace | SyntaxKind::Comma))
         .collect();
+    let tokens_before: Vec<_> = tokens
+        .iter()
+        .scan(0, |count, token| {
+            let before = *count;
+            *count += usize::from(counted(token.kind(), before == 0));
+            Some(before)
+        })
+        .collect();
     tokens
         .iter()
         .enumerate()
@@ -230,6 +255,7 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
                     .is_some_and(|kind| !matches!(kind, SyntaxKind::RBrace | SyntaxKind::RParen));
             Comment {
                 text: token.text().trim_end_matches([' ', '\t', '\r']).to_string(),
+                tokens_before: tokens_before[index],
                 own_line,
                 blank_line_after,
             }
@@ -413,15 +439,15 @@ mod tests {
         assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
         assert_eq!(
             violations[0].detail,
-            "comment 1 is \"# c\" at the end of a line in the source \
-             and \"# c\" on its own line in the output"
+            "comment 1 is \"# c\" at the end of a line after 1 token in the source \
+             and \"# c\" on its own line after 0 tokens in the output"
         );
         let violations = formatter_violations("# c\n\nls\n", "# c\nls\n");
         assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
         assert_eq!(
             violations[0].detail,
-            "comment 1 is \"# c\" on its own line with a blank line after it in the source \
-             and \"# c\" on its own line in the output"
+            "comment 1 is \"# c\" on its own line after 0 tokens, followed by a blank line \
+             in the source and \"# c\" on its own line after 0 tokens in the output"
         );
         let violations = formatter_violations("# c\nls\n", "# c\n\nls\n");
         assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
@@ -429,7 +455,28 @@ mod tests {
         assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
         assert_eq!(
             violations[0].detail,
-            "comment 1, \"# c\" at the end of a line, is not in the source"
+            "comment 1, \"# c\" at the end of a line after 1 token, is not in the source"
+        );
+    }
+
+    #[test]
+    fn output_keeps_every_comment_after_the_same_tokens() {
+        let violations = formatter_violations("# a\ndef f [] {}\n", "def f [] {}\n# a\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+        assert_eq!(
+            violations[0].detail,
+            "comment 1 is \"# a\" on its own line after 0 tokens in the source \
+             and \"# a\" on its own line after 6 tokens in the output"
+        );
+        let violations = formatter_violations("ls # a\nls\n", "ls\nls # a\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+        let violations =
+            formatter_violations("# a\n\n# b\ndef f [] {}\n", "# a\ndef f [] {}\n\n# b\n");
+        assert_eq!(invariant_names(&violations), [Invariant::Comments.name()]);
+        assert_eq!(formatter_violations("ls -a -b # c\n", "ls -a -b # c\n"), []);
+        assert_eq!(
+            formatter_violations("[a\n# c\n, b]\n", "[\n    a\n    # c\n    b\n]\n"),
+            []
         );
     }
 
@@ -576,7 +623,8 @@ mod tests {
         let violation = &formatter_violations("ls\n", "ls # c\n")[0];
         assert_eq!(
             violation.to_string(),
-            "comment preservation: comment 1, \"# c\" at the end of a line, is not in the source"
+            "comment preservation: comment 1, \"# c\" at the end of a line after 1 token, \
+             is not in the source"
         );
     }
 }
