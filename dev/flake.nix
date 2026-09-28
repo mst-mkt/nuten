@@ -176,6 +176,7 @@
             "benchmark"
             "lsp"
             "vscode"
+            "zed"
             "assets"
           ];
         in
