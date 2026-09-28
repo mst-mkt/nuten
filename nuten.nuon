@@ -1,0 +1,8 @@
+{
+    indent_style: space
+    indent_width: 4
+    line_ending: lf
+    commas: inline
+    include: [*.nu, *.nuon]
+    exclude: [test_data]
+}
