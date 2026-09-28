@@ -46,7 +46,12 @@
               ./editors/zed
             ]
           );
-          testData = lib.fileset.fileFilter (file: file.hasExt "nu" || file.hasExt "snap") ./crates;
+          testData = lib.fileset.unions (
+            map (lib.fileset.fileFilter (file: file.hasExt "nu" || file.hasExt "snap")) [
+              ./crates
+              ./tasks/oracle
+            ]
+          );
           commonArgs = {
             src = sourceOf cargoSources;
             strictDeps = true;
