@@ -7,7 +7,7 @@ use std::{
 };
 
 /// The series the formatter targets, as a prefix of `nu --version`.
-const VERSION: &str = "0.115.";
+const VERSION: &str = "0.116.";
 
 /// Fails when nu cannot be run or is not of the series the formatter targets.
 pub(crate) fn check_version() -> Result<(), String> {

@@ -263,8 +263,9 @@ fn format_skips_nuon_file_nuten_parses_otherwise_after_asking_about_its_formatti
         return;
     }
     let dir = TempDir::new();
-    // Nuten's parser keeps `[a;b]` one word, which nu reads as the list of `a`.
-    let file = dir.file("a.nuon", "[a;b]\n");
+    // Nu drops the redirection `o> b` in `[a o> b]` to read `[a]`.
+    // Nuten keeps `o>` an item, which it rejects as a value.
+    let file = dir.file("a.nuon", "[a o> b]\n");
 
     let output = oracle("format", &[&file]);
 

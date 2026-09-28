@@ -138,7 +138,7 @@ fn record_field(p: &mut Parser<'_>) {
     p.finish();
 }
 
-/// Nu splits the patterns at a `|`, and reads none past a `;` or a redirection.
+/// Nu splits the patterns at a `|`, rejects a `;`, and reads none past a redirection.
 /// It reads none past a rest either.
 /// It takes `=` as a string, but nuten lexes it as an operator.
 fn list_pattern(p: &mut Parser<'_>) {

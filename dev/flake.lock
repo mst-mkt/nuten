@@ -220,22 +220,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-nushell": {
-      "locked": {
-        "lastModified": 1789073787,
-        "narHash": "sha256-xfX/toC2QV707s06GbP4II/TxYF0fNQj7s5/LClNDKc=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "aff8a0b28396750446e5537a96461bc4facdb287",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "aff8a0b28396750446e5537a96461bc4facdb287",
-        "type": "github"
-      }
-    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1788297115,
@@ -248,6 +232,22 @@
       "original": {
         "owner": "NixOS",
         "ref": "nixos-26.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1789426278,
+        "narHash": "sha256-GnotcvKtbTMnoVx6G4E7ZdUX6487Dky74dqq3pU7iRk=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "efe6f071ede9d21c37462d2d6682d5e670099684",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -267,6 +267,28 @@
       "original": {
         "owner": "nushell",
         "repo": "nufmt",
+        "type": "github"
+      }
+    },
+    "nushell": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_3",
+        "rust-overlay": "rust-overlay"
+      },
+      "locked": {
+        "dir": "scripts/nix",
+        "lastModified": 1790438542,
+        "narHash": "sha256-xSV4v7VJ3vd39a4hAywjo7hXtwrB598DtMOsYWqfIFA=",
+        "owner": "nushell",
+        "repo": "nushell",
+        "rev": "2459fdd134ea4fdbae42efd6924e2b41201cf363",
+        "type": "github"
+      },
+      "original": {
+        "dir": "scripts/nix",
+        "owner": "nushell",
+        "ref": "0.116.0",
+        "repo": "nushell",
         "type": "github"
       }
     },
@@ -321,8 +343,8 @@
         "git-hooks": "git-hooks",
         "nix-vite-plus": "nix-vite-plus",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-nushell": "nixpkgs-nushell",
         "nufmt": "nufmt",
+        "nushell": "nushell",
         "nuten": "nuten",
         "nutest": "nutest",
         "treefmt-nix": "treefmt-nix_2"
@@ -342,6 +364,27 @@
         "owner": "rust-lang",
         "ref": "nightly",
         "repo": "rust-analyzer",
+        "type": "github"
+      }
+    },
+    "rust-overlay": {
+      "inputs": {
+        "nixpkgs": [
+          "nushell",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789543870,
+        "narHash": "sha256-45ikFmtfgBZgMePIm4GevJ9VjDSWO3PGQgOuuwHDpes=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "35ca0490d13a3d38c4602d0eb9600a30fa63a367",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
         "type": "github"
       }
     },

@@ -13,7 +13,8 @@ use crate::{ParseErrorKind, lexer::Mode, parser::Parser};
 /// Any number of `,` and comments may come among the rows.
 /// Nu reads a table past a `,` or a comment before the `;` too, but such a `[ ]` stays a word.
 /// Pulling the `;` up to the names would put it after the comment.
-/// A `;` later is an error to nu, and it reads `[[a b];]` as a list, so those stay words as well.
+/// Nu rejects a second `;`, and one with no row after it as in `[[a b];]`.
+/// So those stay words as well.
 pub(super) fn is_table(inner: &Parser<'_>) -> bool {
     let mut tokens = inner
         .remaining_tokens()
@@ -41,7 +42,7 @@ pub(super) fn is_table(inner: &Parser<'_>) -> bool {
 }
 
 /// The column names, the `;`, and the rows, each a list.
-/// One holding a `;` is a word instead: nu reads no table there, and drops what follows.
+/// A list holding a `;`, the column names or a row, stays a word, since nu rejects the `;`.
 pub(super) fn table_items(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
         if let Some(bracketed) = p.bracketed(&SQUARE, Mode::List)

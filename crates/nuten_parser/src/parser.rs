@@ -233,6 +233,17 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// How many words name the command the call ahead runs.
+    /// `None` unless a block around it defines that command, or an import nuten reads brings it.
+    pub(crate) fn defined_words(&self) -> Option<usize> {
+        let head = self.peek_range()?;
+        self.names.defined_words(head.start(), |nth| {
+            self.nth_token(nth)
+                .filter(|token| token.kind.is_item())
+                .map(|token| &self.src[token.range])
+        })
+    }
+
     pub(crate) fn can_nest(&self) -> bool {
         self.depth < MAX_DEPTH
     }

@@ -1,0 +1,44 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/row_condition_subcommand_under_defined_parent.nu
+---
+Root@0..47
+  Pipeline@0..20
+    PipelineElement@0..20
+      Def@0..20
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        Word@4..8 "take"
+        Whitespace@8..9 " "
+        Signature@9..17
+          LBracket@9..10 "["
+          Param@10..16
+            Word@10..11 "n"
+            Colon@11..12 ":"
+            Whitespace@12..13 " "
+            Word@13..16 "int"
+          RBracket@16..17 "]"
+        Whitespace@17..18 " "
+        Block@18..20
+          LBrace@18..19 "{"
+          RBrace@19..20 "}"
+  Newline@20..21 "\n"
+  Pipeline@21..46
+    PipelineElement@21..26
+      List@21..26
+        LBracket@21..22 "["
+        Word@22..23 "1"
+        Whitespace@23..24 " "
+        Word@24..25 "2"
+        RBracket@25..26 "]"
+    Whitespace@26..27 " "
+    Pipe@27..28 "|"
+    Whitespace@28..29 " "
+    PipelineElement@29..46
+      Call@29..46
+        Word@29..33 "take"
+        Whitespace@33..34 " "
+        Word@34..39 "until"
+        Whitespace@39..40 " "
+        Word@40..46 "{a: 1}"
+  Newline@46..47 "\n"

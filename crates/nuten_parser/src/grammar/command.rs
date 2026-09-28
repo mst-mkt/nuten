@@ -263,37 +263,43 @@ pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
     if head.starts_with('^') {
         Shape::ExternalArgument
     } else if let Some(name) = head.strip_prefix('%') {
-        percent_shape(name)
+        percent_shape(name, p.nth_text(1))
     } else if p.is_aliased(head) {
         Shape::UnknownArgument
     } else if declaration(p).is_some() {
         Shape::VariableName
     } else {
         match p.callee() {
+            // Nu runs its own command of a longer name, as `take until` over a defined `take`.
+            Callee::Defined
+                if builtin::row_condition_words(head, p.nth_text(1)) > p.defined_words() =>
+            {
+                Shape::RowCondition
+            },
             Callee::Defined => Shape::KnownArgument,
             Callee::Unknowable => Shape::UnknownArgument,
             Callee::Undefined if matches!(head, "else" | "catch") => Shape::ExternalArgument,
-            Callee::Undefined => command_shape(head),
+            Callee::Undefined => command_shape(head, p.nth_text(1)),
         }
     }
 }
 
 /// Nu runs a head whose `%` finds no built-in as an external command.
 /// A `%` alone leaves the head in the token after it, which is not read here.
-fn percent_shape(name: &str) -> Shape {
+fn percent_shape(name: &str, next: Option<&str>) -> Shape {
     if name.is_empty() {
         Shape::UnknownArgument
     } else if builtin::resolves_after_percent(name) {
-        command_shape(name)
+        command_shape(name, next)
     } else {
         Shape::ExternalArgument
     }
 }
 
-fn command_shape(name: &str) -> Shape {
+fn command_shape(name: &str, next: Option<&str>) -> Shape {
     if builtin::takes_any_argument(name) {
         Shape::Any
-    } else if builtin::takes_row_condition(name) {
+    } else if builtin::row_condition_words(name, next).is_some() {
         Shape::RowCondition
     } else if builtin::is_command(name) {
         Shape::KnownArgument

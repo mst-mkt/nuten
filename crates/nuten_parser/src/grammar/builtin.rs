@@ -11,8 +11,14 @@ pub(super) fn resolves_after_percent(head: &str) -> bool {
     is_command(head) && EXTERNAL_AFTER_PERCENT.binary_search(&head).is_err()
 }
 
-pub(super) fn takes_row_condition(head: &str) -> bool {
-    matches!(head, "all" | "any" | "where")
+/// How many words name the command a call headed by `head`, then `next`, runs.
+/// `None` where that command takes no row condition.
+pub(super) fn row_condition_words(head: &str, next: Option<&str>) -> Option<usize> {
+    match (head, next) {
+        ("all" | "any" | "chunk-by" | "where", _) => Some(1),
+        ("skip" | "take", Some("until" | "while")) => Some(2),
+        _ => None,
+    }
 }
 
 /// Nu takes any value for the argument of these.
@@ -111,6 +117,7 @@ const ATTRIBUTES: &[&str] = &[
     "complete",
     "deprecated",
     "example",
+    "interactive",
     "search-terms",
 ];
 
@@ -317,6 +324,7 @@ const COMMANDS: &[&str] = &[
     "touch",
     "transpose",
     "try",
+    "tui",
     "tutor",
     "ulimit",
     "umask",
@@ -347,10 +355,16 @@ const COMMANDS: &[&str] = &[
 mod tests {
     use super::{
         ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, is_parser_keyword,
-        reads_before_assignment, resolves_after_percent, starts_with_parser_keyword,
-        takes_any_argument, takes_row_condition,
+        reads_before_assignment, resolves_after_percent, row_condition_words,
+        starts_with_parser_keyword, takes_any_argument,
     };
     use crate::test_support::asked;
+
+    /// The first word of `name`, and the rest if it has more.
+    fn head_and_next(name: &str) -> (&str, Option<&str>) {
+        name.split_once(' ')
+            .map_or((name, None), |(head, next)| (head, Some(next)))
+    }
 
     const ATTRIBUTES_OF_NU: &str = r#"help commands | get name
         | where { |n| $n | str starts-with "attr " }
@@ -429,15 +443,19 @@ mod tests {
 
     #[test]
     fn row_condition_commands_are_what_nu_declares() {
-        let Some(names) = asked(ROW_CONDITIONS_OF_NU) else {
+        let (Some(names), Some(declared)) = (asked(NAMES_OF_NU), asked(ROW_CONDITIONS_OF_NU))
+        else {
             return;
         };
-        let with_condition: Vec<&str> = COMMANDS
+        let with_condition: Vec<&str> = names
             .iter()
-            .copied()
-            .filter(|head| takes_row_condition(head))
+            .map(String::as_str)
+            .filter(|name| {
+                let (head, next) = head_and_next(name);
+                row_condition_words(head, next).is_some()
+            })
             .collect();
-        assert_eq!(with_condition, names);
+        assert_eq!(with_condition, declared);
     }
 
     #[test]
@@ -462,9 +480,9 @@ mod tests {
         let read_before: Vec<&str> = names
             .iter()
             .map(String::as_str)
-            .filter(|name| match name.split_once(' ') {
-                Some((head, next)) => reads_before_assignment(head, Some(next)),
-                None => reads_before_assignment(name, None),
+            .filter(|name| {
+                let (head, next) = head_and_next(name);
+                reads_before_assignment(head, next)
             })
             .collect();
         assert_eq!(read_before, before);
@@ -489,10 +507,7 @@ mod tests {
             return;
         };
         for keyword in &keywords {
-            let (head, next) = match keyword.split_once(' ') {
-                Some((head, next)) => (head, Some(next)),
-                None => (keyword.as_str(), None),
-            };
+            let (head, next) = head_and_next(keyword);
             assert!(starts_with_parser_keyword(head, next), "{keyword:?}");
         }
     }

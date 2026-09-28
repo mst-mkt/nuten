@@ -99,6 +99,28 @@ impl<'a> Names<'a> {
         self.resolved(head, word).0
     }
 
+    /// How many words name the command the call with its head at `head` runs.
+    /// `None` unless a block around it defines that command, or an import nuten reads brings it.
+    pub(crate) fn defined_words<'w>(
+        &self,
+        head: TextSize,
+        word: impl Fn(usize) -> Option<&'w str>,
+    ) -> Option<usize> {
+        let (Callee::Defined, defining) = self.resolved(head, &word) else {
+            return None;
+        };
+        // Nu runs the longest name it finds.
+        // A longer import therefore beats the definition, even from an outer block.
+        let spelled: Vec<_> = (0..self.longest_name()).map_while(&word).collect();
+        let imported = self
+            .scopes()
+            .filter_map(|scope| scope.imported_words(&spelled, head))
+            .max();
+        defining
+            .map(|(_, _, definition)| definition.words.len())
+            .max(imported)
+    }
+
     /// What `callee` tells, and the definition the call runs if a block defines its command.
     fn resolved<'w>(
         &self,
@@ -113,7 +135,7 @@ impl<'a> Names<'a> {
                 Callee::Unknowable
             } else if !self
                 .scopes()
-                .any(|scope| scope.imports_spelled(&spelled, head))
+                .any(|scope| scope.imported_words(&spelled, head).is_some())
             {
                 Callee::Undefined
             } else if self.is_hidden(spelled[0]) {
@@ -351,16 +373,19 @@ impl<'a> Scope<'a> {
             })
     }
 
-    /// Whether an import nuten reads brings a command of a name `spelled` starts with before `end`.
-    fn imports_spelled(&self, spelled: &[&str], end: TextSize) -> bool {
-        (1..=spelled.len().min(self.longest_name)).any(|len| {
-            let first = self
-                .imported
-                .partition_point(|command| command.words.as_slice() < &spelled[..len]);
-            self.imported
-                .get(first)
-                .is_some_and(|command| command.words == spelled[..len] && command.start < end)
-        })
+    /// How many words name the longest command `spelled` starts with, of those an import brings.
+    /// Only an import before `end` counts.
+    fn imported_words(&self, spelled: &[&str], end: TextSize) -> Option<usize> {
+        (1..=spelled.len().min(self.longest_name))
+            .rev()
+            .find(|&len| {
+                let first = self
+                    .imported
+                    .partition_point(|command| command.words.as_slice() < &spelled[..len]);
+                self.imported
+                    .get(first)
+                    .is_some_and(|command| command.words == spelled[..len] && command.start < end)
+            })
     }
 
     /// Whether an import nuten reads brings a command of a name `spelled` starts with.

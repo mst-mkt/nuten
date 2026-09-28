@@ -21,9 +21,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.fenix.follows = "fenix";
     };
-    nixpkgs-nushell = {
-      # nushell 0.115
-      url = "github:NixOS/nixpkgs/aff8a0b28396750446e5537a96461bc4facdb287";
+    nushell = {
+      # Not following nixpkgs, since this release is built and tested against its own.
+      url = "github:nushell/nushell/0.116.0?dir=scripts/nix";
     };
     nutest = {
       url = "github:vyadh/nutest/v1.2.0";
@@ -82,7 +82,11 @@
         ]
       );
 
-      nushell = forAllSystems (system: inputs.nixpkgs-nushell.legacyPackages.${system}.nushell);
+      nushell = forAllSystems (
+        system:
+        # Its own tests take long and tell nothing of how nu parses.
+        inputs.nushell.packages.${system}.default.overrideAttrs { doCheck = false; }
+      );
       nodejs = forAllSystems (system: inputs.nixpkgs.legacyPackages.${system}.nodejs-slim_26);
       pnpm = forAllSystems (
         system: inputs.nixpkgs.legacyPackages.${system}.pnpm_11.override { nodejs-slim = nodejs.${system}; }
@@ -291,13 +295,14 @@
         system:
         let
           pkgs = inputs.nixpkgs.legacyPackages.${system};
-          nushellPkgs = inputs.nixpkgs-nushell.legacyPackages.${system};
         in
         {
           test-nu = {
             type = "app";
             program = pkgs.lib.getExe (
-              nushellPkgs.writers.writeNuBin "nuten-test-nu" {
+              # Not writeNuBin, which runs the nushell of nixpkgs.
+              pkgs.writers.makeScriptWriter {
+                interpreter = "${pkgs.lib.getExe nushell.${system}} --no-config-file";
                 makeWrapperArgs = [
                   "--set"
                   "NU_LIB_DIRS"
@@ -321,7 +326,7 @@
                     ]
                   ))
                 ];
-              } ../scripts/test-nu.nu
+              } "/bin/nuten-test-nu" ../scripts/test-nu.nu
             );
             meta.description = "Run the tests written in nu";
           };

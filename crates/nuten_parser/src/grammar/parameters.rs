@@ -7,6 +7,7 @@
 //! Nu reads an empty `{ }` there as a record wherever it stands.
 //! A command nu reads a keyword syntax of is left out too, since its own rule reads it.
 //! Where nuten does not read that syntax, what the command takes is unknown here.
+//! A command taking a row condition, or another parameter over several items, is left out as well.
 //! None of these takes arguments it does not declare.
 
 use std::iter;
@@ -572,15 +573,6 @@ const COMMANDS: &[Command] = &[
                 flag("unicode", Some('u'), None),
                 flag("integer", Some('i'), None),
             ],
-        }),
-    ),
-    command(
-        &["chunk-by"],
-        Some(Signature {
-            required: &[CLOSURE],
-            optional: &[],
-            rest: None,
-            flags: &[],
         }),
     ),
     command(
@@ -1244,24 +1236,6 @@ const COMMANDS: &[Command] = &[
         }),
     ),
     command(
-        &["skip", "until"],
-        Some(Signature {
-            required: &[CLOSURE],
-            optional: &[],
-            rest: None,
-            flags: &[],
-        }),
-    ),
-    command(
-        &["skip", "while"],
-        Some(Signature {
-            required: &[CLOSURE],
-            optional: &[],
-            rest: None,
-            flags: &[],
-        }),
-    ),
-    command(
         &["split", "list"],
         Some(Signature {
             required: &[LIST],
@@ -1304,24 +1278,6 @@ const COMMANDS: &[Command] = &[
                 flag("list", Some('l'), None),
                 flag("icons", Some('o'), None),
             ],
-        }),
-    ),
-    command(
-        &["take", "until"],
-        Some(Signature {
-            required: &[CLOSURE],
-            optional: &[],
-            rest: None,
-            flags: &[flag("include", Some('i'), Some(NUMBER))],
-        }),
-    ),
-    command(
-        &["take", "while"],
-        Some(Signature {
-            required: &[CLOSURE],
-            optional: &[],
-            rest: None,
-            flags: &[flag("include", Some('i'), Some(NUMBER))],
         }),
     ),
     command(
@@ -1381,6 +1337,228 @@ const COMMANDS: &[Command] = &[
             flags: &[
                 flag("noheaders", Some('n'), None),
                 flag("columns", None, Some(LIST_OF)),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "bind"],
+        Some(Signature {
+            required: &[WORD, CLOSURE],
+            optional: &[],
+            rest: None,
+            flags: &[],
+        }),
+    ),
+    command(
+        &["tui", "box"],
+        Some(Signature {
+            required: &[WORD, LIST],
+            optional: &[],
+            rest: None,
+            flags: &[flag("id", None, Some(WORD)), flag("focus", None, None)],
+        }),
+    ),
+    command(
+        &["tui", "button"],
+        Some(Signature {
+            required: &[WORD],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[flag("id", None, Some(WORD)), flag("focus", None, None)],
+        }),
+    ),
+    command(
+        &["tui", "debug"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("keys", Some('k'), Some(WORD)),
+                flag("until", Some('u'), Some(CLOSURE)),
+                flag("size", Some('s'), Some(LIST_OF)),
+                flag("dialog", Some('d'), None),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "label"],
+        Some(Signature {
+            required: &[],
+            optional: &[WORD],
+            rest: None,
+            flags: &[
+                flag("title", None, None),
+                flag("status", None, None),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+                flag("data", None, Some(LIST)),
+                flag("from", None, Some(WORD)),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "log"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("max-lines", None, Some(NUMBER)),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+                flag("data", None, Some(LIST)),
+                flag("from", None, Some(WORD)),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "menu"],
+        Some(Signature {
+            required: &[LIST],
+            optional: &[],
+            rest: None,
+            flags: &[flag("id", None, Some(WORD)), flag("focus", None, None)],
+        }),
+    ),
+    command(
+        &["tui", "preview"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("from", None, Some(WORD)),
+                flag("max-bytes", None, Some(NUMBER)),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "progress"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("value", Some('v'), Some(NUMBER)),
+                flag("total", Some('t'), Some(NUMBER)),
+                flag("label", Some('l'), Some(WORD)),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+                flag("data", None, Some(LIST)),
+                flag("from", None, Some(WORD)),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "run"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("dialog", Some('d'), None),
+                flag("size", Some('s'), Some(LIST_OF)),
+                flag("refresh", Some('r'), Some(WORD)),
+                flag("no-mouse", None, None),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "search"],
+        Some(Signature {
+            required: &[],
+            optional: &[],
+            rest: None,
+            flags: &[
+                flag("placeholder", None, Some(WORD)),
+                flag("bind", None, Some(WORD)),
+                flag("fuzzy", Some('f'), None),
+                flag("case-sensitive", Some('s'), None),
+                flag("columns", None, Some(LIST_OF)),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "select"],
+        Some(Signature {
+            required: &[],
+            optional: &[LIST],
+            rest: None,
+            flags: &[
+                flag("display", Some('d'), Some(WORD)),
+                flag("index", Some('i'), None),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+                flag("data", None, Some(LIST)),
+                flag("from", None, Some(WORD)),
+                flag("on-select", None, Some(CLOSURE)),
+                flag("multi", Some('m'), None),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "split"],
+        Some(Signature {
+            required: &[LIST],
+            optional: &[],
+            rest: None,
+            flags: &[
+                flag("vertical", Some('v'), None),
+                flag("sizes", Some('s'), Some(LIST)),
+                flag("ratio", Some('r'), Some(NUMBER)),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "tab"],
+        Some(Signature {
+            required: &[WORD, LIST],
+            optional: &[],
+            rest: None,
+            flags: &[flag("id", None, Some(WORD)), flag("focus", None, None)],
+        }),
+    ),
+    command(
+        &["tui", "table"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("columns", None, Some(LIST_OF)),
+                flag("capture-keys", None, None),
+                flag("index", Some('i'), None),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+                flag("data", None, Some(LIST)),
+                flag("from", None, Some(WORD)),
+                flag("on-select", None, Some(CLOSURE)),
+                flag("multi", Some('m'), None),
+            ],
+        }),
+    ),
+    command(
+        &["tui", "tree"],
+        Some(Signature {
+            required: &[],
+            optional: &[CLOSURE],
+            rest: None,
+            flags: &[
+                flag("walk", None, None),
+                flag("column", None, Some(WORD)),
+                flag("id", None, Some(WORD)),
+                flag("focus", None, None),
+                flag("data", None, Some(LIST)),
+                flag("from", None, Some(WORD)),
+                flag("on-select", None, Some(CLOSURE)),
+                flag("multi", Some('m'), None),
             ],
         }),
     ),
@@ -1461,7 +1639,10 @@ const COMMANDS: &[Command] = &[
             required: &[CLOSURE],
             optional: &[],
             rest: None,
-            flags: &[flag("columns", Some('c'), Some(LIST))],
+            flags: &[
+                flag("columns", Some('c'), Some(LIST)),
+                flag("recursive", Some('r'), None),
+            ],
         }),
     ),
     command(
@@ -1491,7 +1672,7 @@ const COMMANDS: &[Command] = &[
             required: &[LIST],
             optional: &[],
             rest: None,
-            flags: &[],
+            flags: &[flag("dependencies", Some('d'), None)],
         }),
     ),
     command(
