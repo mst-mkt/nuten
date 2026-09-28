@@ -41,6 +41,21 @@ pub(crate) fn ast(src: &str, dir: Option<&Path>) -> Result<String, String> {
     )
 }
 
+/// The kind of the error nu reports on parsing `src`, or `None` when it reports none.
+/// Nu writes the error as an object whose one key names the kind.
+/// A kind can be about a name rather than the syntax, as `VariableNotFound` is.
+/// Fails, in one line, when nu does.
+pub(crate) fn parse_error(src: &str, dir: Option<&Path>) -> Result<Option<String>, String> {
+    let kind = run(
+        "let src = $in; ast $src --json | get error | from json \
+         | if ($in | is-empty) { '' } else { $in | columns | first }",
+        src,
+        dir,
+    )?;
+    let kind = kind.trim();
+    Ok((!kind.is_empty()).then(|| kind.to_string()))
+}
+
 /// The value nu reads from the NUON `src`, described with its types, as JSON text.
 /// `describe -d` writes each value as an object with its `type`.
 /// Beside it stand a scalar's `value`, a record's `columns`, or a list's items as `value`.

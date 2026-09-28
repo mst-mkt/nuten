@@ -13,7 +13,10 @@
 //! `tasks/oracle/test_data` holds files to run it on.
 //! Its `nufmt` holds the cases nushell/nufmt broke, each headed by the URL of its report.
 //! It takes files, and directories to search for `.nu` and `.nuon` files.
-//! It skips a file that is too large, is not UTF-8, or has syntax errors, and says so.
+//! It skips a file that is too large or is not UTF-8, and says so.
+//! A `.nu` file with syntax errors leaves no output to ask about, so it asks nu about the file.
+//! It skips the file when nu reports an error too, naming its kind.
+//! It fails the file when nu reports none, since nuten then rejects what nu reads.
 //! It asks about formatting before it skips a `.nuon` file nuten parses otherwise than nu.
 //! It exits with 1 when any other file cannot be checked, or its AST or value differs.
 //! It exits with 1 too when a file breaks an invariant.
@@ -214,9 +217,21 @@ fn check(path: &Path, max_size: u64, config: &Config) -> Result<Checked, String>
         return nuon::check(&src, output.as_deref(), dir_of(path));
     }
     let Some(output) = output else {
-        return Ok(Checked::Skipped("syntax errors".to_string()));
+        return rejection_verdict(nu::parse_error(&src, dir_of(path))?);
     };
     same_ast(&src, &output, dir_of(path)).map(|()| Checked::Passed)
+}
+
+/// Nuten rejects the file, so nu must report an error too, or nuten rejects what nu reads.
+/// `nu_error` is the kind of the error nu reports, if it reports one.
+/// Whatever the kind, nu rejects the file, so nothing tells whether nuten rejects it wrongly.
+fn rejection_verdict(nu_error: Option<String>) -> Result<Checked, String> {
+    match nu_error {
+        Some(kind) => Ok(Checked::Skipped(format!(
+            "syntax errors, and nu reports {kind}"
+        ))),
+        None => Err("nuten reports syntax errors, though nu parses it".to_string()),
+    }
 }
 
 /// The output of formatting `src`, or `None` when its syntax errors leave none.
@@ -268,7 +283,7 @@ mod tests {
         invariants::{self, Violation},
     };
 
-    use super::{formatted, invariants_kept};
+    use super::{Checked, formatted, invariants_kept, rejection_verdict};
 
     fn violation(detail: &str) -> Violation {
         Violation {
@@ -288,6 +303,24 @@ mod tests {
     #[test]
     fn file_with_syntax_errors_gives_no_output() {
         assert_eq!(formatted("ls |", &Config::default()), Ok(None));
+    }
+
+    #[test]
+    fn file_nu_rejects_too_is_skipped_naming_nu_error() {
+        assert_eq!(
+            rejection_verdict(Some("UnexpectedEof".to_string())),
+            Ok(Checked::Skipped(
+                "syntax errors, and nu reports UnexpectedEof".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn file_nu_parses_fails() {
+        assert_eq!(
+            rejection_verdict(None),
+            Err("nuten reports syntax errors, though nu parses it".to_string())
+        );
     }
 
     #[test]

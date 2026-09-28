@@ -182,7 +182,7 @@ fn format_keeps_io_types_seen_by_calls_above_defs() {
 }
 
 #[test]
-fn format_skips_file_with_syntax_errors() {
+fn format_skips_file_with_syntax_errors_nu_rejects_too() {
     if nu_missing() {
         return;
     }
@@ -193,7 +193,10 @@ fn format_skips_file_with_syntax_errors() {
 
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(stderr.contains("syntax errors"), "{stderr}");
+    assert!(
+        stderr.contains("syntax errors, and nu reports Unclosed"),
+        "{stderr}"
+    );
     assert!(stderr.contains("skipped: 1"), "{stderr}");
 }
 
