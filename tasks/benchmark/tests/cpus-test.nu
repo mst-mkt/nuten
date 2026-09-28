@@ -1,7 +1,7 @@
 use std/assert
 use std/testing *
 
-use ../cpus.nu [allowed-cpus any-allowed-cpu fastest-allowed-cpu parse-cpu-list]
+use ../cpus.nu [allowed-cpus, any-allowed-cpu, fastest-allowed-cpu, parse-cpu-list]
 
 const CPUS = path self ../cpus.nu
 
@@ -11,7 +11,7 @@ def "allowed-cpus gives cpus process may run on" [] {
     let script = $"use ($CPUS | to nuon) allowed-cpus; allowed-cpus | to nuon"
 
     let actual = ^taskset --cpu-list $cpu $nu.current-exe --no-config-file --commands $script
-    | from nuon
+        | from nuon
 
     assert equal $actual [$cpu]
 }

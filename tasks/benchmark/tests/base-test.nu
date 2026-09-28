@@ -22,7 +22,7 @@ def setup []: nothing -> record {
     let corpus = $dir | path join corpus
     mkdir $corpus
 
-    { dir: $dir corpus: $corpus nuten: $env.NUTEN }
+    { dir: $dir, corpus: $corpus, nuten: $env.NUTEN }
 }
 
 @after-each
@@ -30,7 +30,7 @@ def teardown []: record -> nothing {
     rm --recursive $in.dir
 }
 
-def put [corpus: path file: string content: string]: nothing -> path {
+def put [corpus: path, file: string, content: string]: nothing -> path {
     let path = $corpus | path join $file
     mkdir ($path | path dirname)
     $content | save --force $path
@@ -38,7 +38,7 @@ def put [corpus: path file: string content: string]: nothing -> path {
 }
 
 # Small files at the picked paths, so what reads them runs in seconds.
-def put-picks [corpus: path picks: record]: nothing -> nothing {
+def put-picks [corpus: path, picks: record]: nothing -> nothing {
     $picks | reject directory | values | each {|file| put $corpus $file "ls" } | ignore
     put $corpus ($picks.directory | path join lib.nu) "ls" | ignore
 }
@@ -62,10 +62,10 @@ def measures [instructions: int]: nothing -> record {
     }
 }
 
-def input [dir: path source: string]: nothing -> record {
+def input [dir: path, source: string]: nothing -> record {
     {
         name: test
-        arguments: [format --stdin-filepath ($dir | path join test.nu) -]
+        arguments: [format, --stdin-filepath, ($dir | path join test.nu), -]
         stdin: $source
         exit_codes: [0]
     }
@@ -87,7 +87,7 @@ def "allocations reads blocks and bytes from dhat report" [] {
         "==1== At t-gmax: 11,274 bytes in 23 blocks"
         "==1== At t-end:  8,736 bytes in 2 blocks"
     ]
-    | str join "\n"
+        | str join "\n"
 
     let actual = $report | allocations
 
@@ -291,7 +291,7 @@ def "main exits with 2 naming inputs base times out on" [] {
     let base = sleeper $context.dir
 
     let actual = ^$nu.current-exe $BASE --time-limit 1sec $context.corpus $base $context.nuten
-    | complete
+        | complete
 
     assert equal $actual.exit_code 2
     assert str contains $actual.stderr "base timed out on"

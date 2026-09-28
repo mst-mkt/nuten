@@ -25,7 +25,7 @@ export def any-allowed-cpu []: nothing -> int {
 
 # The cores of a hybrid CPU differ in speed, so the fastest is taken, and the same one every time.
 export def fastest-allowed-cpu []: nothing -> int {
-    let frequencies = allowed-cpus | each {|cpu| { cpu: $cpu frequency: (max-frequency $cpu) } }
+    let frequencies = allowed-cpus | each {|cpu| { cpu: $cpu, frequency: (max-frequency $cpu) } }
     let fastest = $frequencies | get frequency | math max
 
     $frequencies | where frequency == $fastest | first | get cpu

@@ -1,7 +1,7 @@
 # Compares nuten with nufmt, over only the files both format without changing what nu parses.
 # A formatter must not win time on a file it fails on or reads differently, so such files are left out for both.
 
-use cpus.nu [allowed-cpus fastest-allowed-cpu]
+use cpus.nu [allowed-cpus, fastest-allowed-cpu]
 
 const REPOSITORY = path self ../..
 const LOCK = path self ../../dev/flake.lock
@@ -16,9 +16,9 @@ def main [
     --time-limit: duration = 100sec # How long a formatter may take on one file before it is cut off
     --runs: int = 5 # How many times each formatter is timed on each file
 ]: nothing -> record {
-    let missing_flags = [[flag value]; [--nuten $nuten] [--nufmt $nufmt] [--oracle $oracle]]
-    | where value == null
-    | get flag
+    let missing_flags = [[flag, value]; [--nuten, $nuten], [--nufmt, $nufmt], [--oracle, $oracle]]
+        | where value == null
+        | get flag
     if not ($missing_flags | is-empty) {
         print --stderr $"($missing_flags | str join ', ') not given"
         exit 2
@@ -28,7 +28,7 @@ def main [
         print --stderr "--runs must be at least 1"
         exit 2
     }
-    let missing_tools = [timeout hyperfine] | where { which $in | is-empty }
+    let missing_tools = [timeout, hyperfine] | where { which $in | is-empty }
     if not ($missing_tools | is-empty) {
         print --stderr $"($missing_tools | str join ', ') not found"
         exit 2
@@ -45,14 +45,14 @@ def main [
     let cpus = if (which taskset | is-empty) {
         null
     } else {
-        { all: (allowed-cpus) one: (fastest-allowed-cpu) }
+        { all: (allowed-cpus), one: (fastest-allowed-cpu) }
     }
 
-    let selection = [...(glob ($corpus | path join '**/*.nu')) ...($also | path expand)]
-    | uniq
-    | par-each {|file| verdict $file $formatters $oracle $time_limit }
-    | sort-by file
-    | report
+    let selection = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)]
+        | uniq
+        | par-each {|file| verdict $file $formatters $oracle $time_limit }
+        | sort-by file
+        | report
     # One file or directory at a time, since formatters timed side by side would slow each other down.
     let timing = $selection.compared | each {|file| time-file $file $formatters $runs } | summarize
     let directories = time-directories $selection.compared $corpus $formatters $runs $cpus
@@ -67,39 +67,44 @@ def main [
     }
 }
 
-def formatters [nuten: path nufmt: path]: nothing -> list<record> {
+def formatters [nuten: path, nufmt: path]: nothing -> list<record> {
     [
         {
             name: nuten
             command: $nuten
-            arguments: {|file| [format --stdin-filepath $file -] }
-            directory: {|dir| [format --check $dir] }
+            arguments: {|file| [format, --stdin-filepath, $file, -] }
+            directory: {|dir| [format, --check, $dir] }
         }
         {
             name: nufmt
             command: $nufmt
             arguments: {|file| [--stdin] }
-            directory: {|dir| [--dry-run $dir] }
+            directory: {|dir| [--dry-run, $dir] }
         }
     ]
 }
 
 # Nu reads no file that is not UTF-8, so neither formatter is asked about one.
-def verdict [file: path formatters: list<record> oracle: path limit: duration]: nothing -> record {
+def verdict [
+    file: path
+    formatters: list<record>
+    oracle: path
+    limit: duration
+]: nothing -> record {
     let source = open --raw $file
     if ($source | describe) != string {
-        return { file: $file unreadable: true problems: [] }
+        return { file: $file, unreadable: true, problems: [] }
     }
     let problems = $formatters
-    | each {|formatter|
+        | each {|formatter|
           let reason = problem $file $source $formatter $oracle $limit
           if $reason != null {
               { formatter: $formatter.name reason: $reason }
           }
       }
-    | compact
+        | compact
 
-    { file: $file unreadable: false problems: $problems }
+    { file: $file, unreadable: false, problems: $problems }
 }
 
 # Running in the directory of the file, nufmt finds a config from there as nuten does by the path.
@@ -113,8 +118,8 @@ def problem [
     cd ($file | path dirname)
     let seconds = $limit / 1sec
     let formatted = $source
-    | ^timeout $seconds $formatter.command ...(do $formatter.arguments $file)
-    | complete
+        | ^timeout $seconds $formatter.command ...(do $formatter.arguments $file)
+        | complete
     match $formatted.exit_code {
         0 => {}
         124 => { return "times out" }
@@ -151,12 +156,12 @@ def excluded []: list<record> -> table {
       }
 }
 
-def time-file [file: path formatters: list<record> runs: int]: nothing -> record {
+def time-file [file: path, formatters: list<record>, runs: int]: nothing -> record {
     cd ($file | path dirname)
     let commands = $formatters
-    | each {|formatter| { name: $formatter.name words: [$formatter.command ...(do $formatter.arguments $file)] } }
+        | each {|formatter| { name: $formatter.name words: [$formatter.command ...(do $formatter.arguments $file)] } }
 
-    { file: $file ...(time-commands $commands $runs [--input $file] $file) }
+    { file: $file, ...(time-commands $commands $runs [--input $file] $file) }
 }
 
 # Only the compared files are staged, so neither formatter meets a file left out of the comparison.
@@ -174,14 +179,14 @@ def time-directories [
         let memory = if ($groups | is-empty) { null } else { memory $staged $formatters }
         rm --recursive $staged
 
-        { directories: $directories memory: $memory }
+        { directories: $directories, memory: $memory }
     } catch {|error|
         rm --recursive $staged
         error make $error.raw
     }
 }
 
-def stage [files: list<path> corpus: path]: nothing -> path {
+def stage [files: list<path>, corpus: path]: nothing -> path {
     let root = mktemp --directory
     $files
     | enumerate
@@ -197,11 +202,11 @@ def stage [files: list<path> corpus: path]: nothing -> path {
 
 # A leading dot is dropped from every part, since nufmt skips hidden files and directories where nuten does not.
 # A file from outside the corpus gets a directory of its own, so two of the same name do not meet.
-def staged-path [file: path corpus: path index: int]: nothing -> path {
+def staged-path [file: path, corpus: path, index: int]: nothing -> path {
     let relative = if ($file | str starts-with $"($corpus)/") {
         $file | path relative-to $corpus
     } else {
-        [also ($index | into string) ($file | path basename)] | path join
+        [also, ($index | into string), ($file | path basename)] | path join
     }
 
     $relative
@@ -211,7 +216,7 @@ def staged-path [file: path corpus: path index: int]: nothing -> path {
 }
 
 def groups [staged: path]: nothing -> table {
-    [[name dir]; [nu-std ($staged | path join nu-std)] [all $staged]]
+    [[name, dir]; [nu-std, ($staged | path join nu-std)], [all, $staged]]
     | insert files {|group| glob ($group.dir | path join '**/*.nu') | length }
     | where files > 0
 }
@@ -242,7 +247,7 @@ def time-group [
 
 # Taskset runs before the formatter on all CPUs too, so that it weighs the same on both sides of the gain.
 def pin [cpus: oneof<list<int>, nothing>]: nothing -> list<string> {
-    if $cpus == null { [] } else { [taskset --cpu-list ($cpus | str join ',')] }
+    if $cpus == null { [] } else { [taskset, --cpu-list, ($cpus | str join ',')] }
 }
 
 def parallel-gain [
@@ -253,7 +258,7 @@ def parallel-gain [
         return null
     }
 
-    { nuten: ($one_cpu.nuten / $all_cpus.nuten) nufmt: ($one_cpu.nufmt / $all_cpus.nufmt) }
+    { nuten: ($one_cpu.nuten / $all_cpus.nuten), nufmt: ($one_cpu.nufmt / $all_cpus.nufmt) }
 }
 
 def time-directory [
@@ -264,7 +269,7 @@ def time-directory [
 ]: nothing -> record {
     cd $dir
     let commands = $formatters
-    | each {|formatter|
+        | each {|formatter|
         { name: $formatter.name words: [...$prefix $formatter.command ...(do $formatter.directory $dir)] }
     }
 
@@ -281,10 +286,10 @@ def time-commands [
 ]: nothing -> record {
     let export = mktemp --tmpdir --suffix .json
     let named = $commands
-    | each {|command| [--command-name $command.name (command-line $command.words)] }
-    | flatten
+        | each {|command| [--command-name $command.name (command-line $command.words)] }
+        | flatten
     let result = ^hyperfine -N --warmup 1 --runs $runs --export-json $export ...$options ...$named
-    | complete
+        | complete
     let exported = open --raw $export
     rm $export
     if $result.exit_code != 0 {
@@ -310,7 +315,7 @@ def command-line [words: list<string>]: nothing -> string {
 
 # One run each, since peak memory, unlike time, barely moves from run to run.
 # macOS time cannot write the peak to a file of its own, so nothing is weighed there.
-def memory [dir: path formatters: list<record>]: nothing -> oneof<record, nothing> {
+def memory [dir: path, formatters: list<record>]: nothing -> oneof<record, nothing> {
     if not (has-gnu-time) {
         return null
     }
@@ -333,13 +338,13 @@ def has-gnu-time []: nothing -> bool {
 }
 
 # The peak goes to a file of its own, so what the formatter writes to stderr does not mix in.
-def peak [formatter: record dir: path]: nothing -> filesize {
+def peak [formatter: record, dir: path]: nothing -> filesize {
     let report = mktemp --tmpdir
     let run = ^time -f %M -o $report $formatter.command ...(do $formatter.directory $dir) | complete
     let peak = open --raw $report
     rm $report
     # Both exit with 1 when a file would change, which is no failure here.
-    if $run.exit_code not-in [0 1] {
+    if $run.exit_code not-in [0, 1] {
         error make {
             msg: $"($formatter.name) failed on ($dir) with exit code ($run.exit_code): ($run.stderr)"
         }
@@ -367,12 +372,12 @@ def summarize []: list<record> -> record {
     let files = $in | each { with-speedup }
     # math median fails on an empty list.
     if ($files | is-empty) {
-        return { files: [] total: null speedup: null }
+        return { files: [], total: null, speedup: null }
     }
 
     {
         files: $files
-        total: { nuten: ($files.nuten | math sum) nufmt: ($files.nufmt | math sum) }
+        total: { nuten: ($files.nuten | math sum), nufmt: ($files.nufmt | math sum) }
         speedup: {
             median: ($files.speedup | math median)
             p10: ($files.speedup | percentile 10)
@@ -386,11 +391,11 @@ def percentile [percent: number]: list<number> -> number {
     let sorted = $in | sort
     let rank = ($percent * ($sorted | length) / 100 | math ceil) - 1
 
-    $sorted | get ([$rank 0] | math max)
+    $sorted | get ([$rank, 0] | math max)
 }
 
-def versions [repository: path lock: path]: nothing -> record {
-    { nuten: (nuten-version $repository) ...(locked-versions $lock) }
+def versions [repository: path, lock: path]: nothing -> record {
+    { nuten: (nuten-version $repository), ...(locked-versions $lock) }
 }
 
 # The binaries given may be built from anywhere, so nuten is named by the tree this script is in.
@@ -410,7 +415,7 @@ def nuten-version [repository: path]: nothing -> oneof<string, nothing> {
 # A corpus path does not tell its version, so the lock that fills NUTEN_CORPUS in the devShell does.
 def locked-versions [lock: path]: nothing -> record {
     if not ($lock | path exists) {
-        return { nufmt: null nixpkgs-nushell: null corpus: null }
+        return { nufmt: null, nixpkgs-nushell: null, corpus: null }
     }
     let nodes = open --raw $lock | from json | get nodes
 
@@ -437,7 +442,7 @@ def locked [name: string]: record -> oneof<record, nothing> {
         return null
     }
 
-    { rev: $node.locked.rev date: ($node.locked.lastModified * 1_000_000_000 | into datetime) }
+    { rev: $node.locked.rev, date: ($node.locked.lastModified * 1_000_000_000 | into datetime) }
 }
 
 # The host name is left out, since the results may be shared.

@@ -4,7 +4,7 @@ use cpus.nu any-allowed-cpu
 
 const INPUTS = path self inputs.nuon
 const DEPTH = 64
-const METRICS = [instructions allocations allocated_bytes peak_bytes]
+const METRICS = [instructions, allocations, allocated_bytes, peak_bytes]
 # Code elsewhere can shift the counts a little through inlining, which is no regression.
 const THRESHOLD_PERCENT = 1
 
@@ -23,7 +23,7 @@ def main [
     head: path # The nuten binary to compare
     --time-limit: duration = 100sec # How long one run may take before it is cut off
 ]: nothing -> nothing {
-    let missing = [valgrind timeout taskset] | where { which $in | is-empty }
+    let missing = [valgrind, timeout, taskset] | where { which $in | is-empty }
     if not ($missing | is-empty) {
         print --stderr $"($missing | str join ', ') not found"
         exit 2
@@ -44,11 +44,11 @@ def main [
     }
 }
 
-def measure-each [nuten: path inputs: list<record> limit: duration]: nothing -> table {
+def measure-each [nuten: path, inputs: list<record>, limit: duration]: nothing -> table {
     $inputs | each {|input| { input: $input.name ...(measure $nuten $input $limit) } }
 }
 
-def compare [before: table after: table]: nothing -> table {
+def compare [before: table, after: table]: nothing -> table {
     $before
     | zip $after
     | each {|pair| compare-input $pair.0 $pair.1 }
@@ -56,7 +56,7 @@ def compare [before: table after: table]: nothing -> table {
 }
 
 # A timeout has no counts to compare, and is a regression in itself.
-def compare-input [before: record after: record]: nothing -> list<record> {
+def compare-input [before: record, after: record]: nothing -> list<record> {
     if $after.timed_out {
         return [
             {
@@ -87,7 +87,7 @@ def compare-input [before: record after: record]: nothing -> list<record> {
       }
 }
 
-def inputs [corpus: path picks: record]: nothing -> list<record> {
+def inputs [corpus: path, picks: record]: nothing -> list<record> {
     [
         ...(file-inputs $corpus $picks)
         (directory-input $corpus $picks.directory)
@@ -95,7 +95,7 @@ def inputs [corpus: path picks: record]: nothing -> list<record> {
     ]
 }
 
-def file-inputs [corpus: path picks: record]: nothing -> list<record> {
+def file-inputs [corpus: path, picks: record]: nothing -> list<record> {
     $picks
     | reject directory
     | values
@@ -112,12 +112,12 @@ def file-inputs [corpus: path picks: record]: nothing -> list<record> {
 }
 
 # nuten checks with 1 when a file would change, which is no failure here.
-def directory-input [corpus: path directory: string]: nothing -> record {
+def directory-input [corpus: path, directory: string]: nothing -> record {
     {
         name: $directory
-        arguments: [format --check ($corpus | path join $directory)]
+        arguments: [format, --check, ($corpus | path join $directory)]
         stdin: null
-        exit_codes: [0 1]
+        exit_codes: [0, 1]
     }
 }
 
@@ -126,11 +126,11 @@ def directory-input [corpus: path directory: string]: nothing -> record {
 def nest-inputs [corpus: path]: nothing -> list<record> {
     let generated = $corpus | path join generated.nu
 
-    [[name open close];
-        [nested-parens "(" ")"]
-        [nested-lists "[" "]"]
-        [nested-records "{a: " "}"]
-        [nested-closures "{|| " " }"]
+    [[name, open, close];
+        [nested-parens, "(", ")"]
+        [nested-lists, "[", "]"]
+        [nested-records, "{a: ", "}"]
+        [nested-closures, "{|| ", " }"]
     ]
     | each {|nest|
           {
@@ -142,7 +142,7 @@ def nest-inputs [corpus: path]: nothing -> list<record> {
       }
 }
 
-def nest [open: string close: string depth: int]: nothing -> string {
+def nest [open: string, close: string, depth: int]: nothing -> string {
     let opens = 1..$depth | each { $open } | str join
     let closes = 1..$depth | each { $close } | str join
 
@@ -150,7 +150,7 @@ def nest [open: string close: string depth: int]: nothing -> string {
 }
 
 # DHAT is skipped after a timeout, which it would only reach again.
-def measure [nuten: path input: record limit: duration]: nothing -> record {
+def measure [nuten: path, input: record, limit: duration]: nothing -> record {
     let cachegrind = run-valgrind [
         --tool=cachegrind
         --cache-sim=no
@@ -164,7 +164,7 @@ def measure [nuten: path input: record limit: duration]: nothing -> record {
         return $TIMED_OUT
     }
 
-    { timed_out: false instructions: ($cachegrind | instructions) ...($dhat | allocations) }
+    { timed_out: false, instructions: ($cachegrind | instructions), ...($dhat | allocations) }
 }
 
 # The report goes to its own file, so what nuten writes to stderr does not mix in.
@@ -179,8 +179,8 @@ def run-valgrind [
     let seconds = $limit / 1sec
     let cpu = any-allowed-cpu
     let result = $input.stdin
-    | ^timeout $seconds taskset --cpu-list $cpu valgrind ...$tool $"--log-file=($log)" $nuten ...$input.arguments
-    | complete
+        | ^timeout $seconds taskset --cpu-list $cpu valgrind ...$tool $"--log-file=($log)" $nuten ...$input.arguments
+        | complete
     let report = open --raw $log
     rm $log
 
@@ -207,10 +207,10 @@ def instructions []: string -> int {
 def allocations []: string -> record {
     let report = $in | str replace --all ',' ''
     let total = $report
-    | parse --regex 'Total:\s+(?<bytes>\d+) bytes in (?<blocks>\d+) blocks'
-    | first
-    | into int bytes blocks
+        | parse --regex 'Total:\s+(?<bytes>\d+) bytes in (?<blocks>\d+) blocks'
+        | first
+        | into int bytes blocks
     let peak = $report | parse --regex 'At t-gmax:\s+(?<bytes>\d+) bytes' | first | into int bytes
 
-    { allocations: $total.blocks allocated_bytes: $total.bytes peak_bytes: $peak.bytes }
+    { allocations: $total.blocks, allocated_bytes: $total.bytes, peak_bytes: $peak.bytes }
 }

@@ -20,10 +20,10 @@ def main [
     }
 
     let picks = $files
-    | par-each {|file| candidate $file $corpus $nuten }
-    | compact
-    | each {|file| { path: $file.path ...($file.source | measure) } }
-    | pick-inputs
+        | par-each {|file| candidate $file $corpus $nuten }
+        | compact
+        | each {|file| { path: $file.path, ...($file.source | measure) } }
+        | pick-inputs
     let unpicked = $picks | transpose rule path | where path == null | get rule
     if not ($unpicked | is-empty) {
         print --stderr $"no file for ($unpicked | str join ', ') under ($corpus)"
@@ -34,15 +34,15 @@ def main [
 }
 
 # The benchmark measures how nuten formats each pick, so a file it does not format cannot be one.
-def candidate [file: path corpus: path nuten: path]: nothing -> oneof<record, nothing> {
+def candidate [file: path, corpus: path, nuten: path]: nothing -> oneof<record, nothing> {
     let source = open --raw $file
     if ($source | describe) == string and (nuten-formats $source $file $nuten) {
-        { path: ($file | path relative-to $corpus) source: $source }
+        { path: ($file | path relative-to $corpus), source: $source }
     }
 }
 
 # Without the path, nuten would take the config found from where this runs.
-def nuten-formats [source: string file: path nuten: path]: nothing -> bool {
+def nuten-formats [source: string, file: path, nuten: path]: nothing -> bool {
     ($source | ^$nuten format --stdin-filepath $file - | complete | get exit_code) == 0
 }
 

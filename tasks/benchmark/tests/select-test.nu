@@ -14,7 +14,7 @@ def setup []: nothing -> record {
     let corpus = $dir | path join corpus
     mkdir $corpus
 
-    { dir: $dir corpus: $corpus nuten: $env.NUTEN }
+    { dir: $dir, corpus: $corpus, nuten: $env.NUTEN }
 }
 
 @after-each
@@ -22,7 +22,7 @@ def teardown []: record -> nothing {
     rm --recursive $in.dir
 }
 
-def put [corpus: path file: string content: oneof<string, binary>]: nothing -> path {
+def put [corpus: path, file: string, content: oneof<string, binary>]: nothing -> path {
     let path = $corpus | path join $file
     mkdir ($path | path dirname)
     $content | save $path
@@ -38,18 +38,18 @@ def "measure counts bytes in utf-8" [] {
 
 @test
 def "measure counts pipes wherever nu reads them" [] {
-    let cases = [[source pipes];
-        ['def f [] { ls | length }' 1]
-        ["match 1 {\n    1 => { ls | length }\n    _ => (ls | first | get name)\n}" 3]
-        ['{|r| $r | into string | str length }' 2]
-        ['$"a (ls | length)"' 1]
-        ['module m { export def f [] { [1 2] | each {|x| $x | into string } } }' 2]
-        ['if true { ls | length } else { ps | length }' 2]
-        ['try { ls | length } catch {|e| $e | get msg }' 2]
-        ['for i in 1..2 { $i | into string }' 1]
-        ["@example \"x\" { 1 | into string }\ndef f [] { 1 | into string }" 2]
-        ['{ a: (1 | into string), b: [(2 | into string)] }' 2]
-        ['ls o+e>| length' 1]
+    let cases = [[source, pipes];
+        ['def f [] { ls | length }', 1]
+        ["match 1 {\n    1 => { ls | length }\n    _ => (ls | first | get name)\n}", 3]
+        ['{|r| $r | into string | str length }', 2]
+        ['$"a (ls | length)"', 1]
+        ['module m { export def f [] { [1 2] | each {|x| $x | into string } } }', 2]
+        ['if true { ls | length } else { ps | length }', 2]
+        ['try { ls | length } catch {|e| $e | get msg }', 2]
+        ['for i in 1..2 { $i | into string }', 1]
+        ["@example \"x\" { 1 | into string }\ndef f [] { 1 | into string }", 2]
+        ['{ a: (1 | into string), b: [(2 | into string)] }', 2]
+        ['ls o+e>| length', 1]
     ]
 
     for case in $cases {
@@ -77,10 +77,10 @@ def "measure leaves out bars inside strings and comments" [] {
 
 @test
 def "measure counts each interpolated string, nested ones included" [] {
-    let cases = [[source interpolations];
-        ['$"a (1)"' 1]
-        ["$'a (1)'" 1]
-        ['$"a ($"b (1)") c"' 2]
+    let cases = [[source, interpolations];
+        ['$"a (1)"', 1]
+        ["$'a (1)'", 1]
+        ['$"a ($"b (1)") c"', 2]
     ]
 
     for case in $cases {
@@ -107,10 +107,10 @@ def "measure leaves out strings that only look interpolated" [] {
 
 @test
 def "most returns path with highest measure" [] {
-    let files = [[path pipes];
-        [a.nu 1]
-        [b.nu 3]
-        [c.nu 2]
+    let files = [[path, pipes];
+        [a.nu, 1]
+        [b.nu, 3]
+        [c.nu, 2]
     ]
 
     let actual = $files | most pipes
@@ -120,10 +120,10 @@ def "most returns path with highest measure" [] {
 
 @test
 def "most breaks tie by path order" [] {
-    let files = [[path pipes];
-        [c.nu 3]
-        [a.nu 3]
-        [b.nu 3]
+    let files = [[path, pipes];
+        [c.nu, 3]
+        [a.nu, 3]
+        [b.nu, 3]
     ]
 
     let actual = $files | most pipes
@@ -140,11 +140,11 @@ def "most returns nothing for no files" [] {
 
 @test
 def "pick-inputs picks each input by its rule" [] {
-    let files = [[path bytes interpolations pipes];
-        [large.nu 50 1 1]
-        [interpolating.nu 10 9 1]
-        [piping.nu 10 1 9]
-        [nu-std/std/lib.nu 20 1 1]
+    let files = [[path, bytes, interpolations, pipes];
+        [large.nu, 50, 1, 1]
+        [interpolating.nu, 10, 9, 1]
+        [piping.nu, 10, 1, 9]
+        [nu-std/std/lib.nu, 20, 1, 1]
     ]
     let expected = {
         largest: large.nu
@@ -161,8 +161,8 @@ def "pick-inputs picks each input by its rule" [] {
 
 @test
 def "pick-inputs leaves rule unpicked when no file meets it" [] {
-    let files = [[path bytes interpolations pipes];
-        [a.nu 10 1 1]
+    let files = [[path, bytes, interpolations, pipes];
+        [a.nu, 10, 1, 1]
     ]
 
     let actual = $files | pick-inputs
@@ -264,8 +264,8 @@ def "main prints nuon nuten leaves unchanged as inputs.nuon" [] {
     let actual = ^$nu.current-exe $SELECT $context.corpus $context.nuten | complete
 
     let check = $actual.stdout
-    | ^$context.nuten format --check --stdin-filepath $OUTPUT -
-    | complete
+        | ^$context.nuten format --check --stdin-filepath $OUTPUT -
+        | complete
     assert equal $check.exit_code 0 $check.stderr
 }
 
