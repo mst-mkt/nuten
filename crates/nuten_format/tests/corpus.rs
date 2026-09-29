@@ -1,5 +1,6 @@
 //! Every UTF-8 `.nu` and `.nuon` file of the corpus must keep the invariants of the parser.
 //! Unless it has syntax errors, it must keep those of the formatter too.
+//! It must keep them at line width 1 as well, where each group breaks wherever it can.
 //! Exactly the files in `SYNTAX_ERRORS` have syntax errors.
 //! The corpus is the directory `NUTEN_CORPUS` names, which the devShell sets.
 //! Without it the test fails, unless `NUTEN_TEST_SKIP_CORPUS` is set to skip it.
@@ -60,6 +61,10 @@ fn every_file_keeps_invariants_with_syntax_errors_as_listed() {
     }
 
     let config = Config::default();
+    let narrow = Config {
+        line_width: 1,
+        ..Config::default()
+    };
     let mut problems = Vec::new();
     let mut unseen: BTreeSet<_> = SYNTAX_ERRORS.iter().copied().collect();
     for path in paths {
@@ -99,6 +104,15 @@ fn every_file_keeps_invariants_with_syntax_errors_as_listed() {
                 );
             },
             Err(message) => problems.push(format!("{name}: panics: {message}")),
+        }
+        match caught(|| invariants::check(&src, &narrow)) {
+            Ok(checked) => problems.extend(
+                checked
+                    .violations
+                    .iter()
+                    .map(|violation| format!("{name}: at line width 1: {violation}")),
+            ),
+            Err(message) => problems.push(format!("{name}: at line width 1: panics: {message}")),
         }
     }
     problems.extend(

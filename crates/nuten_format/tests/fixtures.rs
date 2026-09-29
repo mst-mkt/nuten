@@ -2,6 +2,7 @@
 //! The expected output must format to itself.
 //! Formatting either must keep every invariant `nuten_format::invariants` asks about.
 //! That covers those of the parser and of the formatter alike.
+//! It must keep them at the widths of `NARROW_WIDTHS` too.
 //!
 //! A failing fixture does not stop the others.
 //! A change to a rule then shows all it affects at once.
@@ -47,7 +48,15 @@ const CONFIGS: &[(&str, Change)] = &[
         line_ending: LineEnding::Lf,
         ..config
     }),
+    ("line_width/40", |config| Config {
+        line_width: 40,
+        ..config
+    }),
 ];
+
+/// At 1 each group breaks wherever it can.
+/// At 40 some groups break beside others that fit.
+const NARROW_WIDTHS: [u32; 2] = [1, 40];
 
 #[test]
 fn test_data_holds_only_fixture_files() {
@@ -170,8 +179,17 @@ fn failures_in(name: &Path, src: &str, expected: &str, config: &Config) -> Vec<S
         (Some(one), Some(other)) if one == other => vec![one],
         (formatting, invariant) => [formatting, invariant].into_iter().flatten().collect(),
     };
+    let narrow_failures = NARROW_WIDTHS.iter().filter_map(|&line_width| {
+        let config = Config {
+            line_width,
+            ..config.clone()
+        };
+        let detail = detail_of(|| keeps_invariants(src, &config))?;
+        Some(format!("at line width {line_width}: {detail}"))
+    });
     details
         .into_iter()
+        .chain(narrow_failures)
         .map(|detail| format!("{}\n{detail}", name.display()))
         .collect()
 }
