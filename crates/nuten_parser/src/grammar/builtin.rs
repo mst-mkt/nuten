@@ -2,6 +2,7 @@
 //!
 //! Nu registers the parent of a subcommand as a command too, so `str` stands for `str trim`.
 //! A plugin is left out: it is registered per user, and nu runs an unregistered one externally.
+//! A command nu has only on some platforms is taken in, since a file may run on another one.
 
 pub(super) fn is_command(head: &str) -> bool {
     COMMANDS.binary_search(&head).is_ok()
@@ -286,6 +287,7 @@ const COMMANDS: &[&str] = &[
     "query",
     "random",
     "reduce",
+    "registry",
     "reject",
     "rename",
     "return",
@@ -417,8 +419,20 @@ mod tests {
         let Some(names) = asked(COMMANDS_OF_NU) else {
             return;
         };
-        assert_eq!(COMMANDS, names);
+        assert_eq!(without_windows_only(COMMANDS), names);
     }
+
+    /// `names` without those nu has only on Windows, since the tests run nu on unix.
+    fn without_windows_only<'a>(names: &[&'a str]) -> Vec<&'a str> {
+        names
+            .iter()
+            .copied()
+            .filter(|name| !WINDOWS_ONLY.contains(name))
+            .collect()
+    }
+
+    /// The names nu registers only on Windows.
+    const WINDOWS_ONLY: &[&str] = &["registry"];
 
     #[test]
     fn attributes_are_what_nu_has() {
