@@ -20,7 +20,7 @@ impl<'a> Formatter<'a> {
             part.child
                 .element
                 .as_node()
-                .is_some_and(|node| self.breaks_at_operators(node.syntax()))
+                .is_some_and(|node| self.holds_expression_breaking_at_operators(node.syntax()))
         });
         let head: Vec<_> = expand
             .then(expand_parent)

@@ -4,65 +4,48 @@
 
 use std::iter;
 
-use nuten_doc::{Element, breaks_groups, group, soft_line_break_or_space};
+use nuten_doc::{Element, group, soft_line_break_or_space};
 use nuten_parser::operator_precedence;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
 
-use super::{Child, Formatter, children, line_break_or_space};
+use super::{Child, Formatter, children, in_interpolation, line_break_or_space, starts_kept_line};
 
 impl<'a> Formatter<'a> {
-    /// An expression `breaks_by_width` picks, broken before each loosest operator if need be.
+    /// An expression `breaks_by_width` picks, broken before its loosest operators if need be.
     /// Those split it into the parts nu evaluates last, so each line holds a whole part.
     pub(super) fn parenthesized_expression(&mut self, expression: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(expression.children_with_tokens(), &self.kept).collect();
-        let laid_out = self
-            .laid_out_ahead
-            .remove(expression)
-            .unwrap_or_else(|| self.laid_out_items(&items));
-        let broken_at = broken_at(&items, &laid_out);
-        // An operator the source ends a line with, or puts a comment after, stays there.
-        // Moving it would override where the author broke the line.
-        let breaks_after = |index: usize| {
-            items
-                .get(index + 1)
-                .is_some_and(|next| next.newlines > 0 || next.is_comment())
-        };
-        let mut laid_out = laid_out.into_iter();
-        let expression = self.spaced_children_by(
-            &items,
-            |index, item| {
-                let breaks_before = item.newlines == 0
-                    && !breaks_after(index)
-                    && precedence_of(item).is_some_and(|precedence| Some(precedence) == broken_at);
-                Some(if breaks_before {
-                    soft_line_break_or_space()
-                } else {
-                    line_break_or_space(item)
+        let loosest = loosest_precedence(&items);
+        // An operator ahead of a comment or a kept line stays, or it would sit alone on its line.
+        let breaks_after: Vec<_> = (0..items.len())
+            .map(|index| {
+                items.get(index + 1).is_some_and(|next| {
+                    next.is_comment() || starts_kept_line(&self.kept, &items[index + 1..])
                 })
-            },
-            |_, _, _| {
-                laid_out
-                    .next()
-                    .expect("`spaced_children_by` lays out each item but a comment, in order")
-            },
-        );
+            })
+            .collect();
+        let expression = self.spaced_children(&items, |index, item| {
+            let breaks_before = !breaks_after[index]
+                && precedence_of(item).is_some_and(|precedence| Some(precedence) == loosest);
+            Some(if breaks_before {
+                soft_line_break_or_space()
+            } else {
+                line_break_or_space(item)
+            })
+        });
         vec![group(expression)]
     }
 
     /// Whether `element`, an element of a pipeline, holds an expression that breaks at operators.
-    /// Its items stay laid out for `parenthesized_expression` to take.
-    /// False when the expression or what holds it is kept, since nothing would take its items.
-    pub(super) fn breaks_at_operators(&mut self, element: &SyntaxNode) -> bool {
-        let Some(expression) = held_expression(element).filter(|expression| {
-            breaks_by_width(expression) && !self.kept_up_to(expression, element)
-        }) else {
-            return false;
-        };
-        let items: Vec<_> = children(expression.children_with_tokens(), &self.kept).collect();
-        let laid_out = self.laid_out_items(&items);
-        let breaks = broken_at(&items, &laid_out).is_some();
-        self.laid_out_ahead.insert(expression, laid_out);
-        breaks
+    pub(super) fn holds_expression_breaking_at_operators(&self, element: &SyntaxNode) -> bool {
+        held_expression(element).is_some_and(|expression| {
+            breaks_by_width(&expression)
+                && !self.kept_up_to(&expression, element)
+                && loosest_precedence(
+                    &children(expression.children_with_tokens(), &self.kept).collect::<Vec<_>>(),
+                )
+                .is_some()
+        })
     }
 
     fn kept_up_to(&self, expression: &SyntaxNode, element: &SyntaxNode) -> bool {
@@ -71,14 +54,6 @@ impl<'a> Formatter<'a> {
             .take_while(|node| node != element)
             .chain(iter::once(element.clone()))
             .any(|node| self.kept.keeps(&node.into()))
-    }
-
-    fn laid_out_items(&mut self, items: &[Child]) -> Vec<Vec<Element<'a>>> {
-        items
-            .iter()
-            .filter(|item| !item.is_comment())
-            .map(|item| self.element(&item.element))
-            .collect()
     }
 }
 
@@ -91,19 +66,6 @@ fn held_expression(element: &SyntaxNode) -> Option<SyntaxNode> {
             .find(|child| child.kind() == SyntaxKind::MathExpression),
         _ => None,
     })
-}
-
-/// The precedence of the operators an expression breaks before: its loosest.
-/// `None` where it breaks before none, as where one of `laid_out` is laid out over lines.
-/// Such an item breaks the group around it whatever the width.
-/// The expression would then break at its operators even where it fits.
-/// The layout decides, not the source, which may have line breaks the layout drops.
-fn broken_at(items: &[Child], laid_out: &[Vec<Element<'_>>]) -> Option<u8> {
-    if laid_out.iter().any(|item| breaks_groups(item)) {
-        None
-    } else {
-        items.iter().filter_map(precedence_of).min()
-    }
 }
 
 /// Whether `expression` is laid out by `parenthesized_expression`.
@@ -123,13 +85,15 @@ pub(super) fn breaks_by_width(expression: &SyntaxNode) -> bool {
     });
     holder.is_some_and(|holder| {
         holder.kind() == SyntaxKind::Subexpression
-            && holder
-                .parent()
-                .is_none_or(|parent| parent.kind() != SyntaxKind::Interpolation)
+            && !in_interpolation(&holder)
             && !holder
                 .children_with_tokens()
                 .any(|child| child.kind() == SyntaxKind::Semicolon)
     })
+}
+
+fn loosest_precedence(items: &[Child]) -> Option<u8> {
+    items.iter().filter_map(precedence_of).min()
 }
 
 /// How tightly `item` binds as an operator, the smaller the looser.

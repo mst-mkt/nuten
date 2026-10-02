@@ -3,5 +3,5 @@ let eta = 7; let theta = 8; let iota = 9; let kappa = 10; let lambda = 11; let m
 let closure_over_lines = ($alpha == ([1 2] | each {|x|
     $x
 }))
-let nested_over_lines = ($alpha + ($beta
-    + 1) + $alpha + $beta + $alpha + $beta + $alpha + $beta + $alpha + $beta + $alpha + $beta)
+let nested_over_lines = ($alpha + (
+    $beta + 1) + $alpha + $beta + $alpha + $beta + $alpha + $beta + $alpha + $beta + $alpha + $beta)

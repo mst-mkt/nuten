@@ -1,5 +1,3 @@
-(ls
-)
 (ls;
 pwd)
 (let x = 1

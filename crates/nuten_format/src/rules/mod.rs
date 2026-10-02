@@ -16,7 +16,7 @@ mod pipeline;
 mod signature;
 mod subexpression;
 
-use std::{collections::HashMap, iter, mem};
+use std::{iter, mem};
 
 use nuten_doc::{
     Element, GroupIds, empty_line, empty_lines, exact_text, hard_line_break, line_suffix, space,
@@ -108,16 +108,11 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode, commas: Commas) -> Vec<E
         src,
         root: root.clone(),
         groups: GroupIds::default(),
-        laid_out_ahead: HashMap::new(),
         kept: Kept::of(src, root),
         commas,
     };
     let statements: Vec<_> = children(root.children_with_tokens(), &formatter.kept).collect();
     let mut out = formatter.statements(&statements, true);
-    debug_assert!(
-        formatter.laid_out_ahead.is_empty(),
-        "each expression laid out ahead takes its items"
-    );
     out.push(hard_line_break());
     out
 }
@@ -134,10 +129,6 @@ struct Formatter<'a> {
     /// The tree of `src`.
     root: SyntaxNode,
     groups: GroupIds,
-    /// The items of each expression a pipeline laid out to tell its tail.
-    /// They stay until the expression takes them.
-    /// Laying them out again would double the work at each level of nested `( )`.
-    laid_out_ahead: HashMap<SyntaxNode, Vec<Vec<Element<'a>>>>,
     kept: Kept,
     commas: Commas,
 }
@@ -273,17 +264,9 @@ impl<'a> Formatter<'a> {
             .enumerate()
             .flat_map(|(index, item)| {
                 let prev = items[..index].last().map(Child::kind);
-                // The layout would otherwise join this line to the one above.
-                // Formatted again, the kept run on it would then take in that line too.
-                let starts_kept_line = item.newlines > 0
-                    && items[index..]
-                        .iter()
-                        .enumerate()
-                        .take_while(|(offset, next)| *offset == 0 || next.newlines == 0)
-                        .any(|(_, next)| self.kept.keeps(&ast::untyped(&next.element)));
                 let (lead, elements) = match item.as_comment() {
                     Some(comment) => (None, self.comment(comment, item.newlines, false)),
-                    None if starts_kept_line => {
+                    None if starts_kept_line(&self.kept, &items[index..]) => {
                         (Some(hard_line_break()), element(self, index, &item.element))
                     },
                     None => (
@@ -479,11 +462,55 @@ fn headed_by_attribute(node: &SyntaxNode) -> bool {
 }
 
 fn line_break_or_space(item: &Child) -> Element<'static> {
-    if item.newlines > 0 {
+    if item.newlines > 0 && !joins_line_break(&ast::untyped(&item.element)) {
         hard_line_break()
     } else {
         space()
     }
+}
+
+/// Whether a line break before `element` becomes a space, where nu reads it as one: inside `( )`.
+/// The nearest brackets around it decide, since nu lexes what each holds by its own rules.
+/// A call an attribute heads stops the search too, since a line break ends the attribute.
+/// One inside a string is left as it is, since a line break there also splits the string.
+fn joins_line_break(element: &SyntaxElement) -> bool {
+    let Some(parent) = element.parent() else {
+        return false;
+    };
+    let nearest = parent.ancestors().find(|ancestor| {
+        matches!(
+            ancestor.kind(),
+            SyntaxKind::Subexpression
+                | SyntaxKind::Block
+                | SyntaxKind::MatchArms
+                | SyntaxKind::Record
+                | SyntaxKind::List
+                | SyntaxKind::Table
+                | SyntaxKind::Signature
+                | SyntaxKind::AttributeBlock
+                | SyntaxKind::Attribute
+        ) || headed_by_attribute(ancestor)
+    });
+    nearest.is_some_and(|nearest| nearest.kind() == SyntaxKind::Subexpression)
+        && !in_interpolation(&parent)
+}
+
+fn in_interpolation(node: &SyntaxNode) -> bool {
+    node.ancestors()
+        .any(|ancestor| ancestor.kind() == SyntaxKind::Interpolation)
+}
+
+/// Whether the first of `items` starts a line with something kept as written on it.
+/// The layout would otherwise join this line to the one above.
+/// Formatted again, the kept run on it would then take in that line too.
+fn starts_kept_line<'c>(kept: &Kept, items: impl IntoIterator<Item = &'c Child>) -> bool {
+    let mut items = items.into_iter();
+    items.next().is_some_and(|first| {
+        first.newlines > 0
+            && iter::once(first)
+                .chain(items.take_while(|next| next.newlines == 0))
+                .any(|item| kept.keeps(&ast::untyped(&item.element)))
+    })
 }
 
 /// A comment runs to the end of its line.
