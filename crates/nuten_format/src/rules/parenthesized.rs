@@ -4,7 +4,7 @@
 
 use std::iter;
 
-use nuten_doc::{Element, group, soft_line_break_or_space};
+use nuten_doc::{Element, group, indent, soft_line_break_or_space, space};
 use nuten_parser::operator_precedence;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
 
@@ -15,6 +15,13 @@ impl<'a> Formatter<'a> {
     /// Those split it into the parts nu evaluates last, so each line holds a whole part.
     pub(super) fn parenthesized_expression(&mut self, expression: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(expression.children_with_tokens(), &self.kept).collect();
+        let keeps_line_breaks = (0..items.len()).any(|index| {
+            items[index].is_comment() || starts_kept_line(&self.kept, &items[index..])
+        });
+        // The levels of `operation` would ignore the line breaks a comment or a kept line keeps.
+        if !keeps_line_breaks {
+            return self.operation(&items, 0);
+        }
         let loosest = loosest_precedence(&items);
         // An operator ahead of a comment or a kept line stays, or it would sit alone on its line.
         let breaks_after: Vec<_> = (0..items.len())
@@ -34,6 +41,36 @@ impl<'a> Formatter<'a> {
             })
         });
         vec![group(expression)]
+    }
+
+    /// `items` broken before each loosest operator where they do not fit, and each part likewise.
+    fn operation(&mut self, items: &[Child], levels: usize) -> Vec<Element<'a>> {
+        let loosest = loosest_precedence(items);
+        let operators: Vec<_> = (0..items.len())
+            .filter(|&index| {
+                precedence_of(&items[index]).is_some_and(|precedence| Some(precedence) == loosest)
+            })
+            .collect();
+        // An operator first leaves no part before it to break after.
+        let Some(&first) = operators.first().filter(|&&first| first > 0) else {
+            return self.spaced_children(items, |_, _| Some(space()));
+        };
+        // A first part goes deeper, or its own breaks would line up with the operators after it.
+        let head = self.operation(&items[..first], levels + 1);
+        let ends = operators.iter().skip(1).copied().chain([items.len()]);
+        let rest: Vec<_> = operators
+            .iter()
+            .zip(ends)
+            .flat_map(|(&index, end)| {
+                iter::once(soft_line_break_or_space())
+                    .chain(self.element(&items[index].element))
+                    .chain([space()])
+                    .chain(self.operation(&items[index + 1..end], 1))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        let rest = (0..levels).fold(rest, |rest, _| vec![indent(rest)]);
+        vec![group(head.into_iter().chain(rest))]
     }
 
     /// Whether `element`, an element of a pipeline, holds an expression that breaks at operators.
