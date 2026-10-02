@@ -53,10 +53,11 @@ fn pieces(text: &str, start: TextSize) -> Vec<Piece> {
         .collect()
 }
 
+/// The range of each `( )` in the interpolation `text`, brackets included.
 /// Ported from nu's `parse_string_interpolation`.
 /// In a `$"` string, a `(` after an odd number of `\` is text.
 /// Inside a `( )`, quotes make nested strings, where only a `"` one takes a `\` escape.
-fn parens(text: &str) -> Vec<Range<usize>> {
+pub(super) fn parens(text: &str) -> Vec<Range<usize>> {
     let bytes = text.as_bytes();
     let escapes = bytes[1] == b'"';
     // Past the `$` and the opening quote, and before the closing one.

@@ -4,10 +4,13 @@ use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
 
 use super::{
-    builtin, is_pipe,
+    builtin, interpolation, is_pipe,
     parameters::{Declared, Item, Param},
 };
-use crate::lexer::{self, Mode, Token};
+use crate::{
+    lexer::{self, Mode, Token},
+    parser::MAX_DEPTH,
+};
 
 /// What the parser of every level of brackets knows of the names in the file.
 #[derive(Clone)]
@@ -335,7 +338,7 @@ impl<'a> Scope<'a> {
             })
             .collect();
         imported.sort_by(|one, other| (&one.words, one.start).cmp(&(&other.words, other.start)));
-        let imports: Box<[_]> = imports(lexemes)
+        let imports: Box<[_]> = imports(&statement_lexemes)
             .into_iter()
             .filter(|import| !read.iter().any(|(start, _)| start == import))
             .collect();
@@ -761,7 +764,6 @@ fn bracketed_tokens(
 /// Where each statement that imports names starts, in order.
 /// Those are a `use`, a `source`, a `source-env`, and an `overlay use`, exported or not.
 /// Also where one follows an assignment operator, which nu reads as statements of the block.
-/// A line break counts even where the parser skips it, since nu reads such statements with it.
 fn imports(lexemes: &[Lexeme<'_>]) -> Vec<TextSize> {
     (0..lexemes.len())
         .filter(|&nth| {
@@ -794,10 +796,14 @@ fn unexported<'a>(mut words: impl Iterator<Item = &'a str>) -> Option<&'a str> {
 }
 
 /// The names `src` aliases, sorted and without repeats.
-/// Reads the text, not the tree, which the parser has yet to build.
+/// Reads the tokens, not the tree, which the parser has yet to build.
 /// Taking in a name out of scope only leaves a call read as it was written.
+/// One in brackets too deep for the parser is left out: it counts only there, kept as written.
 fn alias_names(src: &str) -> Box<[&str]> {
     let mut names: Vec<_> = statements_holding(src, "alias")
+        .0
+        .iter()
+        .map(Vec::as_slice)
         .filter_map(alias_name)
         .collect();
     names.sort_unstable();
@@ -806,29 +812,28 @@ fn alias_names(src: &str) -> Box<[&str]> {
 }
 
 /// The words after each `hide` in `src`, sorted and without repeats.
-/// `None` when `src` hides an overlay.
-/// Reads the text, as `alias_names` does.
+/// `None` when `src` hides an overlay, or may hide in brackets too deep to read.
+/// Reads the tokens, as `alias_names` does.
 /// A `hide` may follow an assignment operator, so one anywhere in a statement counts.
 /// Nu hides a name even outside the block of the `hide`.
 /// Taking in more words than it hides only leaves a call read as it was written.
 fn hidden_words(src: &str) -> Option<Box<[&str]>> {
-    let statements: Vec<_> = statements_holding(src, "hide").collect();
-    if statements.iter().any(|statement| {
-        let words = statement.split_ascii_whitespace();
-        words
-            .clone()
-            .zip(words.skip(1))
-            .any(|pair| pair == ("overlay", "hide"))
-    }) {
+    let (statements, too_deep) = statements_holding(src, "hide");
+    if too_deep
+        || statements
+            .iter()
+            .any(|statement| statement.windows(2).any(|pair| pair == ["overlay", "hide"]))
+    {
         return None;
     }
     let mut words: Vec<_> = statements
         .iter()
         .flat_map(|statement| {
             statement
-                .split_ascii_whitespace()
-                .skip_while(|&word| word != "hide")
+                .iter()
+                .skip_while(|&&item| item != "hide")
                 .skip(1)
+                .flat_map(|item| item.split_ascii_whitespace())
         })
         .map(|word| word.trim_matches(HIDDEN_TRIM))
         .collect();
@@ -840,45 +845,128 @@ fn hidden_words(src: &str) -> Option<Box<[&str]>> {
 /// What stands around a word after `hide`, which may name members in a list.
 const HIDDEN_TRIM: [char; 6] = ['"', '\'', '`', '[', ']', ','];
 
-/// What nu may start a statement after, so that an `alias` first in one is a head.
-fn breaks_statement(char: char) -> bool {
-    matches!(char, '\n' | '\r' | ';' | '|' | '{' | '}' | '(' | ')')
+/// The items of each statement of `src` that holds `word`, in brackets as deep as the parser reads.
+/// Also whether brackets deeper than that hold `word`, which the parser keeps as written.
+/// The lexer splits them, so that strings, comments, and line breaks read as nu reads them.
+/// Only brackets that hold `word` are lexed again, which spares most files any lexing.
+/// Each level lexes the levels inside it again, so the depth bounds the time.
+fn statements_holding<'a>(src: &'a str, word: &str) -> (Vec<Vec<&'a str>>, bool) {
+    let mut pending = vec![(TextRange::up_to(TextSize::of(src)), Mode::Block, 0)];
+    let mut statements = Vec::new();
+    let mut too_deep = false;
+    while let Some((range, mode, depth)) = pending.pop() {
+        if !src[range].contains(word) {
+            continue;
+        }
+        if depth > MAX_DEPTH {
+            too_deep = true;
+            continue;
+        }
+        let tokens = significant_tokens(src, range, mode);
+        statements.extend(
+            statements_of(src, &tokens, mode).filter(|statement| statement.contains(&word)),
+        );
+        pending.extend(
+            tokens
+                .iter()
+                .flat_map(|token| insides(src, token, mode))
+                .map(|(range, mode)| (range, mode, depth + 1)),
+        );
+    }
+    (statements, too_deep)
 }
 
-/// The statements of `src` that hold `word`, each once, as `breaks_statement` splits them.
-/// `word` holds no character that breaks a statement.
-/// Most files hold no `alias` or `hide`, and finding the word is cheaper than splitting `src`.
-fn statements_holding<'a>(src: &'a str, word: &'a str) -> impl Iterator<Item = &'a str> {
-    let statement_from = move |from: usize| {
-        let at = from + src[from..].find(word)?;
-        let start = src[..at].rfind(breaks_statement).map_or(0, |end| end + 1);
-        let end = src[at..]
-            .find(breaks_statement)
-            .map_or(src.len(), |end| at + end);
-        Some(start..end)
+/// The tokens of `range` lexed in `mode`, without those that end no statement and hold no item.
+fn significant_tokens(src: &str, range: TextRange, mode: Mode) -> Vec<Token> {
+    lexer::tokens(src, range, mode)
+        .filter(|token| {
+            !(matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment)
+                || (token.kind == SyntaxKind::Newline && mode.skips_newline()))
+        })
+        .collect()
+}
+
+/// The items of each statement `tokens` hold.
+/// A pipe ends one too, since an `alias` may follow it.
+/// A list holds none, though a block among its items may.
+fn statements_of<'a, 't>(
+    src: &'a str,
+    tokens: &'t [Token],
+    mode: Mode,
+) -> impl Iterator<Item = Vec<&'a str>> + use<'a, 't> {
+    let ends_statement = |token: &Token| {
+        matches!(
+            token.kind,
+            SyntaxKind::Newline
+                | SyntaxKind::Semicolon
+                | SyntaxKind::Pipe
+                | SyntaxKind::PipePipe
+                | SyntaxKind::ErrGtPipe
+                | SyntaxKind::OutErrGtPipe
+        )
     };
-    iter::successors(statement_from(0), move |statement| {
-        statement_from(statement.end)
-    })
-    .map(|statement| &src[statement])
+    tokens
+        .split(ends_statement)
+        .filter(move |run| mode != Mode::List && !run.is_empty())
+        .map(|run| run.iter().map(|token| &src[token.range]).collect())
+}
+
+/// What each outermost bracket of a word, or `( )` of an interpolation, holds, and how nu lexes it.
+/// `mode` is the one `token` was lexed in.
+/// The parser splits a word such as `a:{|| ls }` or `--flag=(ls)` before it reads its brackets.
+fn insides(src: &str, token: &Token, mode: Mode) -> Vec<(TextRange, Mode)> {
+    // Every bracket is one byte.
+    let inside = |range: TextRange| {
+        TextRange::new(
+            range.start() + TextSize::from(1),
+            range.end() - TextSize::from(1),
+        )
+    };
+    match token.kind {
+        SyntaxKind::Word => lexer::item_brackets(src, token.range, mode)
+            .into_iter()
+            .filter_map(|brackets| {
+                let inner = match src.as_bytes()[usize::from(brackets.start())] {
+                    b'(' => Mode::Paren,
+                    b'{' => Mode::Block,
+                    b'[' => Mode::List,
+                    _ => return None,
+                };
+                Some((inside(brackets), inner))
+            })
+            .collect(),
+        SyntaxKind::InterpString => {
+            let offset = |at: usize| TextSize::try_from(at).expect("an offset in a token");
+            interpolation::parens(&src[token.range])
+                .into_iter()
+                .map(|paren| {
+                    let range = TextRange::new(offset(paren.start), offset(paren.end));
+                    (inside(range + token.range.start()), Mode::Paren)
+                })
+                .collect()
+        },
+        _ => Vec::new(),
+    }
 }
 
 /// What nu may put around a name.
 const NAME_QUOTES: [char; 3] = ['"', '\'', '`'];
 
-fn alias_name(statement: &str) -> Option<&str> {
-    let mut words = statement.split_ascii_whitespace();
-    if unexported(words.by_ref())? != "alias" {
+fn alias_name<'a>(statement: &[&'a str]) -> Option<&'a str> {
+    let mut items = statement.iter().copied();
+    if unexported(items.by_ref())? != "alias" {
         return None;
     }
-    Some(words.next()?.trim_matches(NAME_QUOTES))
+    Some(items.next()?.trim_matches(NAME_QUOTES))
 }
 
 #[cfg(test)]
 mod tests {
+    use std::time::{Duration, Instant};
+
     use rowan::{TextRange, TextSize};
 
-    use super::{Callee, Names, alias_names, hidden_words};
+    use super::{Callee, MAX_DEPTH, Names, alias_names, hidden_words};
     use crate::{
         grammar::parameters::Takes,
         lexer::{self, Mode},
@@ -1460,9 +1548,10 @@ mod tests {
     }
 
     #[test]
-    fn skipped_line_break_makes_module_command_unknowable() {
-        let src = format!("{MODULE}\nuse m f\nf");
-        assert_eq!(callee_lexed_in(&src, 2, Mode::Paren), Callee::Unknowable);
+    fn skipped_line_break_starts_no_import() {
+        let src = "ls\nuse m.nu *\nf";
+        assert_eq!(callee_lexed_in(src, 2, Mode::Paren), Callee::Undefined);
+        assert_eq!(callee_lexed_in(src, 2, Mode::Block), Callee::Unknowable);
     }
 
     #[test]
@@ -1510,8 +1599,10 @@ mod tests {
         assert_eq!(*alias_names("alias a = ^a"), ["a"]);
         assert_eq!(*alias_names("export alias b = ^b"), ["b"]);
         assert_eq!(*alias_names("print hi;alias c = ^c"), ["c"]);
-        assert_eq!(*alias_names("print hi\ralias d = ^d"), ["d"]);
+        assert_eq!(*alias_names("print hi\r\nalias d = ^d"), ["d"]);
         assert_eq!(*alias_names("ls | alias e = ^e"), ["e"]);
+        assert_eq!(*alias_names("ls e>| alias e = ^e"), ["e"]);
+        assert_eq!(*alias_names("ls o+e>| alias e = ^e"), ["e"]);
         assert_eq!(*alias_names("do { alias f = ^f }"), ["f"]);
         assert_eq!(*alias_names("(alias g = ^g)"), ["g"]);
     }
@@ -1538,6 +1629,111 @@ mod tests {
     }
 
     #[test]
+    fn alias_names_read_line_break_in_parentheses_as_space() {
+        assert!(alias_names("(ls\nalias a = ^a)").is_empty());
+        assert_eq!(*alias_names("(\nalias b = ^b\n)"), ["b"]);
+        assert_eq!(*alias_names("(do {\nls\nalias c = ^c\n})"), ["c"]);
+        assert_eq!(*alias_names("(# c\nalias d = ^d)"), ["d"]);
+    }
+
+    #[test]
+    fn alias_names_skip_brackets_and_quotes_in_strings_and_comments() {
+        for (src, name) in [
+            ("print \"\\\"(\"\nalias a = ^a", "a"),
+            ("print '('\nalias b = ^b", "b"),
+            ("print r#'it's ('#\nalias c = ^c", "c"),
+            ("# (\nls\nalias d = ^d", "d"),
+            ("ls;# it's\nalias e = ^e", "e"),
+            ("ls |# it's\nalias f = ^f", "f"),
+        ] {
+            assert_eq!(*alias_names(src), [name], "{src:?}");
+        }
+    }
+
+    #[test]
+    fn alias_names_read_hash_inside_word_as_no_comment() {
+        assert_eq!(*alias_names("print [a#]\nalias a = ^a"), ["a"]);
+    }
+
+    #[test]
+    fn alias_names_omit_list_items() {
+        assert!(alias_names("[ls\nalias a = ^a]").is_empty());
+        assert!(alias_names("[alias b = ^b]").is_empty());
+    }
+
+    #[test]
+    fn alias_names_come_from_blocks_in_lists() {
+        assert_eq!(*alias_names("[{\nalias a = ^a\n}]"), ["a"]);
+    }
+
+    #[test]
+    fn alias_names_come_from_parentheses_in_interpolations() {
+        assert_eq!(*alias_names("print $\"(alias b = ^b; b)\""), ["b"]);
+        assert_eq!(*alias_names("print $'x((alias c = ^c))'"), ["c"]);
+        assert!(alias_names("print $\"(ls\nalias d = ^d)\"").is_empty());
+        assert!(alias_names("print $'(ls\nalias e = ^e)'").is_empty());
+    }
+
+    #[test]
+    fn alias_names_come_from_brackets_inside_words() {
+        assert_eq!(*alias_names("{a:{|| alias a = ^a; a}}"), ["a"]);
+        assert_eq!(*alias_names("ls --flag={ alias b = ^b }"), ["b"]);
+        assert_eq!(*alias_names("FOO=(alias c = ^c) ls"), ["c"]);
+        assert_eq!(*alias_names("ls --flag=(alias\nd = ^d)"), ["d"]);
+        assert_eq!(*alias_names("ls --flag={ export alias e = ^e }"), ["e"]);
+        assert_eq!(
+            *alias_names("print {a:(do { alias f = ^f; f }), b: 1}"),
+            ["f"]
+        );
+        assert_eq!(*alias_names("ls --g=(do { alias g = ^g }),x"), ["g"]);
+    }
+
+    #[test]
+    fn hidden_words_come_from_brackets_inside_words() {
+        assert_eq!(
+            hidden_words("{a:{|| hide m [d, e]}}").as_deref(),
+            Some(&["d", "e", "m"][..])
+        );
+    }
+
+    #[test]
+    fn alias_names_skip_comments_and_strings_in_brackets_inside_words() {
+        assert!(alias_names("{a:{|| # x alias a = ^a\na [b,  c]}}").is_empty());
+        assert!(alias_names("{a:{|| print \"x alias b = ^b\"; b}}").is_empty());
+        assert!(alias_names("print a\"{alias c = ^c}\"").is_empty());
+    }
+
+    /// `inner` inside `depth` levels of `( )`.
+    fn nested(depth: usize, inner: &str) -> String {
+        format!("{}{inner}{}", "(".repeat(depth), ")".repeat(depth))
+    }
+
+    #[test]
+    fn alias_names_come_from_brackets_as_deep_as_parser_reads() {
+        assert_eq!(*alias_names(&nested(MAX_DEPTH, "alias a = ^a")), ["a"]);
+    }
+
+    #[test]
+    fn alias_names_leave_out_alias_too_deep_to_read() {
+        assert!(alias_names(&nested(MAX_DEPTH + 1, "alias a = ^a")).is_empty());
+    }
+
+    #[test]
+    fn alias_names_lex_no_deeper_than_parser_reads() {
+        // Lexing each of those brackets again would take minutes.
+        let start = Instant::now();
+        assert!(alias_names(&nested(100_000, "alias a = ^a")).is_empty());
+        let src = format!("alias b = ^b\n{}", nested(100_000, ""));
+        assert_eq!(*alias_names(&src), ["b"]);
+        assert!(start.elapsed() < Duration::from_secs(30));
+    }
+
+    #[test]
+    fn hide_too_deep_to_read_may_hide_every_word() {
+        assert_eq!(hidden_words(&nested(MAX_DEPTH + 1, "hide a")), None);
+    }
+
+    #[test]
     fn alias_names_omit_statement_naming_nothing() {
         assert!(alias_names("alias").is_empty());
         assert!(alias_names("export").is_empty());
@@ -1558,6 +1754,14 @@ mod tests {
         );
         assert_eq!(hidden_words("print hi;hide d").as_deref(), Some(&["d"][..]));
         assert_eq!(hidden_words("do { hide e }").as_deref(), Some(&["e"][..]));
+        assert_eq!(hidden_words("hide f # g").as_deref(), Some(&["f"][..]));
+    }
+
+    #[test]
+    fn hidden_words_read_line_break_in_parentheses_as_space() {
+        assert_eq!(hidden_words("(ls\nhide\nf)").as_deref(), Some(&["f"][..]));
+        assert_eq!(hidden_words("(ls hide f)").as_deref(), Some(&["f"][..]));
+        assert_eq!(hidden_words("hide\nf").as_deref(), Some(&[][..]));
     }
 
     #[test]

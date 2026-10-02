@@ -23,7 +23,7 @@ pub(crate) enum Event {
 /// How deep brackets may nest before a bracketed word stays a word.
 /// Syntax that nests with no brackets, as a chain of assignments, counts toward it too.
 /// Past it nuten keeps the syntax as written, which cannot change what it means.
-const MAX_DEPTH: usize = 128;
+pub(crate) const MAX_DEPTH: usize = 128;
 
 pub(crate) struct Brackets {
     pub(crate) open: u8,

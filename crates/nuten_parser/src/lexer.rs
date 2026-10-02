@@ -190,6 +190,15 @@ pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     }
 }
 
+/// The outermost brackets in the item that `range` of `src` holds, as `lex` reads them in `mode`.
+pub(crate) fn item_brackets(src: &str, range: TextRange, mode: Mode) -> Vec<TextRange> {
+    let mut lexer = Lexer::new(src, range, mode);
+    lexer.brackets = Some(Vec::new());
+    // An item with an error still gives the brackets it closed before it.
+    let _ = lexer.item();
+    lexer.brackets.unwrap_or_default()
+}
+
 /// The tokens of lexing `range` of `src`, each lexed only as it is taken.
 /// An `Error` token comes without its error.
 pub(crate) fn tokens(src: &str, range: TextRange, mode: Mode) -> impl Iterator<Item = Token> {
@@ -201,6 +210,8 @@ struct Lexer<'a> {
     pos: usize,
     mode: Mode,
     errors: Vec<LexError>,
+    /// Where to put the outermost brackets of each item, if anywhere.
+    brackets: Option<Vec<TextRange>>,
 }
 
 impl Iterator for Lexer<'_> {
@@ -242,6 +253,7 @@ impl<'a> Lexer<'a> {
             pos: usize::from(range.start()),
             mode,
             errors: Vec::new(),
+            brackets: None,
         }
     }
 
@@ -324,7 +336,12 @@ impl<'a> Lexer<'a> {
                 b']' | b'}' | b')' | b'>'
                     if closers.last().is_some_and(|&(closer, _)| closer == byte) =>
                 {
-                    closers.pop();
+                    if let Some((_, opened)) = closers.pop()
+                        && closers.is_empty()
+                        && let Some(brackets) = &mut self.brackets
+                    {
+                        brackets.push(text_range(opened..at + 1));
+                    }
                 },
                 b']' if closers.is_empty() => {},
                 b']' | b'}' | b')' => {
@@ -471,7 +488,7 @@ mod tests {
     use super::{
         LexError,
         LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
-        Lexed, Mode, lex,
+        Lexed, Mode, item_brackets, lex,
     };
     use crate::invariants::OPERATORS;
 
@@ -672,6 +689,21 @@ mod tests {
     fn strings_inside_brackets_hide_closers() {
         for item in [r#"[a "]" b]"#, "[r#'a']'#]"] {
             assert_one_item(item);
+        }
+    }
+
+    #[test]
+    fn item_brackets_are_outermost_outside_strings_and_comments() {
+        for (src, expected) in [
+            (r#"a:(b{c})"(x)"[d]r#'{'#"#, &["(b{c})", "[d]"][..]),
+            ("a{b # }\n}", &["{b # }\n}"]),
+        ] {
+            let brackets: Vec<_> =
+                item_brackets(src, TextRange::up_to(TextSize::of(src)), Mode::Block)
+                    .into_iter()
+                    .map(|range| &src[range])
+                    .collect();
+            assert_eq!(brackets, expected, "{src:?}");
         }
     }
 
