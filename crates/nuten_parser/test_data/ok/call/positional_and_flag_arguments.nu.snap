@@ -21,9 +21,10 @@ Root@0..70
     Whitespace@21..22 " "
     PipelineElement@22..40
       Call@22..40
-        Word@22..24 "to"
-        Whitespace@24..25 " "
-        Word@25..29 "json"
+        CommandName@22..29
+          Word@22..24 "to"
+          Whitespace@24..25 " "
+          Word@25..29 "json"
         Whitespace@29..30 " "
         Word@30..38 "--indent"
         Whitespace@38..39 " "

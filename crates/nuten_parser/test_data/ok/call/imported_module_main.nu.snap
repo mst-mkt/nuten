@@ -89,11 +89,12 @@ Root@0..114
   Pipeline@94..113
     PipelineElement@94..113
       Call@94..113
-        Word@94..95 "n"
-        Whitespace@95..96 " "
-        Word@96..99 "two"
-        Whitespace@99..100 " "
-        Word@100..105 "words"
+        CommandName@94..105
+          Word@94..95 "n"
+          Whitespace@95..96 " "
+          Word@96..99 "two"
+          Whitespace@99..100 " "
+          Word@100..105 "words"
         Whitespace@105..106 " "
         Record@106..113
           LBrace@106..107 "{"

@@ -41,9 +41,10 @@ Root@0..79
   Pipeline@40..61
     PipelineElement@40..57
       Call@40..57
-        Word@40..46 "export"
-        Whitespace@46..47 " "
-        Word@47..52 "const"
+        CommandName@40..52
+          Word@40..46 "export"
+          Whitespace@46..47 " "
+          Word@47..52 "const"
         Whitespace@52..53 " "
         Word@53..57 "(ls)"
     Whitespace@57..58 " "

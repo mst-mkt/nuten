@@ -36,9 +36,10 @@ Root@0..47
     Whitespace@28..29 " "
     PipelineElement@29..46
       Call@29..46
-        Word@29..33 "take"
-        Whitespace@33..34 " "
-        Word@34..39 "until"
+        CommandName@29..39
+          Word@29..33 "take"
+          Whitespace@33..34 " "
+          Word@34..39 "until"
         Whitespace@39..40 " "
         Word@40..46 "{a: 1}"
   Newline@46..47 "\n"

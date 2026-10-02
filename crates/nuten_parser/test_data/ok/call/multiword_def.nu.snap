@@ -28,9 +28,10 @@ Root@0..57
   Pipeline@27..44
     PipelineElement@27..44
       Call@27..44
-        Word@27..30 "two"
-        Whitespace@30..31 " "
-        Word@31..36 "words"
+        CommandName@27..36
+          Word@27..30 "two"
+          Whitespace@30..31 " "
+          Word@31..36 "words"
         Whitespace@36..37 " "
         Record@37..44
           LBrace@37..38 "{"

@@ -45,9 +45,10 @@ Root@0..62
     Whitespace@36..37 " "
     PipelineElement@37..47
       Call@37..47
-        Word@37..40 "str"
-        Whitespace@40..41 " "
-        Word@41..47 "length"
+        CommandName@37..47
+          Word@37..40 "str"
+          Whitespace@40..41 " "
+          Word@41..47 "length"
   Newline@47..48 "\n"
   Pipeline@48..61
     PipelineElement@48..52

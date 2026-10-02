@@ -31,9 +31,10 @@ Root@0..51
   Pipeline@34..50
     PipelineElement@34..50
       Call@34..50
-        Word@34..40 "return"
-        Whitespace@40..41 " "
-        Word@41..42 "x"
+        CommandName@34..42
+          Word@34..40 "return"
+          Whitespace@40..41 " "
+          Word@41..42 "x"
         Whitespace@42..43 " "
         Word@43..50 "[a,  b]"
   Newline@50..51 "\n"

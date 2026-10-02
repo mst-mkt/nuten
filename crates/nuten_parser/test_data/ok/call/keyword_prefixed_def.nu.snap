@@ -28,9 +28,10 @@ Root@0..98
   Pipeline@22..33
     PipelineElement@22..33
       Call@22..33
-        Word@22..24 "if"
-        Whitespace@24..25 " "
-        Word@25..26 "x"
+        CommandName@22..26
+          Word@22..24 "if"
+          Whitespace@24..25 " "
+          Word@25..26 "x"
         Whitespace@26..27 " "
         Block@27..33
           LBrace@27..28 "{"
@@ -93,9 +94,10 @@ Root@0..98
   Pipeline@85..97
     PipelineElement@85..97
       Call@85..97
-        Word@85..88 "try"
-        Whitespace@88..89 " "
-        Word@89..90 "x"
+        CommandName@85..90
+          Word@85..88 "try"
+          Whitespace@88..89 " "
+          Word@89..90 "x"
         Whitespace@90..91 " "
         Block@91..97
           LBrace@91..92 "{"

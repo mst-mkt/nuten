@@ -61,9 +61,10 @@ Root@0..102
     Whitespace@60..61 " "
     PipelineElement@61..76
       Call@61..76
-        Word@61..65 "each"
-        Whitespace@65..66 " "
-        Word@66..71 "while"
+        CommandName@61..71
+          Word@61..65 "each"
+          Whitespace@65..66 " "
+          Word@66..71 "while"
         Whitespace@71..72 " "
         Block@72..76
           LBrace@72..73 "{"

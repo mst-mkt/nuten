@@ -1,5 +1,3 @@
-use std::iter;
-
 use nuten_syntax::SyntaxKind;
 
 use super::{
@@ -310,9 +308,24 @@ fn command_shape(name: &str, next: Option<&str>) -> Shape {
 
 /// Where the call runs a command nuten knows the signature of, a `[ ]` is what its parameter takes.
 pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
-    let params = call_parameters(p, shape);
-    start_call(p, shape);
-    for param in params.into_iter().skip(1) {
+    let items = match shape {
+        Shape::ExternalArgument | Shape::UnknownArgument => Vec::new(),
+        _ => call_items(p),
+    };
+    let params = call_parameters(p, shape, &items);
+    let words = call_name_words(p, shape, &items);
+    open_call(p, shape);
+    if words > 1 {
+        p.start(SyntaxKind::CommandName);
+        head(p);
+        for _ in 1..words {
+            p.bump();
+        }
+        p.finish();
+    } else {
+        head(p);
+    }
+    for param in params.into_iter().skip(words) {
         if !at_call_item(p) {
             break;
         }
@@ -328,26 +341,27 @@ pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
 /// Empty where it runs a command the file defines with a signature nuten cannot read.
 /// Empty too where nuten cannot tell which command it runs.
 /// A `%` before the head looks up a command nu has, whatever the file defines.
-fn call_parameters(p: &Parser<'_>, shape: Shape) -> Vec<Option<Param>> {
+fn call_parameters(p: &Parser<'_>, shape: Shape, items: &[&str]) -> Vec<Option<Param>> {
     if shape != Shape::KnownArgument {
         return Vec::new();
     }
-    let items = call_items(p);
     match p.callee() {
-        Callee::Defined => p.defined_parameters(&items).unwrap_or_default(),
+        Callee::Defined => p.defined_parameters(items).unwrap_or_default(),
         Callee::Unknowable => Vec::new(),
-        Callee::Undefined => {
-            let Some((head, rest)) = items.split_first() else {
-                return Vec::new();
-            };
-            let name = head.strip_prefix('%').unwrap_or(head);
-            parameters(
-                &iter::once(name)
-                    .chain(rest.iter().copied())
-                    .collect::<Vec<_>>(),
-            )
-        },
+        Callee::Undefined => parameters(&as_looked_up(items)),
     }
+}
+
+/// `items`, with the head looked up as nu looks it up, past any `%`.
+fn as_looked_up<'s>(items: &[&'s str]) -> Vec<&'s str> {
+    items
+        .iter()
+        .enumerate()
+        .map(|(index, item)| match index {
+            0 => item.strip_prefix('%').unwrap_or(item),
+            _ => item,
+        })
+        .collect()
 }
 
 fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
@@ -367,16 +381,38 @@ fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
     }
 }
 
-/// Nu reads the head as the name of a command, never as a value.
+/// Starts the call and takes its head alone, for an alias value or what an attribute heads.
+/// Neither is a call whose name nuten looks up.
 pub(super) fn start_call(p: &mut Parser<'_>, shape: Shape) {
+    open_call(p, shape);
+    head(p);
+}
+
+fn open_call(p: &mut Parser<'_>, shape: Shape) {
     p.start(if shape == Shape::ExternalArgument {
         SyntaxKind::ExternalCall
     } else {
         SyntaxKind::Call
     });
+}
+
+/// Nu reads the head as the name of a command, never as a value.
+fn head(p: &mut Parser<'_>) {
     match p.peek_text().and_then(shell_operator) {
         Some(kind) => p.bump_error(kind),
         None => p.bump(),
+    }
+}
+
+/// How many of `items` name the command, as nu takes the longest name they spell.
+fn call_name_words(p: &Parser<'_>, shape: Shape, items: &[&str]) -> usize {
+    if matches!(shape, Shape::ExternalArgument | Shape::UnknownArgument) {
+        return 1;
+    }
+    let builtin = builtin::name_words(&as_looked_up(items));
+    match p.callee() {
+        Callee::Defined => builtin.max(p.defined_words().unwrap_or(1)),
+        Callee::Unknowable | Callee::Undefined => builtin,
     }
 }
 

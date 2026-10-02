@@ -71,9 +71,10 @@ Root@0..103
   Pipeline@88..102
     PipelineElement@88..102
       Call@88..102
-        Word@88..94 "export"
-        Whitespace@94..95 " "
-        Word@95..100 "alias"
+        CommandName@88..100
+          Word@88..94 "export"
+          Whitespace@94..95 " "
+          Word@95..100 "alias"
         Whitespace@100..101 " "
         Word@101..102 "z"
   Newline@102..103 "\n"

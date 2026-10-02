@@ -11,7 +11,8 @@ Root@0..15
   Pipeline@4..14
     PipelineElement@4..14
       Call@4..14
-        Word@4..10 "export"
-        Whitespace@10..11 " "
-        Word@11..14 "use"
+        CommandName@4..14
+          Word@4..10 "export"
+          Whitespace@10..11 " "
+          Word@11..14 "use"
   Newline@14..15 "\n"

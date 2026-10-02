@@ -47,9 +47,10 @@ Root@0..66
     Whitespace@56..57 " "
     PipelineElement@57..65
       Call@57..65
-        Word@57..61 "into"
-        Whitespace@61..62 " "
-        Word@62..65 "int"
+        CommandName@57..65
+          Word@57..61 "into"
+          Whitespace@61..62 " "
+          Word@62..65 "int"
   Newline@65..66 "\n"
 error 1..8 "0x[f g]": BinaryDigits
 error 13..21 "0x[\"ff\"]": BinaryDigits

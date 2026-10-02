@@ -1,7 +1,6 @@
 //! Expressions nu reads inside `( )`, where its lexer takes a line break for a space.
 //!
 //! A call there stays on its line, though nu would take a line break before any argument.
-//! The tree does not tell how many words its name takes, such as the two of `str replace`.
 
 use std::iter;
 

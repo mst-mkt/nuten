@@ -4,8 +4,22 @@
 //! A plugin is left out: it is registered per user, and nu runs an unregistered one externally.
 //! A command nu has only on some platforms is taken in, since a file may run on another one.
 
+/// Whether `head` is the name, or the first word of the name, of a command of nu's own.
 pub(super) fn is_command(head: &str) -> bool {
     COMMANDS.binary_search(&head).is_ok()
+}
+
+/// How many of `words`, from the first, spell the longest name of a command of nu's own.
+/// One where no name of more words starts them.
+pub(super) fn name_words(words: &[&str]) -> usize {
+    (2..=words.len().min(LONGEST_NAME))
+        .rev()
+        .find(|&len| {
+            MULTIWORD_NAMES
+                .binary_search(&words[..len].join(" ").as_str())
+                .is_ok()
+        })
+        .unwrap_or(1)
 }
 
 pub(super) fn resolves_after_percent(head: &str) -> bool {
@@ -353,12 +367,362 @@ const COMMANDS: &[&str] = &[
     "zip",
 ];
 
+/// How many words the longest of `MULTIWORD_NAMES` takes.
+const LONGEST_NAME: usize = 3;
+
+/// The names of nu's commands that take more than one word.
+/// Sorted, so that `name_words` can bisect.
+const MULTIWORD_NAMES: &[&str] = &[
+    "abbr list",
+    "ansi gradient",
+    "ansi link",
+    "ansi strip",
+    "attr category",
+    "attr complete",
+    "attr complete external",
+    "attr deprecated",
+    "attr example",
+    "attr interactive",
+    "attr search-terms",
+    "bits and",
+    "bits not",
+    "bits or",
+    "bits rol",
+    "bits ror",
+    "bits shl",
+    "bits shr",
+    "bits xor",
+    "bytes add",
+    "bytes at",
+    "bytes build",
+    "bytes collect",
+    "bytes ends-with",
+    "bytes index-of",
+    "bytes length",
+    "bytes remove",
+    "bytes replace",
+    "bytes reverse",
+    "bytes split",
+    "bytes starts-with",
+    "commandline complete",
+    "commandline edit",
+    "commandline get-cursor",
+    "commandline set-cursor",
+    "commandline set-prompt",
+    "config env",
+    "config flatten",
+    "config nu",
+    "config reset",
+    "config use-colors",
+    "date format",
+    "date from-human",
+    "date humanize",
+    "date list-timezone",
+    "date now",
+    "date to-timezone",
+    "debug env",
+    "debug experimental-options",
+    "debug info",
+    "debug profile",
+    "decode base32",
+    "decode base32hex",
+    "decode base64",
+    "decode hex",
+    "detect columns",
+    "detect type",
+    "drop column",
+    "drop nth",
+    "each while",
+    "encode base32",
+    "encode base32hex",
+    "encode base64",
+    "encode hex",
+    "error make",
+    "explore config",
+    "explore regex",
+    "export alias",
+    "export const",
+    "export def",
+    "export extern",
+    "export module",
+    "export use",
+    "format bits",
+    "format date",
+    "format duration",
+    "format filesize",
+    "format number",
+    "format pattern",
+    "from csv",
+    "from json",
+    "from kdl",
+    "from md",
+    "from msgpack",
+    "from msgpackz",
+    "from nuon",
+    "from ods",
+    "from ssv",
+    "from toml",
+    "from tsv",
+    "from url",
+    "from xlsx",
+    "from xml",
+    "from yaml",
+    "from yml",
+    "hash md5",
+    "hash sha256",
+    "hash sha512",
+    "help aliases",
+    "help commands",
+    "help escapes",
+    "help externs",
+    "help modules",
+    "help operators",
+    "help pipe-and-redirect",
+    "history import",
+    "history session",
+    "http delete",
+    "http get",
+    "http head",
+    "http options",
+    "http patch",
+    "http pool",
+    "http post",
+    "http put",
+    "idx dirs",
+    "idx drop",
+    "idx files",
+    "idx find",
+    "idx init",
+    "idx search",
+    "idx status",
+    "idx watch",
+    "input list",
+    "input listen",
+    "into binary",
+    "into bool",
+    "into cell-path",
+    "into datetime",
+    "into duration",
+    "into filesize",
+    "into float",
+    "into glob",
+    "into int",
+    "into matrix",
+    "into record",
+    "into semver",
+    "into semver-range",
+    "into sqlite",
+    "into string",
+    "into value",
+    "job describe",
+    "job flush",
+    "job id",
+    "job kill",
+    "job list",
+    "job recv",
+    "job send",
+    "job spawn",
+    "job unfreeze",
+    "keybindings default",
+    "keybindings list",
+    "keybindings listen",
+    "math abs",
+    "math arccos",
+    "math arccosh",
+    "math arcsin",
+    "math arcsinh",
+    "math arctan",
+    "math arctanh",
+    "math avg",
+    "math cbrt",
+    "math ceil",
+    "math cos",
+    "math cosh",
+    "math exp",
+    "math floor",
+    "math ln",
+    "math log",
+    "math max",
+    "math median",
+    "math min",
+    "math mode",
+    "math product",
+    "math round",
+    "math sin",
+    "math sinh",
+    "math sqrt",
+    "math stddev",
+    "math sum",
+    "math tan",
+    "math tanh",
+    "math variance",
+    "matrix add",
+    "matrix get-col",
+    "matrix get-row",
+    "matrix identity",
+    "matrix into-nu",
+    "matrix map",
+    "matrix max",
+    "matrix mean",
+    "matrix multiply",
+    "matrix reduce",
+    "matrix reshape",
+    "matrix scale",
+    "matrix set-col",
+    "matrix set-row",
+    "matrix subtract",
+    "matrix sum",
+    "matrix transpose",
+    "matrix zeros",
+    "merge deep",
+    "metadata access",
+    "metadata set",
+    "overlay hide",
+    "overlay list",
+    "overlay new",
+    "overlay use",
+    "path basename",
+    "path dirname",
+    "path exists",
+    "path expand",
+    "path join",
+    "path parse",
+    "path relative-to",
+    "path self",
+    "path split",
+    "path type",
+    "plugin add",
+    "plugin list",
+    "plugin rm",
+    "plugin stop",
+    "plugin use",
+    "query db",
+    "random binary",
+    "random bool",
+    "random chars",
+    "random float",
+    "random int",
+    "random pass",
+    "random uuid",
+    "registry query",
+    "roll down",
+    "roll left",
+    "roll right",
+    "roll up",
+    "scope aliases",
+    "scope commands",
+    "scope engine-stats",
+    "scope externs",
+    "scope modules",
+    "scope variables",
+    "semver bump",
+    "seq char",
+    "seq date",
+    "skip until",
+    "skip while",
+    "split cell-path",
+    "split chars",
+    "split column",
+    "split list",
+    "split row",
+    "split words",
+    "stor create",
+    "stor delete",
+    "stor export",
+    "stor import",
+    "stor insert",
+    "stor open",
+    "stor reset",
+    "stor update",
+    "str camel-case",
+    "str capitalize",
+    "str contains",
+    "str distance",
+    "str downcase",
+    "str ends-with",
+    "str escape-regex",
+    "str expand",
+    "str index-of",
+    "str join",
+    "str kebab-case",
+    "str length",
+    "str lowercase",
+    "str pascal-case",
+    "str replace",
+    "str reverse",
+    "str screaming-snake-case",
+    "str snake-case",
+    "str starts-with",
+    "str stats",
+    "str substring",
+    "str title-case",
+    "str trim",
+    "str upcase",
+    "str uppercase",
+    "sys cpu",
+    "sys disks",
+    "sys host",
+    "sys mem",
+    "sys net",
+    "sys temp",
+    "sys users",
+    "take until",
+    "take while",
+    "term query",
+    "term size",
+    "to csv",
+    "to html",
+    "to json",
+    "to kdl",
+    "to md",
+    "to msgpack",
+    "to msgpackz",
+    "to nuon",
+    "to text",
+    "to toml",
+    "to tsv",
+    "to txt",
+    "to xml",
+    "to yaml",
+    "to yml",
+    "tui bind",
+    "tui box",
+    "tui button",
+    "tui debug",
+    "tui label",
+    "tui log",
+    "tui menu",
+    "tui preview",
+    "tui progress",
+    "tui run",
+    "tui search",
+    "tui select",
+    "tui split",
+    "tui tab",
+    "tui table",
+    "tui textbox",
+    "tui tree",
+    "update cells",
+    "url build-query",
+    "url decode",
+    "url encode",
+    "url join",
+    "url parse",
+    "url split-query",
+    "version check",
+    "view blocks",
+    "view files",
+    "view ir",
+    "view source",
+    "view span",
+];
+
 #[cfg(test)]
 mod tests {
     use super::{
-        ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, is_command, is_parser_keyword,
-        reads_before_assignment, resolves_after_percent, row_condition_words,
-        starts_with_parser_keyword, takes_any_argument,
+        ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT, LONGEST_NAME, MULTIWORD_NAMES, is_command,
+        is_parser_keyword, name_words, reads_before_assignment, resolves_after_percent,
+        row_condition_words, starts_with_parser_keyword, takes_any_argument,
     };
     use crate::test_support::asked;
 
@@ -404,7 +768,12 @@ mod tests {
 
     #[test]
     fn lists_are_sorted_without_repeats() {
-        for list in [ATTRIBUTES, COMMANDS, EXTERNAL_AFTER_PERCENT] {
+        for list in [
+            ATTRIBUTES,
+            COMMANDS,
+            EXTERNAL_AFTER_PERCENT,
+            MULTIWORD_NAMES,
+        ] {
             assert!(list.windows(2).all(|pair| pair[0] < pair[1]), "{list:?}");
         }
     }
@@ -432,7 +801,43 @@ mod tests {
     }
 
     /// The names nu registers only on Windows.
-    const WINDOWS_ONLY: &[&str] = &["registry"];
+    const WINDOWS_ONLY: &[&str] = &["registry", "registry query"];
+
+    #[test]
+    fn multiword_names_are_what_nu_has() {
+        let Some(names) = asked(NAMES_OF_NU) else {
+            return;
+        };
+        let multiword: Vec<&str> = names
+            .iter()
+            .map(String::as_str)
+            .filter(|name| name.contains(' '))
+            .collect();
+        assert_eq!(without_windows_only(MULTIWORD_NAMES), multiword);
+    }
+
+    #[test]
+    fn name_words_takes_longest_name() {
+        for (words, count) in [
+            (&["str", "replace", "a"][..], 2),
+            (&["attr", "complete", "external", "x"], 3),
+            (&["str"], 1),
+            (&["ls", "foo", "bar"], 1),
+            (&["http", "get", "url"], 2),
+            (&[], 1),
+        ] {
+            assert_eq!(name_words(words), count, "{words:?}");
+        }
+    }
+
+    #[test]
+    fn longest_name_is_that_of_most_words() {
+        let most = MULTIWORD_NAMES
+            .iter()
+            .map(|name| name.split(' ').count())
+            .max();
+        assert_eq!(most, Some(LONGEST_NAME));
+    }
 
     #[test]
     fn attributes_are_what_nu_has() {

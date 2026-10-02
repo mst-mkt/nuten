@@ -105,6 +105,9 @@ macro_rules! syntax_kinds {
                 /// Nu runs those two as external commands outside an `if` or a `try`.
                 /// That is, unless a block defines them or an import before them may bring them.
                 ExternalCall,
+                /// The words naming the command of a `Call`, where nuten knows there are several.
+                /// The value of an alias and a call an attribute heads leave such a name bare.
+                CommandName,
                 /// A term, then an `Operator` and a term while the element lasts.
                 /// An `if` or a `match` as a term is the keyword syntax over the rest of the items.
                 MathExpression,

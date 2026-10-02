@@ -50,9 +50,10 @@ Root@0..47
             Pipeline@32..40
               PipelineElement@32..40
                 Call@32..40
-                  Word@32..36 "date"
-                  Whitespace@36..37 " "
-                  Word@37..40 "now"
+                  CommandName@32..40
+                    Word@32..36 "date"
+                    Whitespace@36..37 " "
+                    Word@37..40 "now"
             RParen@40..41 ")"
           InterpText@41..46 ".log\""
   Newline@46..47 "\n"

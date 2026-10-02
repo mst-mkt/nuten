@@ -38,7 +38,8 @@ Root@0..33
     Whitespace@24..25 " "
     PipelineElement@25..32
       Call@25..32
-        Word@25..27 "to"
-        Whitespace@27..28 " "
-        Word@28..32 "json"
+        CommandName@25..32
+          Word@25..27 "to"
+          Whitespace@27..28 " "
+          Word@28..32 "json"
   Newline@32..33 "\n"

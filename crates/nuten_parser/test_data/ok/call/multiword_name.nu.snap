@@ -1,0 +1,163 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/multiword_name.nu
+---
+Root@0..218
+  Pipeline@0..15
+    PipelineElement@0..15
+      Call@0..15
+        CommandName@0..11
+          Word@0..3 "str"
+          Whitespace@3..4 " "
+          Word@4..11 "replace"
+        Whitespace@11..12 " "
+        Word@12..13 "a"
+        Whitespace@13..14 " "
+        Word@14..15 "b"
+  Newline@15..16 "\n"
+  Pipeline@16..38
+    PipelineElement@16..38
+      Call@16..38
+        CommandName@16..38
+          Word@16..20 "attr"
+          Whitespace@20..21 " "
+          Word@21..29 "complete"
+          Whitespace@29..30 " "
+          Word@30..38 "external"
+  Newline@38..39 "\n"
+  Pipeline@39..48
+    PipelineElement@39..48
+      Call@39..48
+        CommandName@39..48
+          Word@39..43 "%str"
+          Whitespace@43..44 " "
+          Word@44..48 "trim"
+  Newline@48..49 "\n"
+  Pipeline@49..59
+    PipelineElement@49..59
+      Call@49..59
+        Word@49..52 "str"
+        Whitespace@52..53 " "
+        String@53..59 "\"trim\""
+  Newline@59..60 "\n"
+  Pipeline@60..84
+    PipelineElement@60..84
+      Def@60..84
+        Word@60..63 "def"
+        Whitespace@63..64 " "
+        String@64..73 "\"foo bar\""
+        Whitespace@73..74 " "
+        Signature@74..77
+          LBracket@74..75 "["
+          Param@75..76
+            Word@75..76 "x"
+          RBracket@76..77 "]"
+        Whitespace@77..78 " "
+        Block@78..84
+          LBrace@78..79 "{"
+          Whitespace@79..80 " "
+          Pipeline@80..82
+            PipelineElement@80..82
+              Word@80..82 "$x"
+          Whitespace@82..83 " "
+          RBrace@83..84 "}"
+  Newline@84..85 "\n"
+  Pipeline@85..94
+    PipelineElement@85..94
+      Call@85..94
+        CommandName@85..92
+          Word@85..88 "foo"
+          Whitespace@88..89 " "
+          Word@89..92 "bar"
+        Whitespace@92..93 " "
+        Word@93..94 "1"
+  Newline@94..95 "\n"
+  Pipeline@95..108
+    PipelineElement@95..108
+      Def@95..108
+        Word@95..98 "def"
+        Whitespace@98..99 " "
+        Word@99..102 "str"
+        Whitespace@102..103 " "
+        Signature@103..105
+          LBracket@103..104 "["
+          RBracket@104..105 "]"
+        Whitespace@105..106 " "
+        Block@106..108
+          LBrace@106..107 "{"
+          RBrace@107..108 "}"
+  Newline@108..109 "\n"
+  Pipeline@109..117
+    PipelineElement@109..117
+      Call@109..117
+        CommandName@109..117
+          Word@109..112 "str"
+          Whitespace@112..113 " "
+          Word@113..117 "trim"
+  Newline@117..118 "\n"
+  Pipeline@118..126
+    PipelineElement@118..126
+      ExternalCall@118..126
+        Word@118..122 "^git"
+        Whitespace@122..123 " "
+        Word@123..126 "log"
+  Newline@126..127 "\n"
+  Pipeline@127..139
+    PipelineElement@127..139
+      Call@127..139
+        Word@127..129 "gh"
+        Whitespace@129..130 " "
+        Word@130..132 "pr"
+        Whitespace@132..133 " "
+        Word@133..139 "create"
+  Newline@139..140 "\n"
+  Pipeline@140..156
+    PipelineElement@140..156
+      Call@140..156
+        CommandName@140..154
+          Word@140..148 "registry"
+          Whitespace@148..149 " "
+          Word@149..154 "query"
+        Whitespace@154..155 " "
+        Word@155..156 "x"
+  Newline@156..157 "\n"
+  Pipeline@157..175
+    PipelineElement@157..175
+      Subexpression@157..175
+        LParen@157..158 "("
+        Pipeline@158..174
+          PipelineElement@158..174
+            Call@158..174
+              CommandName@158..170
+                Word@158..162 "into"
+                Newline@162..163 "\n"
+                Whitespace@163..167 "    "
+                Word@167..170 "int"
+              Whitespace@170..171 " "
+              String@171..174 "\"1\""
+        RParen@174..175 ")"
+  Newline@175..176 "\n"
+  Pipeline@176..198
+    PipelineElement@176..198
+      Use@176..198
+        Word@176..179 "use"
+        Whitespace@179..180 " "
+        Word@180..196 "a_missing_module"
+        Whitespace@196..197 " "
+        Word@197..198 "*"
+  Newline@198..199 "\n"
+  Pipeline@199..208
+    PipelineElement@199..208
+      Call@199..208
+        CommandName@199..208
+          Word@199..203 "%str"
+          Whitespace@203..204 " "
+          Word@204..208 "trim"
+  Newline@208..209 "\n"
+  Pipeline@209..217
+    PipelineElement@209..217
+      Call@209..217
+        Word@209..212 "str"
+        Whitespace@212..213 " "
+        Word@213..217 "trim"
+  Newline@217..218 "\n"

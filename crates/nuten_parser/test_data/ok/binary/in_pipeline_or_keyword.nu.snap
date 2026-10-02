@@ -15,9 +15,10 @@ Root@0..82
     Whitespace@8..9 " "
     PipelineElement@9..17
       Call@9..17
-        Word@9..13 "into"
-        Whitespace@13..14 " "
-        Word@14..17 "int"
+        CommandName@9..17
+          Word@9..13 "into"
+          Whitespace@13..14 " "
+          Word@14..17 "int"
   Newline@17..18 "\n"
   Pipeline@18..41
     PipelineElement@18..41

@@ -6,27 +6,30 @@ Root@0..88
   Pipeline@0..17
     PipelineElement@0..17
       Call@0..17
-        Word@0..4 "take"
-        Whitespace@4..5 " "
-        Word@5..10 "until"
+        CommandName@0..10
+          Word@0..4 "take"
+          Whitespace@4..5 " "
+          Word@5..10 "until"
         Whitespace@10..11 " "
         Word@11..17 "{a: 1}"
   Newline@17..18 "\n"
   Pipeline@18..36
     PipelineElement@18..36
       Call@18..36
-        Word@18..23 "%take"
-        Whitespace@23..24 " "
-        Word@24..29 "until"
+        CommandName@18..29
+          Word@18..23 "%take"
+          Whitespace@23..24 " "
+          Word@24..29 "until"
         Whitespace@29..30 " "
         Word@30..36 "{a: 1}"
   Newline@36..37 "\n"
   Pipeline@37..55
     PipelineElement@37..55
       Call@37..55
-        Word@37..41 "take"
-        Whitespace@41..42 " "
-        Word@42..47 "while"
+        CommandName@37..47
+          Word@37..41 "take"
+          Whitespace@41..42 " "
+          Word@42..47 "while"
         Whitespace@47..48 " "
         Word@48..51 "$it"
         Whitespace@51..52 " "
@@ -37,9 +40,10 @@ Root@0..88
   Pipeline@56..75
     PipelineElement@56..75
       Call@56..75
-        Word@56..60 "skip"
-        Whitespace@60..61 " "
-        Word@61..66 "until"
+        CommandName@56..66
+          Word@56..60 "skip"
+          Whitespace@60..61 " "
+          Word@61..66 "until"
         Whitespace@66..67 " "
         Block@67..75
           LBrace@67..68 "{"

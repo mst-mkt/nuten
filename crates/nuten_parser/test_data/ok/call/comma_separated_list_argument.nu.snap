@@ -39,9 +39,10 @@ Root@0..88
     Whitespace@29..30 " "
     PipelineElement@30..48
       Call@30..48
-        Word@30..35 "merge"
-        Whitespace@35..36 " "
-        Word@36..40 "deep"
+        CommandName@30..40
+          Word@30..35 "merge"
+          Whitespace@35..36 " "
+          Word@36..40 "deep"
         Whitespace@40..41 " "
         List@41..48
           LBracket@41..42 "["
@@ -75,9 +76,10 @@ Root@0..88
   Pipeline@71..87
     PipelineElement@71..87
       Call@71..87
-        Word@71..74 "str"
-        Whitespace@74..75 " "
-        Word@75..79 "join"
+        CommandName@71..79
+          Word@71..74 "str"
+          Whitespace@74..75 " "
+          Word@75..79 "join"
         Whitespace@79..80 " "
         Word@80..87 "[a,  b]"
   Newline@87..88 "\n"

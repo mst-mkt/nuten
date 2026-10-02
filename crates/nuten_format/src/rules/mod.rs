@@ -194,6 +194,7 @@ impl<'a> Formatter<'a> {
             Node::PipelineElement(_)
             | Node::Call(_)
             | Node::ExternalCall(_)
+            | Node::CommandName(_)
             | Node::MathExpression(_)
             | Node::Redirection(_)
             | Node::Match(_)
