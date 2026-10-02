@@ -5,7 +5,7 @@
 //! A command nu has only on some platforms is taken in, since a file may run on another one.
 
 /// Whether `head` is the name, or the first word of the name, of a command of nu's own.
-pub(super) fn is_command(head: &str) -> bool {
+pub fn is_command(head: &str) -> bool {
     COMMANDS.binary_search(&head).is_ok()
 }
 

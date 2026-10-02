@@ -1,6 +1,4 @@
 //! Expressions nu reads inside `( )`, where its lexer takes a line break for a space.
-//!
-//! A call there stays on its line, though nu would take a line break before any argument.
 
 use std::iter;
 
@@ -8,7 +6,7 @@ use nuten_doc::{Element, group, indent, soft_line_break_or_space, space};
 use nuten_parser::operator_precedence;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
 
-use super::{Child, Formatter, children, in_interpolation, line_break_or_space, starts_kept_line};
+use super::{Child, Formatter, breaks_by_width, children, line_break_or_space, starts_kept_line};
 
 impl<'a> Formatter<'a> {
     /// An expression `breaks_by_width` picks, broken before its loosest operators if need be.
@@ -84,14 +82,6 @@ impl<'a> Formatter<'a> {
                 .is_some()
         })
     }
-
-    fn kept_up_to(&self, expression: &SyntaxNode, element: &SyntaxNode) -> bool {
-        expression
-            .ancestors()
-            .take_while(|node| node != element)
-            .chain(iter::once(element.clone()))
-            .any(|node| self.kept.keeps(&node.into()))
-    }
 }
 
 /// The expression `element` holds: its first child, or the row condition of its `where`.
@@ -102,30 +92,6 @@ fn held_expression(element: &SyntaxNode) -> Option<SyntaxNode> {
             .children()
             .find(|child| child.kind() == SyntaxKind::MathExpression),
         _ => None,
-    })
-}
-
-/// Whether `expression` is laid out by `parenthesized_expression`.
-/// It is what the only statement right inside `( )` holds.
-/// It reaches that `( )` through its pipeline, its element, and any `where`, but nothing else.
-/// A `( )` inside a string is left out, since a line break there also splits the string.
-/// So is what an assignment takes, whose holder is no `Subexpression`.
-/// Nu ends it at a line break.
-/// So is a statement that shares its `( )` with another.
-/// Its `;` would then end a broken line, as if the next statement went on from it.
-pub(super) fn breaks_by_width(expression: &SyntaxNode) -> bool {
-    let holder = expression.ancestors().skip(1).find(|ancestor| {
-        !matches!(
-            ancestor.kind(),
-            SyntaxKind::PipelineElement | SyntaxKind::Pipeline | SyntaxKind::Where
-        )
-    });
-    holder.is_some_and(|holder| {
-        holder.kind() == SyntaxKind::Subexpression
-            && !in_interpolation(&holder)
-            && !holder
-                .children_with_tokens()
-                .any(|child| child.kind() == SyntaxKind::Semicolon)
     })
 }
 

@@ -33,7 +33,6 @@ mod where_;
 
 use nuten_syntax::SyntaxKind;
 
-pub use self::command::operator_precedence;
 use self::{
     assignment::Assigned,
     binary::{binary, binary_ahead},
@@ -49,6 +48,7 @@ use self::{
     table::{is_table, table_items},
     variable::variable_error,
 };
+pub use self::{builtin::is_command, command::operator_precedence};
 pub(crate) use self::{
     names::{Callee, Names},
     parameters::Param,

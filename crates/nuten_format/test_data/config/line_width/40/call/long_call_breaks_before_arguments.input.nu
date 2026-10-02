@@ -1,0 +1,21 @@
+let url = "https://example.com"
+let body = { a: 1 }
+(http post --content-type application/json $url $body)
+let result = (str replace --all --regex "a_long_pattern" "a_replacement" $url)
+(ls | where size > 1kb | http post --content-type application/json $url $body)
+(^git log -1 --oneline --max-count 10 --author someone $url)
+(echo --no-newline first second third fourth fifth sixth)
+(some-command --hoge=fuga --flag --flag2 "value" $url -- -x --y)
+(ls --all --long --short-names --du --mime-type --threads)
+(some-command --first # c
+  --second value)
+(some-command --first value --second value {|x| $x })
+(some-command --flag value -- first -x second third fourth)
+(some-command --hoge=fuga first second third fourth fifth)
+(some-command --flag -1 -.5 first second third fourth)
+(^docker compose up first-service Second third fourth)
+(ls | ^git log --oneline --graph --decorate --all-of-it)
+(gh pr list --search $url --repo $url --json title,author)
+(registry query --hklm 'SOFTWARE\Microsoft\Windows' ProgramFilesDir)
+(echo first second third fourth fifth sixth seventh)
+(str replace apple-and-pear banana-and-kiwi cherry)

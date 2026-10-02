@@ -4,6 +4,7 @@ mod alias;
 mod attribute;
 mod binary;
 mod block;
+mod call;
 mod container;
 mod control;
 mod def;
@@ -27,10 +28,7 @@ use nuten_syntax::{
     ast::{self, AstNode, Node},
 };
 
-use self::{
-    kept::{Kept, Member},
-    parenthesized::breaks_by_width,
-};
+use self::kept::{Kept, Member};
 use crate::Commas;
 
 /// A child of a container: neither whitespace nor a line break.
@@ -182,9 +180,8 @@ impl<'a> Formatter<'a> {
             Node::MathExpression(_) if breaks_by_width(node.syntax()) => {
                 self.parenthesized_expression(node.syntax())
             },
+            Node::Call(_) | Node::ExternalCall(_) => self.call(node.syntax()),
             Node::PipelineElement(_)
-            | Node::Call(_)
-            | Node::ExternalCall(_)
             | Node::CommandName(_)
             | Node::MathExpression(_)
             | Node::Redirection(_)
@@ -277,6 +274,14 @@ impl<'a> Formatter<'a> {
                 lead.into_iter().chain(elements)
             })
             .collect()
+    }
+
+    /// Whether `node` or what holds it, up to `element`, is kept.
+    fn kept_up_to(&self, node: &SyntaxNode, element: &SyntaxNode) -> bool {
+        node.ancestors()
+            .take_while(|node| node != element)
+            .chain(iter::once(element.clone()))
+            .any(|node| self.kept.keeps(&node.into()))
     }
 
     /// Items on one line, with a `,` before each item but the first that `comma_before` takes.
@@ -493,6 +498,30 @@ fn joins_line_break(element: &SyntaxElement) -> bool {
     });
     nearest.is_some_and(|nearest| nearest.kind() == SyntaxKind::Subexpression)
         && !in_interpolation(&parent)
+}
+
+/// Whether `node`, an expression or a call, breaks by the width inside the `( )` it stands in.
+/// It is what the only statement right inside `( )` holds.
+/// It reaches that `( )` through its pipeline, its element, and for an expression any `where`.
+/// A `( )` inside a string is left out, since a line break there also splits the string.
+/// So is what an assignment takes, whose holder is no `Subexpression`.
+/// Nu ends it at a line break.
+/// So is a statement that shares its `( )` with another.
+/// Its `;` would then end a broken line, as if the next statement went on from it.
+fn breaks_by_width(node: &SyntaxNode) -> bool {
+    let holder = node.ancestors().skip(1).find(|ancestor| {
+        !matches!(
+            ancestor.kind(),
+            SyntaxKind::PipelineElement | SyntaxKind::Pipeline | SyntaxKind::Where
+        )
+    });
+    holder.is_some_and(|holder| {
+        holder.kind() == SyntaxKind::Subexpression
+            && !in_interpolation(&holder)
+            && !holder
+                .children_with_tokens()
+                .any(|child| child.kind() == SyntaxKind::Semicolon)
+    })
 }
 
 fn in_interpolation(node: &SyntaxNode) -> bool {

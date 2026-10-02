@@ -14,7 +14,10 @@ use nuten_syntax::SyntaxNode;
 use rowan::{GreenNode, TextRange, TextSize};
 
 use crate::lexer::{LexError, Mode};
-pub use crate::{grammar::operator_precedence, lexer::LexErrorKind};
+pub use crate::{
+    grammar::{is_command, operator_precedence},
+    lexer::LexErrorKind,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Parsed {

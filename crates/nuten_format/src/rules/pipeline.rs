@@ -17,10 +17,10 @@ impl<'a> Formatter<'a> {
         let parts = parts(pipeline.syntax(), &self.kept);
         let expand = parts.iter().any(|part| part.child.newlines > 0);
         let (segments, tail) = segments(&parts, follows_semicolon(pipeline.syntax()), |part| {
-            part.child
-                .element
-                .as_node()
-                .is_some_and(|node| self.holds_expression_breaking_at_operators(node.syntax()))
+            part.child.element.as_node().is_some_and(|node| {
+                self.holds_expression_breaking_at_operators(node.syntax())
+                    || self.holds_call_breaking_at_arguments(node.syntax())
+            })
         });
         let head: Vec<_> = expand
             .then(expand_parent)
@@ -394,11 +394,11 @@ fn keeps_pipe_at_line_end(items: &[Part]) -> bool {
         .is_some_and(|part| part.child.is_comment() || part.starts_line_with_attribute())
 }
 
-/// `breaks_at_operators` tells an element that breaks at its operators, which is no tail.
+/// `breaks_itself` tells an element that breaks inside itself, which is no tail.
 fn segments(
     parts: &[Part],
     after_semicolon: bool,
-    breaks_at_operators: impl FnOnce(&Part) -> bool,
+    breaks_itself: impl FnOnce(&Part) -> bool,
 ) -> (Vec<Segment<'_>>, Option<Segment<'_>>) {
     let is_pipe = |part: &Part| part.kind() == SyntaxKind::Pipe;
     let mut runs = parts.split(is_pipe);
@@ -416,7 +416,7 @@ fn segments(
             (segments, segment)
         },
     );
-    let (last, tail) = last.split_tail(breaks_at_operators);
+    let (last, tail) = last.split_tail(breaks_itself);
     segments.push(last);
     (segments, tail)
 }
@@ -469,14 +469,14 @@ impl<'p> Segment<'p> {
             .unwrap_or(self.items.len())
     }
 
-    fn split_tail(&self, breaks_at_operators: impl FnOnce(&Part) -> bool) -> (Self, Option<Self>) {
+    fn split_tail(&self, breaks_itself: impl FnOnce(&Part) -> bool) -> (Self, Option<Self>) {
         let last = self.items.iter().rposition(|part| !part.joined);
         // An element that an attribute heads keeps the `|` before it at the end of the line.
         // Only the segment that holds that `|` can, so the element is no tail.
-        // An expression that breaks at its operators is no tail either, so the `|`s break first.
+        // An element that breaks inside itself is no tail either, so the `|`s break first.
         let Some(tail) = last.filter(|&last| {
             let part = &self.items[last];
-            part.is_element() && !part.starts_line_with_attribute() && !breaks_at_operators(part)
+            part.is_element() && !part.starts_line_with_attribute() && !breaks_itself(part)
         }) else {
             return (*self, None);
         };
