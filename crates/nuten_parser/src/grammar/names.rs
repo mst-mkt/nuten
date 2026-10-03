@@ -96,13 +96,13 @@ impl<'a> Names<'a> {
         };
         // Nu runs the longest name it finds.
         // A longer import therefore beats the definition, even from an outer block.
-        let spelled: Vec<_> = (0..self.longest_name()).map_while(&word).collect();
+        let spelled = self.spelled(&word);
         let imported = self
             .scopes()
             .filter_map(|scope| scope.imported_words(&spelled, head))
             .max();
         defining
-            .map(|(_, _, definition)| definition.words.len())
+            .map(|defining| defining.definition.words.len())
             .max(imported)
     }
 
@@ -110,17 +110,15 @@ impl<'a> Names<'a> {
         &self,
         head: TextSize,
         word: impl Fn(usize) -> Option<&'w str>,
-    ) -> (Callee, Option<(usize, &Scope<'a>, &Definition<'a>)>) {
-        let spelled: Vec<_> = (0..self.longest_name()).map_while(&word).collect();
+    ) -> (Callee, Option<Defining<'_, 'a>>) {
+        let spelled = self.spelled(&word);
+        let imports_before = || self.scopes().flat_map(|scope| scope.imports_before(head));
         // Nu may take a definition over the alias, but leaving that unknowable only keeps its call.
-        if self
-            .scopes()
-            .any(|scope| scope.imports_alias(&spelled, head))
-        {
+        if imports_before().any(|import| import.brings_alias(&spelled)) {
             return (Callee::Unknowable, None);
         }
-        let Some(defining @ (depth, scope, definition)) = self.defining(&spelled) else {
-            let unknowable = self.scopes().any(|scope| scope.imports_before(head))
+        let Some(defining) = self.defining(&spelled) else {
+            let unknowable = imports_before().any(|import| import.brings.is_none())
                 && word(0).is_some_and(|head| !builtin::is_parser_keyword(head));
             let callee = if unknowable {
                 Callee::Unknowable
@@ -136,49 +134,68 @@ impl<'a> Names<'a> {
             };
             return (callee, None);
         };
-        let longer_imported = word(definition.words.len()).is_some()
-            && self.scopes().any(|scope| scope.imports_before(head));
-        let replaceable = self.is_hidden(definition.words[0])
+        let unknowable = self.is_hidden(defining.definition.words[0])
             || self
-                .scopes()
-                .take(depth)
-                .any(|scope| scope.imports_before(head))
-            || scope.imports_between(definition.start, head)
-            || longer_imported;
-        if replaceable {
+                .replacing(&defining, &spelled, head)
+                .any(|import| import.brings.is_none());
+        if unknowable {
             (Callee::Unknowable, None)
         } else {
             (Callee::Defined, Some(defining))
         }
     }
 
-    /// A name starting with a word that names a command nu has may run that, as nu runs the longer.
+    /// Nu runs the longest name it finds, and of those as long, the one from the innermost block.
     /// Nu brings a definition in at its statement, so only a later import in its block replaces it.
+    fn replacing<'s>(
+        &'s self,
+        defining: &Defining<'s, 'a>,
+        spelled: &'s [&'s str],
+        head: TextSize,
+    ) -> impl Iterator<Item = &'s Import<'a>> {
+        let words = defining.definition.words.len();
+        let start = defining.definition.start;
+        let longer = self
+            .scopes()
+            .flat_map(move |scope| scope.imports_before(head))
+            .filter(move |import| import.may_bring(spelled, words + 1));
+        let inner = self
+            .scopes()
+            .take(defining.depth)
+            .flat_map(move |scope| scope.imports_before(head));
+        let later = defining
+            .scope
+            .imports_before(head)
+            .filter(move |import| import.start > start);
+        let as_long = inner
+            .chain(later)
+            .filter(move |import| import.may_bring(spelled, words));
+        longer.chain(as_long)
+    }
+
+    /// A name starting with a word that names a command nu has may run that, as nu runs the longer.
     pub(crate) fn defined_parameters(
         &self,
         head: TextSize,
         items: &[&str],
     ) -> Option<Vec<Option<Param>>> {
         let (_, defining) = self.resolved(head, |nth| items.get(nth).copied());
-        let (depth, scope, definition) = defining?;
+        let defining = defining?;
+        let definition = defining.definition;
         let declared = definition.declared.as_ref()?;
-        let words = definition.words.len();
-        let spelled = &items[..self.longest_name().min(items.len())];
-        let imported = |scope: &Scope<'a>, len, from| scope.imports_named(spelled, len, from, head);
         let replaced = builtin::is_command(definition.words[0])
-            || self
-                .scopes()
-                .any(|scope| imported(scope, words + 1, TextSize::new(0)))
-            || self
-                .scopes()
-                .take(depth)
-                .any(|scope| imported(scope, words, TextSize::new(0)))
-            || imported(scope, words, definition.start);
+            || self.replacing(&defining, items, head).next().is_some();
         if replaced {
             return None;
         }
+        let words = definition.words.len();
         let arguments = declared.arguments(&items[words..]);
         Some(iter::repeat_n(None, words).chain(arguments).collect())
+    }
+
+    /// One word past the longest name, so that an import nuten cannot read may bring a longer one.
+    fn spelled<'w>(&self, word: impl Fn(usize) -> Option<&'w str>) -> Vec<&'w str> {
+        (0..=self.longest_name()).map_while(word).collect()
     }
 
     fn scopes(&self) -> impl Iterator<Item = &Scope<'a>> {
@@ -192,15 +209,18 @@ impl<'a> Names<'a> {
             .unwrap_or(0)
     }
 
-    fn defining(&self, spelled: &[&str]) -> Option<(usize, &Scope<'a>, &Definition<'a>)> {
+    fn defining(&self, spelled: &[&str]) -> Option<Defining<'_, 'a>> {
         self.scopes()
             .enumerate()
             .filter_map(|(depth, scope)| {
-                scope
-                    .longest_spelled(spelled)
-                    .map(|definition| (depth, scope, definition))
+                let definition = scope.longest_spelled(spelled)?;
+                Some(Defining {
+                    depth,
+                    scope,
+                    definition,
+                })
             })
-            .max_by_key(|&(depth, _, definition)| (definition.words.len(), Reverse(depth)))
+            .max_by_key(|defining| (defining.definition.words.len(), Reverse(defining.depth)))
     }
 
     fn is_hidden(&self, first_word: &str) -> bool {
@@ -235,10 +255,9 @@ const SCOPE_WORDS: [&str; 6] = ["def", "extern", "module", "use", "source", "sou
 struct Scope<'a> {
     /// Sorted by name, so that `longest_spelled` can bisect them.
     definitions: Box<[Definition<'a>]>,
-    /// Sorted by name, then by where they start.
-    imported: Box<[Definition<'a>]>,
+    /// Sorted by where they start, so that `imports_before` can stop at the call.
+    imports: Box<[Import<'a>]>,
     longest_name: usize,
-    imports: Box<[TextSize]>,
     modules: Box<[Module<'a>]>,
     outer: Option<Rc<Scope<'a>>>,
 }
@@ -247,9 +266,20 @@ struct Definition<'a> {
     words: Vec<&'a str>,
     /// Nu takes the definition over a name imported before its start.
     start: TextSize,
-    /// An import of a `def` does not carry its parameters here.
     declared: Option<Declared<'a>>,
-    alias: bool,
+}
+
+struct Import<'a> {
+    start: TextSize,
+    /// `None` for an import nuten cannot read.
+    brings: Option<Vec<Exported<'a>>>,
+}
+
+struct Defining<'s, 'a> {
+    /// How many blocks lie between the call and the block of the definition.
+    depth: usize,
+    scope: &'s Scope<'a>,
+    definition: &'s Definition<'a>,
 }
 
 struct Module<'a> {
@@ -299,31 +329,34 @@ impl<'a> Scope<'a> {
             .filter_map(|statement| module(src, statement))
             .collect();
         let read = read_imports(src, &alone, &modules, outer.as_deref());
-        let mut imported: Vec<_> = read
-            .iter()
-            .flat_map(|(start, names)| {
-                names.iter().map(|exported| Definition {
-                    words: exported.words.clone(),
-                    start: *start,
-                    declared: None,
-                    alias: exported.alias,
-                })
+        let unread: Vec<_> = imports(&statement_lexemes)
+            .into_iter()
+            .filter(|&start| !read.iter().any(|&(read_start, _)| read_start == start))
+            .map(|start| Import {
+                start,
+                brings: None,
             })
             .collect();
-        imported.sort_by(|one, other| (&one.words, one.start).cmp(&(&other.words, other.start)));
-        let imports: Box<[_]> = imports(&statement_lexemes)
+        let mut imports: Vec<_> = read
             .into_iter()
-            .filter(|import| !read.iter().any(|(start, _)| start == import))
+            .map(|(start, names)| Import {
+                start,
+                brings: Some(names),
+            })
+            .chain(unread)
             .collect();
+        imports.sort_unstable_by_key(|import| import.start);
+        let imports = imports.into_boxed_slice();
+        let brought = imports.iter().flat_map(Import::brought);
         Scope {
             longest_name: definitions
                 .iter()
-                .chain(&imported)
-                .map(|definition| definition.words.len())
+                .map(|definition| &definition.words)
+                .chain(brought.map(|exported| &exported.words))
+                .map(Vec::len)
                 .max()
                 .unwrap_or(0),
             definitions: definitions.into(),
-            imported: imported.into(),
             imports,
             modules,
             outer,
@@ -331,10 +364,7 @@ impl<'a> Scope<'a> {
     }
 
     fn is_empty(&self) -> bool {
-        self.definitions.is_empty()
-            && self.imported.is_empty()
-            && self.imports.is_empty()
-            && self.modules.is_empty()
+        self.definitions.is_empty() && self.imports.is_empty() && self.modules.is_empty()
     }
 
     fn longest_spelled(&self, spelled: &[&str]) -> Option<&Definition<'a>> {
@@ -348,40 +378,38 @@ impl<'a> Scope<'a> {
             })
     }
 
+    fn imports_before(&self, end: TextSize) -> impl Iterator<Item = &Import<'a>> {
+        self.imports
+            .iter()
+            .take_while(move |import| import.start < end)
+    }
+
     fn imported_words(&self, spelled: &[&str], end: TextSize) -> Option<usize> {
-        (1..=spelled.len().min(self.longest_name))
-            .rev()
-            .find(|&len| {
-                let first = self
-                    .imported
-                    .partition_point(|command| command.words.as_slice() < &spelled[..len]);
-                self.imported
-                    .get(first)
-                    .is_some_and(|command| command.words == spelled[..len] && command.start < end)
-            })
+        self.imports_before(end)
+            .flat_map(Import::brought)
+            .filter(|exported| spelled.starts_with(&exported.words))
+            .map(|exported| exported.words.len())
+            .max()
+    }
+}
+
+impl<'a> Import<'a> {
+    fn brought(&self) -> impl Iterator<Item = &Exported<'a>> {
+        self.brings.iter().flatten()
     }
 
-    fn imports_named(&self, spelled: &[&str], len: usize, from: TextSize, end: TextSize) -> bool {
-        self.imported.iter().any(|command| {
-            command.words.len() >= len
-                && spelled.starts_with(&command.words)
-                && (from..end).contains(&command.start)
-        })
+    fn may_bring(&self, spelled: &[&str], len: usize) -> bool {
+        match &self.brings {
+            None => spelled.len() >= len,
+            Some(names) => names.iter().any(|exported| {
+                exported.words.len() >= len && spelled.starts_with(&exported.words)
+            }),
+        }
     }
 
-    fn imports_alias(&self, spelled: &[&str], end: TextSize) -> bool {
-        self.imported.iter().any(|command| {
-            command.alias && spelled.starts_with(&command.words) && command.start < end
-        })
-    }
-
-    fn imports_before(&self, end: TextSize) -> bool {
-        self.imports.first().is_some_and(|&import| import < end)
-    }
-
-    fn imports_between(&self, start: TextSize, end: TextSize) -> bool {
-        let after = self.imports.partition_point(|&import| import <= start);
-        self.imports.get(after).is_some_and(|&import| import < end)
+    fn brings_alias(&self, spelled: &[&str]) -> bool {
+        self.brought()
+            .any(|exported| exported.alias && spelled.starts_with(&exported.words))
     }
 }
 
@@ -480,7 +508,6 @@ fn definition<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Definition<'
         words: name_words(name.text)?,
         start,
         declared,
-        alias: false,
     })
 }
 
