@@ -1,11 +1,13 @@
 {
   inputs = {
+    nuten = {
+      url = "path:../..";
+    };
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+      follows = "nuten/nixpkgs";
     };
     fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
+      follows = "nuten/fenix";
     };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
@@ -14,12 +16,6 @@
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    nuten = {
-      # TODO: change to github: when publishing the repository
-      url = "git+ssh://git@github.com/mst-mkt/nuten";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
     };
     nushell = {
       # Not following nixpkgs, since this release is built and tested against its own.

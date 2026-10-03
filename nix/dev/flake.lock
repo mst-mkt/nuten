@@ -106,6 +106,7 @@
     "fenix": {
       "inputs": {
         "nixpkgs": [
+          "nuten",
           "nixpkgs"
         ],
         "rust-analyzer-src": "rust-analyzer-src"
@@ -206,22 +207,6 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1789073787,
-        "narHash": "sha256-xfX/toC2QV707s06GbP4II/TxYF0fNQj7s5/LClNDKc=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "aff8a0b28396750446e5537a96461bc4facdb287",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_2": {
-      "locked": {
         "lastModified": 1788297115,
         "narHash": "sha256-Z+vUNbfd2FIKkWOTkcT7RYlh3oFCnig/d2eXD1SWf2E=",
         "owner": "NixOS",
@@ -236,7 +221,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_3": {
+    "nixpkgs_2": {
       "locked": {
         "lastModified": 1789426278,
         "narHash": "sha256-GnotcvKtbTMnoVx6G4E7ZdUX6487Dky74dqq3pU7iRk=",
@@ -252,9 +237,25 @@
         "type": "github"
       }
     },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1789073787,
+        "narHash": "sha256-xfX/toC2QV707s06GbP4II/TxYF0fNQj7s5/LClNDKc=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "aff8a0b28396750446e5537a96461bc4facdb287",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nufmt": {
       "inputs": {
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs"
       },
       "locked": {
         "lastModified": 1790211032,
@@ -272,7 +273,7 @@
     },
     "nushell": {
       "inputs": {
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_2",
         "rust-overlay": "rust-overlay"
       },
       "locked": {
@@ -295,26 +296,18 @@
     "nuten": {
       "inputs": {
         "crane": "crane",
-        "fenix": [
-          "fenix"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "fenix": "fenix",
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1790610636,
-        "narHash": "sha256-xWOyil1RIx64cf8nRkfYF6k99+RQkHlyxqJJTuVmAxM=",
-        "ref": "refs/heads/main",
-        "rev": "106d85a34fa3268c6abc51310e2bec09b9b8bebd",
-        "revCount": 417,
-        "type": "git",
-        "url": "ssh://git@github.com/mst-mkt/nuten"
+        "path": "../..",
+        "type": "path"
       },
       "original": {
-        "type": "git",
-        "url": "ssh://git@github.com/mst-mkt/nuten"
-      }
+        "path": "../..",
+        "type": "path"
+      },
+      "parent": []
     },
     "nutest": {
       "flake": false,
@@ -339,10 +332,16 @@
         "corpus-nu_scripts": "corpus-nu_scripts",
         "corpus-nupm": "corpus-nupm",
         "corpus-tree-sitter-nu": "corpus-tree-sitter-nu",
-        "fenix": "fenix",
+        "fenix": [
+          "nuten",
+          "fenix"
+        ],
         "git-hooks": "git-hooks",
         "nix-vite-plus": "nix-vite-plus",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": [
+          "nuten",
+          "nixpkgs"
+        ],
         "nufmt": "nufmt",
         "nushell": "nushell",
         "nuten": "nuten",
