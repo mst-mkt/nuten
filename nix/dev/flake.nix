@@ -112,19 +112,6 @@
         inherit (nufmt.packages.${pkgs.stdenv.hostPlatform.system}) nufmt;
       });
 
-      apps = forAllSystems (pkgs: {
-        test-nu = {
-          type = "app";
-          program = pkgs.lib.getExe (
-            pkgs.callPackage ./nu-tests.nix {
-              toolchain = toolchainOf pkgs;
-              inherit nutest;
-            }
-          );
-          meta.description = "Run the tests written in nu";
-        };
-      });
-
       formatter = forAllSystems (pkgs: (treefmtOf pkgs).config.build.wrapper);
     };
 }
