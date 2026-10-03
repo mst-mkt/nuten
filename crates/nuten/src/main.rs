@@ -8,6 +8,7 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
     io::{self, Write},
+    panic::{self, UnwindSafe},
     path::{Path, PathBuf},
     process::ExitCode,
 };
@@ -452,15 +453,27 @@ fn overwrite_problem(path: &Path, failure: &Failure) -> String {
 }
 
 fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, Vec<String>> {
-    format(src, config).map_err(|errors| {
-        located(
-            path,
-            src,
-            errors
-                .errors
-                .iter()
-                .map(|error| (error.range.start().into(), error.kind)),
-        )
+    catch_panic(path, || {
+        format(src, config).map_err(|errors| {
+            located(
+                path,
+                src,
+                errors
+                    .errors
+                    .iter()
+                    .map(|error| (error.range.start().into(), error.kind)),
+            )
+        })
+    })?
+}
+
+/// Not left to end the run, which would lose the report of the other files.
+fn catch_panic<T>(path: &Path, f: impl FnOnce() -> T + UnwindSafe) -> Result<T, Vec<String>> {
+    panic::catch_unwind(f).map_err(|_| {
+        vec![format!(
+            "{}: nuten panicked while formatting",
+            path.display()
+        )]
     })
 }
 
@@ -476,8 +489,23 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use super::overwrite_problem;
+    use super::{catch_panic, overwrite_problem};
     use crate::overwrite::{Contents, Failure};
+
+    #[test]
+    fn catch_panic_turns_panic_into_problem_naming_file() {
+        assert_eq!(
+            catch_panic(Path::new("dir/a.nu"), || panic!("bug")),
+            Err::<(), _>(vec![
+                "dir/a.nu: nuten panicked while formatting".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn catch_panic_passes_on_value_of_f() {
+        assert_eq!(catch_panic(Path::new("dir/a.nu"), || 1), Ok(1));
+    }
 
     #[test]
     fn overwrite_problem_says_what_file_and_backup_hold() {
