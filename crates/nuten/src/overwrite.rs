@@ -3,7 +3,7 @@
 use std::{
     ffi::OsStr,
     fs::{self, File, OpenOptions},
-    io::{self, Seek, Write},
+    io::{self, Read, Seek, Write},
     iter,
     path::{Path, PathBuf},
     process,
@@ -11,9 +11,9 @@ use std::{
 };
 
 pub(crate) trait Target {
-    type File: Write + Seek + SetLen;
+    type File: Read + Write + Seek + SetLen;
 
-    /// Must not cut the file short.
+    /// Must read from the start and not cut the file short.
     fn open(&self) -> io::Result<Self::File>;
 
     /// The backup file must be new and empty.
@@ -33,7 +33,7 @@ impl Target for OnDisk<'_> {
     type File = File;
 
     fn open(&self) -> io::Result<File> {
-        OpenOptions::new().write(true).open(self.0)
+        OpenOptions::new().read(true).write(true).open(self.0)
     }
 
     fn create_backup(&self) -> io::Result<(File, PathBuf)> {
@@ -75,7 +75,6 @@ pub(crate) struct Failure {
     pub(crate) backup: Option<PathBuf>,
 }
 
-/// The file of `target` must hold `old`.
 pub(crate) fn overwrite<T: Target>(target: &T, old: &[u8], new: &[u8]) -> Result<(), Failure> {
     let untouched = |error| Failure {
         error,
@@ -84,6 +83,12 @@ pub(crate) fn overwrite<T: Target>(target: &T, old: &[u8], new: &[u8]) -> Result
     };
     // Opened before the backup is made, so that an unwritable file leaves nothing behind.
     let mut file = target.open().map_err(untouched)?;
+    // Another writer, such as an editor, may have changed it since, and writing would lose that.
+    if !holds(&mut file, old).map_err(untouched)? {
+        return Err(untouched(io::Error::other(
+            "changed since it was read, so it is left as it is",
+        )));
+    }
     let backup = match target.create_backup() {
         Ok((backup_file, path)) => Some(back_up(target, backup_file, path, old)?),
         Err(error) if forbids_backup(&error) => None,
@@ -159,6 +164,14 @@ fn left_behind<T: Target>(target: &T, path: PathBuf) -> Option<PathBuf> {
     target.remove_backup(&path).is_err().then_some(path)
 }
 
+/// Reading one byte past `contents` is enough to see that the file grew, so no more is read.
+fn holds(file: &mut impl Read, contents: &[u8]) -> io::Result<bool> {
+    let limit = contents.len() + 1;
+    let mut held = Vec::with_capacity(limit);
+    file.take(limit as u64).read_to_end(&mut held)?;
+    Ok(held == contents)
+}
+
 fn write_over(file: &mut (impl Write + Seek + SetLen), contents: &[u8]) -> io::Result<()> {
     file.rewind()?;
     file.write_all(contents)?;
@@ -191,7 +204,7 @@ mod tests {
     use std::{
         cell::{Cell, RefCell},
         env, fs,
-        io::{self, Seek, SeekFrom, Write},
+        io::{self, Read, Seek, SeekFrom, Write},
         iter,
         path::{Path, PathBuf},
         process,
@@ -230,7 +243,8 @@ mod tests {
         Backup,
     }
 
-    /// A write puts at most two bytes, so that a cut can fall inside it.
+    /// A read takes and a write puts at most two bytes.
+    /// So a read comes up short, as a real one may, and a cut can fall inside a write.
     struct Fake {
         steps_taken: Cell<usize>,
         fails: Box<dyn Fn(usize) -> bool>,
@@ -288,6 +302,20 @@ mod tests {
                 Role::File => &mut self.file,
                 Role::Backup => self.backup.as_mut().expect("a backup to write"),
             }
+        }
+    }
+
+    impl Read for FakeFile {
+        fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+            let (role, position) = (self.role, self.position);
+            let read = self.fake.take_step(|disk| {
+                let rest = disk.contents_mut(role).get(position..).unwrap_or_default();
+                let taken = rest.len().min(bytes.len()).min(2);
+                bytes[..taken].copy_from_slice(&rest[..taken]);
+                taken
+            })?;
+            self.position += read;
+            Ok(read)
         }
     }
 
@@ -466,6 +494,42 @@ mod tests {
         }
     }
 
+    /// `OLD` cut short, as long as `OLD`, and `OLD` with more after it.
+    /// So neither the length nor a start shared with `OLD` tells them from `OLD`.
+    fn changes() -> [Vec<u8>; 3] {
+        [
+            OLD[..OLD.len() - 1].to_vec(),
+            OLD.to_ascii_uppercase(),
+            [OLD, b"ls\n"].concat(),
+        ]
+    }
+
+    fn holding(file: Vec<u8>, backup_error: Option<io::ErrorKind>) -> Rc<Fake> {
+        let fake = Fake::with_backup_error(|_| false, backup_error);
+        fake.history.borrow_mut().push(Disk {
+            file,
+            backup: None,
+        });
+        fake
+    }
+
+    #[test]
+    fn overwrite_leaves_file_alone_when_it_changed_since_being_read() {
+        for changed in changes() {
+            for new in NEW_CONTENTS {
+                let fake = holding(changed.clone(), None);
+                let failure = overwrite(&fake, OLD, new).unwrap_err();
+                assert_eq!(failure.contents, Contents::Old);
+                assert_eq!(failure.backup, None);
+                let expected = Disk {
+                    file: changed.clone(),
+                    backup: None,
+                };
+                assert_eq!(fake.disk(), expected);
+            }
+        }
+    }
+
     #[test]
     fn overwrite_leaves_file_alone_when_disk_is_too_full_for_backup() {
         let fake = Fake::with_backup_error(|_| false, Some(io::ErrorKind::StorageFull));
@@ -473,7 +537,16 @@ mod tests {
         assert_eq!(failure.error.kind(), io::ErrorKind::StorageFull);
         assert_eq!(failure.contents, Contents::Old);
         assert_eq!(failure.backup, None);
-        assert_eq!(fake.steps_taken.get(), 1, "no step past opening the file");
+        let untouched = Disk {
+            file: OLD.to_vec(),
+            backup: None,
+        };
+        assert!(fake.history.borrow().iter().all(|disk| *disk == untouched));
+        // A file as long as `OLD` that fails the check takes as many steps to read.
+        let changed = holding(OLD.to_ascii_uppercase(), None);
+        overwrite(&changed, OLD, NEW_CONTENTS[1]).unwrap_err();
+        let checked = changed.steps_taken.get();
+        assert_eq!(fake.steps_taken.get(), checked, "no step past checking");
     }
 
     struct TempDir(PathBuf);
@@ -495,11 +568,17 @@ mod tests {
     }
 
     #[test]
-    fn on_disk_file_opens_without_being_cut_short_or_created() {
+    fn on_disk_file_opens_readable_without_being_cut_short_or_created() {
         let dir = TempDir::new();
         let path = dir.0.join("a.nu");
         fs::write(&path, OLD).unwrap();
-        drop(OnDisk(&path).open().unwrap());
+        let mut held = Vec::new();
+        OnDisk(&path)
+            .open()
+            .unwrap()
+            .read_to_end(&mut held)
+            .unwrap();
+        assert_eq!(held, OLD);
         assert_eq!(fs::read(&path).unwrap(), OLD);
         let missing = dir.0.join("missing.nu");
         let error = OnDisk(&missing).open().unwrap_err();
