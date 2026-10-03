@@ -69,7 +69,6 @@ in
       // {
         inherit cargoArtifacts;
         src = testSrc;
-        cargoNextestExtraArgs = "--no-tests=pass";
         env = {
           NUTEN_TEST_SKIP_NU = "1"; # No nu in the sandbox
           NUTEN_TEST_SKIP_CORPUS = "1"; # No corpus in the sandbox
