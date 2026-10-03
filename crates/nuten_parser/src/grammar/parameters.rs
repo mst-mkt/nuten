@@ -421,7 +421,6 @@ fn param_of_type(text: &str) -> Option<Param> {
         Some(Reads::ListOf) if !falls_to_text => Takes::ListOf,
         _ => Takes::Word,
     };
-    // Nu rejects `closure(...)` in a signature, so only `closure` itself counts.
     let closure = names.first().is_some_and(|name| name.trim() == "closure");
     Some(param(takes, members.contains(&Reads::Number), closure))
 }
@@ -445,7 +444,7 @@ fn reads(name: &str) -> Option<Reads> {
         "int" | "float" | "number" => Reads::Number,
         "binary" | "bool" | "cell-path" | "closure" | "datetime" | "directory" | "duration"
         | "error" | "filesize" | "nothing" | "range" | "record" => Reads::Nothing,
-        name if name.starts_with("record<") || name.starts_with("closure(") => Reads::Nothing,
+        name if name.starts_with("record<") => Reads::Nothing,
         _ => return None,
     })
 }
@@ -2027,7 +2026,6 @@ mod tests {
             "glob",
             "string@complete",
             "record<a: int>",
-            "closure(int)",
         ] {
             assert_eq!(param_of_type(ty), Some(WORD), "{ty:?}");
         }
@@ -2074,7 +2072,13 @@ mod tests {
 
     #[test]
     fn unknown_type_takes_nothing() {
-        for ty in ["nosuch", "oneof<>", "oneof<nosuch, string>"] {
+        for ty in [
+            "nosuch",
+            "oneof<>",
+            "oneof<nosuch, string>",
+            "closure(int)",
+            "oneof<closure(int), string>",
+        ] {
             assert_eq!(param_of_type(ty), None, "{ty:?}");
         }
     }
