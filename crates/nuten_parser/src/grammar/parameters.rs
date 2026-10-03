@@ -7,11 +7,15 @@
 
 use std::iter;
 
+use nuten_syntax::SyntaxKind;
+use rowan::{TextRange, TextSize};
+
 use super::{
     builtin::starts_with_parser_keyword,
     number::is_number,
     spread::{Target, is_spread},
 };
+use crate::lexer::{self, Mode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Takes {
@@ -400,7 +404,7 @@ fn param_of_type(text: &str) -> Option<Param> {
         .strip_prefix("oneof<")
         .and_then(|rest| rest.strip_suffix('>'))
     {
-        Some(members) => split_members(members),
+        Some(members) => without_commas(&type_param_tokens(members)),
         None => vec![text],
     };
     let members = names
@@ -449,28 +453,20 @@ fn reads(name: &str) -> Option<Reads> {
     })
 }
 
-/// Nu lexes the types of a `oneof` apart at each `,` or whitespace outside `< >` and `( )`.
-fn split_members(text: &str) -> Vec<&str> {
-    let mut depth = 0_usize;
-    let mut start = 0;
-    let mut members = Vec::new();
-    for (at, char) in text.char_indices() {
-        match char {
-            '<' | '(' => depth += 1,
-            '>' | ')' => depth = depth.saturating_sub(1),
-            char if depth == 0 && (char == ',' || char.is_whitespace()) => {
-                if start < at {
-                    members.push(&text[start..at]);
-                }
-                start = at + char.len_utf8();
-            },
-            _ => {},
-        }
-    }
-    if start < text.len() {
-        members.push(&text[start..]);
-    }
-    members
+/// Lexes the inside of a `< >` as nu's `parse_type_params` and `parse_named_type_params` do.
+fn type_param_tokens(text: &str) -> Vec<(SyntaxKind, &str)> {
+    lexer::tokens(text, TextRange::up_to(TextSize::of(text)), Mode::TypeParams)
+        .filter(|token| !token.kind.is_trivia())
+        .map(|token| (token.kind, &text[token.range]))
+        .collect()
+}
+
+fn without_commas<'a>(tokens: &[(SyntaxKind, &'a str)]) -> Vec<&'a str> {
+    tokens
+        .iter()
+        .filter(|&&(kind, _)| kind != SyntaxKind::Comma)
+        .map(|&(_, text)| text)
+        .collect()
 }
 
 /// Sorted by name, so that `longest_spelled` can bisect.
@@ -2039,11 +2035,12 @@ mod tests {
     }
 
     #[test]
-    fn oneof_members_part_at_whitespace_as_at_commas() {
+    fn oneof_members_part_at_whitespace_and_comments_as_at_commas() {
         for ty in [
             "oneof<list<any> string>",
             "oneof<list<any>\tstring>",
             "oneof< list<any> ,, string >",
+            "oneof<list<any> # c\n string>",
         ] {
             assert_eq!(param_of_type(ty), Some(WORD), "{ty:?}");
         }
@@ -2078,6 +2075,7 @@ mod tests {
             "oneof<nosuch, string>",
             "closure(int)",
             "oneof<closure(int), string>",
+            "oneof<int:string>",
         ] {
             assert_eq!(param_of_type(ty), None, "{ty:?}");
         }
