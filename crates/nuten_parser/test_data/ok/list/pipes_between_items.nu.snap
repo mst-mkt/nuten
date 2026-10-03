@@ -1,0 +1,60 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/pipes_between_items.nu
+---
+Root@0..51
+  Pipeline@0..21
+    PipelineElement@0..21
+      List@0..21
+        LBracket@0..1 "["
+        Word@1..2 "a"
+        Whitespace@2..3 " "
+        ListPipe@3..4 "|"
+        Whitespace@4..5 " "
+        Word@5..6 "b"
+        Whitespace@6..7 " "
+        ListPipe@7..10 "e>|"
+        Whitespace@10..11 " "
+        Word@11..12 "c"
+        Whitespace@12..13 " "
+        ListPipe@13..18 "o+e>|"
+        Whitespace@18..19 " "
+        Word@19..20 "d"
+        RBracket@20..21 "]"
+  Newline@21..22 "\n"
+  Pipeline@22..33
+    PipelineElement@22..33
+      List@22..33
+        LBracket@22..23 "["
+        ListPipe@23..24 "|"
+        Whitespace@24..25 " "
+        Word@25..26 "a"
+        Whitespace@26..27 " "
+        ListPipe@27..28 "|"
+        Whitespace@28..29 " "
+        ListPipe@29..30 "|"
+        Whitespace@30..31 " "
+        Word@31..32 "b"
+        RBracket@32..33 "]"
+  Newline@33..34 "\n"
+  Pipeline@34..41
+    PipelineElement@34..41
+      List@34..41
+        LBracket@34..35 "["
+        Word@35..36 "a"
+        Whitespace@36..37 " "
+        ListPipe@37..40 "e>|"
+        RBracket@40..41 "]"
+  Newline@41..42 "\n"
+  Pipeline@42..50
+    PipelineElement@42..50
+      List@42..50
+        LBracket@42..43 "["
+        Word@43..44 "a"
+        Comma@44..45 ","
+        Whitespace@45..46 " "
+        ListPipe@46..47 "|"
+        Whitespace@47..48 " "
+        Word@48..49 "b"
+        RBracket@49..50 "]"
+  Newline@50..51 "\n"

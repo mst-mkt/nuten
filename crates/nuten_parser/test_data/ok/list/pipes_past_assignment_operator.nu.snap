@@ -1,0 +1,28 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/pipes_past_assignment_operator.nu
+---
+Root@0..22
+  Pipeline@0..21
+    PipelineElement@0..21
+      List@0..21
+        LBracket@0..1 "["
+        Word@1..2 "a"
+        Whitespace@2..3 " "
+        ListPipe@3..4 "|"
+        Whitespace@4..5 " "
+        Word@5..6 "b"
+        Whitespace@6..7 " "
+        Assign@7..8 "="
+        Whitespace@8..9 " "
+        Word@9..10 "c"
+        Whitespace@10..11 " "
+        Pipe@11..12 "|"
+        Whitespace@12..13 " "
+        Word@13..14 "d"
+        Whitespace@14..15 " "
+        ErrGtPipe@15..18 "e>|"
+        Whitespace@18..19 " "
+        Word@19..20 "e"
+        RBracket@20..21 "]"
+  Newline@21..22 "\n"

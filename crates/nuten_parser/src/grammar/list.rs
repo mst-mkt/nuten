@@ -52,8 +52,8 @@ fn pipe(p: &mut Parser<'_>, kind: SyntaxKind, pipes_separate: bool) {
         _ if !pipes_separate || p.emitted_kinds().any(|kind| kind == SyntaxKind::Assign) => {
             p.bump();
         },
-        SyntaxKind::Pipe => p.bump(),
-        _ if follows_item(p) => p.bump(),
+        SyntaxKind::Pipe => p.bump_as(SyntaxKind::ListPipe),
+        _ if follows_item(p) => p.bump_as(SyntaxKind::ListPipe),
         _ => p.bump_error(ParseErrorKind::RedirectionAtHead),
     }
 }

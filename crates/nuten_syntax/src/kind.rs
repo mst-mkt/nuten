@@ -61,6 +61,9 @@ macro_rules! syntax_kinds {
                 ErrGtPipe,
                 /// `o+e>|`, `e+o>|`, `out+err>|`, or `err+out>|`
                 OutErrGtPipe,
+                /// `|`, or any spelling of `e>|` or `o+e>|`, between the items of a list.
+                /// The parser emits this, not the lexer.
+                ListPipe,
 
                 /// An operator of a `MathExpression`: `+`, `not-in`, or the `not` before a term.
                 /// The parser emits this, not the lexer.

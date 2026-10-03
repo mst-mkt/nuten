@@ -1,0 +1,20 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/list/pipes_beside_file_redirection.nu
+---
+Root@0..13
+  Pipeline@0..12
+    PipelineElement@0..12
+      List@0..12
+        LBracket@0..1 "["
+        Word@1..2 "a"
+        Whitespace@2..3 " "
+        OutGt@3..5 "o>"
+        Whitespace@5..6 " "
+        Word@6..7 "b"
+        Whitespace@7..8 " "
+        Pipe@8..9 "|"
+        Whitespace@9..10 " "
+        Word@10..11 "c"
+        RBracket@11..12 "]"
+  Newline@12..13 "\n"

@@ -19,7 +19,7 @@ Root@0..22
         LBracket@8..9 "["
         Word@9..10 "a"
         Whitespace@10..11 " "
-        Pipe@11..12 "|"
+        ListPipe@11..12 "|"
         Whitespace@12..13 " "
         Error@13..18
           OutErrGtPipe@13..18 "o+e>|"
