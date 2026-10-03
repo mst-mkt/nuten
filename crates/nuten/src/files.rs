@@ -31,7 +31,7 @@ pub(crate) fn dirs(paths: &[PathBuf]) -> Vec<&Path> {
         .collect()
 }
 
-/// A directory comes instead as the problems met while walking it, or keeping it from being walked.
+/// A directory comes as its files and the problems met walking it, or as what keeps it unwalked.
 /// `dir_lookups` holds the config of each of `dirs(paths)`, which says how to walk it.
 pub(crate) fn expand(paths: &[PathBuf], dir_lookups: &HashMap<&Path, Lookup>) -> Vec<Entry> {
     let respects_gitignore =
