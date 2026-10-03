@@ -12,7 +12,6 @@ use nuten_syntax::{
 use super::{Child, Formatter, children, kept::Member, without_separators};
 use crate::Commas;
 
-/// Makes a line break that prints as nothing or as a space when the group is flat.
 type SoftLine = fn() -> Element<'static>;
 
 impl<'a> Formatter<'a> {
@@ -136,7 +135,6 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// The `,` between `items[index]` and the next item, comments aside, or after the last item.
     fn comma_after(&self, items: &[Child], index: usize, commas: Commas) -> Option<Element<'a>> {
         let item = &items[index];
         if item.is_comment() || self.keeps_comma(item) {
@@ -148,8 +146,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// Whether `item` is kept as written with a `,` at its end, as a parameter holds its own.
-    /// Another `,` after it would double that one.
+    /// Another `,` after an item kept with a `,` at its end would double that one.
     fn keeps_comma(&self, item: &Child) -> bool {
         matches!(
             self.kept.member(&ast::untyped(&item.element)),
@@ -172,7 +169,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether nu reads `item` as the one item it looks like, or it is a comment.
 /// Nu reads no item in a `|` or a redirection, nor one in a field without both key and value.
 /// Nor in a parameter that ends with a `:` or a `=`, where nu would take a `,` for what it lacks.
 fn is_plain_item(item: &Child) -> bool {
@@ -190,7 +186,6 @@ fn is_plain_item(item: &Child) -> bool {
     }
 }
 
-/// The children of `node` but trivia and `,`s.
 fn parts(node: &SyntaxNode) -> Vec<SyntaxElement> {
     node.children_with_tokens()
         .filter(|part| !part.kind().is_trivia() && part.kind() != SyntaxKind::Comma)

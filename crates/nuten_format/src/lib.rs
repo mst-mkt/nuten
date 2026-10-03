@@ -1,5 +1,3 @@
-//! Formatting rules for Nushell.
-
 pub mod invariants;
 mod rules;
 
@@ -11,10 +9,8 @@ use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
-    /// Columns a line may take before it breaks where it can.
     pub line_width: u32,
     pub indent_style: IndentStyle,
-    /// Columns per indent level, and per tab when indenting with tabs.
     pub indent_width: u8,
     pub line_ending: LineEnding,
     pub commas: Commas,
@@ -32,29 +28,21 @@ impl Default for Config {
     }
 }
 
-/// Where a `,` goes among the items of lists, records, tables, parameters, and type parameters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Commas {
-    /// Nowhere.
     None,
-    /// Between items on one line.
     Inline,
-    /// Between items.
     Always,
-    /// Between items, and after the last when they break over lines.
     Trailing,
 }
 
-/// What ends each line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineEnding {
     Lf,
     CrLf,
-    /// That of the first line break between tokens, or `\n` where there is none.
     Auto,
 }
 
-/// `root` is the tree of the source, which `LineEnding::Auto` reads.
 fn printer_options(config: &Config, root: &SyntaxNode) -> PrinterOptions {
     let line_ending = match config.line_ending {
         LineEnding::Lf => nuten_doc::LineEnding::Lf,
@@ -85,14 +73,12 @@ fn first_line_ending(root: &SyntaxNode) -> nuten_doc::LineEnding {
     }
 }
 
-/// Syntax errors; a file with any is not formatted.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FormatError {
-    /// At least one, in the order they appear in the source.
+    /// At least one.
     pub errors: Vec<ParseError>,
 }
 
-/// Formats a whole file.
 pub fn format(src: &str, config: &Config) -> Result<String, FormatError> {
     format_parsed(src, &nuten_parser::parse(src), config)
 }

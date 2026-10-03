@@ -1,20 +1,16 @@
-//! Typed views over the nodes of the CST, which rowan calls the AST.
-//! Their accessors read the shape the parser gives a node.
-//! The `NodeShape` invariant holds every tree to that shape, so the accessors can count on it.
+//! Accessors expect the parser's shape, since the `NodeShape` invariant holds every tree to it.
 
 pub use rowan::ast::AstNode;
 use rowan::{NodeOrToken, ast::support};
 
 use crate::{NuLanguage, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, kind::syntax_kinds};
 
-/// The node kinds of `syntax_kinds`, with `Error`, which is among its tokens.
 macro_rules! nodes {
     (
         tokens { $($tokens:tt)* }
         nodes { $($(#[$meta:meta])* $node:ident,)* }
     ) => {
         typed_nodes! {
-            /// A node wrapping a parse error.
             Error,
             $($(#[$meta])* $node,)*
         }
@@ -100,7 +96,6 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
     }
 }
 
-/// A node the parser makes of a word enclosed in brackets.
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
         self.syntax()
@@ -116,12 +111,11 @@ pub trait Bracketed: AstNode<Language = NuLanguage> {
             .expect("a bracketed node closes with its bracket")
     }
 
-    /// What the brackets hold, trivia included.
     fn inside(&self) -> Inside {
         self.following(&self.open().into())
     }
 
-    /// What follows `after`, a child, up to the closing bracket, trivia included.
+    /// `after` must be a child of this node.
     fn following(&self, after: &SyntaxElement) -> Inside {
         Inside {
             next: after.next_sibling_or_token(),
@@ -130,7 +124,6 @@ pub trait Bracketed: AstNode<Language = NuLanguage> {
     }
 }
 
-/// The children of a bracketed node after one of them, up to its closing bracket, in source order.
 /// A struct rather than an `impl Iterator`, so that `Bracketed` can be a trait object.
 #[derive(Debug, Clone)]
 pub struct Inside {
@@ -151,14 +144,11 @@ impl Iterator for Inside {
     }
 }
 
-/// Implements `Bracketed` for the node kinds the parser makes of a bracketed word.
-/// Each takes the methods given in braces, and `Node::brackets` comes from the same table.
 macro_rules! bracketed {
     ($($name:ident: $($open:ident $close:ident)|+ $({ $($methods:tt)* })?,)*) => {
         $(impl Bracketed for $name { $($($methods)*)? })*
 
         impl Node {
-            /// The kinds of the brackets a `Bracketed` node may have.
             fn brackets(&self) -> Option<&'static [(SyntaxKind, SyntaxKind)]> {
                 match self {
                     $(Node::$name(_) => Some(&[$((SyntaxKind::$open, SyntaxKind::$close)),+]),)*
@@ -192,7 +182,6 @@ bracketed! {
 }
 
 impl Node {
-    /// What the node lacks of the shape the accessors read, if anything.
     pub fn flaw(&self) -> Option<&'static str> {
         // The inside is read through the brackets, so a missing one is reported first.
         self.bracket_flaw().or_else(|| self.inside_flaw())
@@ -202,7 +191,6 @@ impl Node {
         let pairs = self.brackets()?;
         let node = self.syntax();
         let first = node.first_child_or_token();
-        // A word before the brackets, and what is wrong without it.
         let lead = match self {
             Node::Type(_) => Some("does not start with its name"),
             Node::Binary(_) => Some("does not start with its prefix"),
@@ -261,7 +249,6 @@ impl Node {
     }
 }
 
-/// The token right after `token`, if the next sibling is one.
 fn token_after(token: &SyntaxToken) -> Option<SyntaxToken> {
     token
         .next_sibling_or_token()
@@ -278,7 +265,6 @@ fn closer(pairs: &[(SyntaxKind, SyntaxKind)], open: SyntaxKind) -> Option<Syntax
         .find_map(|&(opener, close)| (opener == open).then_some(close))
 }
 
-/// Trivia that is not a comment.
 fn is_line_trivia(kind: SyntaxKind) -> bool {
     matches!(kind, SyntaxKind::Whitespace | SyntaxKind::Newline)
 }
@@ -288,8 +274,6 @@ impl Block {
         support::child(self.syntax())
     }
 
-    /// What follows the parameters, or the `{`.
-    /// The statements, the `;` and the comments among them, and the trivia around them.
     pub fn statements(&self) -> Inside {
         match self.params() {
             Some(params) => self.following(&params.syntax().clone().into()),
@@ -309,8 +293,6 @@ impl Table {
         Some((columns, semicolon))
     }
 
-    /// The column names, a `List` or a `Word`, and the `;` after them, past any trivia.
-    /// The rows are what follows the `;`.
     pub fn header(&self) -> (Element, SyntaxToken) {
         let (columns, semicolon) = self
             .try_header()
@@ -320,28 +302,24 @@ impl Table {
 }
 
 impl Def {
-    /// The body, its last child when that is a block; an `extern`, or a `def` cut short, has none.
     pub fn body(&self) -> Option<Block> {
         self.syntax().last_child().and_then(Block::cast)
     }
 }
 
 impl Module {
-    /// The body, its last child when that is a block; one that stays a `Word` gives none.
     pub fn body(&self) -> Option<Block> {
         self.syntax().last_child().and_then(Block::cast)
     }
 }
 
 impl ExportEnv {
-    /// The body, its last child when that is a block; a record or a word gives none.
     pub fn body(&self) -> Option<Block> {
         self.syntax().last_child().and_then(Block::cast)
     }
 }
 
 impl Type {
-    /// The name before the `<`; the parameters or fields are what the brackets hold.
     pub fn name(&self) -> SyntaxToken {
         self.syntax()
             .first_child_or_token()
@@ -351,7 +329,6 @@ impl Type {
 }
 
 impl IoTypes {
-    /// The `[`, what it holds, and the `]`, when the pairs are written in `[ ]`.
     pub fn brackets(&self) -> Option<(SyntaxToken, Inside, SyntaxToken)> {
         let open = self
             .syntax()
@@ -372,7 +349,6 @@ impl IoTypes {
 }
 
 impl Binary {
-    /// The `0x`, `0o`, or `0b` before the `[`.
     pub fn prefix(&self) -> SyntaxToken {
         self.syntax()
             .first_child_or_token()
@@ -393,7 +369,6 @@ mod tests {
     };
     use crate::{SyntaxElement, SyntaxKind, SyntaxNode};
 
-    /// A tree written down: a node of a kind with what it holds, or a token.
     enum Tree {
         Node(SyntaxKind, Vec<Tree>),
         Token(SyntaxKind, &'static str),
@@ -429,7 +404,6 @@ mod tests {
         build(&node(kind, vec![]))
     }
 
-    /// `inside` between `[` and `]`.
     fn bracketed(inside: Vec<Tree>) -> Vec<Tree> {
         iter::once(token(SyntaxKind::LBracket, "["))
             .chain(inside)

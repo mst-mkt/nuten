@@ -1,5 +1,3 @@
-//! Formatting open documents with the config of their files.
-
 use lsp_server::ErrorCode;
 use lsp_types::{
     OneOf, Position, Range, TextEdit,

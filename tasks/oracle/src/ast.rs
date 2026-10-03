@@ -1,13 +1,7 @@
-//! Compares the ASTs nu writes as JSON.
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use jsonc_parser::{JsonValue, Map, ParseOptions, parse_to_value};
 
-/// Where what nu parses in `before` and `after` first differs, in one line.
-/// Positions, span ids, and the layout in the flattened tokens are left aside.
-/// `None` when the two are the same.
-/// Fails when either is not JSON.
 pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, String> {
     let (before, after) = (json(before)?, json(after)?);
     let difference = first_difference(
@@ -28,7 +22,6 @@ pub(crate) fn difference(before: &str, after: &str) -> Result<Option<String>, St
     }))
 }
 
-/// `value` in one line: an array by its length, an object by its keys.
 pub(crate) fn excerpt(value: JsonValue<'_>) -> String {
     match value {
         JsonValue::Array(array) => format!("an array of length {}", array.len()),
@@ -43,7 +36,6 @@ pub(crate) fn excerpt(value: JsonValue<'_>) -> String {
     }
 }
 
-/// `text` quoted, cut to 200 characters.
 pub(crate) fn quoted(text: &str) -> String {
     let text = format!("{text:?}");
     match text.char_indices().nth(200) {
@@ -58,11 +50,10 @@ pub(crate) fn json(text: &str) -> Result<JsonValue<'_>, String> {
         .ok_or_else(|| "nu wrote no JSON".to_string())
 }
 
-/// Without `start` and `end` wherever they stand together.
-/// Without the `span_source` beside them, which is the text between.
-/// Nu writes positions as such pairs, in `span` objects and elsewhere.
-/// It writes them as the source excerpt it draws into the message of a `LabeledError` too.
-/// Without a numeric `span_id` either, which counts the spans nu registers as it parses.
+/// Nu writes positions as `start` and `end` side by side, in `span` objects and elsewhere.
+/// The `span_source` beside them is the text between.
+/// Nu writes them as the source excerpt it draws into the message of a `LabeledError` too.
+/// A numeric `span_id` counts the spans nu registers as it parses.
 /// Nu registers some for expressions it then drops, and how many depends on the layout.
 fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
     match value {
@@ -100,8 +91,6 @@ fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
     }
 }
 
-/// `error`, the items of a `LabeledError`, without the lines of the excerpt in its message.
-/// The excerpt runs from the line starting with `,-[` to the one starting with `` `---- ``.
 fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
     let JsonValue::Array(items) = error else {
         return error;
@@ -124,7 +113,6 @@ fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
     JsonValue::Array(items.into())
 }
 
-/// Without the layout in the flattened tokens that formatting may change.
 fn without_layout(value: JsonValue<'_>) -> JsonValue<'_> {
     let JsonValue::Object(object) = value else {
         return value;
@@ -140,10 +128,8 @@ fn without_layout(value: JsonValue<'_>) -> JsonValue<'_> {
     JsonValue::Object(map.into())
 }
 
-/// A token of a shape made of layout and words, normalized.
-/// Such a shape is the brackets and the gaps between the items of a list.
+/// Nu gives the brackets and the gaps between items tokens of these shapes.
 /// A binary is one too: nu gives its brackets and items one token, and the AST holds its bytes.
-/// `None` when that leaves the token empty.
 fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
     const LAYOUT_SHAPES: [&str; 11] = [
         "shape_binary",
@@ -176,14 +162,8 @@ fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
     Some(JsonValue::Object(token.into()))
 }
 
-/// `content` with each run of whitespace and `,` as one space between two words.
-/// Such a run becomes nothing elsewhere.
-/// With `pipes_separate`, a `|` and a redirection to a pipe count in such a run as well.
 /// A redirection glued to the token before it belongs to that token, as nu lexes it.
-/// A string that closes in `content` and a comment stay as they are.
-/// A comment loses the whitespace it ends with, but keeps its line break.
-/// A lone `\r` ends a comment as a line break does.
-/// Nu ends a comment there when it looks for the closing bracket.
+/// A lone `\r` ends a comment, since nu ends one there when it looks for the closing bracket.
 fn words(content: &str, pipes_separate: bool) -> String {
     const REDIRECTING_PIPES: [&str; 6] =
         ["e>|", "err>|", "o+e>|", "e+o>|", "out+err>|", "err+out>|"];
@@ -237,8 +217,7 @@ fn words(content: &str, pipes_separate: bool) -> String {
     out
 }
 
-/// Where the string that `text` starts with closes, if it does.
-/// It closes at a quote of the kind it opens with, not escaped when that is `"`.
+/// Only a `"` string has escapes in nu.
 fn closing(text: &str) -> Option<usize> {
     let quote = text.as_bytes()[0];
     let mut escaped = false;
@@ -251,7 +230,6 @@ fn closing(text: &str) -> Option<usize> {
     None
 }
 
-/// The first difference: a JSON pointer to it and the two values there.
 /// Keys are compared sorted, so the difference reported does not depend on nu's key order.
 fn first_difference<'a>(
     a: JsonValue<'a>,

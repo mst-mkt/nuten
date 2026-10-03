@@ -1,5 +1,3 @@
-//! The parser must not panic, and must keep every parser invariant in `nuten_parser::invariants`.
-
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;

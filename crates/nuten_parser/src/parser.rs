@@ -1,5 +1,3 @@
-//! Parser that turns tokens into events for the tree builder.
-
 use std::{iter, mem, vec};
 
 use nuten_syntax::SyntaxKind;
@@ -20,9 +18,7 @@ pub(crate) enum Event {
     Finish,
 }
 
-/// How deep brackets may nest before a bracketed word stays a word.
-/// Syntax that nests with no brackets, as a chain of assignments, counts toward it too.
-/// Past it nuten keeps the syntax as written, which cannot change what it means.
+/// Past this depth nuten keeps the syntax as written, which cannot change what it means.
 pub(crate) const MAX_DEPTH: usize = 128;
 
 pub(crate) struct Brackets {
@@ -30,9 +26,7 @@ pub(crate) struct Brackets {
     pub(crate) close: u8,
     pub(crate) open_kind: SyntaxKind,
     pub(crate) close_kind: SyntaxKind,
-    /// Whether nu's lexer nests them in every mode.
-    /// Then lexing a word in block mode tells whether its first bracket closes at its last byte.
-    /// It must not close before that, as in `[a].b]`.
+    /// If set, block mode lexing tells whether a word's first bracket closes at its last byte.
     /// `< >` nest only where a type is read, so the caller checks what they hold by lexing it.
     pub(crate) always_nested: bool,
 }
@@ -43,7 +37,6 @@ impl Brackets {
         bytes.first() == Some(&self.open) && bytes.last() == Some(&self.close)
     }
 
-    /// Whether the brackets wrap `range` of `src`, the opening one closing at its last byte.
     fn enclose(&self, src: &str, range: TextRange) -> bool {
         if !self.wrap(&src[range]) {
             return false;
@@ -62,15 +55,10 @@ impl Brackets {
     }
 }
 
-/// The bytes of a bracketed word outside its brackets.
 #[derive(Clone, Copy)]
 pub(crate) enum Affix {
     None,
-    /// This many bytes before the opening bracket, as the name of a type before its `< >`.
-    /// `bump_bracketed` emits them as a `Word` inside the node.
     Name(usize),
-    /// One byte after the closing bracket, such as the `:` before input and output types.
-    /// `bump_bracketed` emits it as this kind after the node.
     Suffix(SyntaxKind),
 }
 
@@ -87,24 +75,20 @@ impl Affix {
     }
 }
 
-/// What `Parser::bracketed` found in the next token.
 pub(crate) struct Bracketed<'a> {
     inner: Parser<'a>,
     token: Token,
-    /// The brackets and what they hold.
     range: TextRange,
     brackets: &'static Brackets,
     affix: Affix,
 }
 
 impl<'a> Bracketed<'a> {
-    /// A parser of what the token holds, to look into before emitting it.
     pub(crate) fn inner(&self) -> &Parser<'a> {
         &self.inner
     }
 }
 
-/// What `Parser::enclosed` found in the next token.
 /// The first tokens inside decide the mode to lex it all in.
 pub(crate) struct Enclosed<'a> {
     src: &'a str,
@@ -117,14 +101,12 @@ pub(crate) struct Enclosed<'a> {
 }
 
 impl<'a> Enclosed<'a> {
-    /// The tokens the brackets hold in `mode`, each lexed only as it is taken.
     pub(crate) fn tokens_in(&self, mode: Mode) -> impl Iterator<Item = (Token, &'a str)> {
         let src = self.src;
         let (_, inside, _) = split(self.range);
         lexer::tokens(src, inside, mode).map(move |token| (token, &src[token.range]))
     }
 
-    /// The same token, with what it holds lexed in `mode`.
     pub(crate) fn lexed_in(self, mode: Mode) -> Bracketed<'a> {
         let (_, inside, _) = split(self.range);
         Bracketed {
@@ -137,23 +119,18 @@ impl<'a> Enclosed<'a> {
     }
 }
 
-/// A piece of a token, as `Parser::split` cuts it.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Piece {
-    /// Text `split` lexes in block mode, taking it only where it makes one item with no error.
     Lexed(TextRange),
-    /// Text emitted as a token of this kind.
     Token(SyntaxKind, TextRange),
 }
 
-/// What `Parser::relexed` or `Parser::split` found in the next token.
 pub(crate) struct Relexed<'a> {
     inner: Parser<'a>,
     token: Token,
 }
 
 impl<'a> Relexed<'a> {
-    /// A parser of the pieces of the token, to look into before emitting it.
     pub(crate) fn inner(&self) -> &Parser<'a> {
         &self.inner
     }
@@ -169,8 +146,7 @@ pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
     parser.events
 }
 
-/// Whitespace and comments are skipped when looking ahead, as is a line break in some modes.
-/// They are emitted just before the next token or node, or at the end of the tokens.
+/// Skipped tokens are emitted just before the next token or node, or at the end of the tokens.
 /// So no node but Root starts or ends with them.
 pub(crate) struct Parser<'a> {
     src: &'a str,
@@ -179,12 +155,9 @@ pub(crate) struct Parser<'a> {
     pos: usize,
     events: Vec<Event>,
     skips_newline: bool,
-    /// What the file names, and what the blocks around the tokens declare.
     names: Names<'a>,
-    /// Brackets around the tokens, and syntax nested with no brackets, as `deeper` counts it.
     depth: usize,
-    /// How many errors were reported among these tokens.
-    /// Those inside a bracketed word read as a node are not counted.
+    /// Errors inside a bracketed word read as a node are not counted.
     /// Whether `{ }` reads as a block depends on its own statements alone.
     errors: usize,
 }
@@ -214,14 +187,13 @@ impl<'a> Parser<'a> {
         self.names.is_aliased(name)
     }
 
-    /// Takes in what the block of the tokens ahead declares and imports, as nu does first.
+    /// Nu takes in what a block declares and imports before it reads the block.
     pub(crate) fn enter_block(&mut self) {
         self.names = self
             .names
             .within(self.src, &self.tokens[self.pos..], self.skips_newline);
     }
 
-    /// What the call ahead runs, as far as the blocks around it tell.
     pub(crate) fn callee(&self) -> Callee {
         let Some(head) = self.peek_range() else {
             return Callee::Undefined;
@@ -233,8 +205,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// How many words name the command the call ahead runs.
-    /// `None` unless a block around it defines that command, or an import nuten reads brings it.
     pub(crate) fn defined_words(&self) -> Option<usize> {
         let head = self.peek_range()?;
         self.names.defined_words(head.start(), |nth| {
@@ -248,7 +218,6 @@ impl<'a> Parser<'a> {
         self.depth < MAX_DEPTH
     }
 
-    /// Runs `read` one level deeper, for syntax that nests with no brackets around it.
     pub(crate) fn deeper<T>(&mut self, read: impl FnOnce(&mut Parser<'a>) -> T) -> T {
         self.depth += 1;
         let value = read(self);
@@ -256,8 +225,6 @@ impl<'a> Parser<'a> {
         value
     }
 
-    /// What nu takes each of `items` as, the items of the call ahead.
-    /// `None` unless it runs a command a block around it defines, with a signature nuten reads.
     pub(crate) fn defined_parameters(&self, items: &[&str]) -> Option<Vec<Option<Param>>> {
         self.names
             .defined_parameters(self.peek_range()?.start(), items)
@@ -299,30 +266,24 @@ impl<'a> Parser<'a> {
         self.nth_token(n).map(|token| token.range)
     }
 
-    /// The kinds the lexer gave the tokens emitted, the last first.
     /// A token emitted as another kind, as by `bump_as`, keeps its lexed kind here.
     pub(crate) fn emitted_kinds(&self) -> impl Iterator<Item = SyntaxKind> {
         self.tokens[..self.pos].iter().rev().map(|token| token.kind)
     }
 
-    /// The kind of the last token emitted, trivia aside.
     pub(crate) fn last_kind(&self) -> Option<SyntaxKind> {
         self.emitted_kinds().find(|kind| !kind.is_trivia())
     }
 
-    /// The kind of the last token emitted, the skipped ones aside.
-    /// Unlike `last_kind`, it counts a line break the parser does not skip.
     pub(crate) fn last_unskipped_kind(&self) -> Option<SyntaxKind> {
         self.emitted_kinds().find(|&kind| !self.is_skipped(kind))
     }
 
-    /// The kinds of every token ahead, trivia included.
     /// Only for looking past what `peek` sees.
     pub(crate) fn remaining_kinds(&self) -> impl Iterator<Item = SyntaxKind> {
         self.tokens[self.pos..].iter().map(|token| token.kind)
     }
 
-    /// As `remaining_kinds`, with each token and its text.
     pub(crate) fn remaining_tokens(&self) -> impl Iterator<Item = (Token, &'a str)> + Clone {
         self.tokens[self.pos..]
             .iter()
@@ -338,7 +299,7 @@ impl<'a> Parser<'a> {
         lexer::lex(self.src, range, mode).errors.into_iter().next()
     }
 
-    /// Emits the next `count` tokens, which touch one another, as one `Word`.
+    /// The next `count` tokens must touch one another.
     pub(crate) fn bump_joined(&mut self, count: usize) {
         self.bump_skipped();
         let tokens = &self.tokens[self.pos..self.pos + count];
@@ -357,8 +318,6 @@ impl<'a> Parser<'a> {
         self.push_token(SyntaxKind::Word, range);
     }
 
-    /// What the next token holds inside `brackets`, lexed in `mode`.
-    /// `None` when the token is not a word enclosed in them, or when brackets nest too deep.
     pub(crate) fn bracketed(
         &self,
         brackets: &'static Brackets,
@@ -367,7 +326,6 @@ impl<'a> Parser<'a> {
         self.bracketed_affixed(brackets, mode, Affix::None)
     }
 
-    /// As `bracketed`, for a word with `affix` outside its brackets.
     pub(crate) fn bracketed_affixed(
         &self,
         brackets: &'static Brackets,
@@ -377,7 +335,6 @@ impl<'a> Parser<'a> {
         Some(self.enclosed_affixed(brackets, affix)?.lexed_in(mode))
     }
 
-    /// As `bracketed`, leaving what the brackets hold to be lexed.
     pub(crate) fn enclosed(&self, brackets: &'static Brackets) -> Option<Enclosed<'a>> {
         self.enclosed_affixed(brackets, Affix::None)
     }
@@ -402,8 +359,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// Emits the next token as a `node`.
-    /// Its opening bracket, the events `items` makes of what it holds, then its closing bracket.
     /// The token stays a `Word` when a comment inside has no whitespace before its `#`.
     /// Nu reads a word with that `#` as no comment, and counts the brackets in its text.
     /// So whitespace put before the `#` may move where the word ends.
@@ -416,9 +371,6 @@ impl<'a> Parser<'a> {
         self.emit_bracketed(node, bracketed, items);
     }
 
-    /// As `bump_bracketed`, unless `items` reports an error among the tokens it holds.
-    /// Then its events are dropped and the token stays a `Word`.
-    /// Errors inside nested nodes do not count.
     /// For a word that nu may read as a string, where nothing inside may be reported.
     pub(crate) fn bump_bracketed_or_word(
         &mut self,
@@ -436,7 +388,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Returns how many errors `items` reported among the tokens it holds.
     fn emit_bracketed(
         &mut self,
         node: SyntaxKind,
@@ -488,13 +439,11 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// The next token cut into `pieces`, when it is a word and each lexed piece is one item.
-    /// The pieces cover the token in order.
+    /// `pieces` must cover the token in order.
     pub(crate) fn split(&self, pieces: &[Piece]) -> Option<Relexed<'a>> {
         self.split_token(SyntaxKind::Word, pieces)
     }
 
-    /// As `split`, for a next token of `kind`.
     pub(crate) fn split_token(&self, kind: SyntaxKind, pieces: &[Piece]) -> Option<Relexed<'a>> {
         let token = self.nth_token(0).filter(|token| token.kind == kind)?;
         let tokens = pieces
@@ -523,8 +472,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// A parser of `range` of the source, when block mode lexes it as one item with no error.
-    /// Its one token is the next, to look into as a piece of the token ahead.
     pub(crate) fn item_at(&self, range: TextRange) -> Option<Parser<'a>> {
         let item = self.lexed_item(range)?;
         Some(self.over(vec![item]))
@@ -537,7 +484,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Emits the next token as a `node` of the events `items` makes of its pieces.
     /// Unlike what brackets hold, the pieces stand among these tokens, so their errors count here.
     pub(crate) fn bump_relexed(
         &mut self,
@@ -561,8 +507,6 @@ impl<'a> Parser<'a> {
         self.finish();
     }
 
-    /// Lexes the tokens ahead up to `end` again in `mode`, and emits the events `items` makes.
-    /// Their lexing errors give way to those of lexing them again.
     /// The tokens skipped before them are emitted as they are, since `mode` may read a line break.
     pub(crate) fn bump_relexed_to(
         &mut self,
@@ -581,14 +525,11 @@ impl<'a> Parser<'a> {
         self.errors += inner.errors;
     }
 
-    /// A parser of `range` of the source lexed again in `mode`.
     /// It shows what `bump_relexed_to` would emit, before it does.
     pub(crate) fn lexed_range(&self, range: TextRange, mode: Mode) -> Parser<'a> {
         self.nested(range, mode, self.depth)
     }
 
-    /// Emits the tokens ahead up to `end` as the events `items` makes of them.
-    /// `items` sees no token past `end`.
     pub(crate) fn bump_bounded(&mut self, end: TextSize, items: impl FnOnce(&mut Parser<'a>)) {
         let taken = self.take_to(end);
         let mut inner = Parser::new(
@@ -602,7 +543,6 @@ impl<'a> Parser<'a> {
         self.errors += inner.errors;
     }
 
-    /// Moves past the tokens ahead up to `end`, and returns them with their lexing errors.
     fn take_to(&mut self, end: TextSize) -> Lexed {
         let count = self.tokens[self.pos..]
             .iter()
@@ -626,12 +566,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// A parser of `range` of the source lexed in `mode`, inside `depth` brackets.
     fn nested(&self, range: TextRange, mode: Mode, depth: usize) -> Parser<'a> {
         Parser::lexed(self.src, range, mode, self.names.clone(), depth)
     }
 
-    /// As `nested`, for a parser not at hand.
     fn lexed(
         src: &'a str,
         range: TextRange,
@@ -643,7 +581,7 @@ impl<'a> Parser<'a> {
         Parser::new(src, lexed, mode.skips_newline(), names, depth)
     }
 
-    /// A parser of `tokens`, pieces of the tokens here with no lexing error.
+    /// `tokens` must be pieces of the tokens here with no lexing error.
     fn over(&self, tokens: Vec<Token>) -> Parser<'a> {
         let lexed = Lexed {
             tokens,
@@ -658,7 +596,7 @@ impl<'a> Parser<'a> {
         )
     }
 
-    /// Runs `items` to the end of `inner`, a parser of what this one moves past.
+    /// `inner` must be a parser of what this one moves past.
     /// The events are lent to it, so that nested nodes do not copy the events inside.
     fn read_inner(&mut self, inner: &mut Parser<'a>, items: impl FnOnce(&mut Parser<'a>)) {
         inner.events = mem::take(&mut self.events);
@@ -682,8 +620,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Emits the next token as `kind`, which the mode it was lexed in did not give it.
-    /// The `:` before input and output types is one.
     pub(crate) fn bump_as(&mut self, kind: SyntaxKind) {
         self.bump_skipped();
         let token = self.nth_token(0).expect("bump_as at the end");
@@ -697,7 +633,6 @@ impl<'a> Parser<'a> {
         self.bump_one();
     }
 
-    /// Emits the next token inside an `Error` node, reporting `kind` at it.
     pub(crate) fn bump_error(&mut self, kind: ParseErrorKind) {
         let token = self.nth_token(0).expect("bump_error at the end");
         self.bump_error_to(
@@ -709,7 +644,6 @@ impl<'a> Parser<'a> {
         );
     }
 
-    /// Emits the tokens ahead up to `end` inside an `Error` node, reporting `error`.
     pub(crate) fn bump_error_to(&mut self, end: TextSize, error: ParseError) {
         self.start(SyntaxKind::Error);
         self.push_error(error);
@@ -773,7 +707,6 @@ impl<'a> Parser<'a> {
     }
 }
 
-/// Whether a comment among `tokens` has no whitespace before its `#`.
 /// `tokens` is the inside of a bracketed word of `src`.
 fn has_glued_comment(src: &str, tokens: &[Token]) -> bool {
     tokens
@@ -785,7 +718,6 @@ fn has_glued_comment(src: &str, tokens: &[Token]) -> bool {
         })
 }
 
-/// The first byte of `range`, what lies between, and the last byte.
 fn split(range: TextRange) -> (TextRange, TextRange, TextRange) {
     let one = TextSize::new(1);
     let (start, end) = (range.start() + one, range.end() - one);

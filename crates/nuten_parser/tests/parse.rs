@@ -1,5 +1,3 @@
-//! Snapshot tests of `parse`.
-
 use std::{
     collections::BTreeSet,
     fmt::Write,

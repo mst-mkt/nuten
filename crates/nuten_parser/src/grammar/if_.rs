@@ -7,7 +7,6 @@ use super::{
 };
 use crate::parser::Parser;
 
-/// The `If` ahead, when nu reads the call as one.
 pub(super) fn if_(p: &mut Parser<'_>) -> bool {
     let items = call_items(p);
     let Some(chain) = if_chain(&items) else {
@@ -32,8 +31,7 @@ pub(super) fn if_(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// What the last `else` takes, its `len` items: one as a block, or all of them as one expression.
-/// Nu reads more than one as what heads a statement, up to the last item of the `if` call.
+/// Nu reads more than one item as what heads a statement, up to the last item of the `if` call.
 /// A redirection after them belongs to the whole `if`, so the expression takes none.
 fn else_argument(p: &mut Parser<'_>, len: usize) {
     if len == 1 {
@@ -50,16 +48,12 @@ fn else_argument(p: &mut Parser<'_>, len: usize) {
     });
 }
 
-/// One `if` of a chain: where its body is among the items of the chain.
-/// It carries whether `else` follows that body too.
 struct IfLink {
     body: usize,
     has_else: bool,
 }
 
-/// The `if`s that `items` make when nu reads them as one, in order.
-/// After an `else` comes one item, or more items as one expression.
-/// Nu reads that expression as an `if` call where it starts with `if`, which is one more link here.
+/// Nu reads items after an `else` that start with `if` as an `if` call, one more link here.
 /// Nu reads a first item it takes as a block alone, and the rest as more items of the `if` call.
 /// So that makes no `If`.
 fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
@@ -95,8 +89,7 @@ fn if_chain(items: &[&str]) -> Option<Vec<IfLink>> {
     }
 }
 
-/// Whether nu takes `item` where it takes a block, whatever the item holds.
-/// It reads a `{ }`, a `$`, a `( )`, and a raw string before it looks at the shape.
+/// Nu reads a `{ }`, a `$`, a `( )`, and a raw string before it looks at the shape.
 fn taken_as_block(item: &str) -> bool {
     item.starts_with(['{', '$', '(']) || item.starts_with("r#")
 }

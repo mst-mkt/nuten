@@ -8,13 +8,10 @@ use nuten_syntax::{
 
 use super::{Child, Formatter, children, kept::Kept, without_separators};
 
-/// A block laid out for its container to group.
 pub(super) struct BlockLayout<'a> {
-    /// The opening brace and the parameters, which stay out of the group.
-    /// Parameters over lines then leave the rest to fit after their last line.
+    /// Out of the group, so that parameters over lines leave the rest to fit after their last line.
     pub(super) head: Vec<Element<'a>>,
     pub(super) rest: Vec<Element<'a>>,
-    /// Whether it breaks over lines whatever its width.
     /// A comment the `}` follows on its line ends at a lone `\r`.
     /// As a line suffix it would move past the `}`.
     expand: bool,
@@ -34,7 +31,6 @@ impl<'a> Formatter<'a> {
         head
     }
 
-    /// `element`, or, where it is `body`, the body broken over lines whatever it holds.
     pub(super) fn element_or_body(
         &mut self,
         element: &ast::Element,
@@ -125,7 +121,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether `block` holds at most one statement and nothing else.
 pub(super) fn holds_at_most_one_statement(block: &Block, kept: &Kept) -> bool {
     let body: Vec<_> = children(block.statements(), kept).collect();
     matches!(
@@ -141,8 +136,7 @@ fn closure_params_stay_as_is(params: &ClosureParams, kept: &Kept) -> bool {
     holds_stray_token(params, kept) || holds_ignored_token(params)
 }
 
-/// Whether something between the pipes, other than a `,`, is outside any `Param`.
-/// The layout would join it to what follows it.
+/// The layout would join such a token to what follows it.
 fn holds_stray_token(params: &ClosureParams, kept: &Kept) -> bool {
     without_separators(children(params.syntax().children_with_tokens(), kept)).any(|child| {
         !matches!(
@@ -152,7 +146,6 @@ fn holds_stray_token(params: &ClosureParams, kept: &Kept) -> bool {
     })
 }
 
-/// Whether the parameters hold a token that nu ignores, such as a comment.
 /// A comment runs to the end of its line.
 /// A redirection nu ignores would take the `|` after it as its own, as in `e>|`.
 fn holds_ignored_token(params: &ClosureParams) -> bool {

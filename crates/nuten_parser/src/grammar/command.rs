@@ -13,7 +13,6 @@ use super::{
 };
 use crate::{ParseErrorKind, lexer::Mode, parser::Parser};
 
-/// Returns the streams it redirects; `None` when there is no command.
 pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     let head = Head::of(p);
     match head {
@@ -30,11 +29,8 @@ pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
 
 #[derive(Clone, Copy)]
 enum Head {
-    /// A file redirection or an assignment operator, which leaves the element with no command.
     Missing,
-    /// A value or a `not`, which nu reads as an expression of its own.
     Expression,
-    /// A head, with the shape nu reads the items after it as.
     Call(Shape),
 }
 
@@ -54,7 +50,6 @@ impl Head {
         }
     }
 
-    /// `None` when the element has no command, which is what a redirection would apply to.
     fn redirected(self) -> Option<Streams> {
         match self {
             Head::Missing => None,
@@ -63,8 +58,7 @@ impl Head {
     }
 }
 
-/// The items nu reads as an expression, as a `MathExpression` where it takes an operator.
-/// An `if` or a `match` first heads a call over them instead, as in nu's `parse_math_expression`.
+/// An `if` or a `match` first heads a call over the items, as in nu's `parse_math_expression`.
 pub(super) fn expression(p: &mut Parser<'_>) {
     if keyword_as_term(p) {
         return;
@@ -76,7 +70,6 @@ pub(super) fn expression(p: &mut Parser<'_>) {
     }
 }
 
-/// The `items` ahead as nu reads the condition of an `if` or a `while`.
 /// Nu reads the flags first as those of the keyword, then the rest as one expression.
 /// The items after the condition are other arguments, so the expression takes none of them.
 pub(super) fn condition(p: &mut Parser<'_>, items: &[&str]) {
@@ -99,7 +92,7 @@ fn takes_operator(items: &[&str]) -> bool {
     matches!(items, ["not"] | [_, _, ..])
 }
 
-/// The terms an operator joins, as nu's `parse_math_expression` reads them.
+/// Ported from nu's `parse_math_expression`.
 fn math_expression(p: &mut Parser<'_>) {
     p.start(SyntaxKind::MathExpression);
     term(p);
@@ -141,7 +134,6 @@ fn term(p: &mut Parser<'_>) {
     item(p, Shape::Any);
 }
 
-/// Returns whether the term it takes is the next item to read.
 fn operator(p: &mut Parser<'_>) -> bool {
     if !takes_term(p) {
         p.bump_error(ParseErrorKind::MissingTerm);
@@ -174,9 +166,8 @@ fn is_operator(text: &str) -> bool {
     operator_precedence(text).is_some()
 }
 
-/// How tightly nu binds the operator `text`, as its `Operator::precedence` ranks it.
+/// Ported from nu's `Operator::precedence`.
 /// The smaller, the looser.
-/// `None` where nu's `parse_operator` reads no operator.
 /// Its arms are in the order of `parse_operator`, so that the port can be checked against them.
 /// The spellings it takes only to reject are left out; `unknown_operator` holds them.
 /// So is an assignment operator, which the lexer gives a kind of its own.
@@ -202,7 +193,6 @@ pub fn operator_precedence(text: &str) -> Option<u8> {
     })
 }
 
-/// What nu says to write instead of `text`, among the spellings it takes only to reject.
 /// Ported from the arms of nu's `parse_operator` that report an unknown operator, in their order.
 fn unknown_operator(text: &str) -> Option<ParseErrorKind> {
     let (spelling, instead) = match text {
@@ -245,15 +235,11 @@ pub(super) fn is_math_expression_like(text: &str) -> bool {
         || is_number_range(text)
 }
 
-/// Nu runs a head it finds no declaration for as an external command.
 /// What an import nuten cannot read declares is unknowable here.
-/// So a head that neither the lists here nor a block around it names stays unknown.
-/// So does one after such an import, which may bring an alias of an external command in its name.
+/// So a head after such an import stays unknown, since it may name an alias of an external.
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
-/// It reads the name after `let`, `mut`, `const`, or `export const` as written, never as a value.
-/// A command a block around the call defines takes the place of any other of its name.
-/// Nu reads an argument of one as it does one of its own commands, never as an external one's.
+/// Nu reads the arguments of a command a block defines as its own, never as an external's.
 pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
     let Some(head) = p.peek_text() else {
         return Shape::UnknownArgument;
@@ -306,7 +292,6 @@ fn command_shape(name: &str, next: Option<&str>) -> Shape {
     }
 }
 
-/// Where the call runs a command nuten knows the signature of, a `[ ]` is what its parameter takes.
 pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
     let items = match shape {
         Shape::ExternalArgument | Shape::UnknownArgument => Vec::new(),
@@ -337,9 +322,6 @@ pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
     p.finish();
 }
 
-/// What nu takes each item of the call ahead as, the head first.
-/// Empty where it runs a command the file defines with a signature nuten cannot read.
-/// Empty too where nuten cannot tell which command it runs.
 /// A `%` before the head looks up a command nu has, whatever the file defines.
 fn call_parameters(p: &Parser<'_>, shape: Shape, items: &[&str]) -> Vec<Option<Param>> {
     if shape != Shape::KnownArgument {
@@ -352,7 +334,6 @@ fn call_parameters(p: &Parser<'_>, shape: Shape, items: &[&str]) -> Vec<Option<P
     }
 }
 
-/// `items`, with the head looked up as nu looks it up, past any `%`.
 fn as_looked_up<'s>(items: &[&'s str]) -> Vec<&'s str> {
     items
         .iter()
@@ -381,8 +362,7 @@ fn argument(p: &mut Parser<'_>, shape: Shape, param: Option<Param>) {
     }
 }
 
-/// Starts the call and takes its head alone, for an alias value or what an attribute heads.
-/// Neither is a call whose name nuten looks up.
+/// Neither an alias value nor what an attribute heads is a call whose name nuten looks up.
 pub(super) fn start_call(p: &mut Parser<'_>, shape: Shape) {
     open_call(p, shape);
     head(p);
@@ -404,7 +384,7 @@ fn head(p: &mut Parser<'_>) {
     }
 }
 
-/// How many of `items` name the command, as nu takes the longest name they spell.
+/// Nu takes the longest name the items spell.
 fn call_name_words(p: &Parser<'_>, shape: Shape, items: &[&str]) -> usize {
     if matches!(shape, Shape::ExternalArgument | Shape::UnknownArgument) {
         return 1;
@@ -417,7 +397,6 @@ fn call_name_words(p: &Parser<'_>, shape: Shape, items: &[&str]) -> usize {
 }
 
 /// `redirected` is what the element redirects so far; `None` when it has no command.
-/// Returns what it redirects then.
 pub(super) fn arguments(
     p: &mut Parser<'_>,
     mut redirected: Option<Streams>,
@@ -442,8 +421,6 @@ pub(super) fn arguments(
     redirected
 }
 
-/// `redirected` is what the element redirects so far.
-/// `None` when it has no command for the redirection to apply to.
 /// Nu wants an item right after the operator.
 fn redirection(p: &mut Parser<'_>, kind: SyntaxKind, redirected: Option<&mut Streams>) {
     p.start(SyntaxKind::Redirection);
@@ -531,7 +508,6 @@ mod tests {
         }
     }
 
-    /// The spellings nu's `parse_operator` reads as operators.
     const OPERATORS: &[&str] = &[
         "==",
         "!=",
@@ -569,8 +545,6 @@ mod tests {
         "and",
     ];
 
-    /// For each two of the `$ops` operators, `L` where nu groups `1 a 2 b 3` as `(1 a 2) b 3`.
-    /// `R` where it groups them as `1 a (2 b 3)`.
     const GROUPINGS_OF_NU: &str = r#"$ops | each {|a| $ops | each {|b|
             let expr = ast --json $"1 ($a) 2 ($b) 3" | get block | from json
                 | get pipelines.0.elements.0.expr.expr

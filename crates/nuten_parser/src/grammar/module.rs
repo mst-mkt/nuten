@@ -6,7 +6,6 @@ use super::{
 };
 use crate::{lexer::Mode, parser::Parser};
 
-/// The `Module` ahead, or else the `module` call ahead with its items as written.
 /// Nu takes nothing but a string for the name, so it stays as written either way.
 pub(super) fn module(p: &mut Parser<'_>) -> bool {
     let words = keyword_words(p);
@@ -33,7 +32,6 @@ pub(super) fn export_env(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// The `Module` ahead: the `words` of its keyword, the name, and the body.
 fn module_with_body(p: &mut Parser<'_>, words: usize) {
     p.start(SyntaxKind::Module);
     for _ in 0..=words {
@@ -51,7 +49,6 @@ fn call_as_written(p: &mut Parser<'_>) {
     p.finish();
 }
 
-/// Whether nu reads a body where `items` follow the keyword: the name and `{ }`.
 fn takes_body(items: &[&str]) -> bool {
     matches!(items, [name, body] if !is_flag(name) && body.starts_with('{'))
 }

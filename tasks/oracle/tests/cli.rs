@@ -1,6 +1,3 @@
-//! Runs the binary on files in a temporary directory.
-//! Without nu on PATH the tests that need it fail, unless `NUTEN_TEST_SKIP_NU` is set to skip them.
-
 #![expect(clippy::print_stderr, reason = "what is skipped is reported")]
 
 use std::{
@@ -13,7 +10,6 @@ use std::{
     thread,
 };
 
-/// A fresh directory for each test, removed when dropped.
 struct TempDir(PathBuf);
 
 impl TempDir {

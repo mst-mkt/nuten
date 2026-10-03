@@ -1,6 +1,3 @@
-//! Document IR and printer, with no knowledge of Nushell.
-//! Groups stay on one line when they fit and break otherwise.
-
 mod builder;
 mod element;
 mod flat;

@@ -1,34 +1,27 @@
-//! What nu reads a bare word as.
-//!
 //! Nu tries the shapes of a value in a fixed order and takes the first that reads the word.
 //! A shape that finds the word malformed, as `1-2b` is for a filesize, rejects it outright.
 //! So what a word reads as here is what nu's `parse_value` decides for `SyntaxShape::Any`.
 
 use crate::value::ValueKind;
 
-/// Where a bare word stands.
 /// Nu rejects a `:` in the value of a record, but reads one in an item of a list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Place {
-    /// The value of a record field.
     RecordValue,
-    /// An item of a list, the lone value of a file, or a key.
     Item,
 }
 
-/// What nu makes of a bare word.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Word {
     Value(ValueKind),
-    /// Nu rejects the word.
     Rejected,
 }
 
-/// The suffixes nu takes for a filesize, in the order it looks for them in the word made uppercase.
+/// In the order nu looks for them in the word made uppercase.
 const FILESIZE_UNITS: [&str; 13] = [
     "KB", "MB", "GB", "TB", "PB", "EB", "KIB", "MIB", "GIB", "TIB", "PIB", "EIB", "B",
 ];
-/// The suffixes nu takes for a duration, in the order it looks for them.
+/// In the order nu looks for them.
 /// Both the micro sign and the Greek mu spell a microsecond.
 const DURATION_UNITS: [&str; 10] = [
     "ns", "us", "\u{b5}s", "\u{3bc}s", "ms", "sec", "min", "hr", "day", "wk",
@@ -75,7 +68,6 @@ fn unquoted(text: &str) -> &str {
     }
 }
 
-/// What `text` with a unit is, or `None` where it has none, or nu leaves it to a later shape.
 fn typed_by_unit(text: &str) -> Option<Word> {
     let bytes = text.as_bytes();
     let heads_like_number = bytes.len() >= 2
@@ -97,9 +89,6 @@ fn typed_by_unit(text: &str) -> Option<Word> {
     filesize.or_else(|| number_before_unit(text, &DURATION_UNITS, ValueKind::Duration))
 }
 
-/// `Value(kind)` where one of `units` ends `text` and the number before it is well formed.
-/// `Rejected` where that number is malformed.
-/// `None` where no unit ends `text`, or a `$` ends the number, which nu leaves to the next shape.
 fn number_before_unit(text: &str, units: &[&str], kind: ValueKind) -> Option<Word> {
     let unit = units.iter().find(|unit| text.ends_with(*unit))?;
     let number = without_underscores(&text[..text.len() - unit.len()]);
@@ -113,7 +102,6 @@ fn number_before_unit(text: &str, units: &[&str], kind: ValueKind) -> Option<Wor
     })
 }
 
-/// Whether nu reads `text` as a date, with or without a time and an offset.
 fn is_datetime(text: &str) -> bool {
     let bytes = text.as_bytes();
     let heads_like_date =
@@ -124,9 +112,7 @@ fn is_datetime(text: &str) -> bool {
             || is_rfc3339(&format!("{text}+00:00")))
 }
 
-/// Whether chrono's `parse_from_rfc3339`, which nu reads dates with, accepts `text`.
-/// It takes a date, `T` or a space, a time with any fraction, then `Z` or an offset of `±HH:MM`.
-/// A second of 60 passes as a leap second whatever the date.
+/// Mirrors chrono's `parse_from_rfc3339`, which nu reads dates with.
 fn is_rfc3339(text: &str) -> bool {
     let bytes = text.as_bytes();
     let Some([year, month, day, hour, minute, second]) = date_time_fields(bytes) else {
@@ -145,7 +131,6 @@ fn is_rfc3339(text: &str) -> bool {
     punctuated && in_range && without_fraction(&text[19..]).is_some_and(is_zone)
 }
 
-/// The six numbers of `YYYY-MM-DDThh:mm:ss`, whatever stands between them.
 fn date_time_fields(bytes: &[u8]) -> Option<[u32; 6]> {
     Some([
         digits(bytes, 0, 4)?,
@@ -157,7 +142,6 @@ fn date_time_fields(bytes: &[u8]) -> Option<[u32; 6]> {
     ])
 }
 
-/// `rest` without the fraction of a second it starts with, or `None` where a `.` has no digit.
 fn without_fraction(rest: &str) -> Option<&str> {
     match rest.strip_prefix('.') {
         Some(fraction) => {
@@ -168,7 +152,7 @@ fn without_fraction(rest: &str) -> Option<&str> {
     }
 }
 
-/// Whether `rest` is `Z` or an offset of `±HH:MM`, whose sign chrono takes as `−` (U+2212) too.
+/// Chrono takes `−` (U+2212) as the sign of an offset too.
 fn is_zone(rest: &str) -> bool {
     if matches!(rest, "Z" | "z") {
         return true;
@@ -188,7 +172,6 @@ fn is_zone(rest: &str) -> bool {
         )
 }
 
-/// The number the `count` bytes at `at` spell, or `None` where they are not all digits.
 fn digits(bytes: &[u8], at: usize, count: usize) -> Option<u32> {
     bytes
         .get(at..at + count)
@@ -210,8 +193,6 @@ fn days_in_month(year: u32, month: u32) -> u32 {
     }
 }
 
-/// The integer or the float nu reads `text` as, or `Rejected` where its radix digits are malformed.
-/// `None` where `text` is no number.
 fn number(text: &str) -> Option<Word> {
     let digits = without_underscores(text);
     let radix = [("0b", 2), ("0o", 8), ("0x", 16)]

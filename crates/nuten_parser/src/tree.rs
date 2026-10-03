@@ -1,5 +1,3 @@
-//! Builds a rowan tree from parser events.
-
 use rowan::GreenNodeBuilder;
 
 use crate::{Parsed, parser::Event};

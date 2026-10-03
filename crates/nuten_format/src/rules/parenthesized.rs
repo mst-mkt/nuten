@@ -9,8 +9,7 @@ use nuten_syntax::{SyntaxKind, SyntaxNode};
 use super::{Child, Formatter, breaks_by_width, children, line_break_or_space, starts_kept_line};
 
 impl<'a> Formatter<'a> {
-    /// An expression `breaks_by_width` picks, broken before its loosest operators if need be.
-    /// Those split it into the parts nu evaluates last, so each line holds a whole part.
+    /// Each line then holds a whole part, since nu evaluates the loosest operators last.
     pub(super) fn parenthesized_expression(&mut self, expression: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(expression.children_with_tokens(), &self.kept).collect();
         let keeps_line_breaks = (0..items.len()).any(|index| {
@@ -41,7 +40,6 @@ impl<'a> Formatter<'a> {
         vec![group(expression)]
     }
 
-    /// `items` broken before each loosest operator where they do not fit, and each part likewise.
     fn operation(&mut self, items: &[Child], levels: usize) -> Vec<Element<'a>> {
         let loosest = loosest_precedence(items);
         let operators: Vec<_> = (0..items.len())
@@ -71,7 +69,6 @@ impl<'a> Formatter<'a> {
         vec![group(head.into_iter().chain(rest))]
     }
 
-    /// Whether `element`, an element of a pipeline, holds an expression that breaks at operators.
     pub(super) fn holds_expression_breaking_at_operators(&self, element: &SyntaxNode) -> bool {
         held_expression(element).is_some_and(|expression| {
             breaks_by_width(&expression)
@@ -84,7 +81,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// The expression `element` holds: its first child, or the row condition of its `where`.
 fn held_expression(element: &SyntaxNode) -> Option<SyntaxNode> {
     element.first_child().and_then(|node| match node.kind() {
         SyntaxKind::MathExpression => Some(node),
@@ -99,9 +95,8 @@ fn loosest_precedence(items: &[Child]) -> Option<u8> {
     items.iter().filter_map(precedence_of).min()
 }
 
-/// How tightly `item` binds as an operator, the smaller the looser.
-/// `None` for anything else, `not` among them, which takes the term after it.
-/// `None` too for a word spelled as one where nu reads a term, since that is no `Operator`.
+/// `not` is no operator here, since it takes the term after it.
+/// Nor is a word spelled as one where nu reads a term, since that is no `Operator`.
 fn precedence_of(item: &Child) -> Option<u8> {
     item.element
         .as_token()

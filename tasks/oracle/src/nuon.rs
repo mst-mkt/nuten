@@ -1,6 +1,3 @@
-//! Asks nu whether formatting keeps the value it reads from NUON.
-//! Then compares that value with the one nuten reads.
-
 use std::{collections::BTreeSet, path::Path};
 
 use jsonc_parser::JsonValue;
@@ -11,9 +8,6 @@ use nuten_config::{
 
 use crate::{Checked, Output, ast, labeled, nu, same_asts};
 
-/// `outputs` are those of formatting `src` that nu needs asking about.
-/// They are `None` where syntax errors leave none.
-/// `dir` is the directory nu parses `src` in.
 pub(crate) fn check(
     src: &str,
     outputs: Option<&[Output]>,
@@ -25,8 +19,6 @@ pub(crate) fn check(
     outcome(formatting, reading)
 }
 
-/// `formatting` is whether formatting keeps what nu reads, or `None` where that was not asked.
-/// `reading` is whether nuten reads what nu reads.
 /// A skip says whether formatting was asked about, so that the file does not look unchecked.
 fn outcome(
     formatting: Option<Result<(), String>>,
@@ -41,8 +33,6 @@ fn outcome(
     }
 }
 
-/// Fails, in one line, when nu reads any of `outputs` unlike `before`.
-/// It fails too when nu reads only one of `before` and an output.
 /// Where nu rejects both as NUON, the file is still nu code, so formatting must keep its AST.
 /// Asking nu costs a process each time, so nu reads `before` once, and not at all without outputs.
 fn same_values(before: &str, outputs: &[Output], dir: Option<&Path>) -> Result<(), String> {
@@ -63,16 +53,12 @@ fn same_values(before: &str, outputs: &[Output], dir: Option<&Path>) -> Result<(
     same_asts(before, &rejected, dir)
 }
 
-/// What nu reads before and after formatting, where the two agree.
 #[derive(Debug, PartialEq, Eq)]
 enum Read {
-    /// The same value.
     SameValue,
-    /// No value from either, which leaves the AST to compare.
     Rejected,
 }
 
-/// Nu must read the same value before and after formatting, or reject both.
 /// `before` and `after` are the NUON nu writes of what it reads, or why it fails.
 fn formatting_verdict(
     before: Result<String, String>,
@@ -96,7 +82,6 @@ fn formatting_verdict(
     }
 }
 
-/// The byte where `a` and `b` first differ, or the length of the shorter one.
 fn differing_byte(a: &str, b: &str) -> usize {
     a.char_indices()
         .zip(b.chars())
@@ -104,8 +89,6 @@ fn differing_byte(a: &str, b: &str) -> usize {
         .map_or(a.len().min(b.len()), |((at, _), _)| at)
 }
 
-/// Nuten must read the value nu reads, or reject what nu rejects.
-/// Where nuten's parser reads a file otherwise than nu, the file is skipped.
 /// `nu` is the JSON of what nu reads described with its types, or why it fails.
 fn reading_verdict(
     nuten: Result<Value, Vec<ConfigError>>,
@@ -141,8 +124,6 @@ fn reading_verdict(
     }
 }
 
-/// Where `nu` and `nuten` first differ, as a JSON pointer, with the two values there.
-/// `nu` is what `describe -d` writes: the `type`, then the `columns` of a record or the `value`.
 /// The types are compared first, so that `1` and `1.0` differ though they print the same.
 /// The order of keys is left aside, since the parser of nu's JSON keeps none.
 fn difference<'n, 'j, 'v>(
@@ -186,7 +167,6 @@ fn difference<'n, 'j, 'v>(
     }
 }
 
-/// The `type` nu describes a value of `kind` with.
 fn type_name(kind: &ValueKind) -> &'static str {
     match kind {
         ValueKind::Record(_) => "record",
@@ -212,7 +192,6 @@ fn member<'a, 'j>(node: &'a JsonValue<'j>, key: &str) -> Option<&'a JsonValue<'j
     }
 }
 
-/// Whether `nu`, the `value` nu describes a scalar with, is the one `nuten` holds.
 fn same_scalar(nu: &JsonValue<'_>, nuten: &ValueKind) -> bool {
     match (nu, nuten) {
         (JsonValue::String(nu), ValueKind::String(nuten)) => nu == nuten,
@@ -236,7 +215,6 @@ fn same_scalar(nu: &JsonValue<'_>, nuten: &ValueKind) -> bool {
     }
 }
 
-/// The value `nu` describes, in one line: its type, then its keys, its length, or its value.
 fn described(nu: &JsonValue<'_>) -> String {
     let Some(JsonValue::String(nu_type)) = member(nu, "type") else {
         return ast::excerpt(nu.clone());
@@ -252,7 +230,7 @@ fn described(nu: &JsonValue<'_>) -> String {
     }
 }
 
-/// `value` in one line, in the words `described` uses for nu's side.
+/// In the words `described` uses, so that both sides of a difference read alike.
 fn excerpt(value: &Value) -> String {
     let scalar = |text: String| format!("{} {text}", type_name(&value.kind));
     match &value.kind {
@@ -290,7 +268,6 @@ mod tests {
         read(src, Format::Nuon)
     }
 
-    /// `same_values` with `after` as the only output, that of the config given.
     fn same_value(before: &str, after: &str) -> Result<(), String> {
         let after = Output {
             text: after.to_string(),
@@ -299,7 +276,6 @@ mod tests {
         same_values(before, &[after], None)
     }
 
-    /// What nu writes, or why it fails, as the verdicts take it.
     fn from_nu(written: Result<&str, &str>) -> Result<String, String> {
         written.map(str::to_string).map_err(str::to_string)
     }
@@ -493,7 +469,6 @@ mod tests {
         assert!(error.starts_with("with v: the AST differs"), "{error}");
     }
 
-    /// `describe -d` of a record whose fields are `columns`, as JSON.
     fn record(columns: &str) -> String {
         format!(r#"{{"type": "record", "columns": {{{columns}}}}}"#)
     }

@@ -1,9 +1,5 @@
-//! Inputs shared by tests, and a way to ask nu.
-
 use std::{env, process::Command};
 
-/// What nu prints for `pipeline`, line by line.
-/// `None` when nu cannot be run and `NUTEN_TEST_SKIP_NU` is set.
 /// Nu failing means the pipeline no longer asks what it meant to, which must not pass.
 pub(crate) fn asked(pipeline: &str) -> Option<Vec<String>> {
     let output = match Command::new("nu").args(["-n", "-c", pipeline]).output() {
@@ -24,7 +20,6 @@ pub(crate) fn asked(pipeline: &str) -> Option<Vec<String>> {
     )
 }
 
-/// A sample of each byte class the lexer tells apart.
 /// `à` (`C3 A0`) ends in a byte `starts_comment_after` counts as whitespace.
 const ALPHABET: &[&str] = &[
     "e", "<", ">", "=", "r", "$", "'", "\"", "`", "\\", "(", ")", "[", "]", "{", "}", "#", "|",

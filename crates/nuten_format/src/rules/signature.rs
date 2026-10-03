@@ -59,7 +59,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether `text` is a long flag that takes a `(-f)`.
 /// Nu reads `--` itself as a short flag, and gives a `(-f)` after it to that one.
 /// A flag holding a `(` has its short flag already, and nu splits it at the first `(`.
 fn is_long_flag(text: &str) -> bool {

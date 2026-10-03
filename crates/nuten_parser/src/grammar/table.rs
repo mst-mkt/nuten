@@ -8,9 +8,6 @@ use super::{
 };
 use crate::{ParseErrorKind, lexer::Mode, parser::Parser};
 
-/// Whether the `[ ]` is a table, given its inside in list mode.
-/// The column names in `[ ]` first, `;` right after them, then rows in `[ ]`.
-/// Any number of `,` and comments may come among the rows.
 /// Nu reads a table past a `,` or a comment before the `;` too, but such a `[ ]` stays a word.
 /// Pulling the `;` up to the names would put it after the comment.
 /// Nu rejects a second `;`, and one with no row after it as in `[[a b];]`.
@@ -41,7 +38,6 @@ pub(super) fn is_table(inner: &Parser<'_>) -> bool {
         && rows > 0
 }
 
-/// The column names, the `;`, and the rows, each a list.
 /// A list holding a `;`, the column names or a row, stays a word, since nu rejects the `;`.
 pub(super) fn table_items(p: &mut Parser<'_>) {
     while let Some(kind) = p.peek() {
@@ -59,8 +55,7 @@ pub(super) fn table_items(p: &mut Parser<'_>) {
     }
 }
 
-/// The items of the column names or of a row.
-/// Nu reports a spread there, as it takes none in a table.
+/// Nu reports a spread in a table, as it takes none there.
 fn row_items(p: &mut Parser<'_>) {
     piped_items(p, |p| match p.peek_text() {
         Some(text) if is_spread(text, Target::List) => p.bump_error(ParseErrorKind::SpreadInTable),

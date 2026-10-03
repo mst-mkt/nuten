@@ -1,5 +1,3 @@
-//! Reads JSON and JSONC.
-
 use jsonc_parser::{CollectOptions, ParseOptions, ast, common::Range, parse_to_ast};
 use nuten_syntax::{TextRange, TextSize};
 

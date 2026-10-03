@@ -1,5 +1,3 @@
-//! The command-line interface.
-
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
 mod files;
@@ -135,14 +133,10 @@ enum Mode {
     Check,
 }
 
-/// What formatting the files comes to.
 #[derive(Debug)]
 struct Report {
-    /// The files formatted differently from how they are written, in the order of the paths given.
     changed: Vec<PathBuf>,
-    /// A line for each problem, at each path given that it concerns, in the order of the paths.
     problems: Vec<String>,
-    /// Whether `exclude` left out every file there was to format.
     all_excluded: bool,
 }
 
@@ -179,7 +173,6 @@ fn reads_stdin(args: &Format) -> bool {
     args.paths.iter().any(|path| path.as_os_str() == STDIN_PATH)
 }
 
-/// The problem with `args`, or with how they go together, that the parser cannot see.
 /// Not `conflicts` of usage, which relates arguments and cannot tell `-` from other paths.
 fn argument_problem(args: &Format) -> Option<String> {
     let takes_stdin = reads_stdin(args);
@@ -207,7 +200,7 @@ fn print(text: &str) -> ExitCode {
     }
 }
 
-/// Exits as the protocol asks: 0 after `shutdown`, and 1 without it.
+/// Exits as the protocol asks.
 fn serve_lsp() -> ExitCode {
     match nuten_lsp::serve_stdio() {
         Ok(Exit::AfterShutdown) => ExitCode::SUCCESS,
@@ -223,7 +216,6 @@ fn fail(problems: &[String]) -> ExitCode {
     ExitCode::from(2)
 }
 
-/// The error is the problem, as a line.
 fn write_stdout(text: &str) -> Result<(), String> {
     match io::stdout().write_all(text.as_bytes()) {
         // A reader that stops early, as `head` does, took what it wanted.
@@ -232,7 +224,6 @@ fn write_stdout(text: &str) -> Result<(), String> {
     }
 }
 
-/// Formats stdin to stdout, as the file `filepath` if given, with `config_file` if given.
 fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode) -> ExitCode {
     let name = filepath.unwrap_or(Path::new(STDIN_NAME));
     // Read in full first, so that a writer is not cut off when a config file has a problem.
@@ -326,10 +317,8 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
     report_of(jobs, outcomes, all_excluded)
 }
 
-/// A file with its config, or a line for a problem met while looking for files.
 type Job = Result<(Candidate, Lookup), String>;
 
-/// Each of `entries`, with the file paired with its config.
 /// `lookups` holds the config of each file of `entries`.
 fn with_lookups(entries: Vec<Entry>, lookups: Vec<Lookup>) -> Vec<Job> {
     let mut lookups = lookups.into_iter();
@@ -344,7 +333,6 @@ fn with_lookups(entries: Vec<Entry>, lookups: Vec<Lookup>) -> Vec<Job> {
         .collect()
 }
 
-/// The jobs to go on with, and the paths of the files `exclude` leaves out.
 fn taken(jobs: Vec<Job>) -> (Vec<Job>, Vec<PathBuf>) {
     let (taken, left): (Vec<_>, Vec<_>) = jobs
         .into_iter()
@@ -361,13 +349,10 @@ fn taken(jobs: Vec<Job>) -> (Vec<Job>, Vec<PathBuf>) {
     (taken.into_iter().map(|(job, _)| job).collect(), excluded)
 }
 
-/// What becomes of a file, as far as its config tells.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Pick {
     Take,
-    /// Left out by `exclude`.
     Exclude,
-    /// Found under a directory, but not taken by `include`.
     Skip,
 }
 
@@ -389,8 +374,6 @@ fn pick((candidate, lookup): &(Candidate, Lookup)) -> Pick {
     }
 }
 
-/// Whether the file of each of `jobs` changes, or a line for each problem with it or its config.
-/// Formats nothing when `mode` is `None`.
 fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Result<bool, Vec<String>>> {
     let files: Vec<_> = jobs.iter().flatten().collect();
     parallel::map(&files, |(candidate, lookup)| match (lookup, mode) {
@@ -407,7 +390,7 @@ fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Result<bool, Vec<String>>
     })
 }
 
-/// What `jobs` come to, where what formatting each file comes to is next in `outcomes`.
+/// What formatting each file of `jobs` comes to is next in `outcomes`.
 fn report_of(
     jobs: Vec<Job>,
     outcomes: Vec<Result<bool, Vec<String>>>,
@@ -438,8 +421,6 @@ fn report_of(
     }
 }
 
-/// Tells whether it changes.
-/// The error holds a line for each problem.
 fn format_file(path: &Path, config: &FormatConfig, mode: Mode) -> Result<bool, Vec<String>> {
     let io_problem = |error: io::Error| vec![format!("{}: {error}", path.display())];
     let src = read_regular_file(path).map_err(io_problem)?;
@@ -452,7 +433,6 @@ fn format_file(path: &Path, config: &FormatConfig, mode: Mode) -> Result<bool, V
     Ok(changed)
 }
 
-/// The line reporting `failure` at `path`.
 fn overwrite_problem(path: &Path, failure: &Failure) -> String {
     let (path, error) = (path.display(), &failure.error);
     match (
@@ -471,8 +451,6 @@ fn overwrite_problem(path: &Path, failure: &Failure) -> String {
     }
 }
 
-/// `src`, the text of `path`, formatted.
-/// The error holds a line for each syntax error.
 fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, Vec<String>> {
     format(src, config).map_err(|errors| {
         located(
@@ -486,7 +464,6 @@ fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, 
     })
 }
 
-/// Each of `items` once, in the order it first comes.
 fn unique<T: Copy + Eq + Hash>(items: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
     let mut seen = HashSet::new();
     items.filter(move |item| seen.insert(*item))

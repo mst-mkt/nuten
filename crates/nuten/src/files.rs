@@ -1,5 +1,3 @@
-//! The files to format.
-
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
@@ -11,15 +9,12 @@ use std::{
 use ignore::{DirEntry, WalkBuilder, gitignore::Gitignore};
 use nuten_config::{Lookup, VCS_DIRS};
 
-/// A file that may be formatted, or a line for a problem met while looking for files.
 pub(crate) type Entry = Result<Candidate, String>;
 
 #[derive(Debug)]
 pub(crate) struct Candidate {
     pub(crate) path: PathBuf,
-    /// `path` with symlinks resolved, or the problem resolving it.
     pub(crate) canonical: Result<PathBuf, String>,
-    /// Whether it is given directly, rather than found under a directory given.
     pub(crate) given: bool,
 }
 
@@ -60,7 +55,7 @@ pub(crate) fn expand(paths: &[PathBuf], dir_lookups: &HashMap<&Path, Lookup>) ->
         .collect()
 }
 
-/// The problems with the global excludes file of git, whose lines the walker drops unseen.
+/// The walker drops the lines of the global excludes file of git unseen.
 fn global_ignore_problems() -> Vec<String> {
     Gitignore::global()
         .1
@@ -71,8 +66,7 @@ fn global_ignore_problems() -> Vec<String> {
 /// Walks no directory of version control, since it holds no code of the author's.
 /// Hidden files are walked, since config of Nushell lives in them.
 fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Entry> {
-    // Directories covered by an ignore file with lines the walker drops.
-    // Their files are left alone, since what those lines ignore is unknown.
+    // The walker drops lines of some ignore files, so what they ignore below them is unknown.
     let mut untrusted: Vec<PathBuf> = Vec::new();
     // Resolved once, since the walk follows no symlink below it.
     let canonical_dir = nuten_config::canonical(dir);
@@ -137,7 +131,6 @@ fn is_regular_file(entry: &DirEntry) -> bool {
         .is_some_and(|file_type| file_type.is_file())
 }
 
-/// `path` with no `./` before it, as a path in the current directory is written.
 /// Neither a `.` inside it nor a `/` at its end is kept, so that one directory is named one way.
 fn shown(path: &Path) -> PathBuf {
     let stripped: PathBuf = path
@@ -183,7 +176,6 @@ fn problem_lines(error: &ignore::Error) -> Vec<String> {
     }
 }
 
-/// The IO error that caused `error` in the end.
 fn innermost(error: &io::Error) -> &io::Error {
     let outermost: &(dyn Error + 'static) = error;
     iter::successors(Some(outermost), |&error| error.source())
@@ -192,8 +184,7 @@ fn innermost(error: &io::Error) -> &io::Error {
         .unwrap_or(error)
 }
 
-/// Each of `entries` but those whose file, at `path_of` it, is the same file as one before them.
-/// Nor those that are one of `excluded` under another name, since `exclude` leaves that file alone.
+/// One of `excluded` under another name is dropped too, since `exclude` leaves that file alone.
 pub(crate) fn distinct<T>(
     entries: Vec<Result<T, String>>,
     excluded: &[PathBuf],
@@ -213,8 +204,7 @@ pub(crate) fn distinct<T>(
 #[derive(Debug, PartialEq, Eq, Hash)]
 enum Identity {
     File(FileId),
-    /// A file whose identity cannot be read is known by its path.
-    /// Reading it for formatting reports why.
+    /// Kept, so that reading the file for formatting reports why its identity cannot be read.
     Path(PathBuf),
 }
 

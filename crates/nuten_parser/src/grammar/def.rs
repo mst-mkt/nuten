@@ -41,7 +41,6 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// They are an `Error` where nu fails to lex them, and an `IoTypes` where nu pairs them all up.
 fn io_types(p: &mut Parser<'_>, count: usize, attached_colon: bool) {
     if count == 0 {
         return;
@@ -134,17 +133,12 @@ fn io_type_pairs(p: &mut Parser<'_>) {
     }
 }
 
-/// Where the parts of a `def` or an `extern` are among `items`, when nu reads them as one.
 /// Only a `def` has a body, and nu takes it from the last item.
 struct DefShape {
-    /// Where the parameters are, the items before them being the keyword, any flags, and the name.
     signature: usize,
     brackets: &'static Brackets,
-    /// Whether the `:` of the input and output types ends that item.
     attached_colon: bool,
-    /// How many items of the input and output types follow the parameters, a lone `:` included.
     types: usize,
-    /// Whether an `extern` ends with the one item in braces nu ignores.
     ignored_braces: bool,
     has_body: bool,
 }

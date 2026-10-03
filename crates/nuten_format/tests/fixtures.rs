@@ -1,9 +1,3 @@
-//! Each `test_data/**/<name>.input.nu` must format to `<name>.expected.nu` next to it.
-//! The expected output must format to itself.
-//! Formatting either must keep every invariant `nuten_format::invariants` asks about.
-//! That covers those of the parser and of the formatter alike.
-//! It must keep them with each of `invariants::VARIANTS` of its config too.
-//!
 //! A failing fixture does not stop the others.
 //! A change to a rule then shows all it affects at once.
 
@@ -23,14 +17,10 @@ use crate::support::{caught, files_below};
 const INPUT_SUFFIX: &str = ".input.nu";
 const EXPECTED_SUFFIX: &str = ".expected.nu";
 
-/// Below it, each directory of `CONFIGS` holds fixtures that format with its config.
-/// Elsewhere, fixtures format with the default.
 const CONFIGS_DIR: &str = "config";
 
-/// Makes the config of a directory from the default.
 type Change = fn(Config) -> Config;
 
-/// Each directory, below `CONFIGS_DIR`, with how its config differs from the default.
 const CONFIGS: &[(&str, Change)] = &[
     ("commas/none", |config| Config {
         commas: Commas::None,
@@ -99,7 +89,6 @@ fn test_data() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("test_data")
 }
 
-/// The config of the fixture `stem`: that of its directory below `CONFIGS_DIR`, or the default.
 fn config_of(stem: &str) -> Result<Config, String> {
     let configs_dir = Path::new(CONFIGS_DIR);
     let stem = Path::new(stem);
@@ -113,8 +102,7 @@ fn config_of(stem: &str) -> Result<Config, String> {
         .ok_or_else(|| format!("{}\nnot below a directory of CONFIGS", stem.display()))
 }
 
-/// The fixture `name` belongs to, whichever of its two files it names.
-/// A file left without its pair then stands as a fixture that fails to read.
+/// A file left without its pair stands as a fixture that fails to read.
 fn stem_of(name: &Path) -> Option<&str> {
     let name = name.to_str()?;
     name.strip_suffix(INPUT_SUFFIX)
@@ -164,8 +152,7 @@ fn contents_of(name: &Path) -> io::Result<String> {
     fs::read_to_string(test_data().join(name))
 }
 
-/// What the checks find wrong with `name`.
-/// Its contents are `src`, and it must format to `expected`.
+/// `src` is the contents of `name`.
 fn failures_in(name: &Path, src: &str, expected: &str, config: &Config) -> Vec<String> {
     let formatting = detail_of(|| formats_to(src, expected, config));
     let invariant = detail_of(|| keeps_invariants(src, config));
@@ -187,7 +174,6 @@ fn failures_in(name: &Path, src: &str, expected: &str, config: &Config) -> Vec<S
         .collect()
 }
 
-/// What `check` finds wrong, a panic of nuten's own included.
 fn detail_of(check: impl FnOnce() -> Result<(), String> + UnwindSafe) -> Option<String> {
     match caught(check) {
         Ok(outcome) => outcome.err(),

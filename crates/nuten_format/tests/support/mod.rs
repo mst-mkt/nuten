@@ -1,13 +1,10 @@
-//! Shared by the tests that run nuten over many files.
-
 use std::{
     fs,
     panic::{self, UnwindSafe},
     path::{Path, PathBuf},
 };
 
-/// Sorted, since the order `read_dir` gives depends on the filesystem.
-/// Without sorting, the reports would differ from one machine to another.
+/// Sorted, so that the reports do not depend on the order the filesystem gives.
 pub(crate) fn files_below(dir: &Path, descends: &impl Fn(&Path) -> bool) -> Vec<PathBuf> {
     let mut entries: Vec<_> = fs::read_dir(dir)
         .unwrap_or_else(|error| panic!("{}: {error}", dir.display()))

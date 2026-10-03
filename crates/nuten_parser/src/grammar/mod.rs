@@ -1,5 +1,3 @@
-//! Grammar rules of Nushell.
-
 mod alias;
 mod assignment;
 mod attribute;
@@ -72,42 +70,24 @@ pub(crate) fn file(p: &mut Parser<'_>) {
     }
 }
 
-/// What nu takes at a position, as far as it tells how nuten reads a word there.
-/// Nu's `SyntaxShape` decides more; these are the ones that tell here.
+/// Nu's `SyntaxShape` decides more; these are the ones that tell how nuten reads a word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Shape {
-    /// Any value: `[ ]` makes a list or a table, `{ }` a record or a block.
     Any,
-    /// An argument of a command nu resolves to one of its own.
     /// A `[ ]` stays a word, since the signature may take it as a string.
-    /// A `{ }` is never a string, unlike a `[ ]`.
-    /// An empty one stays a word, and so does one with a spread first.
-    /// Only the signature tells a record from a closure there.
-    /// An argument like `...$x` stays a word as well.
-    /// Nu reads no spread where a flag takes it as its value, which only the signature tells.
+    /// A `{ }` is never a string, but only the signature tells an empty one from a closure.
+    /// A `...$x` stays a word, since nu reads no spread where a flag takes it as its value.
     KnownArgument,
-    /// An argument of a command that takes a row condition.
     /// Nu reads a `{ }` that shows a `RecordSign` as a block alone, and as a value among others.
     /// So it stays a word, which reads the same either way.
     RowCondition,
-    /// An argument of a head nuten cannot look up: an alias, or one no list or block names.
-    /// So is one an import before it may bring, in place of one a block defines or nu has.
-    /// So is one a block around it defines, where a `hide` may take it away.
     /// Every bracketed word but `( )` stays one, since what nu reads it as is unknowable here.
-    /// So does an argument like `...$x`, as after a command nu resolves to one of its own.
     UnknownArgument,
-    /// What a `let`, a `mut`, or a `const` takes before its operator: the name and any type.
-    /// Nu reads those as written, never as a value, so not even `( )` is one.
+    /// Nu reads a declared name and its type as written, so not even `( )` is a value.
     VariableName,
-    /// An argument of an external command: a `[ ]` is a list.
-    /// A `{ }` is a record or a block, as where nu takes any value.
-    /// A `...` before a `$`, a `( )`, or a `[ ]` makes a spread, as in a list.
     ExternalArgument,
-    /// A block or a closure: the body of a keyword syntax, what `else` takes, what an arm does.
-    /// Nu reads a `{ }` there as a record only for a `:` second.
-    /// One with a spread first is a block, unlike where nu takes any value.
     Block,
-    /// The body of a `def`, which nu reads as a block without looking at what the `{ }` holds.
+    /// Nu reads the body of a `def` as a block without looking at what the `{ }` holds.
     DefBody,
 }
 
@@ -118,8 +98,7 @@ enum Braced {
 }
 
 impl Shape {
-    /// Whether nu reads a value here at all.
-    /// It reads a `$` or a `( )` as one before it looks at the shape.
+    /// Nu reads a `$` or a `( )` as a value before it looks at the shape.
     fn takes_value(self) -> bool {
         self != Shape::VariableName
     }
@@ -192,8 +171,7 @@ const CURLY: Brackets = Brackets {
     always_nested: true,
 };
 
-/// The next token as the value nu reads where it takes `shape`.
-/// The `Def` rule reads the one a signature stands in before `value` sees it.
+/// The `Def` rule reads a signature before `value` would see it.
 fn value(p: &mut Parser<'_>, shape: Shape) {
     if let Some(ahead) = binary_ahead(p, shape) {
         binary(p, ahead);
@@ -220,7 +198,7 @@ fn value(p: &mut Parser<'_>, shape: Shape) {
     }
 }
 
-/// `bracketed` is what it holds in list mode.
+/// `bracketed` must hold the inside of the `[ ]` in list mode.
 fn squared<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     if is_list(bracketed.inner()) {
         p.bump_bracketed(SyntaxKind::List, bracketed, list_items);
@@ -231,7 +209,7 @@ fn squared<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, shape: Shape) {
     }
 }
 
-/// `bracketed` is what it holds in list mode.
+/// `bracketed` must hold the inside of the `[ ]` in list mode.
 /// A list of items of another type holds no table, and its items take no `[ ]` or `{ }`.
 fn listed<'a>(p: &mut Parser<'a>, bracketed: Bracketed<'a>, param: Param) {
     let list = is_list(bracketed.inner());
@@ -267,8 +245,7 @@ fn keyword_words(p: &Parser<'_>) -> usize {
     1 + usize::from(p.peek_text() == Some("export"))
 }
 
-/// The keyword ahead that declares a variable, and how many words it takes up.
-/// Of the keywords that declare one, only `const` takes an `export` before it.
+/// Of the keywords that declare a variable, only `const` takes an `export` before it.
 fn declaration<'a>(p: &Parser<'a>) -> Option<(&'a str, usize)> {
     let words = keyword_words(p);
     let keyword = p
@@ -313,7 +290,7 @@ fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
         .collect()
 }
 
-/// Whether nu reads `text` as a flag, where no parameter takes a number.
+/// Nu reads such a text as a flag only where no parameter takes a number.
 fn is_flag(text: &str) -> bool {
     text.starts_with('-') && text.len() > 1
 }

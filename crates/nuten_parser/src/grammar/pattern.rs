@@ -9,8 +9,7 @@ use crate::{
     parser::Parser,
 };
 
-/// The pattern ahead as nu reads it, which nu tells by its first byte.
-/// Anything else but a variable, a record, or a list pattern is a value, `_` among them.
+/// Nu tells the pattern by its first byte.
 pub(super) fn pattern(p: &mut Parser<'_>) {
     match p.peek_text().map(str::as_bytes) {
         Some([b'$', ..]) => variable(p, "$"),
@@ -20,8 +19,7 @@ pub(super) fn pattern(p: &mut Parser<'_>) {
     }
 }
 
-/// The variable ahead, which binds the name after `prefix`.
-/// Nu takes a `$` alone for a name there, unlike where it reads a variable as a value.
+/// Nu takes a `$` alone for a name in a pattern, unlike where it reads a variable as a value.
 fn variable(p: &mut Parser<'_>, prefix: &str) {
     let name = p
         .peek_text()
@@ -46,14 +44,10 @@ fn is_pattern_item(kind: SyntaxKind) -> bool {
     kind.is_item() && kind != SyntaxKind::Error
 }
 
-/// How nu splits the inside of the `{ }` of a record pattern.
 enum Split {
-    /// Into fields of pattern items.
     Items,
-    /// Into fields, one of them holding a token nuten lexes as no item, such as `|`.
-    /// Nu reads that as a string.
+    /// Nu reads a token nuten lexes as no item, such as `|`, as a string in a record pattern.
     Tokens,
-    /// Into no fields, as a key has no `:` and pattern after it.
     Rejected,
 }
 
@@ -88,16 +82,12 @@ fn split(inner: &Parser<'_>) -> Split {
     }
 }
 
-/// A field of a record pattern among the tokens of its inside.
 struct Field<'t, 'a> {
-    /// The key and the pattern, or the variable twice, since it is both.
     parts: [&'t (Token, &'a str); 2],
-    /// The tokens after the field.
     rest: &'t [(Token, &'a str)],
 }
 
 impl<'t, 'a> Field<'t, 'a> {
-    /// The field `tokens` start with, if any.
     fn first(tokens: &'t [(Token, &'a str)]) -> Option<Field<'t, 'a>> {
         let (parts, rest) = match tokens {
             [variable @ (_, text), rest @ ..] if text.starts_with('$') => {
@@ -127,7 +117,6 @@ fn record_pattern_fields(p: &mut Parser<'_>) {
     }
 }
 
-/// A key, its `:`, and its pattern.
 fn record_field(p: &mut Parser<'_>) {
     p.start(SyntaxKind::RecordField);
     p.bump();
@@ -157,7 +146,6 @@ fn reads_whole(inner: &Parser<'_>) -> bool {
         && rest.is_none_or(|rest| rest + 1 == tokens.len())
 }
 
-/// Whether nu reads `text` as the rest of a list pattern: `..` alone, or before a `$`.
 fn is_rest(text: &str) -> bool {
     text == ".." || text.starts_with("..$")
 }

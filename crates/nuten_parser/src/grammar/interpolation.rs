@@ -9,8 +9,7 @@ use crate::{
     parser::{Parser, Piece},
 };
 
-/// The `InterpString` ahead as an `Interpolation`: its text, and each `( )` in it.
-/// Nu reads a `( )` there as it does one that stands where it takes a value.
+/// Nu reads a `( )` in an interpolation as it does one that stands where it takes a value.
 pub(super) fn interpolation(p: &mut Parser<'_>) {
     let text = p.peek_text().expect("an interpolated string ahead");
     let start = p
@@ -53,17 +52,12 @@ fn pieces(text: &str, start: TextSize) -> Vec<Piece> {
         .collect()
 }
 
-/// The range of each `( )` in the interpolation `text`, brackets included.
 /// Ported from nu's `parse_string_interpolation`.
-/// In a `$"` string, a `(` after an odd number of `\` is text.
-/// Inside a `( )`, quotes make nested strings, where only a `"` one takes a `\` escape.
 pub(super) fn parens(text: &str) -> Vec<Range<usize>> {
     let bytes = text.as_bytes();
     let escapes = bytes[1] == b'"';
-    // Past the `$` and the opening quote, and before the closing one.
     let end = bytes.len() - 1;
     let mut parens = Vec::new();
-    // The closers expected inside the `( )` being read, innermost last.
     let mut closers: Vec<u8> = Vec::new();
     let mut open = 0;
     let mut backslashes = 0;

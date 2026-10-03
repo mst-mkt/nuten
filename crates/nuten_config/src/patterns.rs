@@ -1,16 +1,11 @@
-//! Glob patterns that pick files by where they are.
-
 use std::{fmt, path::Path, sync::Arc};
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 
-/// Patterns of one setting.
 #[derive(Debug, Clone)]
 pub struct Patterns {
     written: Arc<[String]>,
-    /// Those with a `/`, against the path from the directory they are relative to.
     anchored: Arc<GlobSet>,
-    /// Those without a `/`, against one name.
     names: Arc<GlobSet>,
 }
 
@@ -27,9 +22,7 @@ pub enum PatternProblem {
     Empty,
     Negated,
     ParentDir,
-    /// A `.` or nothing between two `/`, or before or after one.
     NoName,
-    /// What `globset` finds wrong with it.
     Invalid(String),
 }
 
@@ -52,16 +45,13 @@ impl fmt::Display for PatternProblem {
     }
 }
 
-/// A file, as patterns see it.
 #[derive(Debug, Clone, Copy)]
 pub struct Place<'a> {
-    /// The path from the directory the patterns are relative to, unless the file is outside it.
     pub relative: Option<&'a Path>,
     pub name: &'a Path,
 }
 
 impl Place<'_> {
-    /// `file` as patterns relative to `root` see it.
     /// Both are canonical.
     pub fn of<'a>(file: &'a Path, root: Option<&Path>) -> Place<'a> {
         let relative = root.and_then(|root| file.strip_prefix(root).ok());
@@ -74,7 +64,6 @@ impl Place<'_> {
 }
 
 impl Patterns {
-    /// The error holds the problem of each pattern that has one, with its index.
     pub fn new<'a>(
         written: impl IntoIterator<Item = &'a str>,
     ) -> Result<Patterns, Vec<(usize, PatternProblem)>> {
@@ -103,12 +92,10 @@ impl Patterns {
         self.written.is_empty()
     }
 
-    /// Whether any pattern has a `/`, and so needs the directory it is relative to.
     pub fn has_anchored(&self) -> bool {
         !self.anchored.is_empty()
     }
 
-    /// Whether a pattern matches the file itself.
     pub fn matches_file(&self, place: Place<'_>) -> bool {
         self.names.is_match(place.name)
             || place
@@ -116,8 +103,6 @@ impl Patterns {
                 .is_some_and(|relative| self.anchored.is_match(relative))
     }
 
-    /// Whether a pattern matches the file, or a directory it is in.
-    /// The directory the patterns are relative to, and those above, are not matched.
     pub fn matches_file_or_ancestor(&self, place: Place<'_>) -> bool {
         let Some(relative) = place.relative else {
             return self.names.is_match(place.name);
@@ -174,7 +159,6 @@ fn parse(pattern: &str) -> Result<Parsed, PatternProblem> {
     })
 }
 
-/// Whether `part`, a pattern between two `/`, may stand for `..`.
 /// An alternative of a `{}` group counts too, since a glob may take any of them.
 fn is_parent_dir(part: &str) -> bool {
     part.match_indices("..").any(|(start, _)| {

@@ -1,9 +1,4 @@
-//! What formatting must keep, asked of any input.
-//!
 //! A fixture has an expected output; any other input has only these.
-//! The output keeps every token and every comment, and formatting it again changes nothing.
-//! What the parser must keep is in `nuten_parser::invariants`, and `check` asks those first.
-//! `VARIANTS` make the configs to check every invariant with, besides the one given.
 
 use std::fmt;
 
@@ -13,30 +8,17 @@ use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
 use crate::{Commas, Config, IndentStyle, ParseError, format_parsed};
 
-/// One property of the formatter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
-    /// The output has the tokens of the source, trivia aside, in order.
-    /// `,`s and the pipes between the items of a list are left aside too.
-    /// They separate items as whitespace does in lists, records and types.
-    /// So a `,` the formatter prints in a type without one in the source goes unseen here.
-    /// Only the nu oracle tells whether it went where nu reads it as a separator.
-    /// A `ShortFlag` counts as one with the token before it.
-    /// The formatter may join the two, as nu reads them.
+    /// `,`s and pipes among list items are left aside, since they separate items as spaces do.
+    /// So only the nu oracle tells whether a `,` the formatter adds is where nu reads a separator.
+    /// A `ShortFlag` counts with the token before it, since the formatter may join the two.
     Tokens,
-    /// The output has the comments of the source, in order, each after as many tokens as it was.
-    /// Moving one past a token can change what nu reads it as documenting.
-    /// Each stands on its own line or at the end of a line, as it was.
-    /// Between statements or the arms of a `match`, a blank line follows it or not, as it was.
-    /// Its text, its place, and these two are all nu reads to describe a command or a parameter.
-    /// So does the description of a module, which nu reads from the comments at the top of a file.
-    /// Spaces and tabs at the end of a comment do not count, since the printer trims them.
-    /// Nor do `\r`s there, which it trims with `\n` line endings.
-    /// Nor do blank lines at the end of the file, a block, the arms, or a subexpression.
-    /// The formatter drops them.
-    /// Nor do `,`s and the pipes between the items of a list, which it may drop too.
+    /// Nu reads where comments stand to tell which command, parameter, or module each describes.
+    /// Spaces, tabs, and `\r`s at the end of a comment do not count, since the printer trims them.
+    /// Nor do blank lines ending a file, block, arms, or subexpression, which the formatter drops.
+    /// Nor do `,`s and the pipes between the items of a list, which the formatter may drop too.
     Comments,
-    /// Formatting the output succeeds and changes nothing.
     Idempotency,
 }
 
@@ -49,7 +31,7 @@ impl Invariant {
         }
     }
 
-    /// A violation of this invariant, given what breaks in one line.
+    /// `detail` is one line.
     fn violation(self, detail: String) -> Violation {
         Violation {
             invariant: self.name(),
@@ -61,12 +43,8 @@ impl Invariant {
 /// The syntax errors are kept apart from the violations, since a source can have both.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checked {
-    /// What the parser breaks.
-    /// Or what the formatter breaks, where the parser holds and the source has no syntax errors.
     pub violations: Vec<Violation>,
-    /// The syntax errors of the source, which leave no output to ask about.
     pub syntax_errors: Vec<ParseError>,
-    /// What the source formats to, where it has no syntax errors and the parser breaks nothing.
     pub output: Option<String>,
 }
 
@@ -92,10 +70,8 @@ pub fn check(src: &str, config: &Config) -> Checked {
     }
 }
 
-/// How to make a config from another, to check besides it.
 #[derive(Debug, Clone, Copy)]
 pub struct Variant {
-    /// What it changes, to tell a violation with it from one with the other.
     pub name: &'static str,
     change: fn(Config) -> Config,
 }
@@ -158,13 +134,10 @@ fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Viola
     .collect()
 }
 
-/// Whether a token of `kind` is one of those `Tokens` compares, given whether any stands before it.
-/// A `ShortFlag` after one is part of that one instead.
 fn counted(kind: SyntaxKind, first: bool) -> bool {
     !kind.is_trivia() && !kind.is_separator() && (first || kind != SyntaxKind::ShortFlag)
 }
 
-/// The tokens `Tokens` compares, in order.
 /// The leaves rather than the lexer's tokens, since the parser relabels some.
 fn tokens_of(tree: &SyntaxNode) -> Vec<(SyntaxKind, String)> {
     let mut leaves: Vec<(SyntaxKind, String)> = Vec::new();
@@ -224,12 +197,9 @@ fn comments(tree: &SyntaxNode, output_tree: &SyntaxNode) -> Option<Violation> {
 
 #[derive(Debug, PartialEq, Eq)]
 struct Comment {
-    /// Without the spaces, tabs, and `\r`s at its end.
     text: String,
-    /// How many of the tokens `Tokens` compares stand before it.
     tokens_before: usize,
     own_line: bool,
-    /// False inside a statement and at the end of the file, a block, or a subexpression.
     blank_line_after: bool,
 }
 
@@ -252,7 +222,6 @@ impl fmt::Display for Comment {
     }
 }
 
-/// Whether the comment stands between statements, where a blank line after it is kept.
 /// Inside a statement the formatter drops one, and nu reads no documentation there either.
 /// What an assignment operator takes starts at its first `Pipeline`.
 /// A comment before that one is at the operator, which is inside the statement.
@@ -342,7 +311,6 @@ fn idempotency(output: &str, parsed: &Parsed, config: &Config) -> Option<Violati
     Some(Invariant::Idempotency.violation(detail))
 }
 
-/// The index of the first element that differs, or the length of the shorter one.
 fn mismatch<T: PartialEq>(a: &[T], b: &[T]) -> usize {
     a.iter()
         .zip(b)
@@ -368,7 +336,6 @@ mod tests {
             .collect()
     }
 
-    /// What `check` reports about `src`, its output aside.
     /// The syntax errors come too, since a source that has them leaves the formatter unasked.
     fn reported(src: &str, config: &Config) -> (Vec<Violation>, Vec<ParseError>) {
         let checked = check(src, config);

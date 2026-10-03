@@ -1,54 +1,36 @@
-//! The elements a document is made of.
-
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element<'a> {
-    /// Printed as is, but for its line breaks, which come out as the printer's line ending.
     /// `width` is `TextWidth::of(text)`.
     Text {
         text: &'a str,
         width: TextWidth,
     },
-    /// Printed byte for byte, its line breaks included.
     /// `width` is `TextWidth::of(text)`.
     ExactText {
         text: &'a str,
         width: TextWidth,
     },
-    /// A space either way.
     Space,
     Line(LineMode),
-    /// Breaks every group around it.
     ExpandParent,
-    /// Held back until just before the next line break, or the end of the output.
-    /// Printed then with the indent and mode of its own place.
     LineSuffix(Vec<Element<'a>>),
-    /// A hard line break here if a line suffix is held back.
     LineSuffixBoundary,
-    /// `broken` where the `Line`s around it break, `flat` where they print flat.
     IfBreak {
         broken: Vec<Element<'a>>,
         flat: Vec<Element<'a>>,
     },
-    /// Printed flat when it fits on the line, otherwise with its own `Line`s broken.
-    /// An `Indent` or an `Align` after it or inside it can depend on that through `id`.
     Group {
         id: Option<GroupId>,
         elements: Vec<Element<'a>>,
     },
-    /// One level deeper after each line break inside.
-    /// Only when `group` is `None`, or names a group that broke.
-    /// That group must be one around the indent, or one printed before it.
+    /// `group` must name one around the indent, or one printed before it.
     Indent {
         group: Option<GroupId>,
         elements: Vec<Element<'a>>,
     },
-    /// `columns` further, in spaces, after each line break inside.
-    /// Only when `group` is `None`, or names a group that broke.
-    /// That group must be one around the alignment, or one printed before it.
-    /// With tabs, an alignment that a deeper level follows takes a tab instead.
-    /// No space then comes before a tab.
+    /// `group` must name one around the alignment, or one printed before it.
     Align {
         columns: u32,
         group: Option<GroupId>,
@@ -56,11 +38,10 @@ pub enum Element<'a> {
     },
 }
 
-/// Names a group; the document keeps each id to one group.
+/// A document must give each id to one group only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GroupId(pub(crate) u32);
 
-/// Gives out the ids of one document, each once.
 #[derive(Debug, Default)]
 pub struct GroupIds {
     next: u32,
@@ -74,21 +55,16 @@ impl GroupIds {
     }
 }
 
-/// What a `Line` prints, flat or broken.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineMode {
-    /// Nothing, or a line break.
     Soft,
-    /// A space, or a line break.
     SoftOrSpace,
-    /// A line break and `blank_lines` blank lines either way, less what is there already.
     Hard { blank_lines: u32 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextWidth {
     Width(u32),
-    /// The text has line breaks of its own, so it never fits a group on one line.
     Multiline,
 }
 
@@ -120,7 +96,7 @@ impl TextWidth {
     }
 }
 
-/// Columns `text` takes on one line; `text` has no line break.
+/// `text` must have no line break.
 pub(crate) fn columns(text: &str) -> u32 {
     let width = if text.is_ascii() {
         text.len()

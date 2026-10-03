@@ -1,5 +1,4 @@
-//! Writing a file over, with its old contents kept until the new ones are in.
-//! Not a new file renamed over it, which would split hard links and drop the owner and mode.
+//! Not a new file renamed over the old, which would split hard links and drop the owner and mode.
 
 use std::{
     ffi::OsStr,
@@ -11,17 +10,15 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-/// A file to write over, with room beside it for a backup.
 pub(crate) trait Target {
     type File: Write + Seek + SetLen;
 
-    /// The file, open for writing without being cut short.
+    /// Must not cut the file short.
     fn open(&self) -> io::Result<Self::File>;
 
-    /// A new, empty file for the backup, and its path.
+    /// The backup file must be new and empty.
     fn create_backup(&self) -> io::Result<(Self::File, PathBuf)>;
 
-    /// Removes the backup that `create_backup` made at `path`.
     fn remove_backup(&self, path: &Path) -> io::Result<()>;
 }
 
@@ -30,7 +27,6 @@ pub(crate) trait SetLen {
     fn set_len(&self, len: u64) -> io::Result<()>;
 }
 
-/// A file on disk, whose backup goes in its directory.
 pub(crate) struct OnDisk<'a>(pub(crate) &'a Path);
 
 impl Target for OnDisk<'_> {
@@ -64,25 +60,22 @@ impl SetLen for File {
     }
 }
 
-/// What the file holds after a failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Contents {
     Old,
     New,
-    /// A mix of the new contents and the old, since restoring the old ones failed too.
     Broken,
 }
 
-/// Why `overwrite` failed, and what it left.
 #[derive(Debug)]
 pub(crate) struct Failure {
     pub(crate) error: io::Error,
     pub(crate) contents: Contents,
-    /// The backup left behind, which holds all the old contents unless `contents` is `Old`.
+    /// Holds all the old contents unless `contents` is `Old`.
     pub(crate) backup: Option<PathBuf>,
 }
 
-/// Writes `new` over the file of `target`, which holds `old`.
+/// The file of `target` must hold `old`.
 pub(crate) fn overwrite<T: Target>(target: &T, old: &[u8], new: &[u8]) -> Result<(), Failure> {
     let untouched = |error| Failure {
         error,
@@ -109,7 +102,6 @@ pub(crate) fn overwrite<T: Target>(target: &T, old: &[u8], new: &[u8]) -> Result
     }
 }
 
-/// Whether `error` says no backup can be made beside the file, which leaves writing in place.
 /// A writable file can sit in a directory that is not, or have a name too long for a suffix.
 /// Not an error such as a full disk, which writing in place could meet too and break the file.
 fn forbids_backup(error: &io::Error) -> bool {
@@ -121,8 +113,6 @@ fn forbids_backup(error: &io::Error) -> bool {
     )
 }
 
-/// Writes `old` to the backup, and gives back its path.
-/// The failure leaves the file untouched.
 fn back_up<T: Target>(
     target: &T,
     mut backup_file: T::File,
@@ -143,7 +133,6 @@ fn back_up<T: Target>(
     }
 }
 
-/// Writes `old` back over `file`, whose writing over failed with `error`.
 fn roll_back<T: Target>(
     target: &T,
     file: &mut T::File,
@@ -166,7 +155,6 @@ fn roll_back<T: Target>(
     }
 }
 
-/// `path`, unless the backup there is removed.
 fn left_behind<T: Target>(target: &T, path: PathBuf) -> Option<PathBuf> {
     target.remove_backup(&path).is_err().then_some(path)
 }
@@ -222,7 +210,6 @@ mod tests {
         b"ls | first # a comment longer than the new contents, and longer still\n",
     ];
 
-    /// The errors of creating a backup that leave writing in place without one.
     const FORBIDDING: [io::ErrorKind; 3] = [
         io::ErrorKind::PermissionDenied,
         io::ErrorKind::ReadOnlyFilesystem,
@@ -243,13 +230,11 @@ mod tests {
         Backup,
     }
 
-    /// A file and its backup in memory, whose steps fail as `fails` says.
     /// A write puts at most two bytes, so that a cut can fall inside it.
     struct Fake {
         steps_taken: Cell<usize>,
         fails: Box<dyn Fn(usize) -> bool>,
         backup_error: Option<io::ErrorKind>,
-        /// The disk after each step, from before the first.
         history: RefCell<Vec<Disk>>,
     }
 
@@ -284,7 +269,6 @@ mod tests {
             self.history.borrow().last().unwrap().clone()
         }
 
-        /// Takes a step, which fails as `fails` says, and otherwise changes the disk by `change`.
         fn take_step<R>(&self, change: impl FnOnce(&mut Disk) -> R) -> io::Result<R> {
             let step = self.steps_taken.get();
             self.steps_taken.set(step + 1);
@@ -381,14 +365,12 @@ mod tests {
         }
     }
 
-    /// The number of steps writing `new` over `OLD` takes when none fails.
     fn steps_to_write(new: &[u8], backup_error: Option<io::ErrorKind>) -> usize {
         let fake = Fake::with_backup_error(|_| false, backup_error);
         overwrite(&fake, OLD, new).unwrap();
         fake.steps_taken.get()
     }
 
-    /// Each way of failing: at one step and not again, or at one step and every step after.
     fn failures(steps: usize) -> impl Iterator<Item = Box<dyn Fn(usize) -> bool>> {
         (0..steps).flat_map(|at| {
             let ways: [Box<dyn Fn(usize) -> bool>; 2] = [
@@ -399,7 +381,6 @@ mod tests {
         })
     }
 
-    /// Making a backup, and each error that leaves writing in place without one.
     fn backup_errors() -> impl Iterator<Item = Option<io::ErrorKind>> {
         [None].into_iter().chain(FORBIDDING.map(Some))
     }
@@ -495,7 +476,6 @@ mod tests {
         assert_eq!(fake.steps_taken.get(), 1, "no step past opening the file");
     }
 
-    /// A fresh directory, removed when dropped.
     struct TempDir(PathBuf);
 
     impl TempDir {

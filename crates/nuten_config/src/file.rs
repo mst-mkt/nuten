@@ -1,5 +1,3 @@
-//! Reading a file, and naming a place in it.
-
 use std::{fmt::Display, fs, io, path::Path};
 
 /// Not `fs::read_to_string` alone, which waits forever on a FIFO.
@@ -11,7 +9,6 @@ pub fn read_regular_file(path: &Path) -> io::Result<String> {
     }
 }
 
-/// A line for each of `messages`, in their order, about its offset in `src`, the text of `path`.
 pub fn located<M: Display>(
     path: &Path,
     src: &str,
@@ -25,7 +22,6 @@ pub fn located<M: Display>(
         .collect()
 }
 
-/// The line and column of each of `offsets` in `src`, in the order of `offsets`.
 /// No offset is counted from the start of `src` or of its line, as a line can hold many errors.
 fn line_columns(src: &str, offsets: &[usize]) -> Vec<(usize, usize)> {
     let places = places(src, offsets);
@@ -36,7 +32,6 @@ fn line_columns(src: &str, offsets: &[usize]) -> Vec<(usize, usize)> {
         .collect()
 }
 
-/// The place at each of `offsets` in `src`, in the order of their offsets.
 fn places(src: &str, offsets: &[usize]) -> Vec<Place> {
     let mut ascending = offsets.to_vec();
     ascending.sort_unstable();
@@ -49,7 +44,6 @@ fn places(src: &str, offsets: &[usize]) -> Vec<Place> {
         .collect()
 }
 
-/// A place in a text, by its offset and by its line and column.
 #[derive(Clone, Copy)]
 struct Place {
     offset: usize,
@@ -64,7 +58,6 @@ impl Place {
         column: 1,
     };
 
-    /// This place moved forward to `offset` in `src`, the text it is in.
     fn moved_to(self, src: &str, offset: usize) -> Place {
         let between = &src[self.offset..offset];
         match between.rsplit_once('\n') {

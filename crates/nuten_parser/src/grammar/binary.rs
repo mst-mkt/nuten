@@ -8,13 +8,11 @@ use crate::{
     parser::{Affix, Bracketed, Parser},
 };
 
-/// The prefix of a binary, as `0x`, with the base of its digits and how many make a byte.
 /// Ported from nu's `parse_binary`, which takes only these, in lower case.
 const PREFIXES: [(&str, u32, usize); 3] = [("0x", 16, 2), ("0o", 8, 3), ("0b", 2, 8)];
 
 pub(super) enum BinaryAhead<'a> {
     Decoded(Bracketed<'a>),
-    /// A binary whose items nu cannot decode into bytes, which it reports.
     Undecodable,
 }
 
@@ -57,8 +55,7 @@ pub(super) fn binary<'a>(p: &mut Parser<'a>, ahead: BinaryAhead<'a>) {
     }
 }
 
-/// Whether nu reads `text` as a binary, or as one it reports it cannot decode.
-/// Nu's `is_math_expression_like` takes both for the start of an expression.
+/// Nu's `is_math_expression_like` takes a binary for the start of an expression, decodable or not.
 pub(super) fn is_binary_like(text: &str) -> bool {
     let Some(inside) = PREFIXES
         .iter()
@@ -75,8 +72,7 @@ pub(super) fn is_binary_like(text: &str) -> bool {
         .all(|&token| !ends_item(token.kind, &text[token.range]))
 }
 
-/// Whether nu's lexer makes a pipe, a redirection, or an assignment of the token.
-/// Nu reads no binary where it finds one among the items.
+/// Nu reads no binary where it lexes a pipe, a redirection, or an assignment among the items.
 fn ends_item(kind: SyntaxKind, text: &str) -> bool {
     matches!(
         kind,
@@ -89,7 +85,6 @@ fn ends_item(kind: SyntaxKind, text: &str) -> bool {
         || matches!(text, "o>|" | "out>|" | "&&" | "2>" | "2>&1")
 }
 
-/// The items among `tokens`, joined, as nu joins them before it decodes them.
 fn items(tokens: &[(Token, &str)]) -> String {
     tokens
         .iter()
@@ -98,7 +93,6 @@ fn items(tokens: &[(Token, &str)]) -> String {
         .collect()
 }
 
-/// The bytes nu decodes `joined` to, in `base` with `digits` to a byte, if it can.
 /// Ported from nu's `parse_binary_with_base` and `decode_with_base`.
 /// Nu pads the digits with `0`s at the front to a whole number of bytes, counting bytes of UTF-8.
 /// It then cuts them into bytes by chars.

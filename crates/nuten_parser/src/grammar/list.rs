@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{ParseErrorKind, parser::Parser};
 
-/// A `;` may make it a table, or else a word.
+/// A `;` may make the `[ ]` a table, or else a word.
 /// A lexing error keeps it a word too, since nu lexed the word whole without one.
 pub(super) fn is_list(inner: &Parser<'_>) -> bool {
     !inner
@@ -23,13 +23,11 @@ pub(super) fn list_items(p: &mut Parser<'_>) {
     });
 }
 
-/// The items of a list whose items nu reads as another type than any value, each as `shape`.
 /// A spread stays a word, which reads the same as its value would.
 pub(super) fn items_as(p: &mut Parser<'_>, shape: Shape) {
     piped_items(p, |p| value(p, shape));
 }
 
-/// The items of a list, each read by `item`, and the pipes among them.
 /// Nu's lite parser reads what a list holds as a pipeline.
 pub(super) fn piped_items<'a>(p: &mut Parser<'a>, mut item: impl FnMut(&mut Parser<'a>)) {
     // An attribute heading the list takes in the rest of it, pipes too.
@@ -65,7 +63,6 @@ fn headed_by_attribute(p: &Parser<'_>) -> bool {
         .is_some_and(|(_, text)| text.starts_with('@'))
 }
 
-/// Whether the `|` ahead is the last token of the list.
 fn pipe_ends_list(p: &Parser<'_>) -> bool {
     p.remaining_kinds()
         .filter(|&kind| !reads_as_space(kind))
@@ -73,7 +70,6 @@ fn pipe_ends_list(p: &Parser<'_>) -> bool {
         .is_none()
 }
 
-/// Whether an item stands between the last pipe, or the start of the list, and the token ahead.
 fn follows_item(p: &Parser<'_>) -> bool {
     p.emitted_kinds()
         .find(|&kind| !reads_as_space(kind))

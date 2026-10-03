@@ -6,7 +6,6 @@ use super::{
 };
 use crate::parser::Parser;
 
-/// The `Use` ahead, when the call takes an item past `use`.
 pub(super) fn use_(p: &mut Parser<'_>) -> bool {
     let items = call_items(p);
     let words = keyword_words(p);

@@ -1,5 +1,3 @@
-//! Work spread over threads.
-
 use std::{
     iter,
     num::NonZeroUsize,

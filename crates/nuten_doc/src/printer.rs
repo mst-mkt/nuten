@@ -1,15 +1,11 @@
-//! Prints a document as text.
-
 use std::{collections::HashMap, iter, mem, slice};
 
 use crate::{Element, GroupId, LineMode, TextWidth, element::columns};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrinterOptions {
-    /// Columns a line may take before groups break.
     pub line_width: u32,
     pub indent_style: IndentStyle,
-    /// Columns per indent level, and per tab when indenting with tabs.
     pub indent_width: u8,
     pub line_ending: LineEnding,
 }
@@ -42,9 +38,7 @@ impl LineEnding {
         }
     }
 
-    /// `line` without what belongs to the `\n` that follows it in a text.
-    /// With `\n` line endings, so do all the `\r`s before it.
-    /// They would be read again as part of the break.
+    /// Every `\r` goes with `\n` line endings, for the same reason as in `trimmed_before_break`.
     fn without_break(self, line: &str) -> &str {
         match self {
             LineEnding::Lf => line.trim_end_matches('\r'),
@@ -53,7 +47,6 @@ impl LineEnding {
     }
 }
 
-/// How the line breaks inside a text come out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TextBreaks {
     AsLineEnding,
@@ -82,17 +75,14 @@ pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
     printer.out
 }
 
-/// The indent of a line goes out with its first text or space, so an empty line stays empty.
 struct Printer<'a> {
     options: &'a PrinterOptions,
-    /// What is left to print, the next element on top.
     stack: Vec<Frame<'a>>,
-    /// Held back for the next line break, in order.
     line_suffixes: Vec<Suffix<'a>>,
     out: String,
     group_modes: HashMap<GroupId, Mode>,
+    /// Goes out with the first text or space of the line, so an empty line stays empty.
     pending_indent: Option<Indentation>,
-    /// Columns taken on the current line, a pending indent included.
     column: u32,
 }
 
@@ -100,8 +90,7 @@ struct Printer<'a> {
 struct Indentation {
     tabs: u32,
     spaces: u32,
-    /// Alignments since the last level.
-    /// A deeper level turns them into tabs when indenting with tabs.
+    /// Counted so that a deeper level can turn them into tabs when indenting with tabs.
     aligns: u32,
 }
 
@@ -112,7 +101,6 @@ struct Frame<'a> {
     element: &'a Element<'a>,
 }
 
-/// The contents of a `LineSuffix`, with the indent and mode of its place.
 #[derive(Debug, Clone, Copy)]
 struct Suffix<'a> {
     indent: Indentation,
@@ -124,20 +112,17 @@ const HARD_LINE_BREAK: Element<'static> = Element::Line(LineMode::Hard {
     blank_lines: 0,
 });
 
-/// Whether the `Line`s of the group around print flat or broken.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
     Flat,
     Break,
 }
 
-/// How `fits` measures an element: in the mode of its place, or inside a `LineSuffix`.
-/// A `LineSuffix` among the measured elements takes no width.
-/// It prints only at the next line break.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Measure {
     Flat,
     Break,
+    /// Takes no width, since a suffix prints only at the next line break.
     InSuffix,
 }
 
@@ -256,12 +241,7 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// Whether `elements` fit on the rest of the line when printed flat.
-    /// What follows them up to the next line break counts too.
-    ///
-    /// A hard line break, `ExpandParent`, or multi-line text never fits, even in a `LineSuffix`.
-    /// So every group around one breaks.
-    /// This replaces a separate pass that marks such groups.
+    /// Never fitting a forced break replaces a separate pass that marks the groups around it.
     fn fits(&self, elements: &[Element<'_>]) -> bool {
         let Some(mut remaining) = self.options.line_width.checked_sub(self.column) else {
             return false;
@@ -378,7 +358,6 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// Puts the held-back suffixes on the stack, in order, before `then`.
     fn flush_line_suffixes(&mut self, then: Option<Frame<'a>>) {
         if let Some(then) = then {
             self.stack.push(then);
@@ -507,7 +486,6 @@ fn breaks_line(line_mode: LineMode, mode: Mode) -> bool {
     matches!(line_mode, LineMode::Hard { .. }) || mode == Mode::Break
 }
 
-/// The next element of the innermost list in `nested` with one left, and how it is measured.
 fn next_nested<'a>(
     nested: &mut Vec<(Measure, slice::Iter<'a, Element<'a>>)>,
 ) -> Option<(Measure, &'a Element<'a>)> {
@@ -535,7 +513,6 @@ mod tests {
         soft_line_break_or_space, space, text,
     };
 
-    /// Wide enough that nothing breaks for want of room.
     const WIDE: PrinterOptions = PrinterOptions {
         line_width: 80,
         indent_style: IndentStyle::Space,

@@ -1,16 +1,11 @@
-//! The names nu resolves to a command of its own.
-//!
 //! Nu registers the parent of a subcommand as a command too, so `str` stands for `str trim`.
 //! A plugin is left out: it is registered per user, and nu runs an unregistered one externally.
 //! A command nu has only on some platforms is taken in, since a file may run on another one.
 
-/// Whether `head` is the name, or the first word of the name, of a command of nu's own.
 pub fn is_command(head: &str) -> bool {
     COMMANDS.binary_search(&head).is_ok()
 }
 
-/// How many of `words`, from the first, spell the longest name of a command of nu's own.
-/// One where no name of more words starts them.
 pub(super) fn name_words(words: &[&str]) -> usize {
     (2..=words.len().min(LONGEST_NAME))
         .rev()
@@ -26,8 +21,6 @@ pub(super) fn resolves_after_percent(head: &str) -> bool {
     is_command(head) && EXTERNAL_AFTER_PERCENT.binary_search(&head).is_err()
 }
 
-/// How many words name the command a call headed by `head`, then `next`, runs.
-/// `None` where that command takes no row condition.
 pub(super) fn row_condition_words(head: &str, next: Option<&str>) -> Option<usize> {
     match (head, next) {
         ("all" | "any" | "chunk-by" | "where", _) => Some(1),
@@ -36,14 +29,11 @@ pub(super) fn row_condition_words(head: &str, next: Option<&str>) -> Option<usiz
     }
 }
 
-/// Nu takes any value for the argument of these.
 /// Unlike a command, a keyword cannot be defined again, so its signature is known here.
 pub(super) fn takes_any_argument(head: &str) -> bool {
     head == "return"
 }
 
-/// Whether nu reads a statement headed by `head`, then `next`, as the syntax of that keyword.
-/// Nu reads such a keyword before an assignment operator in the statement.
 pub(super) fn reads_before_assignment(head: &str, next: Option<&str>) -> bool {
     matches!(
         head,
@@ -67,7 +57,6 @@ pub(super) fn reads_before_assignment(head: &str, next: Option<&str>) -> bool {
     ) || (head == "plugin" && next == Some("use"))
 }
 
-/// Whether nu rejects `name` as the name of a command a `def` or an `extern` defines.
 /// Ported from nu's `is_parser_keyword`.
 pub(super) fn is_parser_keyword(name: &str) -> bool {
     matches!(
@@ -109,23 +98,19 @@ pub(super) fn is_parser_keyword(name: &str) -> bool {
     )
 }
 
-/// Whether a name whose first words are `head` and `next` starts with a parser keyword.
 /// Every keyword of two words but `plugin use` starts with one that is a keyword alone.
 pub(super) fn starts_with_parser_keyword(head: &str, next: Option<&str>) -> bool {
     is_parser_keyword(head) || (head == "plugin" && next == Some("use"))
 }
 
-/// A name of a variable stands where these take their first argument, never a value.
 pub(super) fn takes_variable_name(head: &str) -> bool {
     matches!(head, "let" | "mut" | "const")
 }
 
-/// Whether nu resolves the attribute `@name` to one of its own, a command `attr name`.
 pub(super) fn is_attribute(name: &str) -> bool {
     ATTRIBUTES.binary_search(&name).is_ok()
 }
 
-/// The words after `attr` in the names of nu's attributes.
 /// Sorted, so that `is_attribute` can bisect.
 const ATTRIBUTES: &[&str] = &[
     "category",
@@ -367,10 +352,8 @@ const COMMANDS: &[&str] = &[
     "zip",
 ];
 
-/// How many words the longest of `MULTIWORD_NAMES` takes.
 const LONGEST_NAME: usize = 3;
 
-/// The names of nu's commands that take more than one word.
 /// Sorted, so that `name_words` can bisect.
 const MULTIWORD_NAMES: &[&str] = &[
     "abbr list",
@@ -726,7 +709,6 @@ mod tests {
     };
     use crate::test_support::asked;
 
-    /// The first word of `name`, and the rest if it has more.
     fn head_and_next(name: &str) -> (&str, Option<&str>) {
         name.split_once(' ')
             .map_or((name, None), |(head, next)| (head, Some(next)))
@@ -791,7 +773,7 @@ mod tests {
         assert_eq!(without_windows_only(COMMANDS), names);
     }
 
-    /// `names` without those nu has only on Windows, since the tests run nu on unix.
+    /// The tests run nu on unix.
     fn without_windows_only<'a>(names: &[&'a str]) -> Vec<&'a str> {
         names
             .iter()
@@ -800,7 +782,6 @@ mod tests {
             .collect()
     }
 
-    /// The names nu registers only on Windows.
     const WINDOWS_ONLY: &[&str] = &["registry", "registry query"];
 
     #[test]

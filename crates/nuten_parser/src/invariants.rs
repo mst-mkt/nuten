@@ -1,5 +1,3 @@
-//! What the lexer and the parser must keep, asked of any input, with syntax errors or without.
-
 use std::{fmt, iter, ops::Range};
 
 use nuten_syntax::{
@@ -13,39 +11,21 @@ use crate::{
     lexer::{self, LexError, LexErrorKind, Lexed, Mode, Token},
 };
 
-/// One property of the lexer or the parser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
-    /// The tokens cover the source exactly, leaving no gap and nothing over.
-    /// None is empty, and none starts inside a char.
     TokenCoverage,
-    /// No token that nu reads as one is split in two.
-    /// No `Whitespace` follows another, and no `\r\n` straddles a boundary.
     TokenSplits,
-    /// The text of every token is one the lexer may give that kind.
     TokenShape,
-    /// The lexing errors match the `Error` tokens one to one, in order.
-    /// Each falls inside its token and over what the error is about.
     LexErrorPlacement,
-    /// The tree restores the source byte for byte.
     Roundtrip,
-    /// Every node but Root holds text, and its first and last tokens are not trivia.
     NodeBounds,
-    /// Every node has a node kind and the shape `nuten_syntax::ast` reads.
-    /// A bracketed node opens and closes with its brackets.
-    /// A block holds its parameters right after its brace.
-    /// A table holds its column names and their `;` first.
-    /// A cell path, a range, a spread, and an interpolation hold no trivia among their pieces.
     NodeShape,
-    /// The errors match the `Error` elements one to one, in order, each inside its element.
     ParseErrorPlacement,
-    /// Every error of lexing the source is among the errors.
-    /// So no error is lost when a token is split.
+    /// This keeps errors from being lost when a token is split.
     LexErrorsReported,
 }
 
 impl Invariant {
-    /// The name in reports.
     pub fn name(self) -> &'static str {
         match self {
             Invariant::TokenCoverage => "token coverage",
@@ -60,7 +40,6 @@ impl Invariant {
         }
     }
 
-    /// A violation of this invariant, given what breaks in one line.
     fn violation(self, detail: String) -> Violation {
         Violation {
             invariant: self.name(),
@@ -69,14 +48,11 @@ impl Invariant {
     }
 }
 
-/// An invariant that does not hold for one input.
 /// The invariant is named rather than typed, so that one list can hold both layers.
 /// The parser and the formatter each declare their own.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Violation {
-    /// The name of the invariant, as the layer that declares it reports it.
     pub invariant: &'static str,
-    /// What breaks first, in one line.
     pub detail: String,
 }
 
@@ -95,8 +71,7 @@ impl fmt::Display for Violation {
     }
 }
 
-/// Every spelling of each operator kind, written out apart from how the lexer reads them.
-/// One list then checks the other.
+/// Written out apart from how the lexer reads them, so that one list checks the other.
 pub(crate) const OPERATORS: &[(SyntaxKind, &[&str])] = &[
     (SyntaxKind::Assign, &["=", "+=", "++=", "-=", "*=", "/="]),
     (SyntaxKind::OutGt, &["o>", "out>"]),
@@ -118,8 +93,6 @@ pub(crate) const OPERATORS: &[(SyntaxKind, &[&str])] = &[
     ),
 ];
 
-/// Every violation of the lexer for all of `src` in every mode.
-/// Mode by mode, and in the order of the invariants within one.
 pub fn lexer_violations(src: &str) -> Vec<Violation> {
     Mode::ALL
         .iter()
@@ -132,7 +105,6 @@ pub fn lexer_violations(src: &str) -> Vec<Violation> {
         .collect()
 }
 
-/// Every violation of `lexed`, the lexing of all of `src` in `mode`.
 fn lexed_violations(src: &str, lexed: &Lexed, mode: Mode) -> Vec<Violation> {
     // `token_splits` and `token_shape` read the text a token stands for.
     // Covering the source is what leaves it there to read.
@@ -213,7 +185,6 @@ fn token_shape(src: &str, tokens: &[Token], mode: Mode) -> Option<Violation> {
     Some(Invariant::TokenShape.violation(detail))
 }
 
-/// Whether the lexer may give `kind` to `text` in `mode`.
 fn well_formed(kind: SyntaxKind, text: &str, mode: Mode) -> bool {
     let quoted = |text: &str| {
         text.len() >= 2 && text.starts_with(['\'', '"', '`']) && text.ends_with(&text[..1])
@@ -234,7 +205,6 @@ fn well_formed(kind: SyntaxKind, text: &str, mode: Mode) -> bool {
             !text.starts_with(['#', ' ', '\t', '\n', '\r', '|', ';'])
                 && mode.special_kind(text.as_bytes()[0]).is_none()
         },
-        // Special tokens, operators, or kinds not emitted yet.
         _ => {
             (text.len() == 1 && mode.special_kind(text.as_bytes()[0]) == Some(kind))
                 || OPERATORS
@@ -274,7 +244,6 @@ fn lex_error_placement(src: &str, lexed: &Lexed) -> Option<Violation> {
     Some(Invariant::LexErrorPlacement.violation(detail))
 }
 
-/// Whether `error` is inside `token` and over what the error is about.
 fn well_placed(src: &str, error: LexError, token: Token) -> bool {
     if !token.range.contains_range(error.range) {
         return false;
@@ -291,7 +260,6 @@ fn well_placed(src: &str, error: LexError, token: Token) -> bool {
     };
     let ends_token = error.range.end() == token.range.end();
     match error.kind {
-        // Runs to the end, or before a final `\` in a `"` string.
         LexErrorKind::Unclosed => {
             (matches!(
                 text,
@@ -304,7 +272,6 @@ fn well_placed(src: &str, error: LexError, token: Token) -> bool {
     }
 }
 
-/// Every violation of the parser for `src`, in the order of the invariants.
 /// `parsed` is the tree of `src`.
 pub fn violations(src: &str, parsed: &Parsed) -> Vec<Violation> {
     let tree = parsed.syntax();
@@ -443,7 +410,6 @@ mod tests {
         }
     }
 
-    /// Root with one node of `kind` that holds `tokens`.
     fn one_node(
         kind: SyntaxKind,
         tokens: &[(SyntaxKind, &str)],

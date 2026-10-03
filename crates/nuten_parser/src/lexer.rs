@@ -14,14 +14,12 @@ pub(crate) struct Token {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Lexed {
     pub(crate) tokens: Vec<Token>,
-    /// One error per `Error` token, in the same order.
     pub(crate) errors: Vec<LexError>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct LexError {
     pub(crate) kind: LexErrorKind,
-    /// Always inside its `Error` token.
     pub(crate) range: TextRange,
 }
 
@@ -36,12 +34,8 @@ impl LexError {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexErrorKind {
-    /// A quote or bracket that never closes.
     Unclosed,
-    /// A `]`, `}`, or `)` that does not match the innermost opener.
-    /// A `]` with nothing open is the exception.
     UnmatchedCloser,
-    /// `r#` not followed by `'`.
     MissingRawQuote,
 }
 
@@ -55,44 +49,28 @@ impl fmt::Display for LexErrorKind {
     }
 }
 
-/// The part of nu's `lex` settings that decides where items end.
 /// Each mode is one of the ways nu calls `lex`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Mode {
-    /// Statements in the top level, `{ }` blocks, closures, and modules.
-    /// Also the right-hand side of `let` and assignments.
     Block,
-    /// The inside of the `( )` of a subexpression.
     /// Nu lexes a line break as whitespace there, so no statement ends at one.
     Paren,
-    /// Lists, tables, and list patterns.
     List,
-    /// The keys, spreads, and `:` of a record, in the inside of `{ }`.
     Record,
-    /// A value of a record, where nu does not treat `:` as special.
+    /// Nu does not treat `:` as special in a value of a record.
     RecordValue,
-    /// The inside of `{ }` looked into to tell a record from a closure or a block.
     Brace,
-    /// The type of a variable, as in `let x: int`.
     VarType,
-    /// The inside of the `[ ]` or `( )` of a `def` or an `extern`.
     Signature,
-    /// The input and output types after the signature, as in `]: nothing -> string`.
     /// Nu lexes a line break as whitespace there, as it does a `,`.
     IoTypes,
-    /// The inside of the `< >` of a type, as in `record<a: int>`.
     TypeParams,
-    /// The inside of the `{ }` of a `match`.
     /// Nu lexes a line break as whitespace there, as it does a `,`.
     MatchArms,
-    /// A word nu reads as a value and a path into it, as in `$x.a?` or `(ls).name`.
     CellPath,
-    /// What comes before the first `..` of a range, as the `$x.a` of `$x.a..3`.
     /// Nu lexes it only to see that it holds no error before it reads the range.
     RangeFrom,
-    /// The inside of the `[ ]` of a binary, as in `0x[ff 00]`.
     Binary,
-    /// The inside of the `{ }` of a record pattern, as in `{a: $x}`.
     /// Unlike in a record, nu lexes what follows a `:` with `:` special too.
     RecordPattern,
 }
@@ -116,9 +94,6 @@ impl Mode {
         Mode::RecordPattern,
     ];
 
-    /// Bytes that end an item, on top of whitespace, `|`, and `;`.
-    /// Each comes with the kind of the token it makes on its own at the start of an item.
-    /// Nu's special tokens, plus `,` where nu treats it as whitespace.
     /// All ASCII, and none of the bytes `next` handles before `item`.
     #[expect(
         clippy::match_same_arms,
@@ -156,7 +131,7 @@ impl Mode {
         }
     }
 
-    /// Whether `<` and `>` nest as brackets, as nu's `lex_signature` does where it reads a type.
+    /// Nu's `lex_signature` nests `<` and `>` as brackets where it reads a type.
     fn nests_angles(self) -> bool {
         matches!(
             self,
@@ -181,7 +156,7 @@ impl Mode {
 }
 
 /// Lexes `range` of `src` without looking at the bytes around it.
-/// All ranges are absolute in `src`, and the tokens cover `range` exactly.
+/// All ranges are absolute in `src`.
 pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     let mut lexer = Lexer::new(src, range, mode);
     Lexed {
@@ -190,7 +165,6 @@ pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
     }
 }
 
-/// The outermost brackets in the item that `range` of `src` holds, as `lex` reads them in `mode`.
 pub(crate) fn item_brackets(src: &str, range: TextRange, mode: Mode) -> Vec<TextRange> {
     let mut lexer = Lexer::new(src, range, mode);
     lexer.brackets = Some(Vec::new());
@@ -199,7 +173,6 @@ pub(crate) fn item_brackets(src: &str, range: TextRange, mode: Mode) -> Vec<Text
     lexer.brackets.unwrap_or_default()
 }
 
-/// The tokens of lexing `range` of `src`, each lexed only as it is taken.
 /// An `Error` token comes without its error.
 pub(crate) fn tokens(src: &str, range: TextRange, mode: Mode) -> impl Iterator<Item = Token> {
     Lexer::new(src, range, mode)
@@ -210,7 +183,6 @@ struct Lexer<'a> {
     pos: usize,
     mode: Mode,
     errors: Vec<LexError>,
-    /// Where to put the outermost brackets of each item, if anywhere.
     brackets: Option<Vec<TextRange>>,
 }
 
@@ -289,15 +261,12 @@ impl<'a> Lexer<'a> {
         SyntaxKind::Comment
     }
 
-    /// Runs to a terminator outside brackets and strings.
-    /// On error, the item ends where nu finds it.
     fn item(&mut self) -> Result<SyntaxKind, LexError> {
         if let Some(kind) = self.peek().and_then(|byte| self.mode.special_kind(byte)) {
             return Ok(self.eat(1, kind));
         }
         let start = self.pos;
         let mut closers = Vec::new();
-        // A string that opens at `start`, with its kind and end.
         let mut leading_string = None;
 
         while let Some(byte) = self.peek()
@@ -343,6 +312,7 @@ impl<'a> Lexer<'a> {
                         brackets.push(text_range(opened..at + 1));
                     }
                 },
+                // Nu keeps a `]` with nothing open in the word, unlike `}` and `)`.
                 b']' if closers.is_empty() => {},
                 b']' | b'}' | b')' => {
                     return Err(LexError::new(LexErrorKind::UnmatchedCloser, at..at + 1));
@@ -378,8 +348,7 @@ impl<'a> Lexer<'a> {
         self.pos += len;
     }
 
-    /// Consumes a string after its opening quote.
-    /// The opener starts at `start`, on the `$` if interpolated.
+    /// Called after the opening quote, whose opener starts at `start`, on the `$` if interpolated.
     fn string(&mut self, start: usize, quote: u8, interpolated: bool) -> Result<(), LexError> {
         let opener = start..self.pos;
         // The quote stays off the stack, so that a string nesting nothing takes no allocation.
@@ -415,7 +384,7 @@ impl<'a> Lexer<'a> {
         Err(LexError::new(LexErrorKind::Unclosed, range))
     }
 
-    /// Consumes a raw string after its `r`, which is at `start`.
+    /// Called after the `r`, which is at `start`.
     fn raw_string(&mut self, start: usize) -> Result<(), LexError> {
         let hashes = self.rest().iter().take_while(|&&b| b == b'#').count();
         self.pos += hashes;
@@ -441,7 +410,6 @@ impl<'a> Lexer<'a> {
     }
 }
 
-/// Whether a `#` inside an item starts a comment, given the byte before it.
 /// Nu takes it as one only after whitespace, as it does at the start of an item.
 /// A byte is whitespace as the Latin-1 character it stands for, as nu checks it.
 pub(crate) fn starts_comment_after(prev: Option<u8>) -> bool {
@@ -464,7 +432,6 @@ fn operator_kind(text: &[u8]) -> Option<SyntaxKind> {
     Some(kind)
 }
 
-/// Whether `|` right after `text` joins it, as in `e>|`.
 fn is_redirection(text: &[u8]) -> bool {
     matches!(
         operator_kind(text),
@@ -534,7 +501,6 @@ mod tests {
         split_in(src, Mode::Block)
     }
 
-    /// What nuten lexes in `mode`, with what nu skips there dropped.
     fn split_in(src: &str, mode: Mode) -> Vec<&str> {
         let skipped = skipped_in(mode);
         lexed_in(src, mode)
@@ -544,9 +510,8 @@ mod tests {
             .collect()
     }
 
-    /// What nu skips where it lexes in `mode`.
-    /// Whitespace, and what its `additional_whitespace` argument adds to it.
-    /// Comments too, where `skip_comment` is set.
+    /// Nu skips whitespace there, and what its `additional_whitespace` argument adds to it.
+    /// It skips comments too, where `skip_comment` is set.
     #[expect(
         clippy::match_same_arms,
         reason = "one arm per recorded mode, to check each against nu on its own"
@@ -889,7 +854,6 @@ mod tests {
         }
     }
 
-    /// How nu splits each input.
     const NU_SPLITS: &[(&str, &[&str])] = &[
         ("foo#bar", &["foo#bar"]),
         ("foo #bar", &["foo", "#bar"]),
@@ -934,7 +898,6 @@ mod tests {
         ),
     ];
 
-    /// The rows where nu reports a lexing error.
     const NU_ERRORS: &[(&str, LexErrorKind)] = &[
         (r#"echo "a\"#, Unclosed),
         ("echo r#x", MissingRawQuote),
@@ -948,7 +911,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of a subexpression.
     const NU_PAREN_SPLITS: &[(&str, &[&str])] = &[
         ("a\nb", &["a", "b"]),
         ("a\r\nb", &["a", "b"]),
@@ -967,7 +929,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of a list.
     const NU_LIST_SPLITS: &[(&str, &[&str])] = &[
         ("a,b", &["a", "b"]),
         ("a,,b", &["a", "b"]),
@@ -1000,7 +961,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of a record where it reads a key or its `:`.
     const NU_RECORD_SPLITS: &[(&str, &[&str])] = &[
         ("a: 1", &["a", ":", "1"]),
         ("a:1,b:2", &["a", ":", "1", "b", ":", "2"]),
@@ -1023,7 +983,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of `{ }` to tell a record from a closure or a block.
     const NU_BRACE_SPLITS: &[(&str, &[&str])] = &[
         ("a: 1", &["a", ":", "1"]),
         ("a :b", &["a", ":", "b"]),
@@ -1042,7 +1001,6 @@ mod tests {
         }
     }
 
-    /// How nu splits a value of a record.
     const NU_RECORD_VALUE_SPLITS: &[(&str, &[&str])] = &[
         ("b:c", &["b:c"]),
         ("b:c,d", &["b:c", "d"]),
@@ -1058,7 +1016,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the type of a variable.
     const NU_VAR_TYPE_SPLITS: &[(&str, &[&str])] = &[
         ("record<a: int, b: string>", &["record<a: int, b: string>"]),
         ("int, string", &["int", ",", "string"]),
@@ -1076,7 +1033,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the input and output types after a signature.
     const NU_IO_TYPES_SPLITS: &[(&str, &[&str])] = &[
         (
             "int -> string, nothing -> int",
@@ -1105,7 +1061,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of the `< >` of a type.
     const NU_TYPE_PARAMS_SPLITS: &[(&str, &[&str])] = &[
         (
             "a: int, b: string",
@@ -1127,7 +1082,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of the `{ }` of a `match`.
     const NU_MATCH_ARMS_SPLITS: &[(&str, &[&str])] = &[
         ("1 => a, 2 => b", &["1", "=>", "a", "2", "=>", "b"]),
         ("1\n=> a", &["1", "=>", "a"]),
@@ -1148,7 +1102,6 @@ mod tests {
         }
     }
 
-    /// How nu splits a value and the path into it.
     const NU_CELL_PATH_SPLITS: &[(&str, &[&str])] = &[
         ("$x.a", &["$x", ".", "a"]),
         (
@@ -1184,7 +1137,6 @@ mod tests {
         }
     }
 
-    /// How nu splits what comes before the first `..` of a range.
     const NU_RANGE_FROM_SPLITS: &[(&str, &[&str])] = &[
         ("1", &["1"]),
         ("-1.5", &["-1", ".", "5"]),
@@ -1199,7 +1151,7 @@ mod tests {
         ("a)b", &["a)", "b"]),
     ];
 
-    /// The rows where nu reports a lexing error, so that it reads no range.
+    /// Nu reads no range where it reports a lexing error.
     const NU_RANGE_FROM_ERRORS: &[(&str, LexErrorKind)] = &[
         ("$x.#(\n)", UnmatchedCloser),
         (r#"$x."a"#, Unclosed),
@@ -1230,7 +1182,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of the `[ ]` of a binary.
     const NU_BINARY_SPLITS: &[(&str, &[&str])] = &[
         ("ff 00", &["ff", "00"]),
         ("ff,00", &["ff", "00"]),
@@ -1252,7 +1203,6 @@ mod tests {
         }
     }
 
-    /// How nu splits the inside of the `{ }` of a record pattern.
     const NU_RECORD_PATTERN_SPLITS: &[(&str, &[&str])] = &[
         ("a: 1, $b", &["a", ":", "1", "$b"]),
         ("a:b:c", &["a", ":", "b", ":", "c"]),

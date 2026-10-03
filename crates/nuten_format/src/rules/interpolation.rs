@@ -20,9 +20,7 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// A subexpression inside a string, where a line break also splits the string across lines.
-    /// So the layout adds one only where the source has one.
-    /// One that cannot be flat stays as written, rather than breaking where the source does not.
+    /// A line break here also splits the string, so only the source may place one.
     fn embedded(&mut self, subexpression: &Subexpression) -> Vec<Element<'a>> {
         let syntax = subexpression.syntax();
         let elements = self.subexpression(subexpression);

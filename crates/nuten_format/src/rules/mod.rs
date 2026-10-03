@@ -1,5 +1,3 @@
-//! Turns each node of the tree into document elements.
-
 mod alias;
 mod attribute;
 mod binary;
@@ -31,10 +29,8 @@ use nuten_syntax::{
 use self::kept::{Kept, Member};
 use crate::Commas;
 
-/// A child of a container: neither whitespace nor a line break.
 struct Child {
     element: ast::Element,
-    /// Line breaks right before it; two or more make a blank line.
     newlines: u32,
 }
 
@@ -58,8 +54,6 @@ impl Child {
     }
 }
 
-/// Line breaks at the end belong to no child, so nothing is printed for them.
-/// A run kept as written is one child, its first.
 fn children(
     elements: impl IntoIterator<Item = SyntaxElement>,
     kept: &Kept,
@@ -116,7 +110,6 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode, commas: Commas) -> Vec<E
 }
 
 impl Commas {
-    /// Whether items that never break over lines take a `,` between them.
     fn on_one_line(self) -> bool {
         self != Commas::None
     }
@@ -132,7 +125,7 @@ struct Formatter<'a> {
 }
 
 impl<'a> Formatter<'a> {
-    /// Statements; line breaks before the first are left to the container.
+    /// Line breaks before the first statement are left to the container.
     fn statements(&mut self, items: &[Child], at_start: bool) -> Vec<Element<'a>> {
         items
             .iter()
@@ -141,7 +134,6 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// The statement, `;`, or comment `item` after what separates it from the last of `before`.
     /// `before` is every child that comes before it.
     fn statement(
         &mut self,
@@ -239,8 +231,6 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// `items` with what `plain` puts before each.
-    /// A child `plain` gives nothing for touches what comes before it.
     fn spaced_children(
         &mut self,
         items: &[Child],
@@ -249,7 +239,6 @@ impl<'a> Formatter<'a> {
         self.spaced_children_by(items, plain, |this, _, element| this.element(element))
     }
 
-    /// As `spaced_children`, with each child but a comment laid out by `element`.
     fn spaced_children_by(
         &mut self,
         items: &[Child],
@@ -276,7 +265,6 @@ impl<'a> Formatter<'a> {
             .collect()
     }
 
-    /// Whether `node` or what holds it, up to `element`, is kept.
     fn kept_up_to(&self, node: &SyntaxNode, element: &SyntaxNode) -> bool {
         node.ancestors()
             .take_while(|node| node != element)
@@ -284,7 +272,6 @@ impl<'a> Formatter<'a> {
             .any(|node| self.kept.keeps(&node.into()))
     }
 
-    /// Items on one line, with a `,` before each item but the first that `comma_before` takes.
     fn one_line_items(
         &mut self,
         elements: impl Iterator<Item = SyntaxElement>,
@@ -314,7 +301,6 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// The one place a comment is printed, other than inside text kept as it is.
     fn comment(&self, comment: &SyntaxToken, newlines: u32, at_start: bool) -> Vec<Element<'a>> {
         if newlines > 0 || at_start {
             // The container may have pushed a line break already.
@@ -335,7 +321,6 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// The source in `range`, with the line breaks nu reads as layout printed as the line ending.
     fn source(&self, range: TextRange) -> Vec<Element<'a>> {
         let exact = exact_ranges(&self.root, range);
         let gaps = iter::once(range.start())
@@ -366,7 +351,6 @@ fn spans_lines(token: &SyntaxToken) -> bool {
     token.kind() != SyntaxKind::Newline && token.text().contains('\n')
 }
 
-/// The parts of `range` whose line breaks nu reads as part of a value, in order.
 /// `range` holds whole elements.
 fn exact_ranges(root: &SyntaxNode, range: TextRange) -> Vec<TextRange> {
     let within = match root.covering_element(range) {
@@ -406,11 +390,8 @@ fn is_attribute_block(element: &SyntaxElement) -> bool {
             .is_some_and(|parent| parent.kind() == SyntaxKind::Attribute)
 }
 
-/// Whether the last statement before `item` still reaches a line-start `|` after one blank line.
-/// A `|` it ends with does while no blank line has come since, as in the source.
-/// So does a call that an attribute heads, since nu goes on past one blank line after it.
-/// It reads the siblings in the tree rather than the children before it.
-/// Among the children, a run kept as written leaves only its first.
+/// Nu goes on past one blank line after a call that an attribute heads.
+/// Siblings tell rather than children, since a run kept as written leaves only its first child.
 fn reaches_past_blank_line(item: &SyntaxElement) -> bool {
     siblings_before(item)
         .filter(|sibling| !matches!(sibling.kind(), SyntaxKind::Whitespace | SyntaxKind::Newline))
@@ -426,7 +407,6 @@ fn reaches_past_blank_line(item: &SyntaxElement) -> bool {
         .unwrap_or(false)
 }
 
-/// The siblings before `element`, nearest first.
 fn siblings_before(element: &SyntaxElement) -> impl Iterator<Item = SyntaxElement> {
     iter::successors(
         element.prev_sibling_or_token(),
@@ -434,7 +414,6 @@ fn siblings_before(element: &SyntaxElement) -> impl Iterator<Item = SyntaxElemen
     )
 }
 
-/// The `newlines` the `Child` of `element` would have with nothing kept.
 fn newlines_before(element: &SyntaxElement) -> usize {
     siblings_before(element)
         .filter(|sibling| sibling.kind() != SyntaxKind::Whitespace)
@@ -442,7 +421,6 @@ fn newlines_before(element: &SyntaxElement) -> usize {
         .count()
 }
 
-/// Whether the statement ends with a `|`, even one inside the call an alias stands for.
 /// Statements never end with trivia, so the last token tells.
 fn ends_with_pipe(statement: &SyntaxNode) -> bool {
     statement
@@ -474,7 +452,6 @@ fn line_break_or_space(item: &Child) -> Element<'static> {
     }
 }
 
-/// Whether a line break before `element` becomes a space, where nu reads it as one: inside `( )`.
 /// The nearest brackets around it decide, since nu lexes what each holds by its own rules.
 /// A call an attribute heads stops the search too, since a line break ends the attribute.
 /// One inside a string is left as it is, since a line break there also splits the string.
@@ -500,12 +477,8 @@ fn joins_line_break(element: &SyntaxElement) -> bool {
         && !in_interpolation(&parent)
 }
 
-/// Whether `node`, an expression or a call, breaks by the width inside the `( )` it stands in.
-/// It is what the only statement right inside `( )` holds.
-/// It reaches that `( )` through its pipeline, its element, and for an expression any `where`.
 /// A `( )` inside a string is left out, since a line break there also splits the string.
-/// So is what an assignment takes, whose holder is no `Subexpression`.
-/// Nu ends it at a line break.
+/// So is what an assignment takes, since nu ends it at a line break.
 /// So is a statement that shares its `( )` with another.
 /// Its `;` would then end a broken line, as if the next statement went on from it.
 fn breaks_by_width(node: &SyntaxNode) -> bool {
@@ -529,8 +502,7 @@ fn in_interpolation(node: &SyntaxNode) -> bool {
         .any(|ancestor| ancestor.kind() == SyntaxKind::Interpolation)
 }
 
-/// Whether the first of `items` starts a line with something kept as written on it.
-/// The layout would otherwise join this line to the one above.
+/// The layout would otherwise join a line that starts with something kept to the one above.
 /// Formatted again, the kept run on it would then take in that line too.
 fn starts_kept_line<'c>(kept: &Kept, items: impl IntoIterator<Item = &'c Child>) -> bool {
     let mut items = items.into_iter();

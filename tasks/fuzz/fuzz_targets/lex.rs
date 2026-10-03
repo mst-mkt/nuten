@@ -1,6 +1,3 @@
-//! In every mode, the lexer must not panic.
-//! It must keep every lexer invariant in `nuten_parser::invariants` too.
-
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;

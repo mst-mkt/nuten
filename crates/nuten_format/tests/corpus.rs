@@ -1,7 +1,3 @@
-//! Every UTF-8 `.nu` and `.nuon` file of the corpus must keep the invariants of the parser.
-//! Unless it has syntax errors, it must keep those of the formatter too.
-//! It must keep them with each of `invariants::VARIANTS` of the default as well.
-//! Exactly the files in `SYNTAX_ERRORS` have syntax errors.
 //! The corpus is the directory `NUTEN_CORPUS` names, which the devShell sets.
 //! Without it the test fails, unless `NUTEN_TEST_SKIP_CORPUS` is set to skip it.
 
@@ -20,7 +16,6 @@ use nuten_format::{Config, invariants};
 
 use crate::support::{caught, files_below};
 
-/// The files with syntax errors, relative to the corpus.
 /// Nu rejects each of them too.
 const SYNTAX_ERRORS: &[&str] = &[
     // The `{` on line 3 is not closed.

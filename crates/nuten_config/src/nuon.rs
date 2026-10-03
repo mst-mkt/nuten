@@ -1,8 +1,3 @@
-//! Reads NUON, the values nu writes as nu code.
-//!
-//! Nu reads any value its parser gives without running code.
-//! Nuten reads each value as nu does, by type alone where no setting takes the type.
-
 use nuten_syntax::{NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange};
 
 use crate::{
@@ -36,7 +31,6 @@ pub(crate) fn read(text: &str) -> Result<Value, Vec<ConfigError>> {
     }
 }
 
-/// The value `element` is, bare of any command or redirection.
 fn element_value(element: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
     match &significant(element)[..] {
         [value] => self::value(value, Place::Item),
@@ -69,7 +63,6 @@ fn value(element: &SyntaxElement, place: Place) -> Result<Value, Vec<ConfigError
     .ok_or_else(|| rejected(range))
 }
 
-/// Whether every bound of the range `node` is a bare word.
 /// Nu rejects a range with a variable or a subexpression as a bound.
 fn has_bare_bounds(node: &SyntaxNode) -> bool {
     node.children_with_tokens()
@@ -83,7 +76,6 @@ fn has_bare_bounds(node: &SyntaxNode) -> bool {
         })
 }
 
-/// Nu reads a table as the list of its rows, each a record with the columns as its keys.
 fn table(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
     let parts: Vec<_> = items(node)
         .into_iter()
@@ -118,7 +110,6 @@ fn table(node: &SyntaxNode) -> Result<Value, Vec<ConfigError>> {
     })
 }
 
-/// A column of a table, with where its name is written.
 struct Column {
     name: String,
     range: TextRange,
@@ -142,7 +133,6 @@ fn column(element: &SyntaxElement) -> Result<Column, Vec<ConfigError>> {
     }
 }
 
-/// A row must be a list with a cell for each column.
 fn row(element: &SyntaxElement, columns: &[Column]) -> Result<Value, Vec<ConfigError>> {
     let range = element.text_range();
     let cells = match element {
@@ -199,7 +189,6 @@ fn field(node: &SyntaxNode) -> Result<Field, Vec<ConfigError>> {
     })
 }
 
-/// The key `token` is, or `None` for one nu rejects.
 /// Nu reads a key as a string whatever it looks like, but for `true`, `false`, and `null`.
 fn key(token: &SyntaxToken) -> Option<String> {
     let text = token.text();
@@ -214,7 +203,6 @@ fn key(token: &SyntaxToken) -> Option<String> {
     }
 }
 
-/// What a lone token reads as, or `None` for one nu rejects.
 fn scalar(token: &SyntaxToken, place: Place) -> Option<ValueKind> {
     let text = token.text();
     match token.kind() {
@@ -228,7 +216,6 @@ fn scalar(token: &SyntaxToken, place: Place) -> Option<ValueKind> {
     }
 }
 
-/// The content of a `"..."`, `'...'`, or `` `...` `` string, or `None` where nu rejects an escape.
 fn quoted(text: &str) -> Option<String> {
     let content = &text[1..text.len() - 1];
     match text.as_bytes()[0] {
@@ -237,7 +224,6 @@ fn quoted(text: &str) -> Option<String> {
     }
 }
 
-/// The content of an `r#'...'#` string, with as many `#` on each side.
 fn raw(text: &str) -> &str {
     let hashes = text[1..].bytes().take_while(|byte| *byte == b'#').count();
     &text[hashes + 2..text.len() - hashes - 1]
@@ -285,7 +271,6 @@ mod tests {
         ConfigErrorKind::Rejected.to_string()
     }
 
-    /// What the one field of the record `text` holds.
     fn field_value(text: &str) -> ValueKind {
         let Ok(Value {
             kind: ValueKind::Record(fields),
@@ -493,7 +478,6 @@ mod tests {
         }
     }
 
-    /// The rows of the table `text` holds, each as its fields' keys and kinds.
     fn rows(text: &str) -> Vec<Vec<(String, ValueKind)>> {
         let ValueKind::List(rows) = field_value(text) else {
             panic!("{text} holds no table");

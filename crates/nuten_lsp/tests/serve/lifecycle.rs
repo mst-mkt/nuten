@@ -1,5 +1,3 @@
-//! Starting a session, answering what the server does not serve, and ending the session.
-
 use lsp_server::ErrorCode;
 use lsp_types::{
     TextDocumentSyncCapability, TextDocumentSyncKind,

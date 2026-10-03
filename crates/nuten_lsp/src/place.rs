@@ -1,17 +1,12 @@
-//! Where a document lives, as its URI tells.
-
 use std::path::PathBuf;
 
 use lsp_types::Uri;
 
-/// The file a document is to be written to, which decides the config it takes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Place {
-    /// A file at the path, which may not exist yet.
+    /// The path may not exist yet.
     File(PathBuf),
-    /// No file, as for a buffer the editor has not saved.
     NoFile,
-    /// A file, if there is one, that nuten cannot find from the URI.
     UnknownFile,
 }
 

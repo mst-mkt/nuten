@@ -6,12 +6,10 @@ use super::{
 };
 use crate::parser::Parser;
 
-/// Where what an assignment operator takes ends, if the element holds one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Assigned {
     No,
     AtLineBreak,
-    /// At a `;` or the end of the tokens.
     AtSemicolon,
 }
 
@@ -39,16 +37,12 @@ pub(super) fn assignment_ahead(p: &Parser<'_>) -> bool {
     false
 }
 
-/// Whether a token of `kind` after one of `prev` is an assignment operator.
-/// As in nu, the target of a file redirection is none.
+/// Nu reads an `=` after a file redirection as its target, not as an assignment.
 pub(super) fn is_assignment_operator(kind: SyntaxKind, prev: Option<SyntaxKind>) -> bool {
     kind == SyntaxKind::Assign && !prev.is_some_and(is_file_redirection)
 }
 
-/// What an assignment operator takes: the statements of the rest of the element.
-/// Nu lexes them again with a line break ending a statement, so they split at one.
-/// Where the mode around the element skips a line break, the element runs to a `;` or the end.
-/// A line-start `|` goes on there as it does after a line-end one.
+/// Nu lexes what an assignment operator takes again, with a line break ending a statement.
 pub(super) fn assigned_statements(p: &mut Parser<'_>) {
     p.with_newlines_read(|p, skipped| {
         let assigned = if skipped {
@@ -69,8 +63,7 @@ pub(super) fn assigned_statements(p: &mut Parser<'_>) {
     });
 }
 
-/// Line breaks with no statement after them stay where they are.
-/// So the node does not end with trivia.
+/// Line breaks with no statement after them stay outside, since a node must not end with trivia.
 fn statement_ahead(p: &Parser<'_>) -> bool {
     p.remaining_kinds()
         .filter(|&kind| !p.is_skipped(kind))

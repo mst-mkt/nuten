@@ -1,7 +1,3 @@
-//! The escapes nu reads in a `"..."` string.
-
-/// `content` with its escapes decoded, or `None` where nu rejects one, or the bytes are no UTF-8.
-/// A `\x` escape gives one byte, so `"\xc3\xa9"` is `é` and `"\xff"` alone is no string.
 pub(crate) fn unescape(content: &str) -> Option<String> {
     if !content.contains('\\') {
         return Some(content.to_string());

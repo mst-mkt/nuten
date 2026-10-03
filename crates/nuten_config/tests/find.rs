@@ -1,5 +1,3 @@
-//! Looks for config files in a temporary directory tree.
-
 use std::{
     env, fs, io,
     path::{Path, PathBuf},
@@ -8,8 +6,6 @@ use std::{
 
 use nuten_config::{FILE_NAMES, find};
 
-/// A fresh directory for each test, removed when dropped.
-/// No config file is above it.
 struct TempDir(PathBuf);
 
 impl TempDir {

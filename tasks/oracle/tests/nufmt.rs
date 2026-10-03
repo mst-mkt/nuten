@@ -1,6 +1,5 @@
-//! Checks the cases of `test_data/nufmt` for what needs no nu, so that it runs without nu too.
+//! Checks only what needs no nu, so that the cases of `test_data/nufmt` run without nu too.
 //! A case must parse, since the oracle skips a file with syntax errors that nu rejects too.
-//! It must keep the invariants with the default and with each of `invariants::VARIANTS` of it.
 
 use std::{fs, path::Path};
 

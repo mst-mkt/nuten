@@ -10,8 +10,7 @@ use super::{
 };
 use crate::parser::Parser;
 
-/// Whether the element ahead is an alias nu declares: `alias`, a name, `=`, and what follows.
-/// Nu declares none where a value heads what follows `=`, and rejects the statement instead.
+/// Nu declares no alias where a value heads what follows `=`, and rejects the statement instead.
 pub(super) fn alias_ahead(p: &Parser<'_>) -> bool {
     let name = keyword_words(p);
     p.nth_text(name - 1) == Some("alias")
@@ -26,8 +25,6 @@ pub(super) fn alias_ahead(p: &Parser<'_>) -> bool {
             .is_some_and(|head| !is_math_expression_like(head))
 }
 
-/// The `Alias` ahead: what `alias_ahead` takes up to `=`, then what follows.
-/// `assigned` tells where the statement ends, as for a pipeline.
 pub(super) fn alias(p: &mut Parser<'_>, assigned: Assigned) {
     p.start(SyntaxKind::Alias);
     for _ in 0..keyword_words(p) + 2 {
@@ -37,7 +34,7 @@ pub(super) fn alias(p: &mut Parser<'_>, assigned: Assigned) {
     p.finish();
 }
 
-/// What the alias stands for, as nu's `parse_call` reads the rest of the statement.
+/// Ported from how nu's `parse_call` reads the rest of the statement.
 fn replacement(p: &mut Parser<'_>, assigned: Assigned) {
     // Nu's lexer joins a line that starts with `|` to the line before it.
     if p.peek() == Some(SyntaxKind::Newline) {
@@ -48,7 +45,6 @@ fn replacement(p: &mut Parser<'_>, assigned: Assigned) {
     if call_ends_statement(p) && keyword(p) {
         return;
     }
-    // A head that is no item, such as a `|`, is bumped as the tokens after it are.
     if p.peek().is_some_and(SyntaxKind::is_item) {
         start_call(p, shape);
     } else {

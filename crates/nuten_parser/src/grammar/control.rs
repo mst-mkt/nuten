@@ -3,7 +3,6 @@ use nuten_syntax::SyntaxKind;
 use super::{Shape, call_items, command::condition, item, value, var_type::var_type};
 use crate::parser::Parser;
 
-/// The `For`, `While`, `Loop`, or `Try` ahead, when nu reads the call as one.
 pub(super) fn control(p: &mut Parser<'_>) -> bool {
     let items = call_items(p);
     let Some(shape) = control_shape(&items) else {
@@ -28,8 +27,7 @@ pub(super) fn control(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// The variable of a `for` and any type after it, up to the `in`.
-/// Nu never reads them as a value, braces or not.
+/// Nu never reads the variable of a `for` or its type as a value, braces or not.
 fn for_variable(p: &mut Parser<'_>) {
     if !var_type(p, "for") {
         p.bump();
@@ -39,16 +37,10 @@ fn for_variable(p: &mut Parser<'_>) {
     }
 }
 
-/// The shape of a `for`, a `while`, a `loop`, or a `try` among the items of a call.
-/// It is built only where nu reads those items as one.
-/// The last item is a body, and so is the second when `catch` follows it.
 struct ControlShape {
     kind: SyntaxKind,
     len: usize,
     has_catch: bool,
-    /// Where the items nu reads as values start.
-    /// That is at the `in` of a `for`, at the body of a `while`, and after the keyword otherwise.
-    /// The condition of a `while` comes before them, which nu reads as an expression.
     values_at: usize,
 }
 

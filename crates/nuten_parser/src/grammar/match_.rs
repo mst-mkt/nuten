@@ -7,7 +7,6 @@ use super::{
 };
 use crate::{lexer::Mode, parser::Parser};
 
-/// The `Match` ahead, when nu reads the call as one.
 pub(super) fn match_(p: &mut Parser<'_>) -> bool {
     let Some(len) = match_shape(&call_items(p)) else {
         return false;
@@ -28,15 +27,11 @@ pub(super) fn match_(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// How many items a `match` takes when nu reads `items`, `match` first, as one.
 fn match_shape(items: &[&str]) -> Option<usize> {
     let last = items.len().checked_sub(1)?;
     (last >= 2 && items[last].starts_with('{')).then_some(items.len())
 }
 
-/// Whether the `{ }` of a `match` holds arms as nu reads them, near enough.
-/// Each arm is a pattern of items, a guard among them, with a `|` between two of them.
-/// Then `=>` and one item, with any number of `,` between arms.
 /// Nu takes a `,` anywhere and an operator as a pattern too, and rejects some runs of items.
 /// It errors on them all the same before and after.
 fn is_arms(inner: &Parser<'_>) -> bool {
@@ -58,7 +53,6 @@ fn is_arms(inner: &Parser<'_>) -> bool {
         if tokens.peek().is_none() {
             return true;
         }
-        // The pattern, up to `=>`.
         let mut after_item = false;
         loop {
             let Some((token, text)) = tokens.next() else {
@@ -71,7 +65,6 @@ fn is_arms(inner: &Parser<'_>) -> bool {
                 _ => return false,
             }
         }
-        // What the arm does.
         if !tokens
             .next()
             .is_some_and(|(token, text)| takes(token.kind, text))
@@ -91,17 +84,12 @@ fn arms(p: &mut Parser<'_>) {
     }
 }
 
-/// How nu splits the tokens of an arm before `=>`.
 enum ArmHead {
-    /// Patterns with a `|` between two of them.
     Patterns,
-    /// Patterns, then `if` and a guard.
     Guarded,
-    /// Anything else, which nu rejects.
     Rejected,
 }
 
-/// One arm: the patterns and the guard, then `=>` and the one item nu takes as what the arm does.
 fn arm(p: &mut Parser<'_>) {
     p.start(SyntaxKind::MatchArm);
     match arm_head(&arm_tokens(p)) {
@@ -129,8 +117,7 @@ fn patterns(p: &mut Parser<'_>) {
     }
 }
 
-/// The guard ahead, up to `=>`, which nu reads as an expression.
-/// It stays as it is where it holds a `|`, which nu rejects as an operator.
+/// A guard holding a `|` stays as it is, since nu rejects that `|` as an operator.
 fn guard(p: &mut Parser<'_>) {
     let tokens = arm_tokens(p);
     if tokens.iter().any(|&(kind, _)| kind == SyntaxKind::Pipe) {
@@ -152,7 +139,6 @@ fn arm_tokens<'a>(p: &Parser<'a>) -> Vec<(SyntaxKind, &'a str)> {
         .collect()
 }
 
-/// How nu splits `tokens`, those of an arm before `=>`.
 /// `is_arms` has seen that each pattern is an item.
 fn arm_head(tokens: &[(SyntaxKind, &str)]) -> ArmHead {
     let after_patterns = iter::successors(tokens.get(1..), |rest| match rest {

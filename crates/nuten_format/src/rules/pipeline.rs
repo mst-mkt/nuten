@@ -59,8 +59,7 @@ impl<'a> Formatter<'a> {
                 // Not through `separator`, which leaves only a line break after a comment.
                 Some(empty_line())
             } else {
-                // A pipe with a comment after it stays at the end of its line.
-                // So does one before an attribute, which nu reads as one only after a line break.
+                // A pipe before an attribute stays, since nu reads one only after a line break.
                 let plain = if segment.keeps_pipe_at_line_end() {
                     space()
                 } else {
@@ -155,12 +154,9 @@ fn follows_semicolon(node: &SyntaxNode) -> bool {
     before.is_some_and(|before| before.kind() == SyntaxKind::Semicolon)
 }
 
-/// A child of a pipeline as `pipeline` formats it.
 struct Part {
     child: Child,
-    /// Whether it belongs to the element before it, so the pipeline does not end at it.
     joined: bool,
-    /// Its indent level when it starts a line.
     level: u32,
 }
 
@@ -169,10 +165,6 @@ impl Part {
         self.child.kind()
     }
 
-    /// Whether it is an element of the pipeline, or what starts one of a flattened assignment.
-    /// A `let`, the head, and the operator each start one.
-    /// The head is a bare item where nu reads a value with no operator after it.
-    /// So they are what the pipeline may end with.
     fn is_element(&self) -> bool {
         match &self.child.element {
             NodeOrToken::Node(_) => true,
@@ -192,7 +184,6 @@ impl Part {
                 .is_some_and(|node| headed_by_attribute(node.syntax()))
     }
 
-    /// Whether it keeps the blank line before it, which comes right after an attribute's line.
     /// Nu goes on past a blank line to a line-start `|` only there.
     /// Without the blank line, nu would take that `|` into the attribute.
     fn keeps_blank_line_after_attribute(&self) -> bool {
@@ -217,9 +208,6 @@ impl Part {
     }
 }
 
-/// An `Assignment` or a `Let` is laid flat, unless what holds it is kept as written.
-/// The pipes of the first statement the operator takes then format as those of `pipeline`.
-/// The statements below it are left to `assigned`.
 fn parts(pipeline: &SyntaxNode, kept: &Kept) -> Vec<Part> {
     let levels = Levels {
         head: 0,
@@ -249,13 +237,10 @@ fn comments_at_level_of_following(parts: Vec<Part>) -> Vec<Part> {
         .collect()
 }
 
-/// The indent levels the parts of a pipeline take when they start a line.
 /// A value starts on the line of its assignment, so only its `|`s go deeper.
 #[derive(Clone, Copy)]
 struct Levels {
-    /// The level of the parts before the pipeline's first `|`.
     head: u32,
-    /// The level of the parts from the pipeline's first `|` on.
     pipes: u32,
 }
 
@@ -372,14 +357,10 @@ fn flatten_assignment(
 
 #[derive(Clone, Copy)]
 enum Alignment {
-    /// Always, since the `|` starts a line even when the pipeline is on one line.
     Always,
     IfGroupBreaks,
 }
 
-/// A `|` and what follows it, up to the next `|`.
-/// The first segment of a pipeline has no `|`, and neither has the tail.
-/// The tail is the element that ends the pipeline, once `split_tail` takes it off the last segment.
 #[derive(Clone, Copy)]
 struct Segment<'p> {
     prev: Option<SyntaxKind>,
@@ -394,7 +375,6 @@ fn keeps_pipe_at_line_end(items: &[Part]) -> bool {
         .is_some_and(|part| part.child.is_comment() || part.starts_line_with_attribute())
 }
 
-/// `breaks_itself` tells an element that breaks inside itself, which is no tail.
 fn segments(
     parts: &[Part],
     after_semicolon: bool,

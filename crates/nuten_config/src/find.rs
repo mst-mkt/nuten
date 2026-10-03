@@ -1,19 +1,15 @@
-//! Where the config file for a directory is.
-
 use std::{
     collections::HashMap,
     error, fmt, fs, io,
     path::{Path, PathBuf},
 };
 
-/// The names a config file may have, in the order they win in one directory.
 pub const FILE_NAMES: [&str; 3] = ["nuten.nuon", "nuten.jsonc", "nuten.json"];
 
 pub const VCS_DIRS: [&str; 5] = [".git", ".hg", ".svn", ".bzr", ".jj"];
 
 #[derive(Debug)]
 pub struct FindError {
-    /// The path whose existence could not be told.
     pub path: PathBuf,
     pub source: io::Error,
 }
@@ -30,8 +26,6 @@ impl error::Error for FindError {
     }
 }
 
-/// The config file in `dir`, or else in the nearest of its ancestors that holds one.
-/// The search goes no higher than the root of the repository `dir` is in.
 /// `dir` is taken as it is written, so a `..` in it is an ancestor like any other.
 pub fn find(dir: &Path) -> Result<Option<PathBuf>, FindError> {
     // One buffer, since the search probes every name in every ancestor and each path allocates.
@@ -44,7 +38,6 @@ pub fn find(dir: &Path) -> Result<Option<PathBuf>, FindError> {
     Ok(None)
 }
 
-/// `find` of each of `dirs`, with the error as a line.
 /// An ancestor they share is probed once, since a walk looks for the config of every file.
 pub(crate) fn find_each<'a>(
     dirs: impl IntoIterator<Item = &'a Path>,
@@ -60,7 +53,6 @@ pub(crate) fn find_each<'a>(
     found
 }
 
-/// The ancestors of `dir` the search probes, those in `found` aside, and where it ends.
 fn search<'a>(
     path: &mut PathBuf,
     dir: &'a Path,
@@ -81,10 +73,8 @@ fn search<'a>(
     (passed, Ok(None))
 }
 
-/// What one directory makes of the search.
 enum Step {
     GoesOn,
-    /// At the config file in the directory, or at none in the root of a repository.
     Ends(Option<PathBuf>),
 }
 

@@ -65,9 +65,7 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether a comment stands inside a pair, or among pairs that never break the line.
-/// Those have no `[ ]` to break the line in, or have the last type touching the `]`.
-/// Printed on one line with the pairs, it would take in what follows it.
+/// Printed on one line with the pairs, such a comment would take in what follows it.
 fn holds_joining_comment(types: &IoTypes) -> bool {
     let unbroken = types
         .brackets()
@@ -83,8 +81,7 @@ fn holds_joining_comment(types: &IoTypes) -> bool {
         })
 }
 
-/// Whether the last type touches the `]`, with no whitespace, line break, or `,` between them.
-/// For a call above the `def`, nu then reads the type and the `]` as one word, which is `any`.
+/// Where they touch, nu reads the type and the `]` as one word, `any`, for a call above the `def`.
 /// So whether they touch stays as written while nuten supports a nu that reads them so.
 fn touches_last_type(close: &SyntaxToken) -> bool {
     close
@@ -92,7 +89,6 @@ fn touches_last_type(close: &SyntaxToken) -> bool {
         .is_some_and(|prev| prev.kind() == SyntaxKind::IoType)
 }
 
-/// Whether the `:` after the parameters joins them, `rest` being what follows it.
 /// Nu reads `[]:` with no types after it, or only one item in braces, as the whole signature.
 /// In those cases nu reads `[] :` as parameters with no types, so the `:` stays as written.
 /// Nu takes the last item of a `def` for its body, whatever the parser makes of it.
@@ -129,7 +125,6 @@ fn first_token(child: &Child) -> Option<SyntaxToken> {
     }
 }
 
-/// Whether the keyword, after any `export`, is `def` rather than `extern`, which has no body.
 fn has_body(def: &Def) -> bool {
     def.syntax()
         .children_with_tokens()

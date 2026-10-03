@@ -1,5 +1,3 @@
-//! A client that talks to the server over a connection in memory.
-
 use std::{
     cell::Cell,
     env, fmt, fs,
@@ -27,9 +25,7 @@ use serde_json::{Value, json};
 /// Long enough for any answer, so that a server that never answers fails the test.
 const TIMEOUT: Duration = Duration::from_secs(10);
 
-/// A fresh directory for each test, removed when dropped.
 /// Its path has no symlinks, since the paths of config files are reported with symlinks resolved.
-/// No config file is above it.
 #[derive(Debug)]
 pub(crate) struct TempDir(PathBuf);
 
@@ -63,7 +59,7 @@ impl Drop for TempDir {
     }
 }
 
-/// The URI of the file at `path`, which has no character a URI would escape.
+/// `path` must have no character a URI would escape.
 pub(crate) fn file_uri(path: &Path) -> String {
     format!("file://{}", path.display())
 }
@@ -83,7 +79,6 @@ impl fmt::Debug for Client {
 }
 
 impl Client {
-    /// A client that has not yet sent `initialize`.
     pub(crate) fn start() -> Client {
         let (connection, server_connection) = Connection::memory();
         let (sender, ended) = mpsc::channel();
@@ -95,7 +90,6 @@ impl Client {
         }
     }
 
-    /// A client past `initialize` and `initialized`, with what the server answered.
     pub(crate) fn initialized() -> (Client, InitializeResult) {
         let client = Client::start();
         let params = serde_json::to_value(InitializeParams::default()).unwrap();
@@ -122,7 +116,6 @@ impl Client {
         self.connection.sender.send(notification.into()).unwrap();
     }
 
-    /// Answers a request the server never sent.
     pub(crate) fn respond(&self, id: i32) {
         let response = Response::new_ok(RequestId::from(id), Value::Null);
         self.connection.sender.send(response.into()).unwrap();

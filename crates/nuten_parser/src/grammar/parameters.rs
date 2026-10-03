@@ -1,13 +1,8 @@
-//! The parameters of the commands nu has.
-//! Only as far as they tell how nu reads a `[ ]` or an empty `{ }`.
-//!
-//! Only a command with a parameter that takes a `[ ]` as a list is here.
-//! So is one with a parameter that takes an empty `{ }` as a closure.
+//! Only a command with a parameter taking a `[ ]` as a list or an empty `{ }` as a closure is here.
 //! Every other one takes a `[ ]` as text or rejects it, so it stays a word wherever it stands.
 //! Nu reads an empty `{ }` there as a record wherever it stands.
 //! A command nu reads a keyword syntax of is left out too, since its own rule reads it.
 //! Where nuten does not read that syntax, what the command takes is unknown here.
-//! A command taking a row condition, or another parameter over several items, is left out as well.
 //! None of these takes arguments it does not declare.
 
 use std::iter;
@@ -18,27 +13,18 @@ use super::{
     spread::{Target, is_spread},
 };
 
-/// How nu reads a `[ ]` where it takes a parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Takes {
-    /// A list or a table, with each item any value, as for `any`, `list<any>`, or `table`.
     List,
-    /// A list with items of another type, as for `list<string>`.
-    /// An item nu then takes as text or rejects, such as a `[ ]` or a `{ }`, stays a word.
-    /// A table stays a word too.
     ListOf,
-    /// Text, or no value: nu reads the `[ ]` as one string, or rejects it.
     Word,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Param {
     pub(super) takes: Takes,
-    /// Whether it takes a negative number, which an item like `-1` then stands for.
     negative: bool,
-    /// Whether nu reads an empty `{ }` as a closure, as for a `closure` or a `block`.
-    /// It reads one as a record otherwise, and reports an error if the type takes none.
-    /// A `oneof` reads it by its first type, since reading a record reports no error there.
+    /// A `oneof` reads `{}` by its first type, since reading a record reports no error there.
     pub(super) closure: bool,
 }
 
@@ -72,7 +58,6 @@ const fn flag(long: &'static str, short: Option<char>, value: Option<Param>) -> 
     }
 }
 
-/// The parameters of a command, in nu's order.
 #[derive(Debug)]
 struct Signature<'s> {
     required: &'s [Param],
@@ -82,7 +67,6 @@ struct Signature<'s> {
 }
 
 impl Signature<'_> {
-    /// The positional parameter at `index`, the rest taking every one past the others.
     fn positional(&self, index: usize) -> Option<Param> {
         self.required
             .iter()
@@ -117,12 +101,8 @@ const fn command(name: &'static [&'static str], signature: Option<Signature<'sta
     }
 }
 
-/// What nu takes each of `items` as, the head first, where it runs a command nu has.
-/// `None` for an item that is no parameter, such as a word of the name or a flag.
-/// Every item after the name is a `WORD` when the command has no signature here.
-/// So is every item after the head when the command is none here, since its name is unknown.
+/// Every item after the head is a `WORD` when the command is none here, since its name is unknown.
 /// A `WORD` reads a word of the name or a flag as it is, since neither is a `[ ]` nor a `{ }`.
-/// Nu runs the command of the longest name the items spell.
 pub(super) fn parameters(items: &[&str]) -> Vec<Option<Param>> {
     if spells_keyword(items) {
         return vec![None; items.len()];
@@ -202,8 +182,7 @@ fn arguments(signature: &Signature<'_>, items: &[&str]) -> Vec<Option<Param>> {
     taken
 }
 
-/// The flags `item` stands for, as nu's `parse_short_flags` reads it.
-/// `None` where it is no flag: an item that is no `-` and more, or a negative number nu takes.
+/// Reads `item` as nu's `parse_short_flags` does.
 /// Only the last flag may take a value; nu stops at one before it that does.
 fn short_flags<'s>(
     signature: &'s Signature<'s>,
@@ -227,11 +206,9 @@ fn short_flags<'s>(
     (!negative_number).then_some(flags)
 }
 
-/// The parameters of a command a `def` declares, as nuten reads its signature.
 #[derive(Debug)]
 pub(super) struct Declared<'a> {
     positional: Vec<Param>,
-    /// How many of `positional` come first as required ones.
     required: usize,
     rest: Option<Param>,
     flags: Vec<Flag<'a>>,
@@ -248,16 +225,11 @@ impl<'a> Declared<'a> {
         }
     }
 
-    /// What nu takes each of `items` as, the arguments after the name of the command.
     pub(super) fn arguments(&self, items: &[&str]) -> Vec<Option<Param>> {
         arguments(&self.signature(), items)
     }
 
-    /// The parameters `items` declare, the lexemes inside the brackets of a signature.
-    /// Each is an `Item`, as nu's `parse_signature_helper` splits them.
-    /// `None` where nuten cannot tell them all, or where nu rejects them.
-    /// A default with no type gives the parameter the type of its value.
-    /// Where that is a number, a `-1` there is a positional argument, so the type must be told.
+    /// `items` are split as nu's `parse_signature_helper` splits them.
     pub(super) fn of(items: impl IntoIterator<Item = Item<'a>>) -> Option<Declared<'a>> {
         let drafts = drafts(items)?;
         let mut positional = Vec::new();
@@ -315,23 +287,18 @@ impl<'a> Declared<'a> {
     }
 }
 
-/// A lexeme inside the brackets of a signature, trivia and `,` aside.
 #[derive(Debug, Clone, Copy)]
 pub(super) enum Item<'a> {
     Word(&'a str),
-    /// An item other than a word, such as a string, which may be a default value.
     Value,
     Colon,
     Eq,
-    /// Any other, which nuten does not read in a signature.
     Other,
 }
 
-/// A parameter as written, before its type is read.
 struct Draft<'a> {
     name: Name<'a>,
     ty: Option<&'a str>,
-    /// A word or another value.
     default: Option<Item<'a>>,
 }
 
@@ -341,8 +308,6 @@ enum Name<'a> {
     Flag { long: &'a str, short: Option<char> },
 }
 
-/// The parameters `items` write out: each name, then any `:` and type, then any `=` and default.
-/// A long flag may take a `(-f)` of its own right after it.
 fn drafts<'a>(items: impl IntoIterator<Item = Item<'a>>) -> Option<Vec<Draft<'a>>> {
     let mut drafts: Vec<Draft<'a>> = Vec::new();
     let mut items = items.into_iter();
@@ -381,8 +346,6 @@ fn drafts<'a>(items: impl IntoIterator<Item = Item<'a>>) -> Option<Vec<Draft<'a>
     Some(drafts)
 }
 
-/// What a parameter written as `text` is: a flag, the rest, or a positional one.
-/// `None` for a name in brackets, which nuten does not read.
 fn name(text: &str) -> Option<Name<'_>> {
     if text.starts_with(['(', '[', '{']) {
         return None;
@@ -411,9 +374,7 @@ fn name(text: &str) -> Option<Name<'_>> {
     })
 }
 
-/// What a positional parameter with no type takes, given its default value.
-/// Any type it works out keeps a `[ ]` a word; a number's also lets `-1` be a positional argument.
-/// `None` for a default whose type nuten does not work out, such as a list or a variable.
+/// Nu gives a positional parameter with no type the type of its default value.
 fn param_of_default(default: Item<'_>) -> Option<Param> {
     match default {
         Item::Word(text) if is_number(text) => Some(NUMBER),
@@ -423,7 +384,6 @@ fn param_of_default(default: Item<'_>) -> Option<Param> {
     }
 }
 
-/// The one char of a short flag written as `-c`.
 fn short_name(text: &str) -> Option<char> {
     let mut chars = text.strip_prefix('-')?.chars();
     match (chars.next(), chars.next()) {
@@ -432,9 +392,8 @@ fn short_name(text: &str) -> Option<char> {
     }
 }
 
-/// What a parameter of the type `text` takes, as nu's `parse_shape_name` names types.
+/// Names types as nu's `parse_shape_name` does.
 /// A custom completer after `@` is no part of the type.
-/// `None` for a type nuten does not know, or one nu rejects.
 fn param_of_type(text: &str) -> Option<Param> {
     let text = text.split('@').next()?;
     let names = match text
@@ -467,20 +426,15 @@ fn param_of_type(text: &str) -> Option<Param> {
     Some(param(takes, members.contains(&Reads::Number), closure))
 }
 
-/// How nu's `parse_value` reads a `[ ]` where it takes one type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Reads {
     List,
     ListOf,
     Text,
-    /// A number, which takes no `[ ]` but a negative number.
     Number,
-    /// Another type, which takes no `[ ]`.
     Nothing,
 }
 
-/// How nu reads a `[ ]` where it takes the type named `name`, a type that is not a `oneof`.
-/// `None` for a type nuten does not know.
 fn reads(name: &str) -> Option<Reads> {
     let name: String = name.chars().filter(|char| !char.is_whitespace()).collect();
     Some(match name.as_str() {
@@ -496,8 +450,7 @@ fn reads(name: &str) -> Option<Reads> {
     })
 }
 
-/// The types of a `oneof`, split at each `,` or whitespace outside `< >` and `( )`.
-/// Nu lexes them apart at either.
+/// Nu lexes the types of a `oneof` apart at each `,` or whitespace outside `< >` and `( )`.
 fn split_members(text: &str) -> Vec<&str> {
     let mut depth = 0_usize;
     let mut start = 0;
@@ -1722,13 +1675,7 @@ mod tests {
     };
     use crate::test_support::asked;
 
-    /// Each command nu has with a parameter that takes a `[ ]` as a list, in the table's lines.
-    /// Each with a parameter that takes an empty `{ }` as a closure too.
     /// A keyword nu reads a syntax of is left out, as nu's refusal to `def` one tells.
-    /// Then each name that extends one of theirs, alone on its line.
-    /// A type reads a `[ ]` as nu's `parse_value` does.
-    /// A `oneof` reads it as its first type that takes one.
-    /// A type takes an empty `{ }` as a closure where its first type is a closure or a block.
     const COMMANDS_OF_NU: &str = r#"
         def split-top [text: string] {
             $text | split chars | reduce --fold {parts: [], depth: 0, cur: ''} {|ch, acc|
@@ -1839,7 +1786,6 @@ mod tests {
         format!("{takes}{negative}{closure}")
     }
 
-    /// The line `COMMANDS_OF_NU` gives the same command.
     fn line(command: &Command) -> String {
         let name = command.name.join(" ");
         let Some(signature) = &command.signature else {
@@ -2203,7 +2149,6 @@ mod tests {
         );
     }
 
-    /// `a?: list, ...r: int`
     const OPTIONAL_LIST_THEN_REST: [Item<'static>; 6] = [
         Item::Word("a?"),
         Item::Colon,

@@ -1,5 +1,3 @@
-//! Functions that build each element.
-
 use crate::{Element, GroupId, LineMode, TextWidth};
 
 pub fn text(text: &str) -> Element<'_> {

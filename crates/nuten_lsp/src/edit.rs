@@ -1,8 +1,5 @@
-//! The edit that turns one text into another.
-
 use lsp_types::{Position, Range, TextEdit};
 
-/// One edit that replaces the lines `old` and `new` do not share at their start and end.
 /// Not a diff of characters, which costs more and splits edits the client may apply out of step.
 pub(crate) fn between(old: &str, new: &str) -> Option<TextEdit> {
     if old == new {
@@ -28,8 +25,7 @@ pub(crate) fn between(old: &str, new: &str) -> Option<TextEdit> {
     })
 }
 
-/// The lines of `text` as the protocol counts them, each with the break that ends it.
-/// A `\r` alone breaks a line there, though nu reads it as part of the line.
+/// As the protocol counts lines, a `\r` alone breaks one, though nu reads it as part of the line.
 fn lines(text: &str) -> Vec<&str> {
     let mut rest = text;
     std::iter::from_fn(|| {
@@ -57,7 +53,7 @@ fn shared_count<'a>(
     old.zip(new).take_while(|(old, new)| old == new).count()
 }
 
-/// The position after `lines`, which start a text.
+/// `lines` must start a text.
 fn end_of(lines: &[&str]) -> Position {
     match lines.last() {
         Some(last) if !last.ends_with(['\n', '\r']) => Position::new(
@@ -80,7 +76,6 @@ mod tests {
 
     use super::{between, lines};
 
-    /// `text` with `edit` applied, as a client that counts in UTF-16 applies it.
     fn applied(text: &str, edit: &TextEdit) -> String {
         let offset = |position: Position| {
             let line_start: usize = lines(text)[..position.line as usize]

@@ -21,13 +21,9 @@ fn heads_attribute((kind, text): (SyntaxKind, &str)) -> bool {
     kind.is_item() && text.starts_with('@')
 }
 
-/// `heads_pipeline` is whether no `|` comes before it.
-/// `assigned` tells where the statement ends, as for the pipeline.
 /// Nu reads the attributes as such only where they head a statement of one element.
 /// Elsewhere it reads the whole element as one call, which goes on past what ends each attribute.
-///
-/// `None` when it has read attributes for no `def` or `extern`, and what ends the last of them.
-/// The command after them is then left to the element.
+/// On `None`, the command after the attributes is left to the caller.
 pub(super) fn attributed(
     p: &mut Parser<'_>,
     heads_pipeline: bool,
@@ -55,8 +51,6 @@ pub(super) fn attributed(
     None
 }
 
-/// The attributes ahead, with the `;` or line break between each two.
-/// `error` is what the head of the last one reports, unless that head has an error of its own.
 fn attributes(p: &mut Parser<'_>, assigned: Assigned, error: Option<ParseErrorKind>) {
     loop {
         let last = !attribute_follows(p, assigned);
@@ -122,7 +116,6 @@ fn attribute_arguments(p: &mut Parser<'_>, shape: Shape) {
     }
 }
 
-/// The element ahead as one call: the attributes, what ends each, then the items of the command.
 /// Nu runs the head as a command of that name.
 fn attributed_call(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
     let shape = argument_shape(p);
@@ -154,13 +147,10 @@ fn attributed_call(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
     }
 }
 
-/// What follows the `;` or line break that ends an attribute, as nu's lite parser reads it.
 #[derive(PartialEq, Eq)]
 enum After {
     Attribute,
-    /// The items of the command.
     Command,
-    /// A pipe right after a `;`, which the call then holds.
     Pipe,
     /// A file redirection, which nu applies to the attributes as a command.
     Redirection,
@@ -183,7 +173,6 @@ fn after_attribute(p: &Parser<'_>, assigned: Assigned) -> After {
     }
 }
 
-/// The kinds and texts of the tokens ahead as nu's lite parser gets them, trivia aside.
 /// Nu's lexer drops a line break before a line-start `|`, and those of comment lines before it.
 fn lite_tokens<'a>(p: &Parser<'a>) -> impl Iterator<Item = (SyntaxKind, &'a str)> + Clone {
     let skips_newline = p.is_skipped(SyntaxKind::Newline);
@@ -209,17 +198,13 @@ fn lines_start_with_pipe<'a>(lines: impl Iterator<Item = (Token, &'a str)>) -> b
     line_start(&mut kinds) == Some(SyntaxKind::Pipe)
 }
 
-/// What nu's lite parser takes past the attributes of an element.
 #[derive(Default)]
 struct PastAttributes {
-    /// Whether the command is a `def` or an `extern`, `export` or not.
     defines: bool,
-    /// Whether a pipe follows the element in the same pipeline.
     piped: bool,
 }
 
-/// The attributes run to a `;` or a line break, and more of them may follow.
-/// Past them, an assignment operator takes the rest of the statement, a `|` too.
+/// Past the attributes, an assignment operator takes the rest of the statement, a `|` too.
 fn past_attributes<'a>(
     tokens: impl Iterator<Item = (SyntaxKind, &'a str)> + Clone,
     assigned: Assigned,

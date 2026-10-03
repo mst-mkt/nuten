@@ -1,5 +1,3 @@
-//! Finds the config file of a path, reads the settings from it, and writes the JSON Schema of one.
-
 mod escape;
 pub mod file;
 mod find;
@@ -33,28 +31,20 @@ pub use crate::{
 };
 use crate::{patterns::Place, value::Value};
 
-/// What a config file sets.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
     pub format: FormatConfig,
-    /// Whether formatting a directory skips the files that ignore files ignore.
     pub respect_gitignore: bool,
-    /// The files formatting a directory takes.
     pub include: Patterns,
-    /// The files never formatted, and the directories whose files are never formatted.
     pub exclude: Patterns,
-    /// Settings for the files some patterns pick, in the order they apply.
     pub overrides: Vec<Override>,
-    /// The directory the patterns are relative to, canonical.
-    /// None when no pattern needs it or the config is read from text alone.
-    /// Only patterns without a `/` then match, and only the name of a file.
+    /// It is canonical.
     pub root: Option<PathBuf>,
 }
 
 // Built once, since these stand for every file without a config file and a build is slow.
 static DEFAULT_INCLUDE: LazyLock<Patterns> =
     LazyLock::new(|| Patterns::new(["*.nu", "*.nuon"]).expect("the patterns are valid"));
-/// Also the `exclude` of an override without one.
 pub(crate) static NO_PATTERNS: LazyLock<Patterns> =
     LazyLock::new(|| Patterns::new([]).expect("no pattern has a problem"));
 
@@ -72,29 +62,27 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Whether how text is formatted depends on the file it is to be written to.
     pub fn depends_on_file(&self) -> bool {
         !self.exclude.is_empty() || !self.overrides.is_empty()
     }
 
-    /// Whether the patterns need `root`, having a `/` or matching the directories above a file.
     pub(crate) fn needs_root(&self) -> bool {
         self.include.has_anchored()
             || !self.exclude.is_empty()
             || self.overrides.iter().any(Override::needs_root)
     }
 
-    /// Whether formatting a directory takes `file`, a canonical path, unless `exclude` matches.
+    /// `file` must be canonical, and `exclude` is the caller's to check.
     pub fn includes(&self, file: &Path) -> bool {
         self.include.matches_file(self.place(file))
     }
 
-    /// Whether `file`, a canonical path, is left alone even when named directly.
+    /// `file` must be canonical.
     pub fn excludes(&self, file: &Path) -> bool {
         self.exclude.matches_file_or_ancestor(self.place(file))
     }
 
-    /// How to format `file`, a canonical path, with each override that picks it applied in order.
+    /// `file` must be canonical.
     pub fn format_of(&self, file: &Path) -> FormatConfig {
         let place = self.place(file);
         // Not from a clone of `self`, since an override changes only the format.
@@ -116,19 +104,14 @@ impl Config {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {
-    /// JSON without comments or trailing commas.
     Json,
-    /// JSON with comments and trailing commas, as VS Code reads it.
     Jsonc,
-    /// Nushell Object Notation, as `from nuon` reads it.
     Nuon,
 }
 
 impl Format {
-    /// In the order their files win in one directory.
     pub const ALL: [Format; 3] = [Format::Nuon, Format::Jsonc, Format::Json];
 
-    /// What a file name in the format ends with, after the `.`.
     pub fn extension(self) -> &'static str {
         match self {
             Format::Json => "json",
@@ -153,21 +136,15 @@ pub struct ConfigError {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigErrorKind {
-    /// Text the JSON parser rejects, with what it says.
     Json(String),
     Nuon(ParseErrorKind),
-    /// A NUON value nu rejects.
-    /// Or one nuten's parser reads otherwise than nu does, which only the nu oracle can tell.
     Rejected,
-    /// A second value in a NUON file.
     ExtraValue,
     DuplicateKey(String),
-    /// A file holding something other than a record; `found` names what.
     NotRecord {
         found: &'static str,
     },
     UnknownKey(String),
-    /// A value of a type the setting does not take; `expected` and `found` name both.
     WrongType {
         key: &'static str,
         expected: &'static str,
@@ -186,9 +163,7 @@ pub enum ConfigErrorKind {
         key: &'static str,
         problem: PatternProblem,
     },
-    /// A record of `overrides` that picks no files, lacking `include`.
     OverrideWithoutInclude,
-    /// A setting in `overrides` that is the same for every file.
     NotPerFile(&'static str),
 }
 
@@ -240,14 +215,10 @@ impl fmt::Display for ConfigErrorKind {
     }
 }
 
-/// The errors come in the order they appear in `text`, and there is at least one.
-/// When `text` cannot be read, only the errors of reading it come, as `read` gives them.
 pub fn load(text: &str, format: Format) -> Result<Config, Vec<ConfigError>> {
     settings::config(&read(text, format)?)
 }
 
-/// Reads `text` into a value, whatever settings it holds.
-/// The errors come in the order they appear in `text`, and there is at least one.
 pub fn read(text: &str, format: Format) -> Result<Value, Vec<ConfigError>> {
     match format {
         Format::Json => json::read(text, json::Dialect::Json),
@@ -256,7 +227,6 @@ pub fn read(text: &str, format: Format) -> Result<Value, Vec<ConfigError>> {
     }
 }
 
-/// One error, as the readers and the settings give errors.
 pub(crate) fn error(kind: ConfigErrorKind, range: TextRange) -> Vec<ConfigError> {
     vec![ConfigError {
         kind,

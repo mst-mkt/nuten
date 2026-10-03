@@ -12,32 +12,24 @@ use crate::{
     parser::MAX_DEPTH,
 };
 
-/// What the parser of every level of brackets knows of the names in the file.
 #[derive(Clone)]
 pub(crate) struct Names<'a> {
     file: Rc<FileNames<'a>>,
-    /// The innermost block around the tokens that declares or imports anything.
-    /// `None` until the parser enters such a block.
     scope: Option<Rc<Scope<'a>>>,
 }
 
-/// What the file names, whatever block a name stands in.
 struct FileNames<'a> {
-    /// The names the file aliases, sorted so that `is_aliased` can bisect them.
+    /// Sorted so that `is_aliased` can bisect them.
     aliases: Box<[&'a str]>,
-    /// The words the file hides, sorted so that `is_hidden` can bisect them.
+    /// Sorted so that `is_hidden` can bisect them.
     /// `None` when it hides an overlay, which may take any command away.
     hidden: Option<Box<[&'a str]>>,
 }
 
-/// What a call runs, as far as the blocks around it tell.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Callee {
-    /// A command a block around it defines, or one an import nuten reads brings.
     Defined,
-    /// One an import or a `hide` may put in place of what a block defines or nu has.
     Unknowable,
-    /// No command a block around it defines, and none an import may bring.
     Undefined,
 }
 
@@ -56,7 +48,6 @@ impl<'a> Names<'a> {
         self.file.aliases.binary_search(&name).is_ok()
     }
 
-    /// These names, inside the block of `tokens` too.
     /// `skips_newline` is whether a line break there is no more than whitespace.
     pub(crate) fn within(&self, src: &'a str, tokens: &[Token], skips_newline: bool) -> Names<'a> {
         let scope_of = || {
@@ -84,16 +75,9 @@ impl<'a> Names<'a> {
         }
     }
 
-    /// What the call with its head at `head` runs, as far as the blocks around it tell.
     /// `word` gives the text of each item of the call, `0` being the head.
-    ///
-    /// Nu runs the command of the longest name the items spell.
-    /// It looks the name up in the innermost block that declares it.
-    /// What a block imports takes the place of a name that block declares from there on.
-    /// It takes the place of one an outer block declares as well.
     /// What an import nuten cannot read holds is unknowable, so it is taken to hold every name.
     /// Nu rejects a keyword as the name of a command, so no import brings one of those.
-    /// An import of a module a block declares is read, and brings a command of each name it names.
     pub(crate) fn callee<'w>(
         &self,
         head: TextSize,
@@ -102,8 +86,6 @@ impl<'a> Names<'a> {
         self.resolved(head, word).0
     }
 
-    /// How many words name the command the call with its head at `head` runs.
-    /// `None` unless a block around it defines that command, or an import nuten reads brings it.
     pub(crate) fn defined_words<'w>(
         &self,
         head: TextSize,
@@ -124,7 +106,6 @@ impl<'a> Names<'a> {
             .max(imported)
     }
 
-    /// What `callee` tells, and the definition the call runs if a block defines its command.
     fn resolved<'w>(
         &self,
         head: TextSize,
@@ -164,13 +145,8 @@ impl<'a> Names<'a> {
         }
     }
 
-    /// What nu takes each of `items` as, the items of the call with its head at `head`.
-    /// `None` unless it runs a command a block defines, with a signature nuten reads.
-    /// A command nu has may take its place where the name starts with a word that names one.
-    /// Nu runs the one of the longer name then.
-    /// It runs one an import nuten reads brings in place of the definition too.
-    /// An import in the block of the definition does so only after it.
-    /// Nu brings the definition in at its own statement, over any import before it.
+    /// A name starting with a word that names a command nu has may run that, as nu runs the longer.
+    /// Nu brings a definition in at its statement, so only a later import in its block replaces it.
     pub(crate) fn defined_parameters(
         &self,
         head: TextSize,
@@ -198,12 +174,10 @@ impl<'a> Names<'a> {
         Some(iter::repeat_n(None, words).chain(arguments).collect())
     }
 
-    /// The scopes around the tokens, innermost first.
     fn scopes(&self) -> impl Iterator<Item = &Scope<'a>> {
         iter::successors(self.scope.as_deref(), |scope| scope.outer.as_deref())
     }
 
-    /// How many words the longest name any block around the tokens defines or imports has.
     fn longest_name(&self) -> usize {
         self.scopes()
             .map(|scope| scope.longest_name)
@@ -211,9 +185,6 @@ impl<'a> Names<'a> {
             .unwrap_or(0)
     }
 
-    /// The command of the longest name `spelled` starts with among those the blocks define.
-    /// With how many blocks out it stands, and the scope of that block.
-    /// The innermost one where two blocks define a name that long.
     fn defining(&self, spelled: &[&str]) -> Option<(usize, &Scope<'a>, &Definition<'a>)> {
         self.scopes()
             .enumerate()
@@ -233,7 +204,6 @@ impl<'a> Names<'a> {
     }
 }
 
-/// A token of a block other than whitespace or a comment.
 #[derive(Clone, Copy)]
 struct Lexeme<'a> {
     kind: SyntaxKind,
@@ -253,49 +223,36 @@ fn lexemes<'a>(src: &'a str, tokens: &[Token]) -> Vec<Lexeme<'a>> {
         .collect()
 }
 
-/// The words a block needs one of for its `Scope` to hold anything.
 const SCOPE_WORDS: [&str; 6] = ["def", "extern", "module", "use", "source", "source-env"];
 
-/// A block of statements, with what nu declares before it reads them and what they import.
 struct Scope<'a> {
     /// Sorted by name, so that `longest_spelled` can bisect them.
     definitions: Box<[Definition<'a>]>,
-    /// The commands the imports nuten reads bring, each starting where its import does.
     /// Sorted by name, then by where they start.
     imported: Box<[Definition<'a>]>,
-    /// How many words the longest name among `definitions` and `imported` has.
     longest_name: usize,
-    /// Where each statement that imports what nuten cannot read starts, in order.
     imports: Box<[TextSize]>,
-    /// The modules the block declares, in order.
     modules: Box<[Module<'a>]>,
     outer: Option<Rc<Scope<'a>>>,
 }
 
-/// A command a `def` or an `extern` defines, as nu declares it before it reads the block.
-/// Or one an import brings.
 struct Definition<'a> {
-    /// The words of the name, which a call spells out one item each.
     words: Vec<&'a str>,
-    /// Where the statement starts; nu takes it over a name imported before there.
+    /// Nu takes the definition over a name imported before its start.
     start: TextSize,
-    /// The parameters of a `def` nuten reads, which an import of it does not carry here.
+    /// An import of a `def` does not carry its parameters here.
     declared: Option<Declared<'a>>,
 }
 
-/// A module a `module` declares with a body, from where the statement starts.
 struct Module<'a> {
     name: &'a str,
     start: TextSize,
-    /// `None` where it exports what nuten cannot read.
     exports: Option<Exports<'a>>,
 }
 
-/// The commands a module exports.
 struct Exports<'a> {
-    /// The words of each name but `main`.
     commands: Vec<Vec<&'a str>>,
-    /// Whether it exports `main`, which an import brings as the name of the module.
+    /// An import brings `main` as the name of the module, so it stands apart from `commands`.
     main: bool,
 }
 
@@ -364,7 +321,6 @@ impl<'a> Scope<'a> {
             && self.modules.is_empty()
     }
 
-    /// The command of the longest name `spelled` starts with, among those this block defines.
     fn longest_spelled(&self, spelled: &[&str]) -> Option<&Definition<'a>> {
         (1..=spelled.len().min(self.longest_name))
             .rev()
@@ -376,8 +332,6 @@ impl<'a> Scope<'a> {
             })
     }
 
-    /// How many words name the longest command `spelled` starts with, of those an import brings.
-    /// Only an import before `end` counts.
     fn imported_words(&self, spelled: &[&str], end: TextSize) -> Option<usize> {
         (1..=spelled.len().min(self.longest_name))
             .rev()
@@ -391,8 +345,6 @@ impl<'a> Scope<'a> {
             })
     }
 
-    /// Whether an import nuten reads brings a command of a name `spelled` starts with.
-    /// The name has at least `len` words, and the import starts at or after `from`, before `end`.
     fn imports_named(&self, spelled: &[&str], len: usize, from: TextSize, end: TextSize) -> bool {
         self.imported.iter().any(|command| {
             command.words.len() >= len
@@ -411,8 +363,7 @@ impl<'a> Scope<'a> {
     }
 }
 
-/// Where each import nuten reads among `statements` starts, with the names it brings.
-/// `statements` are those of a block that stand alone, whose modules are `modules`.
+/// `statements` must be those of a block that stand alone, whose modules are `modules`.
 fn read_imports<'a>(
     src: &'a str,
     statements: &[&[Lexeme<'a>]],
@@ -430,7 +381,6 @@ fn read_imports<'a>(
         .collect()
 }
 
-/// The module named `name` that an import starting at `start` finds, if a block declares one.
 /// Nu looks in the innermost block first, and takes the last module declared before the import.
 /// `modules` are those of the block of the import, and `outer` the scope around it.
 fn visible_module<'s, 'a>(
@@ -451,7 +401,6 @@ fn visible_module<'s, 'a>(
     })
 }
 
-/// The statements of `lexemes`, each with at least one lexeme.
 fn statements<'l, 'a>(lexemes: &'l [Lexeme<'a>]) -> Vec<&'l [Lexeme<'a>]> {
     lexemes
         .split(|lexeme| matches!(lexeme.kind, SyntaxKind::Semicolon | SyntaxKind::Newline))
@@ -459,7 +408,7 @@ fn statements<'l, 'a>(lexemes: &'l [Lexeme<'a>]) -> Vec<&'l [Lexeme<'a>]> {
         .collect()
 }
 
-/// Whether the statement at `nth` is a pipeline of one command, which is all nu declares from.
+/// Nu declares only from a statement that is a pipeline of one command.
 /// A pipe first or last joins it to the statement next to it.
 fn stands_alone(statements: &[&[Lexeme<'_>]], nth: usize) -> bool {
     let joins =
@@ -473,14 +422,12 @@ fn stands_alone(statements: &[&[Lexeme<'_>]], nth: usize) -> bool {
         && !joins(statements.get(nth + 1).and_then(|next| next.first()))
 }
 
-/// Whether a token of `kind` keeps a statement from standing alone.
 /// `||` is no pipe, but nu declares nothing from a statement with one either.
 fn joins_commands(kind: SyntaxKind) -> bool {
     is_pipe(kind) || kind == SyntaxKind::PipePipe
 }
 
-/// What the statement defines, as nu's `parse_def_predecl` reads it.
-/// `None` where nu declares nothing, or where nuten cannot tell the name nu reads.
+/// Reads the statement as nu's `parse_def_predecl` does.
 fn definition<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Definition<'a>> {
     let start = statement.first()?.start;
     let mut lexemes = statement.iter();
@@ -514,8 +461,6 @@ fn definition<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Definition<'
     })
 }
 
-/// The parameters the signature `lexeme` declares, a `[ ]` or a `( )`.
-/// The `:` before input and output types may touch it.
 fn declared<'a>(src: &'a str, lexeme: &Lexeme<'a>) -> Option<Declared<'a>> {
     let text = lexeme.text.strip_suffix(':').unwrap_or(lexeme.text);
     let tokens = [('[', ']'), ('(', ')')].into_iter().find_map(|brackets| {
@@ -530,10 +475,8 @@ fn declared<'a>(src: &'a str, lexeme: &Lexeme<'a>) -> Option<Declared<'a>> {
     }))
 }
 
-/// The words of the name `text` spells, as nu's `parse_string` reads it.
-/// `None` for a name nu rejects, and for one nu reads as a keyword whatever the file defines.
-/// Also for one that no call spells out.
-/// A `=` in one makes nu read the call as setting an environment variable.
+/// Reads the name as nu's `parse_string` does.
+/// A `=` in a name makes nu read the call as setting an environment variable.
 fn name_words(text: &str) -> Option<Vec<&str>> {
     let name = unquoted(text)?;
     if name.contains(['#', '^', '%', '='])
@@ -554,9 +497,6 @@ fn name_words(text: &str) -> Option<Vec<&str>> {
     Some(words)
 }
 
-/// The text the string `text` spells, quoted or bare.
-/// `None` for one with an escape, which is not unescaped here.
-/// Also for one nu reads as more than a string.
 fn unquoted(text: &str) -> Option<&str> {
     let quoted = |quote: char| {
         text.strip_prefix(quote)
@@ -570,8 +510,7 @@ fn unquoted(text: &str) -> Option<&str> {
     }
 }
 
-/// The statement, then what follows each assignment operator in it.
-/// Nu reads each of those as a statement of the block.
+/// Nu reads what follows each assignment operator as a statement of the block.
 fn assigned_parts<'l, 'a>(statement: &'l [Lexeme<'a>]) -> impl Iterator<Item = &'l [Lexeme<'a>]> {
     iter::once(statement).chain(
         statement
@@ -582,8 +521,7 @@ fn assigned_parts<'l, 'a>(statement: &'l [Lexeme<'a>]) -> impl Iterator<Item = &
     )
 }
 
-/// The module the statement declares, as `module` or `export module`, a name, and a body.
-/// `None` for one with no body, which names a file nuten does not read.
+/// A module with no body names a file nuten does not read.
 fn module<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Module<'a>> {
     let words = match statement {
         [keyword, rest @ ..] if keyword.text == "module" => rest,
@@ -604,10 +542,7 @@ fn module<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Module<'a>> {
     })
 }
 
-/// What a module body exports, as its `export` statements tell.
 /// `inside` is where the text inside its braces stands in `src`.
-/// `None` where the body fails to lex, or where an `export` brings in what nuten cannot read.
-/// An `export use` or an `export module` does, and so does a name nuten cannot tell.
 fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<'a>> {
     let lexed = lexer::lex(src, inside, Mode::Block);
     if !lexed.errors.is_empty() {
@@ -639,7 +574,6 @@ fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<
 #[derive(Debug)]
 enum Export<'a> {
     Command(Vec<&'a str>),
-    /// No command, as a `def` with no `export` or an `export const`.
     Nothing,
     Unreadable,
 }
@@ -664,12 +598,9 @@ fn exported<'a>(src: &'a str, statements: &[&[Lexeme<'a>]], nth: usize) -> Expor
     command.map_or(Export::Unreadable, Export::Command)
 }
 
-/// The names the import `statement` brings, as `use` or `export use`, a module, and any members.
 /// `module` finds the module a name stands for, where a block declares it.
-/// `None` where nuten cannot tell them all, as for a module it does not read.
-/// An import with flags, or with more than one item of members, is left unread as well.
-/// So is a member the module does not export, which nu rejects.
-/// So is a member `main`, which nu reads apart from the other exports.
+/// Nu rejects a member the module does not export.
+/// Nu reads a member `main` apart from the other exports.
 fn imported_names<'s, 'a: 's>(
     src: &'a str,
     statement: &[Lexeme<'a>],
@@ -721,7 +652,6 @@ fn imported_names<'s, 'a: 's>(
         .collect()
 }
 
-/// The names of the members `members` spells: one name, or a list of them.
 fn member_names<'a>(src: &'a str, members: &Lexeme<'a>) -> Option<Vec<&'a str>> {
     if !members.text.starts_with('[') {
         return Some(vec![unquoted(members.text)?]);
@@ -738,10 +668,7 @@ fn member_names<'a>(src: &'a str, members: &Lexeme<'a>) -> Option<Vec<&'a str>> 
         .collect()
 }
 
-/// The tokens between the brackets `open` and `close` of `text`, lexed in `mode`.
-/// Trivia and `,` are left out.
 /// `text` stands at `start` in `src`.
-/// `None` where the brackets do not enclose it, or where it fails to lex.
 fn bracketed_tokens(
     src: &str,
     text: &str,
@@ -761,9 +688,7 @@ fn bracketed_tokens(
     })
 }
 
-/// Where each statement that imports names starts, in order.
-/// Those are a `use`, a `source`, a `source-env`, and an `overlay use`, exported or not.
-/// Also where one follows an assignment operator, which nu reads as statements of the block.
+/// Nu reads what follows an assignment operator as a statement of the block.
 fn imports(lexemes: &[Lexeme<'_>]) -> Vec<TextSize> {
     (0..lexemes.len())
         .filter(|&nth| {
@@ -787,7 +712,6 @@ fn imports_names<'a>(mut words: impl Iterator<Item = &'a str>) -> bool {
     }
 }
 
-/// The first of `words`, or the one after an `export` first.
 fn unexported<'a>(mut words: impl Iterator<Item = &'a str>) -> Option<&'a str> {
     words
         .next()
@@ -795,7 +719,6 @@ fn unexported<'a>(mut words: impl Iterator<Item = &'a str>) -> Option<&'a str> {
         .or_else(|| words.next())
 }
 
-/// The names `src` aliases, sorted and without repeats.
 /// Reads the tokens, not the tree, which the parser has yet to build.
 /// Taking in a name out of scope only leaves a call read as it was written.
 /// One in brackets too deep for the parser is left out: it counts only there, kept as written.
@@ -811,9 +734,6 @@ fn alias_names(src: &str) -> Box<[&str]> {
     names.into()
 }
 
-/// The words after each `hide` in `src`, sorted and without repeats.
-/// `None` when `src` hides an overlay, or may hide in brackets too deep to read.
-/// Reads the tokens, as `alias_names` does.
 /// A `hide` may follow an assignment operator, so one anywhere in a statement counts.
 /// Nu hides a name even outside the block of the `hide`.
 /// Taking in more words than it hides only leaves a call read as it was written.
@@ -842,11 +762,8 @@ fn hidden_words(src: &str) -> Option<Box<[&str]>> {
     Some(words.into())
 }
 
-/// What stands around a word after `hide`, which may name members in a list.
 const HIDDEN_TRIM: [char; 6] = ['"', '\'', '`', '[', ']', ','];
 
-/// The items of each statement of `src` that holds `word`, in brackets as deep as the parser reads.
-/// Also whether brackets deeper than that hold `word`, which the parser keeps as written.
 /// The lexer splits them, so that strings, comments, and line breaks read as nu reads them.
 /// Only brackets that hold `word` are lexed again, which spares most files any lexing.
 /// Each level lexes the levels inside it again, so the depth bounds the time.
@@ -876,7 +793,6 @@ fn statements_holding<'a>(src: &'a str, word: &str) -> (Vec<Vec<&'a str>>, bool)
     (statements, too_deep)
 }
 
-/// The tokens of `range` lexed in `mode`, without those that end no statement and hold no item.
 fn significant_tokens(src: &str, range: TextRange, mode: Mode) -> Vec<Token> {
     lexer::tokens(src, range, mode)
         .filter(|token| {
@@ -886,9 +802,7 @@ fn significant_tokens(src: &str, range: TextRange, mode: Mode) -> Vec<Token> {
         .collect()
 }
 
-/// The items of each statement `tokens` hold.
 /// A pipe ends one too, since an `alias` may follow it.
-/// A list holds none, though a block among its items may.
 fn statements_of<'a, 't>(
     src: &'a str,
     tokens: &'t [Token],
@@ -911,7 +825,6 @@ fn statements_of<'a, 't>(
         .map(|run| run.iter().map(|token| &src[token.range]).collect())
 }
 
-/// What each outermost bracket of a word, or `( )` of an interpolation, holds, and how nu lexes it.
 /// `mode` is the one `token` was lexed in.
 /// The parser splits a word such as `a:{|| ls }` or `--flag=(ls)` before it reads its brackets.
 fn insides(src: &str, token: &Token, mode: Mode) -> Vec<(TextRange, Mode)> {
@@ -949,7 +862,6 @@ fn insides(src: &str, token: &Token, mode: Mode) -> Vec<(TextRange, Mode)> {
     }
 }
 
-/// What nu may put around a name.
 const NAME_QUOTES: [char; 3] = ['"', '\'', '`'];
 
 fn alias_name<'a>(statement: &[&'a str]) -> Option<&'a str> {
@@ -972,12 +884,10 @@ mod tests {
         lexer::{self, Mode},
     };
 
-    /// What each word of the last line of `src` takes, as `defined_parameters` reads it.
     fn defined_takes(src: &str) -> Option<Vec<Option<Takes>>> {
         defined_takes_on(src, src.lines().count() - 1)
     }
 
-    /// What each word of line `line` of `src` takes, as `defined_takes` tells of the last one.
     fn defined_takes_on(src: &str, line: usize) -> Option<Vec<Option<Takes>>> {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
         let start: usize = src.lines().take(line).map(|text| text.len() + 1).sum();
@@ -1108,17 +1018,14 @@ mod tests {
         assert_eq!(defined_takes(src), Some(vec![None, Some(Takes::Word)]));
     }
 
-    /// What the last line of `src` runs, as a call of its words in the block `src` makes.
     fn callee(src: &str) -> Callee {
         callee_on(src, src.lines().count() - 1)
     }
 
-    /// What the line at `line` of `src` runs, as `callee` tells of the last one.
     fn callee_on(src: &str, line: usize) -> Callee {
         callee_lexed_in(src, line, Mode::Block)
     }
 
-    /// As `callee_on`, with `src` lexed in `mode`, as what brackets of that mode hold.
     fn callee_lexed_in(src: &str, line: usize, mode: Mode) -> Callee {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), mode);
         let start: usize = src.lines().take(line).map(|text| text.len() + 1).sum();
@@ -1130,14 +1037,12 @@ mod tests {
             })
     }
 
-    /// What the last line of `inner` runs, with `inner` as a block inside that of `outer`.
     fn callee_nested(outer: &str, inner: &str) -> Callee {
         in_nested(outer, inner, |names, head, words| {
             names.callee(head, |nth| words.get(nth).copied())
         })
     }
 
-    /// What each word of the last line of `inner` takes, with `inner` as a block inside `outer`.
     fn defined_takes_nested(outer: &str, inner: &str) -> Option<Vec<Option<Takes>>> {
         in_nested(outer, inner, |names, head, words| {
             let params = names.defined_parameters(head, words)?;
@@ -1150,7 +1055,6 @@ mod tests {
         })
     }
 
-    /// What `read` tells of the last line of `inner`, as a block inside that of `outer`.
     fn in_nested<T>(
         outer: &str,
         inner: &str,
@@ -1703,7 +1607,6 @@ mod tests {
         assert!(alias_names("print a\"{alias c = ^c}\"").is_empty());
     }
 
-    /// `inner` inside `depth` levels of `( )`.
     fn nested(depth: usize, inner: &str) -> String {
         format!("{}{inner}{}", "(".repeat(depth), ")".repeat(depth))
     }

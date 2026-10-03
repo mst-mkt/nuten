@@ -1,5 +1,3 @@
-//! Runs the binary on files in a temporary directory, on stdin, and with its stdout closed or full.
-
 use std::{
     env,
     ffi::OsStr,
@@ -13,9 +11,7 @@ use std::{
 
 use serde_json::{Value, json};
 
-/// A fresh directory for each test, removed when dropped.
 /// Its path has no symlinks, since the paths of config files are reported with symlinks resolved.
-/// No config file, ignore file, or repository of git is above it.
 struct TempDir(PathBuf);
 
 impl TempDir {
@@ -64,7 +60,7 @@ impl Drop for TempDir {
     }
 }
 
-/// The binary, blind to the git config of the user, which could ignore the files of a test.
+/// Blind to the git config of the user, which could ignore the files of a test.
 fn nuten_command() -> Command {
     let nowhere = env::temp_dir().join("nuten-cli-nowhere");
     let mut command = Command::new(env!("CARGO_BIN_EXE_nuten"));
@@ -88,7 +84,6 @@ fn format(paths: &[&Path]) -> Output {
     nuten(&args)
 }
 
-/// Runs `nuten format` with `args` from `dir`, so that relative paths are in `dir`.
 fn format_in(dir: &TempDir, args: &[&str]) -> Output {
     nuten_command()
         .arg("format")
@@ -115,7 +110,7 @@ fn format_stdin_in(dir: &TempDir, args: &[&str], input: &[u8]) -> Output {
     format_stdin_command(dir, args, input).output().unwrap()
 }
 
-/// A block, which each indent width formats differently.
+/// Each indent width formats a block differently.
 const BLOCK: &str = "if true {\nls\n}";
 
 fn read(path: &Path) -> String {
@@ -150,7 +145,6 @@ fn stdout(output: &Output) -> String {
     String::from_utf8(output.stdout.clone()).unwrap()
 }
 
-/// The line the binary reports for `error` at `path`, when it meets the same error.
 fn io_error_line(path: &Path, error: &io::Error) -> String {
     format!("{}: {error}\n", path.display())
 }
@@ -172,7 +166,7 @@ fn format_rewrites_each_file_in_place() {
 fn format_leaves_formatted_file_alone() {
     let dir = TempDir::new();
     let path = dir.file("a.nu", "ls | first\n");
-    // Writing would fail.
+    // Read-only, so that writing it would fail.
     let mut permissions = fs::metadata(&path).unwrap().permissions();
     permissions.set_readonly(true);
     fs::set_permissions(&path, permissions).unwrap();
@@ -721,7 +715,6 @@ fn format_in_time(paths: &[&Path]) -> Output {
     output_in_time(nuten_command().arg("format").args(paths))
 }
 
-/// The output of `command`, which fails the test when the binary runs for too long.
 /// Not `Command::output`, which would hang along with the binary.
 fn output_in_time(command: &mut Command) -> Output {
     let mut child = command
@@ -1955,8 +1948,7 @@ fn format_leaves_file_alone_under_every_name_when_exclude_matches_one() {
     }
 }
 
-/// Runs `nuten` with `args` in `removed`, which the shell removes before it runs the binary.
-/// `Command` cannot run a binary in a directory that is removed.
+/// The shell removes `removed` before it runs the binary, which `Command` cannot.
 #[cfg(unix)]
 fn nuten_in_removed(removed: &Path, args: &[&OsStr], stdin: Stdio) -> Output {
     Command::new("sh")
@@ -2895,7 +2887,6 @@ fn completions_reports_write_error() {
     assert!(stderr.starts_with("stdout: "), "{stderr}");
 }
 
-/// The lines nuten answers with when a completion script asks it to complete `line`.
 /// A line starting with U+0001 asks the script to complete something else, such as files.
 fn completion_answers(line: &str) -> Vec<String> {
     let output = nuten(&["__complete_word__", "--shell", "nu", "--line", line].map(OsStr::new));
@@ -2903,7 +2894,6 @@ fn completion_answers(line: &str) -> Vec<String> {
     stdout(&output).lines().map(str::to_string).collect()
 }
 
-/// The words nuten offers when a completion script asks it to complete `line`.
 /// Sorted, since the order is up to `usage`, not nuten.
 fn completion_candidates(line: &str) -> Vec<String> {
     let mut candidates: Vec<_> = completion_answers(line)
@@ -2915,7 +2905,6 @@ fn completion_candidates(line: &str) -> Vec<String> {
     candidates
 }
 
-/// The extensions of the files nuten asks a completion script to complete for `line`.
 /// Sorted, since their order means nothing to a shell.
 fn completion_extensions(line: &str) -> Vec<String> {
     let answers = completion_answers(line);
@@ -2991,7 +2980,6 @@ fn complete_word_asks_for_config_files_for_config() {
     }
 }
 
-/// Runs `nuten lsp` from `dir` on `messages`, each framed as the protocol frames it.
 fn lsp_in(dir: &TempDir, args: &[&str], messages: &[Value]) -> Output {
     let input: Vec<u8> = messages
         .iter()
@@ -3032,7 +3020,6 @@ fn lsp_notification(method: &str, params: &Value) -> Value {
     json!({ "jsonrpc": "2.0", "method": method, "params": params })
 }
 
-/// `initialize` as request 0, and `initialized`.
 fn lsp_initialization() -> [Value; 2] {
     [
         lsp_request(0, "initialize", &json!({ "capabilities": {} })),
@@ -3051,7 +3038,6 @@ fn lsp_formatting(id: i32, uri: &str) -> Value {
     lsp_request(id, "textDocument/formatting", &params)
 }
 
-/// The edits that indent the `ls` of `BLOCK` by `indent`.
 fn lsp_block_edits(indent: &str) -> Value {
     let range = json!({
         "start": { "line": 1, "character": 0 },

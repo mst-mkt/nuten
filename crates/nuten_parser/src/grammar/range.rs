@@ -16,19 +16,14 @@ use crate::{
 };
 
 pub(super) enum RangeAhead<'a> {
-    /// The range, cut into its values and operators.
     Pieces(Relexed<'a>),
-    /// A range with more of the word past its last operator, which nu leaves out, as in `1...`.
-    /// It stays whole, since no piece of the range holds what nu leaves out.
+    /// No piece of the range holds what nu leaves out past its last operator.
     Whole,
 }
 
-/// Which values nuten takes for those of a range nu reads.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ValuesTaken {
-    /// Numbers, and a `$` or a `( )` that `value` reads as nu does, with no error.
     Read,
-    /// Numbers alone.
     Numbers,
 }
 
@@ -107,17 +102,13 @@ pub(super) fn is_number_range(text: &str) -> bool {
         .is_some_and(|values| values.ranges().all(|range| is_number(&text[range])))
 }
 
-/// Where nu's `parse_range` finds the operators of a range in a word.
 struct Operators {
-    /// The `..` before the second value, if any.
     next: Option<usize>,
-    /// The operator before the last value.
     at: usize,
-    /// The length of that operator: 2 for `..`, 3 for `..=` and `..<`.
     len: usize,
 }
 
-/// The operators nu's `parse_range` finds in `text`, if it goes on to read the values.
+/// Ported from nu's `parse_range`.
 /// It counts a `..` only where the `(` before it are as many as the `)`, those in strings too.
 /// It takes a `..<` only as the first one in `text`.
 fn operators(text: &str) -> Option<Operators> {
@@ -143,7 +134,6 @@ fn operators(text: &str) -> Option<Operators> {
     })
 }
 
-/// Where `text` has a `..` with as many `(` before it as `)`.
 /// Each count goes on from the `..` before, since counting from the start for each is quadratic.
 fn balanced_dotdots(text: &str) -> impl Iterator<Item = usize> {
     text.match_indices("..")
@@ -164,9 +154,7 @@ fn balanced_dotdots(text: &str) -> impl Iterator<Item = usize> {
 }
 
 impl Operators {
-    /// Nu takes no first value when `text` starts with `..`.
-    /// It takes no last value when `text` ends with the spelling of the last operator.
-    /// `None` when it takes neither, or when the second value is empty.
+    /// Nu takes no last value when `text` ends with the spelling of the last operator.
     fn values(&self, text: &str) -> Option<Values> {
         let end = self.at + self.len;
         let first = (!text.starts_with("..")).then(|| 0..self.next.unwrap_or(self.at));
@@ -192,7 +180,6 @@ impl Operators {
     }
 }
 
-/// Where the values of a range are in its word.
 struct Values {
     first: Option<Range<usize>>,
     second: Option<Range<usize>>,
@@ -226,7 +213,6 @@ fn reads_value(p: &Parser<'_>, range: TextRange, taken: ValuesTaken) -> bool {
     }
 }
 
-/// Whether nu reads the `$` ahead, a variable and any path into it, without an error.
 fn reads_variable(piece: &Parser<'_>) -> bool {
     let Some(relexed) = piece.relexed(Mode::CellPath) else {
         return false;

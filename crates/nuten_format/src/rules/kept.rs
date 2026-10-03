@@ -1,5 +1,3 @@
-//! What `# nuten-ignore` keeps as written.
-
 use std::{cmp::Reverse, collections::HashMap, iter};
 
 use nuten_syntax::{
@@ -8,8 +6,6 @@ use nuten_syntax::{
 
 const IGNORE: &str = "nuten-ignore";
 
-/// The runs of children kept as written.
-/// A run is one child, or siblings from a first to a last with all between them.
 /// The first child of a run stands for all of it, so `children` drops the rest.
 #[derive(Debug, Default)]
 pub(super) struct Kept {
@@ -18,9 +14,7 @@ pub(super) struct Kept {
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum Member {
-    /// The first child, with the source of the whole run.
     First(TextRange),
-    /// A child after the first, printed by the first.
     Rest,
 }
 
@@ -64,7 +58,6 @@ impl Kept {
         matches!(self.member(element), Some(Member::Rest))
     }
 
-    /// Whether `element` is in a run, first or not.
     pub(super) fn keeps(&self, element: &SyntaxElement) -> bool {
         self.member(element).is_some()
     }
@@ -84,7 +77,6 @@ fn stands_on_own_line(comment: &SyntaxToken) -> bool {
         .is_none_or(|token| token.kind() == SyntaxKind::Newline)
 }
 
-/// The sibling after `comment`, past comments, line breaks, and the `|` of a line-start `|`.
 fn run_after(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
     iter::successors(
         comment.next_sibling_or_token(),
@@ -95,7 +87,6 @@ fn run_after(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
     .map(|sibling| vec![sibling])
 }
 
-/// The run that `comment` ends the line of.
 /// The line decides rather than where the comment is, since a comment after a `{` is inside it.
 /// A separator before the comment is passed over, since the layout drops it or puts a `,` there.
 /// A bracket opened on an earlier line ends no run.
@@ -118,8 +109,7 @@ fn run_before(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
     Some(siblings_between(&first, &last))
 }
 
-/// The outermost element that holds `token` and starts on the line from `line_start`.
-/// Never the file itself, which starts on the first line but is no child to keep.
+/// The file itself starts on the first line too, but is no child to keep.
 fn outermost_on_line(token: SyntaxToken, line_start: TextSize) -> SyntaxElement {
     iter::successors(Some(SyntaxElement::from(token)), |element| {
         element
@@ -149,8 +139,7 @@ fn siblings_between(first: &SyntaxElement, last: &SyntaxElement) -> Vec<SyntaxEl
         .collect()
 }
 
-/// `runs` without those inside another.
-/// Two runs never overlap otherwise, since each is of siblings that start on one line.
+/// Two runs never overlap but by nesting, since each is of siblings that start on one line.
 fn outermost(mut runs: Vec<Vec<SyntaxElement>>) -> Vec<Vec<SyntaxElement>> {
     runs.sort_by_key(|run| {
         let span = span(run);

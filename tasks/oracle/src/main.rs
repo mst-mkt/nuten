@@ -1,36 +1,5 @@
-//! Asks nu whether formatting keeps what it parses.
-//! Each file must give the same AST and the same flattened tokens before and after formatting.
-//! Positions, span ids, and the layout in the tokens are left aside.
 //! The AST refers to the blocks inside by id only, so inside them only the tokens are compared.
 //! Those show neither `;` nor line breaks between statements.
-//! Nu parses both versions of a file in the directory of the file before formatting.
-//!
-//! `format` formats files with nuten and asks about each.
-//! Before asking, it checks each file for what `nuten_format::invariants` asks of any input.
-//! It checks a file with syntax errors too before skipping it, for the invariants of the parser.
-//! For a `.nuon` file, it asks about the value nu reads rather than the AST.
-//! It asks nu too whether nuten reads the file into that value.
-//! `tasks/oracle/test_data` holds files to run it on.
-//! Its `nufmt` holds the cases nushell/nufmt broke, each headed by the URL of its report.
-//! It takes files, and directories to search for `.nu` and `.nuon` files.
-//! It skips a file that is too large or is not UTF-8, and says so.
-//! A `.nu` file with syntax errors leaves no output to ask about, so it asks nu about the file.
-//! It skips the file when nu reports an error too, naming its kind.
-//! It fails the file when nu reports none, since nuten then rejects what nu reads.
-//! It asks about formatting before it skips a `.nuon` file nuten parses otherwise than nu.
-//! It exits with 1 when any other file cannot be checked, or its AST or value differs.
-//! It exits with 1 too when a file breaks an invariant.
-//! It exits with 2 when the arguments name no `.nu` or `.nuon` file.
-//! It formats with the defaults, or with the config file `--config` names.
-//! It formats with each of `nuten_format::invariants::VARIANTS` of that config too.
-//! A failure with one of those names it.
-//! It exits with 2 too when the config file cannot be loaded.
-//!
-//! `compare` asks about a file and the version of it that any formatter wrote.
-//! It exits with 1 when either cannot be read, or their ASTs differ.
-//!
-//! Both exit with 2 when the arguments are invalid.
-//! Both exit with 2 too when nu cannot be run, or is not of the series the formatter targets.
 
 #![expect(
     clippy::print_stderr,
@@ -164,7 +133,6 @@ fn run_compare(args: &Compare) -> ExitCode {
     }
 }
 
-/// `path` if it is not a directory, or else every `.nu` and `.nuon` file below it.
 fn files_to_check(path: &Path, files: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(path).and_then(Iterator::collect::<io::Result<Vec<_>>>) else {
         // A file, or a directory that cannot be read, which `check` reports.
@@ -188,17 +156,12 @@ fn files_to_check(path: &Path, files: &mut Vec<PathBuf>) {
     }
 }
 
-/// A file whose check did not fail.
 #[derive(Debug, PartialEq, Eq)]
 enum Checked {
-    /// Formatting keeps the invariants, and nu parses the same AST before and after it.
-    /// For NUON, nu reads the same value instead, and nuten reads that value too.
     Passed,
-    /// Not checked, for the reason given.
     Skipped(String),
 }
 
-/// Checks one file; an error says in one line why it fails.
 fn check(path: &Path, max_size: u64, config: &Config) -> Result<Checked, String> {
     let size = fs::metadata(path).map_err(|error| error.to_string())?.len();
     if size > max_size {
@@ -224,9 +187,7 @@ fn check(path: &Path, max_size: u64, config: &Config) -> Result<Checked, String>
     same_asts(&src, &outputs, dir_of(path)).map(|()| Checked::Passed)
 }
 
-/// Nuten rejects the file, so nu must report an error too, or nuten rejects what nu reads.
-/// `nu_error` is the kind of the error nu reports, if it reports one.
-/// Whatever the kind, nu rejects the file, so nothing tells whether nuten rejects it wrongly.
+/// Nu rejects the file too, whatever `nu_error` is, so nothing tells whether nuten is wrong.
 fn rejection_verdict(nu_error: Option<String>) -> Result<Checked, String> {
     match nu_error {
         Some(kind) => Ok(Checked::Skipped(format!(
@@ -236,15 +197,12 @@ fn rejection_verdict(nu_error: Option<String>) -> Result<Checked, String> {
     }
 }
 
-/// What formatting gives with the config given or with one of its variants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Output {
     text: String,
-    /// The name of the variant, or `None` for the config given.
     variant: Option<&'static str>,
 }
 
-/// `problem`, naming the variant it comes with, if any.
 fn labeled(variant: Option<&str>, problem: String) -> String {
     match variant {
         Some(name) => format!("with {name}: {problem}"),
@@ -252,10 +210,6 @@ fn labeled(variant: Option<&str>, problem: String) -> String {
     }
 }
 
-/// The outputs of formatting `src` with `config` and its variants that nu needs asking about.
-/// `None` when the syntax errors of `src` leave none, which they do with any config alike.
-/// Fails, in one line, when any breaks an invariant, whether or not `src` has syntax errors.
-/// It fails too when some configs give output and others do not.
 /// Asking nu costs a process each time, so every config is checked for the invariants first.
 fn formatted(src: &str, config: &Config) -> Result<Option<Vec<Output>>, String> {
     let configs = [(None, config.clone())].into_iter().chain(
@@ -281,8 +235,6 @@ fn formatted(src: &str, config: &Config) -> Result<Option<Vec<Output>>, String> 
     Ok(Some(distinct(src, &outputs)))
 }
 
-/// The output of `checked`, with the variant it comes with.
-/// Fails, in one line naming the variant, when `checked` has violations.
 fn kept_output(
     checked: invariants::Checked,
     variant: Option<&'static str>,
@@ -294,8 +246,7 @@ fn kept_output(
     }))
 }
 
-/// `outputs` without those whose text is `src` or that of one before them.
-/// Nu parses the same text into the same AST, so only the first of each needs asking about.
+/// Nu parses the same text into the same AST, so only the first of each text needs asking about.
 fn distinct(src: &str, outputs: &[Output]) -> Vec<Output> {
     outputs
         .iter()
@@ -310,7 +261,6 @@ fn distinct(src: &str, outputs: &[Output]) -> Vec<Output> {
         .collect()
 }
 
-/// Fails, in one line, when `checked` has violations.
 fn invariants_kept(checked: &invariants::Checked) -> Result<(), String> {
     if checked.violations.is_empty() {
         return Ok(());
@@ -319,12 +269,11 @@ fn invariants_kept(checked: &invariants::Checked) -> Result<(), String> {
     Err(violations.join("; "))
 }
 
-/// The directory nu parses `path` in, where it finds the modules `path` uses by relative path.
+/// Nu parses `path` in its directory, so that it finds the modules `path` uses by relative path.
 fn dir_of(path: &Path) -> Option<&Path> {
     path.parent().filter(|dir| !dir.as_os_str().is_empty())
 }
 
-/// Fails, in one line, when nu parses `before` and `after` differently, or cannot parse them.
 fn same_ast(before: &str, after: &str, dir: Option<&Path>) -> Result<(), String> {
     // Nu parses the same text into the same AST.
     if before == after {
@@ -337,8 +286,6 @@ fn same_ast(before: &str, after: &str, dir: Option<&Path>) -> Result<(), String>
     same_asts(before, &[after], dir)
 }
 
-/// Fails, in one line, when nu parses any of `outputs` unlike `before`.
-/// It fails too when nu cannot parse `before` or one of them.
 /// Asking nu costs a process each time, so nu parses `before` once, and not at all without outputs.
 fn same_asts(before: &str, outputs: &[Output], dir: Option<&Path>) -> Result<(), String> {
     if outputs.is_empty() {

@@ -1,9 +1,5 @@
-//! A document laid out on one line whatever its width, and what keeps it off one line.
-
 use crate::{Element, LineMode, TextWidth};
 
-/// `elements` as the printer prints them with every group flat, whether or not they fit.
-/// `None` where a hard line break, text over lines, or a line suffix keeps them off one line.
 pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
     elements
         .iter()
@@ -12,8 +8,8 @@ pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
         .map(|elements| elements.into_iter().flatten().collect())
 }
 
-/// One inside a `LineSuffix` counts too, since `fits` measures the suffix with the line.
-/// One on the broken side of an `IfBreak` does not, since that side prints only once they broke.
+/// A forced break inside a `LineSuffix` counts too, since `fits` measures the suffix with the line.
+/// One on the broken side of an `IfBreak` does not, since that side prints only after a break.
 pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
     elements.iter().any(|element| {
         element.forces_break()

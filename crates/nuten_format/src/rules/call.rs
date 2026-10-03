@@ -1,5 +1,3 @@
-//! A call inside `( )`, broken before each of its arguments where it does not fit.
-
 use nuten_doc::{Element, group, indent, soft_line_break_or_space, space};
 use nuten_parser::is_command;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
@@ -7,7 +5,6 @@ use nuten_syntax::{SyntaxKind, SyntaxNode};
 use super::{Child, Formatter, breaks_by_width, children};
 
 impl<'a> Formatter<'a> {
-    /// A call, broken before each argument where `breaks_at_arguments` lets it.
     pub(super) fn call(&mut self, call: &SyntaxNode) -> Vec<Element<'a>> {
         let items: Vec<_> = children(call.children_with_tokens(), &self.kept).collect();
         if !breaks_at_arguments(call, &items) {
@@ -24,7 +21,6 @@ impl<'a> Formatter<'a> {
         vec![group([indent(arguments)])]
     }
 
-    /// Whether `element`, an element of a pipeline, holds a call that breaks at its arguments.
     pub(super) fn holds_call_breaking_at_arguments(&self, element: &SyntaxNode) -> bool {
         element
             .first_child()
@@ -39,7 +35,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// Whether `call`, of `items`, breaks before its arguments.
 /// One with fewer than two places to break is left as it is, since breaking would not shorten it.
 /// One that ends with brackets breaks inside them instead, as `each {|x|` does.
 /// A block before the last argument is what a keyword such as `if` takes, which is left as it is.
@@ -74,8 +69,6 @@ fn breaks_at_arguments(call: &SyntaxNode, items: &[Child]) -> bool {
     !head_names_no_command && breaks >= 2 && !bracketed && !keyword_like
 }
 
-/// How many of `items` name the command: the name, and its subcommands if nu does not have it.
-/// A command headed by `^` counts as one nu does not have.
 fn name_len(call: &SyntaxNode, items: &[Child]) -> usize {
     let foreign = call.kind() == SyntaxKind::ExternalCall
         || (items[0].kind() == SyntaxKind::Word && !is_command(word_text(&items[0])));
@@ -98,7 +91,6 @@ fn is_subcommand(word: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
-/// Whether the item at `index` stays on the line of the flag before it, which may take it.
 fn stays_after_flag(items: &[Child], index: usize) -> bool {
     let takes_value = |item: &Child| {
         let text = word_text(item);
@@ -110,14 +102,12 @@ fn stays_after_flag(items: &[Child], index: usize) -> bool {
         && !is_flag(word_text(&items[index]))
 }
 
-/// Whether nu reads `word` as a flag, rather than a negative number.
 fn is_flag(word: &str) -> bool {
     word.len() > 1
         && word.starts_with('-')
         && !word[1..].starts_with(|c: char| c.is_ascii_digit() || c == '.')
 }
 
-/// The text of `item` where it is a word, or nothing.
 fn word_text(item: &Child) -> &str {
     item.element
         .as_token()

@@ -1,10 +1,10 @@
-/// Whether nu's `parse_number` reads `text` as a number: an int, or else a float.
-/// Nu drops every `_` before reading either.
+/// Ported from nu's `parse_number`.
+/// Nu drops every `_` before reading an int or a float.
 pub(super) fn is_number(text: &str) -> bool {
     int(text).is_some() || text.replace('_', "").parse::<f64>().is_ok()
 }
 
-/// The int nu's `parse_int` reads `text` as, if any.
+/// Ported from nu's `parse_int`.
 pub(super) fn int(text: &str) -> Option<i64> {
     let text = text.replace('_', "");
     let prefixed = [("0b", 2), ("0o", 8), ("0x", 16)]

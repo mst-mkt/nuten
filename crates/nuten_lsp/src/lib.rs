@@ -1,5 +1,3 @@
-//! A language server that formats Nushell.
-
 mod edit;
 mod place;
 
@@ -23,13 +21,10 @@ use crate::place::Place;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Exit {
-    /// With `exit` after `shutdown`, as the protocol asks.
     AfterShutdown,
-    /// With `exit` alone, or by closing the connection.
     WithoutShutdown,
 }
 
-/// The error is the problem, as a line.
 pub fn serve_stdio() -> Result<Exit, String> {
     let (connection, io_threads) = Connection::stdio();
     let exit = serve(&connection);
@@ -57,8 +52,6 @@ pub fn serve(connection: &Connection) -> Exit {
     }
 }
 
-/// Answers `initialize`, the first request the protocol lets the server serve.
-/// The error tells how the client ended the session before it.
 /// Not `Connection::initialize`, which treats an `exit` before it as a broken protocol.
 fn initialize(connection: &Connection) -> Result<(), Exit> {
     connection
@@ -108,7 +101,7 @@ fn initialize_result() -> InitializeResult {
     }
 }
 
-/// The error tells that the session ended, since nothing can reach the client any more.
+/// A failed send ends the session, since nothing can reach the client any more.
 fn send(connection: &Connection, response: Response) -> Result<(), Exit> {
     connection
         .sender
@@ -118,7 +111,6 @@ fn send(connection: &Connection, response: Response) -> Result<(), Exit> {
 
 #[derive(Debug, Default)]
 struct Session {
-    /// The text of each open document, as the client holds it, by its URI.
     /// Not keyed by `Uri`, whose hash clippy cannot tell to be stable.
     documents: HashMap<String, String>,
     shut_down: bool,
@@ -128,7 +120,7 @@ struct Session {
 enum Change {
     Whole(String),
     Nothing,
-    /// Makes it one the server cannot know, since the server applies no range.
+    /// The server applies no range, so a change by one leaves the document unknown.
     Unknown,
 }
 
@@ -178,7 +170,6 @@ impl Session {
         }
     }
 
-    /// The response to a request that leaves the session as it is.
     fn response_to(&self, request: Request) -> Response {
         let Request {
             id,
@@ -201,7 +192,6 @@ impl Session {
         }
     }
 
-    /// The edits that format the document at `uri`, or `None` when it has syntax errors.
     fn formatting(&self, uri: &Uri) -> Result<Option<Vec<TextEdit>>, (ErrorCode, String)> {
         let uri_text = uri.as_str();
         let text = self.documents.get(uri_text).ok_or_else(|| {

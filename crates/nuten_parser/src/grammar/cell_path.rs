@@ -10,21 +10,17 @@ use crate::{
     parser::{Parser, Relexed},
 };
 
-/// The word ahead split as nu splits a full cell path: the value, then the path into it.
 pub(super) struct CellPathAhead<'a> {
     relexed: Relexed<'a>,
-    /// Whether it is a cell path literal, as in `$.a`, whose `$` nu reads as no value.
+    /// Nu reads the `$` of a cell path literal such as `$.a` as no value.
     literal: bool,
-    /// The links of the path up to the first one nu rejects, after which nu reads no more of it.
+    /// Nu reads no more of the path past the first link it rejects.
     links: Vec<Link>,
 }
 
-/// A token of the path, as nu's `parse_cell_path` reads it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Link {
-    /// A `.`, `?`, or `!` where nu takes one.
     Separator,
-    /// A member, which nu reads as an int or a string.
     Member,
     Rejected(ParseErrorKind),
 }
@@ -59,10 +55,6 @@ pub(super) fn cell_path_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<CellPa
     })
 }
 
-/// Whether nu reads `head`, which `inner` starts with, as the value of a cell path for `shape`.
-/// Nu reads a `[ ]` there only where it takes any value.
-/// It reads a `{ }` there only as a record with a `:` second, or an empty one.
-/// Each bracket must close at the last byte of `head`.
 fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
     match head.as_bytes() {
         [b'$', ..] => reads_dollar(head, shape),
@@ -79,23 +71,17 @@ fn reads_head(inner: &Parser<'_>, head: &str, shape: Shape) -> bool {
     }
 }
 
-/// What nu takes next in a path, as its `parse_cell_path` tracks it.
+/// Ported from how nu's `parse_cell_path` tracks what it takes next.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Expect {
-    /// Only `.`, as right after the value or after both `?` and `!`.
     Dot,
-    /// `.`, `?`, or `!`, as right after a member.
     DotOrSign,
-    /// `.` or `!`, as after a `?`.
     DotOrBang,
-    /// `.` or `?`, as after a `!`.
     DotOrQuestion,
-    /// A member, as after a `.`.
     Member,
 }
 
 impl Expect {
-    /// `None` for a member whose error is not checked here.
     fn read(self, kind: SyntaxKind, text: &str) -> Option<Link> {
         if self == Expect::Member {
             return member(text);
@@ -108,7 +94,6 @@ impl Expect {
         })
     }
 
-    /// What nu takes next after a token of `kind` here; `None` for a separator it rejects.
     fn after(self, kind: SyntaxKind) -> Option<Expect> {
         match (self, kind) {
             (Expect::Member, _) => Some(Expect::DotOrSign),
@@ -121,7 +106,6 @@ impl Expect {
         }
     }
 
-    /// The separators nu says it takes, where it takes no member.
     fn separators(self) -> &'static str {
         match self {
             Expect::Dot => "`.`",
@@ -133,11 +117,9 @@ impl Expect {
     }
 }
 
-/// The links of `path`, the tokens after the value, up to the first one nu rejects.
-/// `None` for a comment among them, which nu drops.
-/// The formatter would print a comment inside the node away from where it stands.
-/// `None` too for a member whose error is not checked here.
-/// `None` too for a token with a lexing error, which the word read whole holds none of.
+/// `None` for a comment among them, which nu drops but the formatter would move.
+/// `None` for a token with a lexing error, which the word read whole holds none of.
+/// `None` for a member whose error is not checked here.
 fn links(path: &[(Token, &str)]) -> Option<Vec<Link>> {
     if path
         .iter()
@@ -158,7 +140,6 @@ fn links(path: &[(Token, &str)]) -> Option<Vec<Link>> {
         .collect()
 }
 
-/// How nu reads `text` as a member: an int that is not negative, or else a string.
 /// `None` for a `"` string with a `\`, since whether nu takes its escapes is not checked here.
 fn member(text: &str) -> Option<Link> {
     if let Some(int) = int(text) {

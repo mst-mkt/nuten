@@ -29,9 +29,6 @@ impl<'a> Formatter<'a> {
     }
 }
 
-/// The block at `index` among `items`, when it is a body.
-/// A body comes right before an `else` or a `catch`.
-/// The last item but a comment is a body, or what the last `else` takes.
 fn body_at(items: &[Child], index: usize) -> Option<&Block> {
     let NodeOrToken::Node(Node::Block(block)) = &items[index].element else {
         return None;
@@ -47,7 +44,6 @@ fn body_at(items: &[Child], index: usize) -> Option<&Block> {
         .then_some(block)
 }
 
-/// Whether `node`, an `If` or a `Try`, is a statement.
 fn is_statement(node: &SyntaxNode) -> bool {
     let Some(pipeline) = node.parent().and_then(|element| element.parent()) else {
         return false;

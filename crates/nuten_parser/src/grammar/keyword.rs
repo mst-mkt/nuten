@@ -10,9 +10,7 @@ use super::{
 };
 use crate::parser::Parser;
 
-/// The keyword syntax nu reads where it takes a term, as a call over the rest of the element.
-/// Only `if` and `match` stand there; nu reads any other word as the term itself.
-/// Returns whether one stands there, and then it has read the rest of the element.
+/// Only `if` and `match` stand where nu takes a term; it reads any other word as the term itself.
 pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
     if !matches!(p.peek_text(), Some("if" | "match")) {
         return false;
@@ -28,13 +26,8 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
     true
 }
 
-/// The keyword syntax nu reads the call ahead as, if any.
-/// Each syntax reads its node and returns whether it did.
 /// Only a syntax that a call holds whole belongs here.
 /// `let` and the rest reach past an assignment operator, so they are read with the element.
-///
-/// The keyword alone decides which syntax to try, or the one after an `export`.
-/// The shape of the items is then that syntax's own to check.
 /// Where a block around the call defines a command of its name, nu may run that instead.
 /// A syntax may hold another with no brackets between them, as an `if` does in its condition.
 /// So it counts toward the depth limit of brackets, past which the call stays a call.
@@ -56,8 +49,7 @@ pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
     })
 }
 
-/// An `export` and the keyword after it, which nu reads as that keyword alone.
-/// The syntax of that keyword takes the `export` in.
+/// Nu reads an `export` and the keyword after it as that keyword alone.
 fn exported(p: &mut Parser<'_>) -> bool {
     match p.nth_text(1) {
         Some("def" | "extern") => def(p),

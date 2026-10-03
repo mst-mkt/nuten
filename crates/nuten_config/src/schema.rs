@@ -1,5 +1,3 @@
-//! Writes the JSON Schema of a config file.
-
 use std::fmt::{self, Write};
 
 use crate::settings::{Kind, PICKERS, SETTINGS, Setting};
@@ -109,7 +107,6 @@ impl Json {
         Json::Object(fields.into_iter().collect())
     }
 
-    /// Writes `self` with its lines after the first indented `depth` levels.
     /// An array stays on one line, since the schema holds no array but short ones of strings.
     fn write(&self, f: &mut fmt::Formatter<'_>, depth: usize) -> fmt::Result {
         let indent = |depth| "  ".repeat(depth);

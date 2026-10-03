@@ -1,5 +1,3 @@
-//! What a config file holds, whatever its format.
-
 use nuten_syntax::{TextRange, TextSize};
 
 use crate::{ConfigError, ConfigErrorKind};
@@ -7,7 +5,6 @@ use crate::{ConfigError, ConfigErrorKind};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub kind: ValueKind,
-    /// The whole value as written.
     pub range: TextRange,
 }
 
@@ -18,7 +15,6 @@ pub enum ValueKind {
     List(Vec<Value>),
     String(String),
     Int(i64),
-    /// A number with a fraction or an exponent, or, in JSON, an integer too large for an `Int`.
     Float(f64),
     Bool(bool),
     Null,
@@ -35,13 +31,11 @@ pub enum ValueKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     pub key: String,
-    /// The key as written, quotes included.
     pub key_range: TextRange,
     pub value: Value,
 }
 
 impl ValueKind {
-    /// What the kind is called in an error.
     pub(crate) fn name(&self) -> &'static str {
         match self {
             ValueKind::Record(_) => "a record",
@@ -62,7 +56,6 @@ impl ValueKind {
 }
 
 /// Null, as `from nuon` reads an empty file, so that such a file is reported as no record.
-/// JSON has no empty document, but one is reported as no record all the same.
 pub(crate) fn absent() -> Value {
     Value {
         kind: ValueKind::Null,
@@ -70,7 +63,6 @@ pub(crate) fn absent() -> Value {
     }
 }
 
-/// A record of `fields`, or an error at each key a field before it has.
 pub(crate) fn record(fields: Vec<Field>, range: TextRange) -> Result<Value, Vec<ConfigError>> {
     let duplicates: Vec<_> = fields
         .iter()
@@ -94,7 +86,6 @@ pub(crate) fn record(fields: Vec<Field>, range: TextRange) -> Result<Value, Vec<
     })
 }
 
-/// Every value of `results`, or every error among them when there is any.
 pub(crate) fn all<T>(
     results: impl IntoIterator<Item = Result<T, Vec<ConfigError>>>,
 ) -> Result<Vec<T>, Vec<ConfigError>> {

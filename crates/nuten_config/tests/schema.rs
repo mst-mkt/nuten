@@ -1,5 +1,3 @@
-//! The JSON Schema, and that what it allows is what the loader takes.
-
 use jsonc_parser::{JsonObject, JsonValue, ParseOptions, parse_to_value};
 use nuten_config::{Config, ConfigErrorKind, Format, load, schema};
 
@@ -11,7 +9,6 @@ fn root(text: &str) -> JsonObject<'_> {
     root
 }
 
-/// The properties of `object`, the schema of a record.
 fn properties_of(mut object: JsonObject<'_>) -> Vec<(String, JsonObject<'_>)> {
     let Some(JsonValue::Object(properties)) = object.take("properties") else {
         panic!("the schema of a record has no properties");
@@ -30,7 +27,6 @@ fn properties(text: &str) -> Vec<(String, JsonObject<'_>)> {
     properties_of(root(text))
 }
 
-/// The schema of the records in the list `property` describes, if its items are records.
 fn record_items<'a>(property: &JsonObject<'a>) -> Option<JsonObject<'a>> {
     match property.get("items")? {
         JsonValue::Object(items)
@@ -60,7 +56,6 @@ fn load_one(key: &str, value: &str) -> Loaded {
     load_text(&format!("{{\"{key}\": {value}}}"))
 }
 
-/// Loads `value` as that of `key` in a record of `overrides` that picks some files.
 fn load_in_override(key: &str, value: &str) -> Loaded {
     let record = if key == "include" {
         format!("{{\"include\": {value}}}")
@@ -93,10 +88,8 @@ fn allowed_values(key: &str, property: &JsonObject<'_>) -> Vec<String> {
     }
 }
 
-/// Whether the errors of loading a value are the ones expected.
 type Expected = fn(&[ConfigErrorKind]) -> bool;
 
-/// Each value the schema rejects, with what the errors of loading it are.
 fn rejected_values(property: &JsonObject<'_>) -> Vec<(String, Expected)> {
     let wrong_type: Expected = |errors| matches!(errors, [ConfigErrorKind::WrongType { .. }]);
     match property.get_string("type").map(AsRef::as_ref) {

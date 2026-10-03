@@ -11,16 +11,13 @@ use crate::{
     parser::{Parser, Piece},
 };
 
-/// What a spread goes into, which tells the value nu takes after its `...`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Target {
-    /// A list, or the arguments of a command.
     List,
     Record,
 }
 
 impl Target {
-    /// The bracket of a value this takes after `...`, on top of a `$` or a `(`.
     fn bracket(self) -> char {
         match self {
             Target::List => '[',
@@ -54,9 +51,8 @@ pub(super) fn spread(p: &mut Parser<'_>, target: Target) {
     }
 }
 
-/// The value after `...` as nu reads it where it takes a list or a record.
 /// Unlike where it takes any value, nu reads no cell path after a `[ ]`.
-/// It reads a `{ }` with the shape of a record, so one that is no record stays a word.
+/// Nu reads a `{ }` with the shape of a record, so one that is no record stays a word.
 fn spread_value(p: &mut Parser<'_>, target: Target) {
     match (target, p.peek_text().map(str::as_bytes)) {
         (Target::List, Some([b'[', ..])) => match p.bracketed(&SQUARE, Mode::List) {

@@ -39,17 +39,13 @@ pub(super) fn pipeline(p: &mut Parser<'_>, assigned: Assigned) {
     p.finish();
 }
 
-/// How the element just read ends, as the pipe after it sees it.
 #[derive(Default)]
 pub(super) struct Ended {
-    /// What it redirects; `None` when it has no command, or runs to the statement's end.
     pub(super) redirected: Option<Streams>,
-    /// Whether it ends with an attribute, which the line break ahead ends.
     pub(super) ends_with_attribute: bool,
 }
 
-/// Whether the pipeline goes on past the line break ahead, which ends an attribute.
-/// Nu's lite parser goes on to an `e>|` or an `o+e>|` that starts the next line there.
+/// After an attribute, nu's lite parser goes on to an `e>|` or an `o+e>|` starting the next line.
 /// It goes on to a line-start `|` after a blank line too.
 /// Its lexer drops only the line break of the blank line before that `|`, not the one ahead.
 fn pipe_after_attribute(p: &Parser<'_>) -> bool {
@@ -86,9 +82,7 @@ pub(super) fn plain_pipe(p: &mut Parser<'_>, assigned: Assigned) {
     }
 }
 
-/// Whether the `|` ahead is the last token of the file.
-/// A trailing comment and comment lines right below it may follow: `Comment? (Newline Comment)*`.
-/// A blank line or a final line break saves it; nu counts the `|` as the last token only then.
+/// Nu counts the `|` as the last token only where no blank line or final line break follows it.
 /// Where the parser skips a line break, nu drops every comment too.
 pub(super) fn pipe_ends_file(p: &Parser<'_>) -> bool {
     if p.is_skipped(SyntaxKind::Newline) {
@@ -108,7 +102,7 @@ pub(super) fn pipe_ends_file(p: &Parser<'_>) -> bool {
     kinds.next().is_none()
 }
 
-/// A `;` right after it is left to `SemicolonAfterPipe`.
+/// A `;` right after the `|` is left to `SemicolonAfterPipe`.
 fn pipe_ends_assigned(p: &Parser<'_>, assigned: Assigned) -> bool {
     match assigned {
         Assigned::No => false,
@@ -133,10 +127,7 @@ pub(super) fn next_line_starts_with_pipe(p: &Parser<'_>) -> bool {
     line_start(&mut next_lines(p)) == Some(SyntaxKind::Pipe)
 }
 
-/// After a `|` at the end of a line, the pipeline goes on at the next line, past any comment lines.
-/// A blank line ends it, unless a line-start `|` joins that blank line.
-/// `;` ends it too, and nu rejects it after `|` anyway.
-/// Ending there keeps the newline out of the pipeline, which must not end with trivia.
+/// A line break the pipeline does not go past stays out of it, as a node must not end with trivia.
 fn line_end_continuation(p: &mut Parser<'_>) {
     if p.peek() == Some(SyntaxKind::Newline) && next_line_continues(p) {
         bump_newlines(p);
@@ -159,8 +150,6 @@ fn next_lines(p: &Parser<'_>) -> impl Iterator<Item = SyntaxKind> {
         .skip(1)
 }
 
-/// The first token of a line, past any comment lines.
-/// `Newline` for a blank line, `None` at the end of the file.
 pub(super) fn line_start(lines: &mut impl Iterator<Item = SyntaxKind>) -> Option<SyntaxKind> {
     let mut first = lines.next();
     while first == Some(SyntaxKind::Comment) {
@@ -170,9 +159,7 @@ pub(super) fn line_start(lines: &mut impl Iterator<Item = SyntaxKind>) -> Option
     first
 }
 
-/// The tokens ahead up to the statement's end, each item read by `read_item`.
-/// `assigned` tells where the statement ends, as for a pipeline.
-/// After an assignment operator, nu's lite parser takes them all into one call.
+/// After an assignment operator, nu's lite parser takes the rest of the statement into one call.
 /// So a `|` or a redirection is an argument.
 /// So is `||`, which nu rejects only where it splits a pipeline.
 pub(super) fn rest_of_statement<'a>(
@@ -197,9 +184,7 @@ pub(super) fn bump_newlines(p: &mut Parser<'_>) {
     }
 }
 
-/// `first` is whether it is the first element, which is where nu declares a variable or an alias.
-/// `heads_pipeline` is whether no `|` came before it either.
-/// `assigned` tells where the statement ends, as for the pipeline.
+/// Nu declares a variable or an alias only in the first element.
 fn pipeline_element(
     p: &mut Parser<'_>,
     first: bool,
@@ -209,7 +194,6 @@ fn pipeline_element(
     p.start(SyntaxKind::PipelineElement);
     // Nu reads an attribute where a pipeline starts, or after a line break its lexer leaves.
     // It does so before it looks up an alias, even one of the same name.
-    // Where it returns `None`, `attributed` has read the attributes and leaves the command below.
     if attribute_ahead(p)
         && (heads_pipeline || p.last_unskipped_kind() == Some(SyntaxKind::Newline))
         && let Some(ended) = attributed(p, heads_pipeline, assigned)

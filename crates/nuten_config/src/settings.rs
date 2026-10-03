@@ -1,5 +1,3 @@
-//! The settings a config file may hold, and the `Config` they make.
-//!
 //! Each setting says what it takes and what it changes in a `Config`, in one place.
 //! The loader and the JSON Schema both read them from here.
 
@@ -15,35 +13,28 @@ use crate::{
 #[derive(Debug)]
 pub(crate) struct Setting {
     pub(crate) key: &'static str,
-    /// What an editor shows for the key.
     pub(crate) description: &'static str,
     pub(crate) kind: Kind,
-    /// Whether it may differ from file to file, and so be set in `overrides`.
     pub(crate) per_file: bool,
 }
 
 #[derive(Debug)]
 pub(crate) enum Kind {
-    /// Both ends included.
     Integer {
         min: i64,
         max: i64,
-        /// Takes an integer from `min` to `max`.
         set: fn(Config, i64) -> Config,
     },
     Choice(&'static [Choice]),
     Boolean {
         set: fn(Config, bool) -> Config,
     },
-    /// A list of glob patterns.
     Patterns {
         set: fn(Config, Patterns) -> Config,
     },
-    /// A list of records, each of settings for the files it picks.
     Overrides {
         set: fn(Config, Vec<Override>) -> Config,
     },
-    /// Any string, which changes nothing.
     String,
 }
 
@@ -267,7 +258,6 @@ pub(crate) static SETTINGS: [Setting; 10] = [
     },
 ];
 
-/// The keys of a record of `overrides` that pick its files, with what an editor shows for each.
 pub(crate) const PICKERS: [(&str, &str); 2] = [
     (
         "include",
@@ -281,18 +271,15 @@ pub(crate) const PICKERS: [(&str, &str); 2] = [
     ),
 ];
 
-/// A setting given a value it takes.
 #[derive(Debug, Clone)]
 pub(crate) struct Change {
     setting: &'static Setting,
     given: Given,
 }
 
-/// The value a setting is given, in the form it takes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Given {
     Integer(i64),
-    /// The name of the choice.
     Choice(&'static str),
     Boolean(bool),
     Patterns(Patterns),
@@ -345,7 +332,6 @@ impl Change {
     }
 }
 
-/// Settings for the files some patterns pick.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Override {
     include: Patterns,
@@ -358,7 +344,6 @@ impl Override {
         self.include.matches_file(place) && !self.exclude.matches_file_or_ancestor(place)
     }
 
-    /// Whether the patterns need the directory they are relative to, as those of a `Config` may.
     pub(crate) fn needs_root(&self) -> bool {
         self.include.has_anchored() || !self.exclude.is_empty()
     }
@@ -403,7 +388,6 @@ fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
     })
 }
 
-/// The value `setting` is given in `value`, or the errors that keep it from taking `value`.
 fn given(setting: &'static Setting, value: &Value) -> Result<Given, Vec<ConfigError>> {
     let at_value = |kind| error(kind, value.range);
     let wrong_type = |expected| {
@@ -502,7 +486,6 @@ fn given(setting: &'static Setting, value: &Value) -> Result<Given, Vec<ConfigEr
     }
 }
 
-/// The override in the record of `fields`, which is at `range`.
 fn override_of(fields: &[Field], range: TextRange) -> Result<Override, Vec<ConfigError>> {
     let changes = value::all(fields.iter().map(override_change))?;
     let patterns_of = |key| {
@@ -531,7 +514,6 @@ fn is_picker(key: &str) -> bool {
     PICKERS.iter().any(|(picker, _)| *picker == key)
 }
 
-/// A setting of `field` in a record of `overrides`, or a picker of the record.
 fn override_change(field: &Field) -> Result<Change, Vec<ConfigError>> {
     let change = change(field)?;
     if change.setting.per_file || is_picker(change.setting.key) {
@@ -544,7 +526,6 @@ fn override_change(field: &Field) -> Result<Change, Vec<ConfigError>> {
     }
 }
 
-/// The error is at each value that is no string, or else at each pattern with a problem.
 fn patterns(key: &'static str, values: &[Value]) -> Result<Patterns, Vec<ConfigError>> {
     let written = value::all(values.iter().map(|value| match &value.kind {
         ValueKind::String(pattern) => Ok(pattern.as_str()),
