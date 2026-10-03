@@ -22,7 +22,9 @@
 //! It exits with 1 too when a file breaks an invariant.
 //! It exits with 2 when the arguments name no `.nu` or `.nuon` file.
 //! It formats with the defaults, or with the config file `--config` names.
-//! It exits with 2 too when that file cannot be loaded.
+//! It formats with each of `nuten_format::invariants::VARIANTS` of that config too.
+//! A failure with one of those names it.
+//! It exits with 2 too when the config file cannot be loaded.
 //!
 //! `compare` asks about a file and the version of it that any formatter wrote.
 //! It exits with 1 when either cannot be read, or their ASTs differ.
@@ -69,7 +71,7 @@ struct Format {
     /// Skip files larger than this many bytes
     #[usage(long, default = "524288")]
     max_size: u64,
-    /// Config file to format with, instead of the defaults
+    /// Config file to format with, and to make the variants from, instead of the defaults
     #[usage(long)]
     config: Option<PathBuf>,
     /// Files, and directories to search for `.nu` and `.nuon` files
@@ -209,17 +211,17 @@ fn check(path: &Path, max_size: u64, config: &Config) -> Result<Checked, String>
         },
         Err(error) => return Err(error.to_string()),
     };
-    let output = formatted(&src, config)?;
+    let outputs = formatted(&src, config)?;
     if path
         .extension()
         .is_some_and(|extension| extension == "nuon")
     {
-        return nuon::check(&src, output.as_deref(), dir_of(path));
+        return nuon::check(&src, outputs.as_deref(), dir_of(path));
     }
-    let Some(output) = output else {
+    let Some(outputs) = outputs else {
         return rejection_verdict(nu::parse_error(&src, dir_of(path))?);
     };
-    same_ast(&src, &output, dir_of(path)).map(|()| Checked::Passed)
+    same_asts(&src, &outputs, dir_of(path)).map(|()| Checked::Passed)
 }
 
 /// Nuten rejects the file, so nu must report an error too, or nuten rejects what nu reads.
@@ -234,12 +236,78 @@ fn rejection_verdict(nu_error: Option<String>) -> Result<Checked, String> {
     }
 }
 
-/// The output of formatting `src`, or `None` when its syntax errors leave none.
-/// Fails, in one line, when an invariant is broken, whether or not `src` has syntax errors.
-fn formatted(src: &str, config: &Config) -> Result<Option<String>, String> {
-    let checked = invariants::check(src, config);
-    invariants_kept(&checked)?;
-    Ok(checked.output)
+/// What formatting gives with the config given or with one of its variants.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Output {
+    text: String,
+    /// The name of the variant, or `None` for the config given.
+    variant: Option<&'static str>,
+}
+
+/// `problem`, naming the variant it comes with, if any.
+fn labeled(variant: Option<&str>, problem: String) -> String {
+    match variant {
+        Some(name) => format!("with {name}: {problem}"),
+        None => problem,
+    }
+}
+
+/// The outputs of formatting `src` with `config` and its variants that nu needs asking about.
+/// `None` when the syntax errors of `src` leave none, which they do with any config alike.
+/// Fails, in one line, when any breaks an invariant, whether or not `src` has syntax errors.
+/// It fails too when some configs give output and others do not.
+/// Asking nu costs a process each time, so every config is checked for the invariants first.
+fn formatted(src: &str, config: &Config) -> Result<Option<Vec<Output>>, String> {
+    let configs = [(None, config.clone())].into_iter().chain(
+        invariants::VARIANTS
+            .iter()
+            .map(|variant| (Some(variant.name), variant.of(config))),
+    );
+    let outputs = configs
+        .map(|(variant, config)| {
+            // Catching here names the variant; the panic hook has printed the message already.
+            let checked = panic::catch_unwind(|| invariants::check(src, &config))
+                .map_err(|_| labeled(variant, "nuten panics".to_string()))?;
+            kept_output(checked, variant)
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    if outputs.iter().all(Option::is_none) {
+        return Ok(None);
+    }
+    let outputs = outputs
+        .into_iter()
+        .collect::<Option<Vec<_>>>()
+        .ok_or("nuten gives output with some configs only")?;
+    Ok(Some(distinct(src, &outputs)))
+}
+
+/// The output of `checked`, with the variant it comes with.
+/// Fails, in one line naming the variant, when `checked` has violations.
+fn kept_output(
+    checked: invariants::Checked,
+    variant: Option<&'static str>,
+) -> Result<Option<Output>, String> {
+    invariants_kept(&checked).map_err(|problem| labeled(variant, problem))?;
+    Ok(checked.output.map(|text| Output {
+        text,
+        variant,
+    }))
+}
+
+/// `outputs` without those whose text is `src` or that of one before them.
+/// Nu parses the same text into the same AST, so only the first of each needs asking about.
+fn distinct(src: &str, outputs: &[Output]) -> Vec<Output> {
+    outputs
+        .iter()
+        .enumerate()
+        .filter(|&(index, output)| {
+            output.text != src
+                && outputs[..index]
+                    .iter()
+                    .all(|earlier| earlier.text != output.text)
+        })
+        .map(|(_, output)| output.clone())
+        .collect()
 }
 
 /// Fails, in one line, when `checked` has violations.
@@ -262,22 +330,45 @@ fn same_ast(before: &str, after: &str, dir: Option<&Path>) -> Result<(), String>
     if before == after {
         return Ok(());
     }
-    let before = nu::ast(before, dir)?;
-    let after = nu::ast(after, dir).map_err(|error| format!("after formatting, {error}"))?;
-    match ast::difference(&before, &after)? {
-        Some(difference) => Err(difference),
-        None => Ok(()),
+    let after = Output {
+        text: after.to_string(),
+        variant: None,
+    };
+    same_asts(before, &[after], dir)
+}
+
+/// Fails, in one line, when nu parses any of `outputs` unlike `before`.
+/// It fails too when nu cannot parse `before` or one of them.
+/// Asking nu costs a process each time, so nu parses `before` once, and not at all without outputs.
+fn same_asts(before: &str, outputs: &[Output], dir: Option<&Path>) -> Result<(), String> {
+    if outputs.is_empty() {
+        return Ok(());
     }
+    let before = nu::ast(before, dir)?;
+    outputs.iter().try_for_each(|output| {
+        nu::ast(&output.text, dir)
+            .map_err(|error| format!("after formatting, {error}"))
+            .and_then(|after| match ast::difference(&before, &after)? {
+                Some(difference) => Err(difference),
+                None => Ok(()),
+            })
+            .map_err(|problem| labeled(output.variant, problem))
+    })
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use nuten_format::{
-        Config,
+        Config, format,
         invariants::{self, Violation},
     };
 
-    use super::{Checked, formatted, invariants_kept, rejection_verdict};
+    use super::{
+        Checked, Output, distinct, formatted, invariants_kept, kept_output, labeled,
+        rejection_verdict, same_ast, same_asts,
+    };
 
     fn violation(detail: &str) -> Violation {
         Violation {
@@ -286,12 +377,76 @@ mod tests {
         }
     }
 
+    fn output(text: &str, variant: Option<&'static str>) -> Output {
+        Output {
+            text: text.to_string(),
+            variant,
+        }
+    }
+
+    /// Nu cannot start in a directory that does not exist, so asking it there fails.
+    fn nowhere() -> &'static Path {
+        Path::new("/nonexistent")
+    }
+
     #[test]
-    fn file_keeping_invariants_gives_its_output() {
+    fn file_keeping_invariants_gives_outputs_of_config_given_and_of_its_variants() {
+        let given = Config {
+            indent_width: 2,
+            ..Config::default()
+        };
+        let src = "[a,b]\n";
+        let variants = invariants::VARIANTS
+            .iter()
+            .map(|variant| (Some(variant.name), variant.of(&given)));
+        let outputs: Vec<_> = [(None, given.clone())]
+            .into_iter()
+            .chain(variants)
+            .map(|(variant, config)| output(&format(src, &config).unwrap(), variant))
+            .collect();
+        assert_eq!(formatted(src, &given), Ok(Some(distinct(src, &outputs))));
+    }
+
+    #[test]
+    fn outputs_same_as_source_or_earlier_one_are_dropped() {
+        let outputs = [
+            output("a", None),
+            output("b", Some("x")),
+            output("b", Some("y")),
+            output("c", Some("z")),
+        ];
         assert_eq!(
-            formatted("ls|length\n", &Config::default()),
-            Ok(Some("ls | length\n".to_string()))
+            distinct("a", &outputs),
+            [output("b", Some("x")), output("c", Some("z"))]
         );
+    }
+
+    #[test]
+    fn problem_with_variant_names_it() {
+        assert_eq!(labeled(Some("v"), "p".to_string()), "with v: p");
+        assert_eq!(labeled(None, "p".to_string()), "p");
+    }
+
+    #[test]
+    fn violations_with_variant_fail_naming_it() {
+        let checked = invariants::Checked {
+            violations: vec![violation("a")],
+            ..invariants::check("ls\n", &Config::default())
+        };
+        assert_eq!(
+            kept_output(checked, Some("v")).unwrap_err(),
+            "with v: comment preservation: a"
+        );
+    }
+
+    #[test]
+    fn no_outputs_leave_nu_unasked() {
+        assert_eq!(same_asts("ls", &[], Some(nowhere())), Ok(()));
+    }
+
+    #[test]
+    fn same_texts_leave_nu_unasked() {
+        assert_eq!(same_ast("(", "(", Some(nowhere())), Ok(()));
     }
 
     #[test]

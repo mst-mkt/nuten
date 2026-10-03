@@ -9,17 +9,18 @@ use nuten_config::{
     value::{Value, ValueKind},
 };
 
-use crate::{Checked, ast, nu, same_ast};
+use crate::{Checked, Output, ast, labeled, nu, same_asts};
 
-/// `output` is what formatting `src` gives, or `None` where syntax errors leave none.
+/// `outputs` are those of formatting `src` that nu needs asking about.
+/// They are `None` where syntax errors leave none.
 /// `dir` is the directory nu parses `src` in.
 pub(crate) fn check(
     src: &str,
-    output: Option<&str>,
+    outputs: Option<&[Output]>,
     dir: Option<&Path>,
 ) -> Result<Checked, String> {
-    // Without output there is nothing to ask about formatting, but the readers may still disagree.
-    let formatting = output.map(|output| same_value(src, output, dir));
+    // Without outputs there is nothing to ask about formatting, but the readers may still disagree.
+    let formatting = outputs.map(|outputs| same_values(src, outputs, dir));
     let reading = reading_verdict(nuten_config::read(src, Format::Nuon), nu::from_nuon(src));
     outcome(formatting, reading)
 }
@@ -40,17 +41,26 @@ fn outcome(
     }
 }
 
-/// Fails, in one line, when nu reads `before` and `after` into different values, or reads only one.
+/// Fails, in one line, when nu reads any of `outputs` unlike `before`.
+/// It fails too when nu reads only one of `before` and an output.
 /// Where nu rejects both as NUON, the file is still nu code, so formatting must keep its AST.
-fn same_value(before: &str, after: &str, dir: Option<&Path>) -> Result<(), String> {
-    // Nu reads the same text into the same value.
-    if before == after {
+/// Asking nu costs a process each time, so nu reads `before` once, and not at all without outputs.
+fn same_values(before: &str, outputs: &[Output], dir: Option<&Path>) -> Result<(), String> {
+    if outputs.is_empty() {
         return Ok(());
     }
-    match formatting_verdict(nu::value_as_nuon(before), nu::value_as_nuon(after))? {
-        Read::SameValue => Ok(()),
-        Read::Rejected => same_ast(before, after, dir),
-    }
+    let value = nu::value_as_nuon(before);
+    let rejected = outputs
+        .iter()
+        .filter_map(|output| {
+            match formatting_verdict(value.clone(), nu::value_as_nuon(&output.text)) {
+                Ok(Read::SameValue) => None,
+                Ok(Read::Rejected) => Some(Ok(output.clone())),
+                Err(problem) => Some(Err(labeled(output.variant, problem))),
+            }
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    same_asts(before, &rejected, dir)
 }
 
 /// What nu reads before and after formatting, where the two agree.
@@ -273,11 +283,20 @@ mod tests {
         value::{Value, ValueKind},
     };
 
-    use super::{Read, formatting_verdict, outcome, reading_verdict, same_scalar, same_value};
-    use crate::{Checked, nu};
+    use super::{Read, formatting_verdict, outcome, reading_verdict, same_scalar, same_values};
+    use crate::{Checked, Output, nu};
 
     fn nuten(src: &str) -> Result<Value, Vec<ConfigError>> {
         read(src, Format::Nuon)
+    }
+
+    /// `same_values` with `after` as the only output, that of the config given.
+    fn same_value(before: &str, after: &str) -> Result<(), String> {
+        let after = Output {
+            text: after.to_string(),
+            variant: None,
+        };
+        same_values(before, &[after], None)
     }
 
     /// What nu writes, or why it fails, as the verdicts take it.
@@ -420,7 +439,7 @@ mod tests {
             return;
         }
         assert_eq!(
-            same_value("2024-01-01", "\"2024-01-01T00:00:00+00:00\"", None).unwrap_err(),
+            same_value("2024-01-01", "\"2024-01-01T00:00:00+00:00\"").unwrap_err(),
             concat!(
                 r#"the value differs from byte 0: "2024-01-01T00:00:00+00:00" "#,
                 r#"becomes "\"2024-01-01T00:00:00+00:00\"""#
@@ -433,7 +452,7 @@ mod tests {
         if nu_missing() {
             return;
         }
-        assert_eq!(same_value("1kb", "1000b", None), Ok(()));
+        assert_eq!(same_value("1kb", "1000b"), Ok(()));
     }
 
     #[test]
@@ -441,12 +460,37 @@ mod tests {
         if nu_missing() {
             return;
         }
-        let error = same_value("{a: 1} | length", "{a: 1}; length", None).unwrap_err();
+        let error = same_value("{a: 1} | length", "{a: 1}; length").unwrap_err();
         assert!(error.contains("the AST differs"), "{error}");
-        assert_eq!(
-            same_value("{a: 1} | length", "{a: 1}  | length", None),
-            Ok(())
-        );
+        assert_eq!(same_value("{a: 1} | length", "{a: 1}  | length"), Ok(()));
+    }
+
+    #[test]
+    fn failure_with_variant_names_it() {
+        if nu_missing() {
+            return;
+        }
+        let output = |text: &str, variant| Output {
+            text: text.to_string(),
+            variant,
+        };
+        let error = same_values(
+            "[1]",
+            &[output("[1 ]", None), output("[2]", Some("v"))],
+            None,
+        )
+        .unwrap_err();
+        assert!(error.starts_with("with v: the value differs"), "{error}");
+        let error = same_values(
+            "{a: 1} | length",
+            &[
+                output("{a: 1}  | length", None),
+                output("{a: 1}; length", Some("v")),
+            ],
+            None,
+        )
+        .unwrap_err();
+        assert!(error.starts_with("with v: the AST differs"), "{error}");
     }
 
     /// `describe -d` of a record whose fields are `columns`, as JSON.
