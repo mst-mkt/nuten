@@ -96,11 +96,11 @@
         system:
         let
           vp = inputs.nix-vite-plus.packages.${system}.vp.override { nodejs = nodejs.${system}; };
-          wanted = (inputs.nixpkgs.lib.importJSON ../package.json).devDependencies.vite-plus;
+          wanted = (inputs.nixpkgs.lib.importJSON ../../package.json).devDependencies.vite-plus;
         in
         assert inputs.nixpkgs.lib.assertMsg (
           vp.version == wanted
-        ) "vite-plus in dev/flake.lock (${vp.version}) differs from package.json (${wanted})";
+        ) "vite-plus in nix/dev/flake.lock (${vp.version}) differs from package.json (${wanted})";
         vp
       );
 
@@ -182,7 +182,7 @@
           ];
         in
         inputs.git-hooks.lib.${system}.run {
-          src = ./..;
+          src = ./../..;
           hooks = {
             treefmt = {
               enable = true;
@@ -328,7 +328,7 @@
                     ]
                   ))
                 ];
-              } "/bin/nuten-test-nu" ../scripts/test-nu.nu
+              } "/bin/nuten-test-nu" ../../scripts/test-nu.nu
             );
             meta.description = "Run the tests written in nu";
           };
@@ -336,7 +336,7 @@
       );
 
       checks = forAllSystems (system: {
-        treefmt = treefmtEval.${system}.config.build.check (inputs.nixpkgs.lib.cleanSource ./..);
+        treefmt = treefmtEval.${system}.config.build.check (inputs.nixpkgs.lib.cleanSource ./../..);
       });
 
       formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);

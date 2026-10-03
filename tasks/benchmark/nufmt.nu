@@ -4,7 +4,7 @@
 use cpus.nu [allowed-cpus, fastest-allowed-cpu]
 
 const REPOSITORY = path self ../..
-const LOCK = path self ../../dev/flake.lock
+const LOCK = path self ../../nix/dev/flake.lock
 
 # Prints which files the comparison takes, which each formatter leaves out and why, how both fare on the files compared, and the versions and machine behind the numbers.
 def main [

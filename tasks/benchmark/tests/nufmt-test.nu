@@ -5,7 +5,7 @@ use ../cpus.nu [allowed-cpus, fastest-allowed-cpu]
 source ../nufmt.nu
 
 const NUFMT = path self ../nufmt.nu
-const DEV_LOCK = path self ../../../dev/flake.lock
+const DEV_LOCK = path self ../../../nix/dev/flake.lock
 
 @before-each
 def setup []: nothing -> record {
