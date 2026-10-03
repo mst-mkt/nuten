@@ -34,7 +34,7 @@ let
     commonArgs
     // {
       inherit cargoArtifacts;
-      doCheck = false; # Tested by the nextest check
+      doCheck = false; # Tested by nuten-nextest
       cargoExtraArgs = "--locked --package nuten";
       meta = {
         description = "Formatter for Nushell";
@@ -49,15 +49,22 @@ in
   inherit package;
 
   checks = {
-    build = package;
-    clippy = craneLib.cargoClippy (
+    nuten = package;
+    nuten-clippy = craneLib.cargoClippy (
       commonArgs
       // {
         inherit cargoArtifacts;
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
       }
     );
-    nextest = craneLib.cargoNextest (
+    nuten-doc = craneLib.cargoDoc (
+      commonArgs
+      // {
+        inherit cargoArtifacts;
+        env.RUSTDOCFLAGS = "--deny warnings";
+      }
+    );
+    nuten-nextest = craneLib.cargoNextest (
       commonArgs
       // {
         inherit cargoArtifacts;
@@ -67,13 +74,6 @@ in
           NUTEN_TEST_SKIP_NU = "1"; # No nu in the sandbox
           NUTEN_TEST_SKIP_CORPUS = "1"; # No corpus in the sandbox
         };
-      }
-    );
-    doc = craneLib.cargoDoc (
-      commonArgs
-      // {
-        inherit cargoArtifacts;
-        env.RUSTDOCFLAGS = "--deny warnings";
       }
     );
   };
