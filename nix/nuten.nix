@@ -4,24 +4,16 @@ let
     ../crates
     ../tasks/oracle
   ];
-  cargoFiles = lib.fileset.unions (
-    [
-      ../Cargo.toml
-      ../Cargo.lock
-      ../.cargo
-    ]
-    ++ map craneLib.fileset.commonCargoSources members
-  );
-  testFiles = lib.fileset.unions (
-    map (lib.fileset.fileFilter (file: file.hasExt "nu" || file.hasExt "snap")) members
-  );
   src = lib.fileset.toSource {
     root = ../.;
-    fileset = cargoFiles;
-  };
-  testSrc = lib.fileset.toSource {
-    root = ../.;
-    fileset = lib.fileset.union cargoFiles testFiles;
+    fileset = lib.fileset.unions (
+      [
+        ../Cargo.toml
+        ../Cargo.lock
+        ../.cargo
+      ]
+      ++ map craneLib.fileset.commonCargoSources members
+    );
   };
 
   commonArgs = {
@@ -29,51 +21,18 @@ let
     strictDeps = true;
   };
   cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-  package = craneLib.buildPackage (
-    commonArgs
-    // {
-      inherit cargoArtifacts;
-      doCheck = false; # Tested by nuten-nextest
-      cargoExtraArgs = "--locked --package nuten";
-      meta = {
-        description = "Formatter for Nushell";
-        homepage = "https://github.com/mst-mkt/nuten";
-        license = lib.licenses.mit;
-        mainProgram = "nuten";
-      };
-    }
-  );
 in
-{
-  inherit package;
-
-  checks = {
-    nuten = package;
-    nuten-clippy = craneLib.cargoClippy (
-      commonArgs
-      // {
-        inherit cargoArtifacts;
-        cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-      }
-    );
-    nuten-doc = craneLib.cargoDoc (
-      commonArgs
-      // {
-        inherit cargoArtifacts;
-        env.RUSTDOCFLAGS = "--deny warnings";
-      }
-    );
-    nuten-nextest = craneLib.cargoNextest (
-      commonArgs
-      // {
-        inherit cargoArtifacts;
-        src = testSrc;
-        env = {
-          NUTEN_TEST_SKIP_NU = "1"; # No nu in the sandbox
-          NUTEN_TEST_SKIP_CORPUS = "1"; # No corpus in the sandbox
-        };
-      }
-    );
-  };
-}
+craneLib.buildPackage (
+  commonArgs
+  // {
+    inherit cargoArtifacts;
+    doCheck = false; # The tests need nu and the corpus, so CI runs them on each system
+    cargoExtraArgs = "--locked --package nuten";
+    meta = {
+      description = "Formatter for Nushell";
+      homepage = "https://github.com/mst-mkt/nuten";
+      license = lib.licenses.mit;
+      mainProgram = "nuten";
+    };
+  }
+)

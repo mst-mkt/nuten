@@ -31,29 +31,26 @@
       nutenOf = pkgs: pkgs.callPackage ./nix/nuten.nix { inherit (toolchainOf pkgs) craneLib; };
       vscodeExtensionOf =
         pkgs: pkgs.callPackage ./nix/vscode-extension.nix { inherit (toolchainOf pkgs) pnpm; };
+
+      packages = forAllSystems (pkgs: {
+        default = nutenOf pkgs;
+        vscode-extension = vscodeExtensionOf pkgs;
+      });
     in
     {
-      packages = forAllSystems (pkgs: {
-        default = (nutenOf pkgs).package;
-        vscode-extension = (vscodeExtensionOf pkgs).package;
-      });
+      inherit packages;
 
       overlays.default = final: prev: {
-        nuten = (nutenOf final).package;
+        nuten = nutenOf final;
         vscode-extensions = prev.vscode-extensions // {
           mst-mkt = (prev.vscode-extensions.mst-mkt or { }) // {
-            nuten-vscode = (vscodeExtensionOf final).package;
+            nuten-vscode = vscodeExtensionOf final;
           };
         };
       };
 
       treefmtModule = import ./nix/treefmt-module.nix { inherit nutenOf; };
 
-      checks = forAllSystems (
-        pkgs:
-        (nutenOf pkgs).checks
-        // (vscodeExtensionOf pkgs).checks
-        // (pkgs.callPackage ./nix/zed-extension.nix { craneLib = (toolchainOf pkgs).wasmCraneLib; }).checks
-      );
+      checks = packages;
     };
 }

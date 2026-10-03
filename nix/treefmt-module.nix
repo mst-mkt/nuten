@@ -34,7 +34,7 @@ in
   };
 
   config = {
-    programs.nuten.package = lib.mkDefault (nutenOf pkgs).package;
+    programs.nuten.package = lib.mkDefault (nutenOf pkgs);
     settings.formatter.nuten.options = lib.mkIf (cfg.enable && cfg.settings != { }) [
       "--config"
       (toString configFile)

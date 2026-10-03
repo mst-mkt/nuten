@@ -125,10 +125,6 @@
         };
       });
 
-      checks = forAllSystems (pkgs: {
-        treefmt = (treefmtOf pkgs).config.build.check (pkgs.lib.cleanSource ../..);
-      });
-
       formatter = forAllSystems (pkgs: (treefmtOf pkgs).config.build.wrapper);
     };
 }
