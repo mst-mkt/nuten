@@ -46,7 +46,7 @@ use std::{
     process::ExitCode,
 };
 
-use nuten_format::{Config, format, invariants};
+use nuten_format::{Config, invariants};
 use usage::{Args, Cli, Subcommands};
 
 #[derive(Cli)]
@@ -239,13 +239,7 @@ fn rejection_verdict(nu_error: Option<String>) -> Result<Checked, String> {
 fn formatted(src: &str, config: &Config) -> Result<Option<String>, String> {
     let checked = invariants::check(src, config);
     invariants_kept(&checked)?;
-    if !checked.syntax_errors.is_empty() {
-        return Ok(None);
-    }
-    let Ok(output) = format(src, config) else {
-        unreachable!("the source has no syntax errors")
-    };
-    Ok(Some(output))
+    Ok(checked.output)
 }
 
 /// Fails, in one line, when `checked` has violations.

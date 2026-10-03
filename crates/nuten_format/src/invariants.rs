@@ -65,30 +65,30 @@ pub struct Checked {
     pub violations: Vec<Violation>,
     /// The syntax errors of the source, which leave no output to ask about.
     pub syntax_errors: Vec<ParseError>,
+    /// What the source formats to, where it has no syntax errors and the parser breaks nothing.
+    pub output: Option<String>,
 }
 
 pub fn check(src: &str, config: &Config) -> Checked {
     let parsed = parse(src);
-    Checked {
-        violations: violations(src, &parsed, config),
-        syntax_errors: parsed.errors().to_vec(),
-    }
-}
-
-/// `parsed` is the tree of `src`.
-fn violations(src: &str, parsed: &Parsed, config: &Config) -> Vec<Violation> {
     // The rules read a tree that keeps the invariants of the parser.
     // What the formatter makes of one that does not says nothing.
-    let broken = nuten_parser::invariants::violations(src, parsed);
-    if !broken.is_empty() {
-        return broken;
-    }
+    let broken = nuten_parser::invariants::violations(src, &parsed);
     // `format_parsed` fails only on syntax errors, which leave no output.
     // `Checked` reports them on their own.
-    let Ok(output) = format_parsed(src, parsed, config) else {
-        return Vec::new();
+    let output = broken
+        .is_empty()
+        .then(|| format_parsed(src, &parsed, config).ok())
+        .flatten();
+    let violations = match &output {
+        Some(output) => against_output(&parsed.syntax(), output, config),
+        None => broken,
     };
-    against_output(&parsed.syntax(), &output, config)
+    Checked {
+        violations,
+        syntax_errors: parsed.errors().to_vec(),
+        output,
+    }
 }
 
 fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Violation> {
@@ -307,8 +307,8 @@ fn mismatch<T: PartialEq>(a: &[T], b: &[T]) -> usize {
 mod tests {
     use nuten_parser::parse;
 
-    use super::{Checked, Invariant, Violation, against_output, check};
-    use crate::{Config, LineEnding, ParseErrorKind};
+    use super::{Invariant, Violation, against_output, check};
+    use crate::{Config, LineEnding, ParseError, ParseErrorKind};
 
     fn formatter_violations(src: &str, output: &str) -> Vec<Violation> {
         against_output(&parse(src).syntax(), output, &Config::default())
@@ -321,13 +321,11 @@ mod tests {
             .collect()
     }
 
-    /// The syntax errors count too.
-    /// A source that has them leaves the violations of the formatter unasked, and so empty.
-    fn nothing() -> Checked {
-        Checked {
-            violations: vec![],
-            syntax_errors: vec![],
-        }
+    /// What `check` reports about `src`, its output aside.
+    /// The syntax errors come too, since a source that has them leaves the formatter unasked.
+    fn reported(src: &str, config: &Config) -> (Vec<Violation>, Vec<ParseError>) {
+        let checked = check(src, config);
+        (checked.violations, checked.syntax_errors)
     }
 
     #[test]
@@ -343,20 +341,33 @@ mod tests {
             "ls |\n# c\n\n| first\n",
             "ls\r\n# c\r\n\r\nls\r\n",
         ] {
-            assert_eq!(check(src, &Config::default()), nothing(), "{src:?}");
+            assert_eq!(
+                reported(src, &Config::default()),
+                (vec![], vec![]),
+                "{src:?}"
+            );
         }
         let crlf = Config {
             line_ending: LineEnding::CrLf,
             ..Config::default()
         };
-        assert_eq!(check("ls\r\n# c\r\n\r\nls\r\n", &crlf), nothing());
+        assert_eq!(reported("ls\r\n# c\r\n\r\nls\r\n", &crlf), (vec![], vec![]));
     }
 
     #[test]
-    fn file_with_syntax_errors_leaves_no_violations() {
+    fn file_without_syntax_errors_gives_its_output() {
+        assert_eq!(
+            check("ls|length\n", &Config::default()).output.as_deref(),
+            Some("ls | length\n")
+        );
+    }
+
+    #[test]
+    fn file_with_syntax_errors_leaves_no_violations_and_no_output() {
         let checked = check("ls |", &Config::default());
         assert_eq!(checked.syntax_errors[0].kind, ParseErrorKind::PipeAtEof);
         assert_eq!(checked.violations, []);
+        assert_eq!(checked.output, None);
     }
 
     #[test]
