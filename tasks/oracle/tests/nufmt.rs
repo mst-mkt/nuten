@@ -1,5 +1,6 @@
 //! Checks the cases of `test_data/nufmt` for what needs no nu, so that it runs without nu too.
 //! A case must parse, since the oracle skips a file with syntax errors that nu rejects too.
+//! It must keep the invariants with the default and with each of `invariants::VARIANTS` of it.
 
 use std::{fs, path::Path};
 
@@ -19,19 +20,28 @@ fn nufmt_cases_parse_and_keep_invariants() {
     let problems: Vec<_> = paths
         .iter()
         .flat_map(|path| {
-            let checked = invariants::check(&fs::read_to_string(path).unwrap(), &config);
+            let src = fs::read_to_string(path).unwrap();
             let name = path.file_name().unwrap().display().to_string();
-            let violations = checked
-                .violations
-                .into_iter()
-                .map(|violation| violation.to_string());
+            let checked = invariants::check(&src, &config);
             let errors = checked
                 .syntax_errors
                 .into_iter()
                 .map(|error| format!("syntax error: {}", error.kind));
-            violations
-                .chain(errors)
+            let violations = checked
+                .violations
+                .into_iter()
+                .map(|violation| violation.to_string());
+            let variant_violations = invariants::VARIANTS.iter().flat_map(|variant| {
+                invariants::check(&src, &variant.of(&config))
+                    .violations
+                    .into_iter()
+                    .map(move |violation| format!("with {}: {violation}", variant.name))
+            });
+            errors
+                .chain(violations)
+                .chain(variant_violations)
                 .map(move |problem| format!("{name}: {problem}"))
+                .collect::<Vec<_>>()
         })
         .collect();
     assert!(problems.is_empty(), "{}", problems.join("\n"));

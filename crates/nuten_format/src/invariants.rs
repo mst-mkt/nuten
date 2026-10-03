@@ -3,6 +3,7 @@
 //! A fixture has an expected output; any other input has only these.
 //! The output keeps every token and every comment, and formatting it again changes nothing.
 //! What the parser must keep is in `nuten_parser::invariants`, and `check` asks those first.
+//! `VARIANTS` make the configs to check every invariant with, besides the one given.
 
 use std::fmt;
 
@@ -10,7 +11,7 @@ pub use nuten_parser::invariants::Violation;
 use nuten_parser::{Parsed, parse};
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 
-use crate::{Config, ParseError, format_parsed};
+use crate::{Commas, Config, IndentStyle, ParseError, format_parsed};
 
 /// One property of the formatter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -90,6 +91,52 @@ pub fn check(src: &str, config: &Config) -> Checked {
         output,
     }
 }
+
+/// How to make a config from another, to check besides it.
+#[derive(Debug, Clone, Copy)]
+pub struct Variant {
+    /// What it changes, to tell a violation with it from one with the other.
+    pub name: &'static str,
+    change: fn(Config) -> Config,
+}
+
+impl Variant {
+    pub fn of(&self, config: &Config) -> Config {
+        (self.change)(config.clone())
+    }
+}
+
+/// The rules break groups by the width left, which few inputs run out of at the defaults.
+/// At line width 1 each group breaks wherever it can.
+/// At 40 some groups break beside others that fit.
+/// Indenting with tabs takes a path of the printer of its own.
+/// Those two keep the `commas` of the config given, so that groups break under each setting of it.
+/// Without `,`s, groups that fit on one line drop theirs too.
+/// Only the nu oracle tells whether nu still reads the items apart.
+pub const VARIANTS: &[Variant] = &[
+    Variant {
+        name: "line width 1",
+        change: |config| Config {
+            line_width: 1,
+            ..config
+        },
+    },
+    Variant {
+        name: "line width 40, tabs",
+        change: |config| Config {
+            line_width: 40,
+            indent_style: IndentStyle::Tab,
+            ..config
+        },
+    },
+    Variant {
+        name: "no commas",
+        change: |config| Config {
+            commas: Commas::None,
+            ..config
+        },
+    },
+];
 
 fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Violation> {
     let parsed = parse(output);
