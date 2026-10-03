@@ -46,9 +46,9 @@ export default defineConfig({
         input: [{ auto: true }, "!dist/*.vsix"],
       },
       test: {
-        command: "vscode-test",
+        command: "nix develop ../../nix/dev#vscode-test --command vscode-test",
         dependsOn: ["build", "build:test", "build:nuten"],
-        cache: false,
+        output: [],
       },
     },
   },
