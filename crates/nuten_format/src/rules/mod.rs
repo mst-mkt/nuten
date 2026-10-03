@@ -351,6 +351,14 @@ fn spans_lines(token: &SyntaxToken) -> bool {
     token.kind() != SyntaxKind::Newline && token.text().contains('\n')
 }
 
+/// A line break inside an attribute block is not layout either, since nu takes it into the code.
+pub(crate) fn is_layout_line_break(token: &SyntaxToken) -> bool {
+    token.kind() == SyntaxKind::Newline
+        && !token
+            .parent_ancestors()
+            .any(|node| is_attribute_block(&node.into()))
+}
+
 /// `range` holds whole elements.
 fn exact_ranges(root: &SyntaxNode, range: TextRange) -> Vec<TextRange> {
     let within = match root.covering_element(range) {

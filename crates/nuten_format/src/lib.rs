@@ -5,7 +5,7 @@ pub use nuten_doc::IndentStyle;
 use nuten_doc::PrinterOptions;
 use nuten_parser::Parsed;
 pub use nuten_parser::{ParseError, ParseErrorKind};
-use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
+use nuten_syntax::{SyntaxElement, SyntaxNode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
@@ -57,14 +57,14 @@ fn printer_options(config: &Config, root: &SyntaxNode) -> PrinterOptions {
     }
 }
 
-/// Only a line break between tokens tells, since one inside a token stays as written.
+/// Only a line break that is layout tells, since the others stay as written.
 /// The first such break in the output is one the printer makes.
 /// So formatting the output again takes the same line ending.
 fn first_line_ending(root: &SyntaxNode) -> nuten_doc::LineEnding {
     let crlf = root
         .descendants_with_tokens()
         .filter_map(SyntaxElement::into_token)
-        .find(|token| token.kind() == SyntaxKind::Newline)
+        .find(rules::is_layout_line_break)
         .is_some_and(|newline| newline.text() == "\r\n");
     if crlf {
         nuten_doc::LineEnding::CrLf
