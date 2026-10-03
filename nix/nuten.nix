@@ -1,17 +1,19 @@
 { lib, craneLib }:
 let
-  cargoFiles = lib.fileset.difference (craneLib.fileset.commonCargoSources ../.) (
-    lib.fileset.unions [
-      # Separate workspaces
-      ../tasks/fuzz
-      ../editors/zed
+  members = [
+    ../crates
+    ../tasks/oracle
+  ];
+  cargoFiles = lib.fileset.unions (
+    [
+      ../Cargo.toml
+      ../Cargo.lock
+      ../.cargo
     ]
+    ++ map craneLib.fileset.commonCargoSources members
   );
   testFiles = lib.fileset.unions (
-    map (lib.fileset.fileFilter (file: file.hasExt "nu" || file.hasExt "snap")) [
-      ../crates
-      ../tasks/oracle
-    ]
+    map (lib.fileset.fileFilter (file: file.hasExt "nu" || file.hasExt "snap")) members
   );
   src = lib.fileset.toSource {
     root = ../.;
