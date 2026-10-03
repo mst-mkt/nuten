@@ -15,7 +15,10 @@ use super::{
     number::is_number,
     spread::{Target, is_spread},
 };
-use crate::lexer::{self, Mode};
+use crate::{
+    lexer::{self, Mode},
+    parser::MAX_DEPTH,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Takes {
@@ -409,8 +412,7 @@ fn param_of_type(text: &str) -> Option<Param> {
     };
     let members = names
         .iter()
-        .copied()
-        .map(reads)
+        .map(|&name| reads(name).filter(|_| is_known_type(name, 0)))
         .collect::<Option<Vec<_>>>()
         .filter(|members| !members.is_empty())?;
     // Nu takes the first type that reads the `[ ]` with no error.
@@ -453,6 +455,29 @@ fn reads(name: &str) -> Option<Reads> {
     })
 }
 
+/// Nu reports an unknown type at any depth, so one unknown part makes the whole type unknown.
+/// Past `MAX_DEPTH` the type stays unknown, since each level lexes the text inside it again.
+fn is_known_type(name: &str, depth: usize) -> bool {
+    let Some((generic, rest)) = name.split_once('<') else {
+        return name == "oneof" || reads(name).is_some();
+    };
+    let Some(inside) = rest.strip_suffix('>') else {
+        return false;
+    };
+    if depth == MAX_DEPTH {
+        return false;
+    }
+    let tokens = type_param_tokens(inside);
+    let params = match generic {
+        "list" | "oneof" => without_commas(&tokens),
+        "record" | "table" => field_types(&tokens),
+        _ => return false,
+    };
+    params
+        .into_iter()
+        .all(|param| is_known_type(param, depth + 1))
+}
+
 /// Lexes the inside of a `< >` as nu's `parse_type_params` and `parse_named_type_params` do.
 fn type_param_tokens(text: &str) -> Vec<(SyntaxKind, &str)> {
     lexer::tokens(text, TextRange::up_to(TextSize::of(text)), Mode::TypeParams)
@@ -467,6 +492,23 @@ fn without_commas<'a>(tokens: &[(SyntaxKind, &'a str)]) -> Vec<&'a str> {
         .filter(|&&(kind, _)| kind != SyntaxKind::Comma)
         .map(|&(_, text)| text)
         .collect()
+}
+
+/// Ported from the loop of nu's `parse_named_type_params`.
+fn field_types<'a>(tokens: &[(SyntaxKind, &'a str)]) -> Vec<&'a str> {
+    let mut types = Vec::new();
+    let mut rest = tokens;
+    loop {
+        rest = match rest {
+            [] => return types,
+            [(SyntaxKind::Comma, _), rest @ ..] | [_, (SyntaxKind::Comma, _), rest @ ..] => rest,
+            [_, (SyntaxKind::Colon, _), (_, ty), rest @ ..] => {
+                types.push(*ty);
+                rest
+            },
+            [_, rest @ ..] => rest,
+        };
+    }
 }
 
 /// Sorted by name, so that `longest_spelled` can bisect.
@@ -1665,8 +1707,8 @@ const COMMANDS: &[Command] = &[
 #[cfg(test)]
 mod tests {
     use super::{
-        CLOSURE, COMMANDS, Command, Declared, Item, LIST, LIST_OF, NUMBER, Param, Takes, WORD,
-        param_of_type, parameters,
+        CLOSURE, COMMANDS, Command, Declared, Item, LIST, LIST_OF, MAX_DEPTH, NUMBER, Param, Takes,
+        WORD, param_of_type, parameters,
     };
     use crate::test_support::asked;
 
@@ -2006,10 +2048,18 @@ mod tests {
             "list< any >",
             "table",
             "table<a: int>",
+            "table<a: list<int>, b: oneof<int, string>>",
+            "table<\"a:b\": int>",
         ] {
             assert_eq!(param_of_type(ty), Some(LIST), "{ty:?}");
         }
-        assert_eq!(param_of_type("list<string>"), Some(LIST_OF));
+        for ty in [
+            "list<string>",
+            "list<oneof<int, string>>",
+            "list<record<a: int>>",
+        ] {
+            assert_eq!(param_of_type(ty), Some(LIST_OF), "{ty:?}");
+        }
         assert_eq!(param_of_type("oneof<record, list<any>>"), Some(LIST));
         assert_eq!(param_of_type("oneof<list<any>, table>"), Some(LIST));
     }
@@ -2076,9 +2126,46 @@ mod tests {
             "closure(int)",
             "oneof<closure(int), string>",
             "oneof<int:string>",
+            "list<int>x",
         ] {
             assert_eq!(param_of_type(ty), None, "{ty:?}");
         }
+    }
+
+    #[test]
+    fn type_with_unknown_type_inside_takes_nothing() {
+        for ty in [
+            "list<nosuch>",
+            "list<closure(int)>",
+            "list<oneof<int, nosuch>>",
+            "record<a: nosuch>",
+            "record<a: int, b: nosuch>",
+            "record<a, b: nosuch>",
+            "record<a:, int: int>",
+            "table<a: list<nosuch>>",
+            "oneof<list<record<a: nosuch>>, int>",
+        ] {
+            assert_eq!(param_of_type(ty), None, "{ty:?}");
+        }
+    }
+
+    #[test]
+    fn colon_in_place_of_record_key_is_key() {
+        for ty in [
+            "record<a: int: nosuch>",
+            "record<a, : nosuch>",
+            "record<a: int, : nosuch>",
+            "record<:: bool>",
+        ] {
+            assert_eq!(param_of_type(ty), Some(WORD), "{ty:?}");
+        }
+    }
+
+    #[test]
+    fn type_nested_past_max_depth_takes_nothing() {
+        let nested = |depth| format!("{}int{}", "list<".repeat(depth), ">".repeat(depth));
+        assert_eq!(param_of_type(&nested(MAX_DEPTH)), Some(LIST_OF));
+        assert_eq!(param_of_type(&nested(MAX_DEPTH + 1)), None);
     }
 
     fn declared(items: &[Item<'static>]) -> Option<Declared<'static>> {
