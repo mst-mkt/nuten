@@ -8,10 +8,13 @@
   nuten,
 }:
 let
-  codium-headless = pkgs.writeShellScript "codium-headless" ''
-    unset WAYLAND_DISPLAY
-    exec ${pkgs.xvfb-run}/bin/xvfb-run --auto-servernum \
-      ${pkgs.vscodium}/lib/vscode/codium --ozone-platform=x11 "$@"
+  xvfb-run = "${pkgs.xvfb-run}/bin/xvfb-run";
+  codium = "${pkgs.vscodium}/lib/vscode/codium";
+  codium-headless = pkgs.writers.writeNu "codium-headless" ''
+    def --wrapped main [...arguments] {
+        hide-env --ignore-errors WAYLAND_DISPLAY
+        exec ${xvfb-run} --auto-servernum ${codium} --ozone-platform=x11 ...$arguments
+    }
   '';
 in
 {
@@ -41,7 +44,7 @@ in
     inherit (gitHooks) shellHook;
   };
 
-  vscode = pkgs.mkShell {
+  vscode-test = pkgs.mkShell {
     packages = [
       toolchain.rust
       toolchain.nodejs
