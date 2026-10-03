@@ -4,14 +4,14 @@ use nuten_syntax::{
     ast::{AstNode, Binary, Bracketed},
 };
 
-use super::{Child, Formatter, children, without_commas};
+use super::{Child, Formatter, children, without_separators};
 
 impl<'a> Formatter<'a> {
     /// The items stay on the lines they are on, since the author may group the bytes by line.
     /// Nu joins the items before it decodes them.
     /// So the breaks and spaces among them change nothing.
     pub(super) fn binary(&mut self, binary: &Binary) -> Vec<Element<'a>> {
-        let items: Vec<_> = without_commas(children(binary.inside(), &self.kept)).collect();
+        let items: Vec<_> = without_separators(children(binary.inside(), &self.kept)).collect();
         // Nu ends a comment in the word at a lone `\r`, but one among the items at the line break.
         // What comes between is in the comment alone, so only the source can place it.
         let cr_inside_comment = items

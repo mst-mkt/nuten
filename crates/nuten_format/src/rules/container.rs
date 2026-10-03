@@ -9,7 +9,7 @@ use nuten_syntax::{
     ast::{self, AstNode, Bracketed, Node, RecordField, Table},
 };
 
-use super::{Child, Formatter, children, kept::Member, without_commas};
+use super::{Child, Formatter, children, kept::Member, without_separators};
 use crate::Commas;
 
 /// Makes a line break that prints as nothing or as a space when the group is flat.
@@ -76,7 +76,7 @@ impl<'a> Formatter<'a> {
         close: &SyntaxToken,
         commas: Commas,
     ) -> Vec<Element<'a>> {
-        let items: Vec<_> = without_commas(children(elements, &self.kept)).collect();
+        let items: Vec<_> = without_separators(children(elements, &self.kept)).collect();
         let expand = expand
             || items.first().is_some_and(|first| first.newlines > 0)
             || items.iter().any(Child::is_comment);
@@ -159,7 +159,8 @@ impl<'a> Formatter<'a> {
 
     pub(super) fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
         let items: Vec<_> =
-            without_commas(children(field.syntax().children_with_tokens(), &self.kept)).collect();
+            without_separators(children(field.syntax().children_with_tokens(), &self.kept))
+                .collect();
         let colon = items
             .iter()
             .enumerate()

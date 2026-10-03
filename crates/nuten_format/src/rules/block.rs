@@ -6,7 +6,7 @@ use nuten_syntax::{
     ast::{self, AstNode, Block, Bracketed, ClosureParams, Node},
 };
 
-use super::{Child, Formatter, children, kept::Kept, without_commas};
+use super::{Child, Formatter, children, kept::Kept, without_separators};
 
 /// A block laid out for its container to group.
 pub(super) struct BlockLayout<'a> {
@@ -105,7 +105,7 @@ impl<'a> Formatter<'a> {
             return self.source(syntax.text_range());
         }
         let items: Vec<_> =
-            without_commas(children(syntax.children_with_tokens(), &self.kept)).collect();
+            without_separators(children(syntax.children_with_tokens(), &self.kept)).collect();
         items
             .iter()
             .enumerate()
@@ -144,7 +144,7 @@ fn closure_params_stay_as_is(params: &ClosureParams, kept: &Kept) -> bool {
 /// Whether something between the pipes, other than a `,`, is outside any `Param`.
 /// The layout would join it to what follows it.
 fn holds_stray_token(params: &ClosureParams, kept: &Kept) -> bool {
-    without_commas(children(params.syntax().children_with_tokens(), kept)).any(|child| {
+    without_separators(children(params.syntax().children_with_tokens(), kept)).any(|child| {
         !matches!(
             child.kind(),
             SyntaxKind::Pipe | SyntaxKind::PipePipe | SyntaxKind::Param

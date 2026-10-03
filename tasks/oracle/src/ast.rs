@@ -166,7 +166,8 @@ fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
         (token.get("shape"), token.get("content"))
         && LAYOUT_SHAPES.contains(&shape.as_ref())
     {
-        let content = words(content);
+        let pipes_separate = matches!(shape.as_ref(), "shape_list" | "shape_table");
+        let content = words(content, pipes_separate);
         if content.is_empty() {
             return None;
         }
@@ -177,11 +178,15 @@ fn token_without_layout(token: JsonValue<'_>) -> Option<JsonValue<'_>> {
 
 /// `content` with each run of whitespace and `,` as one space between two words.
 /// Such a run becomes nothing elsewhere.
+/// With `pipes_separate`, a `|` and a redirection to a pipe count in such a run as well.
+/// A redirection glued to the token before it belongs to that token, as nu lexes it.
 /// A string that closes in `content` and a comment stay as they are.
 /// A comment loses the whitespace it ends with, but keeps its line break.
 /// A lone `\r` ends a comment as a line break does.
 /// Nu ends a comment there when it looks for the closing bracket.
-fn words(content: &str) -> String {
+fn words(content: &str, pipes_separate: bool) -> String {
+    const REDIRECTING_PIPES: [&str; 6] =
+        ["e>|", "err>|", "o+e>|", "e+o>|", "out+err>|", "err+out>|"];
     let is_word = |char: char| {
         !matches!(
             char,
@@ -192,9 +197,18 @@ fn words(content: &str) -> String {
     let mut after_gap = true;
     let mut rest = content;
     while let Some(char) = rest.chars().next() {
-        if matches!(char, ' ' | '\t' | '\r' | '\n' | ',') {
+        let gap = match char {
+            ' ' | '\t' | '\r' | '\n' | ',' => Some(1),
+            '|' if pipes_separate => Some(1),
+            _ if pipes_separate && after_gap => REDIRECTING_PIPES
+                .iter()
+                .find(|pipe| rest.starts_with(**pipe))
+                .map(|pipe| pipe.len()),
+            _ => None,
+        };
+        if let Some(len) = gap {
             after_gap = true;
-            rest = &rest[1..];
+            rest = &rest[len..];
             continue;
         }
         let after_word = out.ends_with(is_word);
@@ -216,7 +230,8 @@ fn words(content: &str) -> String {
         } else {
             out.push_str(part);
         }
-        after_gap = false;
+        // The line break that ends a comment is a gap.
+        after_gap = comment;
         rest = after;
     }
     out
@@ -338,6 +353,8 @@ mod tests {
             r#"{"block": {"content": " , "}, "flat": [
                 {"content": "{ |x, y|\r\n\t", "shape": "shape_closure"},
                 {"content": ", ", "shape": "shape_list"},
+                {"content": " | ", "shape": "shape_list"},
+                {"content": " e>| ", "shape": "shape_table"},
                 {"content": "export  def", "shape": "shape_internalcall"},
                 {"content": "[x: int, # a  b\r\n]", "shape": "shape_signature"},
                 {"content": "0x[ff,  00 # c\n 01]", "shape": "shape_binary"},
@@ -360,31 +377,63 @@ mod tests {
 
     #[test]
     fn words_drops_layout_but_keeps_words_apart() {
-        assert_ne!(words("{|x, y| "), words("{|xy| "));
-        assert_ne!(words("[1, 2]"), words("[12]"));
-        assert_eq!(words("{ |x| "), words("{|x|"));
-        assert_eq!(words("[\n    a\n    b\n]"), words("[a, b]"));
-        assert_eq!(words("[x: int=1]"), words("[x: int = 1]"));
-        assert_ne!(words(r#"{|x = "a,  b"| "#), words(r#"{|x = "a b"| "#));
-        assert_ne!(words(r#"["a \"  b"]"#), words(r#"["a \" b"]"#));
-        assert_eq!(
-            words("{ # it's  a, b  \n    "),
-            words("{ # it's  a, b\n        ")
+        assert_ne!(words("{|x, y| ", false), words("{|xy| ", false));
+        assert_ne!(words("[1, 2]", false), words("[12]", false));
+        assert_eq!(words("{ |x| ", false), words("{|x|", false));
+        assert_eq!(words("[\n    a\n    b\n]", false), words("[a, b]", false));
+        assert_eq!(words("[x: int=1]", false), words("[x: int = 1]", false));
+        assert_ne!(
+            words(r#"{|x = "a,  b"| "#, false),
+            words(r#"{|x = "a b"| "#, false)
         );
-        assert_ne!(words("[# a  b\n]"), words("[# a b\n]"));
-        assert_ne!(words("[# c\n  x\n]"), words("[# c x\n]"));
-        assert_eq!(words("[# c  \r\n\n  x\n]"), words("[\n    # c\n    x\n]"));
-        assert_eq!(words("[a#b  c]"), words("[a#b c]"));
-        assert_eq!(words("\"\n  }"), words("\"\n      }"));
-        assert_eq!(words("'a  b' 日本  語"), "'a  b' 日本 語");
+        assert_ne!(
+            words(r#"["a \"  b"]"#, false),
+            words(r#"["a \" b"]"#, false)
+        );
+        assert_eq!(
+            words("{ # it's  a, b  \n    ", false),
+            words("{ # it's  a, b\n        ", false)
+        );
+        assert_ne!(words("[# a  b\n]", false), words("[# a b\n]", false));
+        assert_ne!(words("[# c\n  x\n]", false), words("[# c x\n]", false));
+        assert_eq!(
+            words("[# c  \r\n\n  x\n]", false),
+            words("[\n    # c\n    x\n]", false)
+        );
+        assert_eq!(words("[a#b  c]", false), words("[a#b c]", false));
+        assert_eq!(words("\"\n  }", false), words("\"\n      }", false));
+        assert_eq!(words("'a  b' 日本  語", false), "'a  b' 日本 語");
+    }
+
+    #[test]
+    fn words_drops_pipes_where_they_separate() {
+        assert_eq!(words("[| a e>| b o+e>|", true), words("[a, b", true));
+        assert_eq!(
+            words("[a err>| b e+o>| c out+err>| d err+out>| e", true),
+            words("[a, b, c, d, e", true)
+        );
+        assert_eq!(words("[1 # c\ne>| 2", true), words("[1 # c\n2", true));
+        assert_eq!(words("[1 # c\re>| 2", true), words("[1 # c\r2", true));
+        assert_ne!(words("[(1)e>| 2", true), words("[(1) 2", true));
+        assert_eq!(words(" o> b| ", true), words(" o> b ", true));
+        assert_eq!(words(" o> be>| ", true), words(" o> be> ", true));
+        assert_ne!(words(" o> be>| ", true), words(" o> b ", true));
+        assert_eq!(words(" | # a | b\n", true), "# a | b\n");
+        assert_ne!(words("[ | ", false), words("[ ", false));
     }
 
     #[test]
     fn lone_carriage_return_ends_comment() {
-        assert_eq!(words("[a # c\r]"), words("[\n    a # c\n]"));
-        assert_eq!(words("[a # c\r\r\nb]"), words("[\n    a # c\n    b\n]"));
-        assert_eq!(words("[a # c\rb]"), words("[\n    a # c\rb\n]"));
-        assert_ne!(words("[a # c\rb]"), words("[a # c b]"));
+        assert_eq!(words("[a # c\r]", false), words("[\n    a # c\n]", false));
+        assert_eq!(
+            words("[a # c\r\r\nb]", false),
+            words("[\n    a # c\n    b\n]", false)
+        );
+        assert_eq!(
+            words("[a # c\rb]", false),
+            words("[\n    a # c\rb\n]", false)
+        );
+        assert_ne!(words("[a # c\rb]", false), words("[a # c b]", false));
     }
 
     #[test]

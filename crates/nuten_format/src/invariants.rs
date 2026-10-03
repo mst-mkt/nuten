@@ -17,7 +17,7 @@ use crate::{Commas, Config, IndentStyle, ParseError, format_parsed};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Invariant {
     /// The output has the tokens of the source, trivia aside, in order.
-    /// `Comma` tokens are left aside too.
+    /// `,`s and the pipes between the items of a list are left aside too.
     /// They separate items as whitespace does in lists, records and types.
     /// So a `,` the formatter prints in a type without one in the source goes unseen here.
     /// Only the nu oracle tells whether it went where nu reads it as a separator.
@@ -34,7 +34,7 @@ pub enum Invariant {
     /// Nor do `\r`s there, which it trims with `\n` line endings.
     /// Nor do blank lines at the end of the file, a block, the arms, or a subexpression.
     /// The formatter drops them.
-    /// Nor do `Comma` tokens, which it may drop too.
+    /// Nor do `,`s and the pipes between the items of a list, which it may drop too.
     Comments,
     /// Formatting the output succeeds and changes nothing.
     Idempotency,
@@ -161,7 +161,7 @@ fn against_output(tree: &SyntaxNode, output: &str, config: &Config) -> Vec<Viola
 /// Whether a token of `kind` is one of those `Tokens` compares, given whether any stands before it.
 /// A `ShortFlag` after one is part of that one instead.
 fn counted(kind: SyntaxKind, first: bool) -> bool {
-    !kind.is_trivia() && kind != SyntaxKind::Comma && (first || kind != SyntaxKind::ShortFlag)
+    !kind.is_trivia() && !kind.is_separator() && (first || kind != SyntaxKind::ShortFlag)
 }
 
 /// The tokens `Tokens` compares, in order.
@@ -277,7 +277,7 @@ fn comments_of(tree: &SyntaxNode) -> Vec<Comment> {
     let tokens: Vec<_> = tree
         .descendants_with_tokens()
         .filter_map(SyntaxElement::into_token)
-        .filter(|token| !matches!(token.kind(), SyntaxKind::Whitespace | SyntaxKind::Comma))
+        .filter(|token| token.kind() != SyntaxKind::Whitespace && !token.kind().is_separator())
         .collect();
     let tokens_before: Vec<_> = tokens
         .iter()
@@ -472,13 +472,22 @@ mod tests {
     }
 
     #[test]
-    fn separator_commas_are_ignored() {
+    fn separators_are_ignored() {
         assert_eq!(formatter_violations("[a b,]\n", "[a, b]\n"), []);
         assert_eq!(
             formatter_violations("[a\n, # c\nb]\n", "[\n    a\n    # c\n    b\n]\n"),
             []
         );
-        for (src, output) in [("echo , a\n", "echo a\n"), ("echo a,b\n", "echo ab\n")] {
+        assert_eq!(formatter_violations("[a | b e>| c]\n", "[a, b, c]\n"), []);
+        assert_eq!(
+            formatter_violations("[a\n| # c\nb]\n", "[\n    a\n    # c\n    b\n]\n"),
+            []
+        );
+        for (src, output) in [
+            ("echo , a\n", "echo a\n"),
+            ("echo a,b\n", "echo ab\n"),
+            ("ls | lines\n", "ls lines\n"),
+        ] {
             assert_eq!(
                 invariant_names(&formatter_violations(src, output)),
                 [Invariant::Tokens.name()],

@@ -85,11 +85,11 @@ fn children(
         })
 }
 
-fn without_commas(children: impl Iterator<Item = Child>) -> impl Iterator<Item = Child> {
+fn without_separators(children: impl Iterator<Item = Child>) -> impl Iterator<Item = Child> {
     let mut dropped = 0;
     children.filter_map(move |child| {
         let newlines = child.newlines.max(mem::take(&mut dropped));
-        if child.kind() == SyntaxKind::Comma {
+        if child.kind().is_separator() {
             dropped = newlines;
             return None;
         }
@@ -290,7 +290,7 @@ impl<'a> Formatter<'a> {
         elements: impl Iterator<Item = SyntaxElement>,
         comma_before: impl Fn(&Child) -> bool,
     ) -> Vec<Element<'a>> {
-        let items: Vec<_> = without_commas(children(elements, &self.kept)).collect();
+        let items: Vec<_> = without_separators(children(elements, &self.kept)).collect();
         items
             .iter()
             .enumerate()

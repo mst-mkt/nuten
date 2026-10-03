@@ -6,12 +6,13 @@ use nuten_syntax::{
     ast::{AstNode, Bracketed, Param, Type, TypeField},
 };
 
-use super::{Formatter, children, without_commas};
+use super::{Formatter, children, without_separators};
 
 impl<'a> Formatter<'a> {
     pub(super) fn param(&mut self, param: &Param) -> Vec<Element<'a>> {
         let items: Vec<_> =
-            without_commas(children(param.syntax().children_with_tokens(), &self.kept)).collect();
+            without_separators(children(param.syntax().children_with_tokens(), &self.kept))
+                .collect();
         let name_is_long_flag = items
             .first()
             .and_then(|name| name.element.as_token())

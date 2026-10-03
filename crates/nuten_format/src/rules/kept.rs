@@ -97,7 +97,7 @@ fn run_after(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
 
 /// The run that `comment` ends the line of.
 /// The line decides rather than where the comment is, since a comment after a `{` is inside it.
-/// A `,` before the comment is passed over, since the layout drops it or puts one there.
+/// A separator before the comment is passed over, since the layout drops it or puts a `,` there.
 /// A bracket opened on an earlier line ends no run.
 /// The layout may move that bracket to a line of its own, and the comment with it.
 fn run_before(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
@@ -107,7 +107,7 @@ fn run_before(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
     let line_start = before.last()?.text_range().start();
     let last = before
         .iter()
-        .find(|token| !matches!(token.kind(), SyntaxKind::Whitespace | SyntaxKind::Comma))
+        .find(|token| token.kind() != SyntaxKind::Whitespace && !token.kind().is_separator())
         .map(|token| outermost_on_line(token.clone(), line_start))
         .filter(is_keepable)?;
     let first = before
