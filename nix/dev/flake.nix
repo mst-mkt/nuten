@@ -9,6 +9,7 @@
     fenix = {
       follows = "nuten/fenix";
     };
+
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -30,7 +31,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Corpus for the invariant tests of the parser and formatter
+    # Corpus
     corpus-nu_scripts = {
       url = "github:nushell/nu_scripts";
       flake = false;
@@ -48,7 +49,7 @@
       flake = false;
     };
 
-    # Formatter the benchmarks compare against
+    # Benchmark
     nufmt = {
       url = "github:nushell/nufmt";
     };
@@ -57,284 +58,77 @@
   outputs =
     inputs:
     let
-      forAllSystems = inputs.nixpkgs.lib.genAttrs [
-        "x86_64-linux"
-        "aarch64-linux"
-        "aarch64-darwin"
-      ];
+      inherit (inputs)
+        nixpkgs
+        nuten
+        nutest
+        nufmt
+        ;
 
-      rustToolchain = forAllSystems (
-        system:
-        with inputs.fenix.packages.${system};
-        combine [
-          (stable.withComponents [
-            "cargo"
-            "rustc"
-            "clippy"
-            "rust-src"
-            "rust-analyzer"
-          ])
-          targets.wasm32-wasip2.stable.rust-std
-          latest.rustfmt
-        ]
-      );
+      systems = builtins.attrNames nuten.packages;
+      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
-      nushell = forAllSystems (
-        system:
-        # Its own tests take long and tell nothing of how nu parses.
-        inputs.nushell.packages.${system}.default.overrideAttrs { doCheck = false; }
-      );
-      nodejs = forAllSystems (system: inputs.nixpkgs.legacyPackages.${system}.nodejs-slim_26);
-      pnpm = forAllSystems (
-        system: inputs.nixpkgs.legacyPackages.${system}.pnpm_11.override { nodejs-slim = nodejs.${system}; }
-      );
-      vite-plus = forAllSystems (
-        system:
-        let
-          vp = inputs.nix-vite-plus.packages.${system}.vp.override { nodejs = nodejs.${system}; };
-          wanted = (inputs.nixpkgs.lib.importJSON ../../package.json).devDependencies.vite-plus;
-        in
-        assert inputs.nixpkgs.lib.assertMsg (
-          vp.version == wanted
-        ) "vite-plus in nix/dev/flake.lock (${vp.version}) differs from package.json (${wanted})";
-        vp
-      );
-
-      treefmtEval = forAllSystems (
-        system:
-        inputs.treefmt-nix.lib.evalModule inputs.nixpkgs.legacyPackages.${system} {
-          imports = [ inputs.nuten.treefmtModule ];
-
-          projectRootFile = "Cargo.toml";
-
-          programs = {
-            nixfmt = {
-              enable = true;
-              strict = true;
-            };
-            deadnix = {
-              enable = true;
-            };
-            statix = {
-              enable = true;
-            };
-            rustfmt = {
-              enable = true;
-              package = rustToolchain.${system};
-            };
-            taplo = {
-              enable = true;
-            };
-            oxfmt = {
-              enable = true;
-              excludes = [ "pnpm-lock.yaml" ];
-            };
-            nuten = {
-              enable = true;
-              excludes = [
-                "crates/*/test_data/**"
-                "tasks/oracle/test_data/**"
-              ];
-            };
-          };
-
-          settings.formatter = {
-            oxfmt.command = "${vite-plus.${system}}/node_modules/oxfmt/bin/oxfmt";
-          };
-        }
-      );
-
-      preCommit = forAllSystems (
-        system:
-        let
-          pkgs = inputs.nixpkgs.legacyPackages.${system};
-
-          commitTypes = [
-            "feat"
-            "add"
-            "fix"
-            "refactor"
-            "perf"
-            "style"
-            "test"
-            "docs"
-            "ci"
-            "chore"
-          ];
-          commitScopes = [
-            "cli"
-            "syntax"
-            "parser"
-            "doc"
-            "format"
-            "config"
-            "nix"
-            "oracle"
-            "benchmark"
-            "lsp"
-            "vscode"
-            "zed"
-            "assets"
-          ];
-        in
-        inputs.git-hooks.lib.${system}.run {
-          src = ./../..;
-          hooks = {
-            treefmt = {
-              enable = true;
-              package = treefmtEval.${system}.config.build.wrapper;
-            };
-            clippy = {
-              enable = true;
-              packageOverrides = {
-                cargo = rustToolchain.${system};
-                clippy = rustToolchain.${system};
-              };
-              settings = {
-                denyWarnings = true;
-                extraArgs = "--all-targets";
-              };
-            };
-            typos = {
-              enable = true;
-            };
-            check-merge-conflicts = {
-              enable = true;
-            };
-            convco = {
-              enable = true;
-              settings.configPath = (pkgs.formats.yaml { }).generate "convco.yaml" {
-                types = map (type: {
-                  inherit type;
-                  section = type;
-                }) commitTypes;
-                scopeRegex = "^(${pkgs.lib.concatStringsSep "|" commitScopes})$";
-              };
-            };
-          };
-        }
-      );
+      toolchainOf = pkgs: import ./toolchain.nix { inherit pkgs inputs; };
+      treefmtOf =
+        pkgs:
+        import ./treefmt.nix {
+          inherit pkgs inputs;
+          toolchain = toolchainOf pkgs;
+        };
     in
     {
       devShells = forAllSystems (
-        system:
+        pkgs:
         let
-          pkgs = inputs.nixpkgs.legacyPackages.${system};
+          toolchain = toolchainOf pkgs;
+          treefmt = treefmtOf pkgs;
+          gitHooks = import ./git-hooks.nix {
+            inherit
+              pkgs
+              inputs
+              toolchain
+              treefmt
+              ;
+          };
+          corpus = import ./corpus.nix {
+            inherit pkgs inputs;
+            inherit (toolchain) nushell;
+          };
         in
-        {
-          default = pkgs.mkShell {
-            packages = [
-              nushell.${system}
-              rustToolchain.${system}
-              nodejs.${system}
-              pnpm.${system}
-              vite-plus.${system}
-              pkgs.cargo-insta
-              pkgs.cargo-nextest
-              pkgs.hyperfine
-              pkgs.time
-              treefmtEval.${system}.config.build.wrapper
-              inputs.nuten.packages.${system}.default
-            ]
-            ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-              pkgs.valgrind # Valgrind is broken on darwin.
-            ];
-
-            env = {
-              NU_LIB_DIRS = "${inputs.nutest}";
-              NUTEN_CORPUS = pkgs.runCommand "nuten-corpus" { } ''
-                mkdir $out
-                cp -r ${nushell.${system}.src}/crates/nu-std $out/nu-std
-                cp -r ${inputs.corpus-nu_scripts} $out/nu_scripts
-                cp -r ${inputs.corpus-nupm} $out/nupm
-                cp -r ${inputs.corpus-tree-sitter-nu}/test/corpus $out/tree-sitter-nu
-                cp -r ${inputs.corpus-kurokirasama-nushell_scripts} $out/kurokirasama-nushell_scripts
-              '';
-            };
-            inherit (preCommit.${system}) shellHook;
-          };
-
-          vscode = pkgs.mkShell {
-            packages = [
-              rustToolchain.${system}
-              nodejs.${system}
-              pnpm.${system}
-              vite-plus.${system}
-            ];
-            env = pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-              NUTEN_VSCODE = pkgs.writeShellScript "codium-headless" ''
-                unset WAYLAND_DISPLAY
-                exec ${pkgs.xvfb-run}/bin/xvfb-run --auto-servernum \
-                  ${pkgs.vscodium}/lib/vscode/codium --ozone-platform=x11 "$@"
-              '';
-            };
-          };
-
-          fuzz = pkgs.mkShell {
-            packages = [
-              (inputs.fenix.packages.${system}.latest.withComponents [
-                "cargo"
-                "rustc"
-              ])
-              pkgs.cargo-fuzz
-            ];
-            env = {
-              LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
-            };
-          };
+        import ./shells.nix {
+          inherit
+            pkgs
+            toolchain
+            treefmt
+            gitHooks
+            corpus
+            nutest
+            ;
+          nuten = nuten.packages.${pkgs.stdenv.hostPlatform.system}.default;
         }
       );
 
-      packages = forAllSystems (system: {
-        inherit (inputs.nufmt.packages.${system}) nufmt;
+      packages = forAllSystems (pkgs: {
+        inherit (nufmt.packages.${pkgs.stdenv.hostPlatform.system}) nufmt;
       });
 
-      apps = forAllSystems (
-        system:
-        let
-          pkgs = inputs.nixpkgs.legacyPackages.${system};
-        in
-        {
-          test-nu = {
-            type = "app";
-            program = pkgs.lib.getExe (
-              # Not writeNuBin, which runs the nushell of nixpkgs.
-              pkgs.writers.makeScriptWriter {
-                interpreter = "${pkgs.lib.getExe nushell.${system}} --no-config-file";
-                makeWrapperArgs = [
-                  "--set"
-                  "NU_LIB_DIRS"
-                  "${inputs.nutest}"
-                  "--prefix"
-                  "PATH"
-                  ":"
-                  (pkgs.lib.makeBinPath (
-                    [
-                      nushell.${system}
-                      rustToolchain.${system}
-                      pkgs.stdenv.cc
-                      pkgs.coreutils
-                      pkgs.hyperfine
-                      pkgs.time
-                      pkgs.git
-                    ]
-                    ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-                      pkgs.valgrind
-                      pkgs.util-linux
-                    ]
-                  ))
-                ];
-              } "/bin/nuten-test-nu" ../../scripts/test-nu.nu
-            );
-            meta.description = "Run the tests written in nu";
-          };
-        }
-      );
-
-      checks = forAllSystems (system: {
-        treefmt = treefmtEval.${system}.config.build.check (inputs.nixpkgs.lib.cleanSource ./../..);
+      apps = forAllSystems (pkgs: {
+        test-nu = {
+          type = "app";
+          program = pkgs.lib.getExe (
+            pkgs.callPackage ./nu-tests.nix {
+              toolchain = toolchainOf pkgs;
+              inherit nutest;
+            }
+          );
+          meta.description = "Run the tests written in nu";
+        };
       });
 
-      formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);
+      checks = forAllSystems (pkgs: {
+        treefmt = (treefmtOf pkgs).config.build.check (pkgs.lib.cleanSource ../..);
+      });
+
+      formatter = forAllSystems (pkgs: (treefmtOf pkgs).config.build.wrapper);
     };
 }
