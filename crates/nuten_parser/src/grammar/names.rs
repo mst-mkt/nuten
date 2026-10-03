@@ -555,8 +555,9 @@ fn module<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Module<'a>> {
         return None;
     };
     let inside = body.text.strip_prefix('{')?.strip_suffix('}')?;
-    let name = unquoted(name.text)
-        .filter(|name| name_words(name).is_some_and(|words| words.len() == 1))?;
+    let [name] = name_words(name.text)?[..] else {
+        return None;
+    };
     let inside = TextRange::at(body.start + TextSize::of('{'), TextSize::of(inside));
     Some(Module {
         name,
@@ -617,8 +618,7 @@ fn exported<'a>(src: &'a str, statements: &[&[Lexeme<'a>]], nth: usize) -> Expor
             },
             "alias" if stands_alone(statements, nth) => statement
                 .get(2)
-                .and_then(|name| unquoted(name.text))
-                .and_then(name_words)
+                .and_then(|name| name_words(name.text))
                 .map(|words| Exported {
                     words,
                     alias: true,
@@ -1453,6 +1453,25 @@ mod tests {
         let src = |first, last| format!("module m {{\n{first}\n{last}\n}}\nuse m \"f g\"\nf g");
         assert_eq!(callee(&src(def, alias)), Callee::Unknowable);
         assert_eq!(callee(&src(alias, def)), Callee::Defined);
+    }
+
+    #[test]
+    fn module_import_of_alias_unquotes_its_name_once() {
+        let module = "module m { export alias \"`f`\" = ls }\nuse m *";
+        assert_eq!(callee(&format!("{module}\nf")), Callee::Undefined);
+        assert_eq!(callee(&format!("{module}\n`f`")), Callee::Unknowable);
+    }
+
+    #[test]
+    fn module_import_finds_module_by_name_unquoted_once() {
+        let src = "module \"'if'\" { export def f [] {} }\nuse \"'if'\" f\nf";
+        assert_eq!(callee(src), Callee::Defined);
+    }
+
+    #[test]
+    fn module_import_finds_no_module_named_with_several_words() {
+        let src = "module \"m n\" { export def f [] {} }\nuse m f\nf";
+        assert_eq!(callee(src), Callee::Unknowable);
     }
 
     #[test]
