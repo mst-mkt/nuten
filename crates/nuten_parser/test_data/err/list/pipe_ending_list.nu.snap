@@ -1,0 +1,30 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/list/pipe_ending_list.nu
+---
+Root@0..17
+  Pipeline@0..5
+    PipelineElement@0..5
+      List@0..5
+        LBracket@0..1 "["
+        Word@1..2 "a"
+        Whitespace@2..3 " "
+        Error@3..4
+          Pipe@3..4 "|"
+        RBracket@4..5 "]"
+  Newline@5..6 "\n"
+  Pipeline@6..16
+    PipelineElement@6..16
+      List@6..16
+        LBracket@6..7 "["
+        Word@7..8 "a"
+        Whitespace@8..9 " "
+        Error@9..10
+          Pipe@9..10 "|"
+        Whitespace@10..11 " "
+        Comment@11..14 "# c"
+        Newline@14..15 "\n"
+        RBracket@15..16 "]"
+  Newline@16..17 "\n"
+error 3..4 "|": PipeEndsList
+error 9..10 "|": PipeEndsList

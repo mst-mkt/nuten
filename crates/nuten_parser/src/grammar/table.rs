@@ -2,7 +2,7 @@ use nuten_syntax::SyntaxKind;
 
 use super::{
     SQUARE, Shape,
-    list::is_list,
+    list::{is_list, piped_items},
     spread::{Target, is_spread},
     value,
 };
@@ -62,11 +62,28 @@ pub(super) fn table_items(p: &mut Parser<'_>) {
 /// The items of the column names or of a row.
 /// Nu reports a spread there, as it takes none in a table.
 fn row_items(p: &mut Parser<'_>) {
-    while let Some(text) = p.peek_text() {
-        if is_spread(text, Target::List) {
-            p.bump_error(ParseErrorKind::SpreadInTable);
-        } else {
-            value(p, Shape::Any);
-        }
+    piped_items(p, |p| match p.peek_text() {
+        Some(text) if is_spread(text, Target::List) => p.bump_error(ParseErrorKind::SpreadInTable),
+        _ => value(p, Shape::Any),
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ParseErrorKind, parse};
+
+    fn errors(src: &str) -> Vec<ParseErrorKind> {
+        parse(src).errors().iter().map(|error| error.kind).collect()
+    }
+
+    #[test]
+    fn pipes_in_header_or_row_report_as_in_list() {
+        assert_eq!(errors("[[a |]; [1]]"), [ParseErrorKind::PipeEndsList]);
+        assert_eq!(
+            errors("[[a]; [e>| 1]]"),
+            [ParseErrorKind::RedirectionAtHead]
+        );
+        assert_eq!(errors("[[a b]; [1 | 2]]"), []);
+        assert_eq!(errors("[[@a | b]; [1 2 3]]"), []);
     }
 }

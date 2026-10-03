@@ -299,23 +299,21 @@ impl<'a> Parser<'a> {
         self.nth_token(n).map(|token| token.range)
     }
 
+    /// The kinds the lexer gave the tokens emitted, the last first.
+    /// A token emitted as another kind, as by `bump_as`, keeps its lexed kind here.
+    pub(crate) fn emitted_kinds(&self) -> impl Iterator<Item = SyntaxKind> {
+        self.tokens[..self.pos].iter().rev().map(|token| token.kind)
+    }
+
     /// The kind of the last token emitted, trivia aside.
     pub(crate) fn last_kind(&self) -> Option<SyntaxKind> {
-        self.tokens[..self.pos]
-            .iter()
-            .rev()
-            .map(|token| token.kind)
-            .find(|kind| !kind.is_trivia())
+        self.emitted_kinds().find(|kind| !kind.is_trivia())
     }
 
     /// The kind of the last token emitted, the skipped ones aside.
     /// Unlike `last_kind`, it counts a line break the parser does not skip.
     pub(crate) fn last_unskipped_kind(&self) -> Option<SyntaxKind> {
-        self.tokens[..self.pos]
-            .iter()
-            .rev()
-            .map(|token| token.kind)
-            .find(|&kind| !self.is_skipped(kind))
+        self.emitted_kinds().find(|&kind| !self.is_skipped(kind))
     }
 
     /// The kinds of every token ahead, trivia included.

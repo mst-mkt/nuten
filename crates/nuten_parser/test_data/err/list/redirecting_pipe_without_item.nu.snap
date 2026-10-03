@@ -1,0 +1,31 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/list/redirecting_pipe_without_item.nu
+---
+Root@0..22
+  Pipeline@0..7
+    PipelineElement@0..7
+      List@0..7
+        LBracket@0..1 "["
+        Error@1..4
+          ErrGtPipe@1..4 "e>|"
+        Whitespace@4..5 " "
+        Word@5..6 "a"
+        RBracket@6..7 "]"
+  Newline@7..8 "\n"
+  Pipeline@8..21
+    PipelineElement@8..21
+      List@8..21
+        LBracket@8..9 "["
+        Word@9..10 "a"
+        Whitespace@10..11 " "
+        Pipe@11..12 "|"
+        Whitespace@12..13 " "
+        Error@13..18
+          OutErrGtPipe@13..18 "o+e>|"
+        Whitespace@18..19 " "
+        Word@19..20 "b"
+        RBracket@20..21 "]"
+  Newline@21..22 "\n"
+error 1..4 "e>|": RedirectionAtHead
+error 13..18 "o+e>|": RedirectionAtHead
