@@ -238,6 +238,11 @@ impl SyntaxKind {
         )
     }
 
+    /// Whether a token of this kind stands between items, where a space would do the same.
+    pub fn is_separator(self) -> bool {
+        matches!(self, SyntaxKind::Comma | SyntaxKind::ListPipe)
+    }
+
     /// Whether nu reads a token of this kind as one item, such as the head of a call.
     /// An `Error` is one too: it is the item the lexer could not read.
     /// A `ShortFlag` is not, since nu reads it as part of the item before it.

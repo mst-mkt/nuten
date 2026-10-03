@@ -253,14 +253,14 @@ fn items(node: &SyntaxNode) -> Vec<SyntaxElement> {
     significant(node)
         .into_iter()
         .filter(|child| {
-            !matches!(
-                child.kind(),
-                SyntaxKind::LBrace
-                    | SyntaxKind::RBrace
-                    | SyntaxKind::LBracket
-                    | SyntaxKind::RBracket
-                    | SyntaxKind::Comma
-            )
+            !child.kind().is_separator()
+                && !matches!(
+                    child.kind(),
+                    SyntaxKind::LBrace
+                        | SyntaxKind::RBrace
+                        | SyntaxKind::LBracket
+                        | SyntaxKind::RBracket
+                )
         })
         .collect()
 }
@@ -436,6 +436,26 @@ mod tests {
         assert_eq!(
             kinds,
             [string("lf"), ValueKind::Int(1), string("x"), string("a:b")]
+        );
+    }
+
+    #[test]
+    fn list_separated_by_pipes_holds_its_items() {
+        let ValueKind::List(items) = field_value("{a: [| b, | c e>| 1 o+e>|]}") else {
+            panic!("no list");
+        };
+        let kinds: Vec<_> = items.into_iter().map(|item| item.kind).collect();
+        assert_eq!(kinds, [string("b"), string("c"), ValueKind::Int(1)]);
+    }
+
+    #[test]
+    fn table_separated_by_pipes_keys_its_rows_by_its_columns() {
+        assert_eq!(
+            rows("{a: [[b | c]; [1 e>| 2]]}"),
+            [vec![
+                ("b".to_string(), ValueKind::Int(1)),
+                ("c".to_string(), ValueKind::Int(2)),
+            ]]
         );
     }
 
