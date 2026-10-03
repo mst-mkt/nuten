@@ -20,7 +20,7 @@ pub(crate) struct Names<'a> {
 
 struct FileNames<'a> {
     /// Sorted so that `is_aliased` can bisect them.
-    aliases: Box<[&'a str]>,
+    alias_heads: Box<[&'a str]>,
     /// Sorted so that `is_hidden` can bisect them.
     /// `None` when it hides an overlay, which may take any command away.
     hidden: Option<Box<[&'a str]>>,
@@ -37,15 +37,15 @@ impl<'a> Names<'a> {
     pub(crate) fn of(src: &'a str) -> Names<'a> {
         Names {
             file: Rc::new(FileNames {
-                aliases: alias_names(src),
+                alias_heads: alias_heads(src),
                 hidden: hidden_words(src),
             }),
             scope: None,
         }
     }
 
-    pub(crate) fn is_aliased(&self, name: &str) -> bool {
-        self.file.aliases.binary_search(&name).is_ok()
+    pub(crate) fn is_aliased(&self, head: &str) -> bool {
+        self.file.alias_heads.binary_search(&head).is_ok()
     }
 
     /// `skips_newline` is whether a line break there is no more than whitespace.
@@ -112,6 +112,13 @@ impl<'a> Names<'a> {
         word: impl Fn(usize) -> Option<&'w str>,
     ) -> (Callee, Option<(usize, &Scope<'a>, &Definition<'a>)>) {
         let spelled: Vec<_> = (0..self.longest_name()).map_while(&word).collect();
+        // Nu may take a definition over the alias, but leaving that unknowable only keeps its call.
+        if self
+            .scopes()
+            .any(|scope| scope.imports_alias(&spelled, head))
+        {
+            return (Callee::Unknowable, None);
+        }
         let Some(defining @ (depth, scope, definition)) = self.defining(&spelled) else {
             let unknowable = self.scopes().any(|scope| scope.imports_before(head))
                 && word(0).is_some_and(|head| !builtin::is_parser_keyword(head));
@@ -242,6 +249,7 @@ struct Definition<'a> {
     start: TextSize,
     /// An import of a `def` does not carry its parameters here.
     declared: Option<Declared<'a>>,
+    alias: bool,
 }
 
 struct Module<'a> {
@@ -251,9 +259,16 @@ struct Module<'a> {
 }
 
 struct Exports<'a> {
-    commands: Vec<Vec<&'a str>>,
+    commands: Vec<Exported<'a>>,
     /// An import brings `main` as the name of the module, so it stands apart from `commands`.
     main: bool,
+}
+
+#[derive(Debug, Clone)]
+struct Exported<'a> {
+    words: Vec<&'a str>,
+    /// Nu runs the command an alias stands for, which nuten does not follow.
+    alias: bool,
 }
 
 impl<'a> Scope<'a> {
@@ -287,10 +302,11 @@ impl<'a> Scope<'a> {
         let mut imported: Vec<_> = read
             .iter()
             .flat_map(|(start, names)| {
-                names.iter().map(|words| Definition {
-                    words: words.clone(),
+                names.iter().map(|exported| Definition {
+                    words: exported.words.clone(),
                     start: *start,
                     declared: None,
+                    alias: exported.alias,
                 })
             })
             .collect();
@@ -353,6 +369,12 @@ impl<'a> Scope<'a> {
         })
     }
 
+    fn imports_alias(&self, spelled: &[&str], end: TextSize) -> bool {
+        self.imported.iter().any(|command| {
+            command.alias && spelled.starts_with(&command.words) && command.start < end
+        })
+    }
+
     fn imports_before(&self, end: TextSize) -> bool {
         self.imports.first().is_some_and(|&import| import < end)
     }
@@ -369,7 +391,7 @@ fn read_imports<'a>(
     statements: &[&[Lexeme<'a>]],
     modules: &[Module<'a>],
     outer: Option<&Scope<'a>>,
-) -> Vec<(TextSize, Vec<Vec<&'a str>>)> {
+) -> Vec<(TextSize, Vec<Exported<'a>>)> {
     statements
         .iter()
         .flat_map(|statement| assigned_parts(statement))
@@ -458,6 +480,7 @@ fn definition<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Definition<'
         words: name_words(name.text)?,
         start,
         declared,
+        alias: false,
     })
 }
 
@@ -554,17 +577,21 @@ fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<
         .map(|nth| exported(src, &statements, nth))
         .filter(|export| !matches!(export, Export::Nothing))
         .map(|export| match export {
-            Export::Command(words) => Some(words),
+            Export::Command(exported) => Some(exported),
             Export::Nothing | Export::Unreadable => None,
         })
         .collect::<Option<Vec<_>>>()?;
-    // Nu takes an export named after its module for its `main`, which nuten does not read.
-    if names.iter().any(|words| words.as_slice() == [module]) {
+    // Nu takes an export named after its module for its `main`, or rejects it as an alias.
+    // Nuten reads neither.
+    if names
+        .iter()
+        .any(|exported| exported.words.as_slice() == [module])
+    {
         return None;
     }
     let (main, commands): (Vec<_>, Vec<_>) = names
         .into_iter()
-        .partition(|words| words.as_slice() == ["main"]);
+        .partition(|exported| exported.words.as_slice() == ["main"]);
     Some(Exports {
         commands,
         main: !main.is_empty(),
@@ -573,7 +600,7 @@ fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<
 
 #[derive(Debug)]
 enum Export<'a> {
-    Command(Vec<&'a str>),
+    Command(Exported<'a>),
     Nothing,
     Unreadable,
 }
@@ -583,12 +610,19 @@ fn exported<'a>(src: &'a str, statements: &[&[Lexeme<'a>]], nth: usize) -> Expor
     let command = match statement {
         [export, keyword, ..] if export.text == "export" => match keyword.text {
             "def" | "extern" if stands_alone(statements, nth) => {
-                definition(src, statement).map(|definition| definition.words)
+                definition(src, statement).map(|definition| Exported {
+                    words: definition.words,
+                    alias: false,
+                })
             },
             "alias" if stands_alone(statements, nth) => statement
                 .get(2)
                 .and_then(|name| unquoted(name.text))
-                .and_then(name_words),
+                .and_then(name_words)
+                .map(|words| Exported {
+                    words,
+                    alias: true,
+                }),
             "const" => return Export::Nothing,
             _ => None,
         },
@@ -605,7 +639,7 @@ fn imported_names<'s, 'a: 's>(
     src: &'a str,
     statement: &[Lexeme<'a>],
     module: impl Fn(&str) -> Option<&'s Module<'a>>,
-) -> Option<Vec<Vec<&'a str>>> {
+) -> Option<Vec<Exported<'a>>> {
     let words = match statement {
         [keyword, rest @ ..] if keyword.text == "use" => rest,
         [export, keyword, rest @ ..] if export.text == "export" && keyword.text == "use" => rest,
@@ -621,12 +655,17 @@ fn imported_names<'s, 'a: 's>(
     }
     let module = module(unquoted(name.text)?)?;
     let exports = module.exports.as_ref()?;
-    let main = exports.main.then(|| vec![module.name]);
+    // Nu rejects an alias named `main` as an export.
+    let main = exports.main.then(|| Exported {
+        words: vec![module.name],
+        alias: false,
+    });
     let Some(members) = members else {
-        let prefixed = exports.commands.iter().map(|words| {
-            iter::once(module.name)
-                .chain(words.iter().copied())
-                .collect()
+        let prefixed = exports.commands.iter().map(|exported| Exported {
+            words: iter::once(module.name)
+                .chain(exported.words.iter().copied())
+                .collect(),
+            alias: exported.alias,
         });
         return Some(main.into_iter().chain(prefixed).collect());
     };
@@ -640,13 +679,14 @@ fn imported_names<'s, 'a: 's>(
                 .collect(),
         );
     }
+    // Nu takes the last export of a name.
     member_names(src, members)?
         .into_iter()
         .map(|member| {
             exports
                 .commands
                 .iter()
-                .find(|words| words.iter().copied().eq(member.split(' ')))
+                .rfind(|exported| exported.words.iter().copied().eq(member.split(' ')))
                 .cloned()
         })
         .collect()
@@ -722,16 +762,19 @@ fn unexported<'a>(mut words: impl Iterator<Item = &'a str>) -> Option<&'a str> {
 /// Reads the tokens, not the tree, which the parser has yet to build.
 /// Taking in a name out of scope only leaves a call read as it was written.
 /// One in brackets too deep for the parser is left out: it counts only there, kept as written.
-fn alias_names(src: &str) -> Box<[&str]> {
-    let mut names: Vec<_> = statements_holding(src, "alias")
+/// A call of an alias named in several words starts with its first word.
+/// Taking in a call of another command with that word only leaves it read as it was written.
+fn alias_heads(src: &str) -> Box<[&str]> {
+    let mut heads: Vec<_> = statements_holding(src, "alias")
         .0
         .iter()
         .map(Vec::as_slice)
         .filter_map(alias_name)
+        .map(|name| name.split_once(' ').map_or(name, |(head, _)| head))
         .collect();
-    names.sort_unstable();
-    names.dedup();
-    names.into()
+    heads.sort_unstable();
+    heads.dedup();
+    heads.into()
 }
 
 /// A `hide` may follow an assignment operator, so one anywhere in a statement counts.
@@ -878,7 +921,7 @@ mod tests {
 
     use rowan::{TextRange, TextSize};
 
-    use super::{Callee, MAX_DEPTH, Names, alias_names, hidden_words};
+    use super::{Callee, MAX_DEPTH, Names, alias_heads, hidden_words};
     use crate::{
         grammar::parameters::Takes,
         lexer::{self, Mode},
@@ -1367,9 +1410,49 @@ mod tests {
     }
 
     #[test]
-    fn module_import_brings_exported_alias() {
-        let src = "module m { export alias f = ls }\nuse m f\nf";
+    fn module_import_of_alias_makes_command_unknowable() {
+        for src in [
+            "module m { export alias f = ls }\nuse m f\nf",
+            "module m { export alias f = ls }\nuse m *\nf",
+            "module m { export alias f = ls }\nuse m [f]\nf",
+            "module m { export alias f = ls }\nuse m\nm f",
+            "module m {\nexport alias f = ls\nexport def \"g h\" [] {}\n}\nuse m\nm f g",
+            "def f [x: list] {}\nmodule m { export alias f = ls }\nuse m f\nf",
+        ] {
+            assert_eq!(callee(src), Callee::Unknowable, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn module_import_of_alias_leaves_other_commands_defined() {
+        let src = "module m {\nexport alias f = ls\nexport def g [] {}\n}\nuse m *\ng";
         assert_eq!(callee(src), Callee::Defined);
+    }
+
+    #[test]
+    fn module_import_of_alias_leaves_earlier_call_defined() {
+        let src = "module m { export alias f = ls }\ndef f [] {}\nf\nuse m f";
+        assert_eq!(callee_on(src, 2), Callee::Defined);
+    }
+
+    #[test]
+    fn outer_module_import_of_alias_makes_inner_command_unknowable() {
+        assert_eq!(
+            callee_nested(
+                "module m { export alias f = ls }\nuse m f",
+                "def g [] {}\nf"
+            ),
+            Callee::Unknowable
+        );
+    }
+
+    #[test]
+    fn module_import_of_member_takes_its_last_export() {
+        let def = "export def \"f g\" [] {}";
+        let alias = "export alias \"f g\" = ls";
+        let src = |first, last| format!("module m {{\n{first}\n{last}\n}}\nuse m \"f g\"\nf g");
+        assert_eq!(callee(&src(def, alias)), Callee::Unknowable);
+        assert_eq!(callee(&src(alias, def)), Callee::Defined);
     }
 
     #[test]
@@ -1499,49 +1582,57 @@ mod tests {
     }
 
     #[test]
-    fn alias_names_come_from_every_statement() {
-        assert_eq!(*alias_names("alias a = ^a"), ["a"]);
-        assert_eq!(*alias_names("export alias b = ^b"), ["b"]);
-        assert_eq!(*alias_names("print hi;alias c = ^c"), ["c"]);
-        assert_eq!(*alias_names("print hi\r\nalias d = ^d"), ["d"]);
-        assert_eq!(*alias_names("ls | alias e = ^e"), ["e"]);
-        assert_eq!(*alias_names("ls e>| alias e = ^e"), ["e"]);
-        assert_eq!(*alias_names("ls o+e>| alias e = ^e"), ["e"]);
-        assert_eq!(*alias_names("do { alias f = ^f }"), ["f"]);
-        assert_eq!(*alias_names("(alias g = ^g)"), ["g"]);
+    fn alias_heads_come_from_every_statement() {
+        assert_eq!(*alias_heads("alias a = ^a"), ["a"]);
+        assert_eq!(*alias_heads("export alias b = ^b"), ["b"]);
+        assert_eq!(*alias_heads("print hi;alias c = ^c"), ["c"]);
+        assert_eq!(*alias_heads("print hi\r\nalias d = ^d"), ["d"]);
+        assert_eq!(*alias_heads("ls | alias e = ^e"), ["e"]);
+        assert_eq!(*alias_heads("ls e>| alias e = ^e"), ["e"]);
+        assert_eq!(*alias_heads("ls o+e>| alias e = ^e"), ["e"]);
+        assert_eq!(*alias_heads("do { alias f = ^f }"), ["f"]);
+        assert_eq!(*alias_heads("(alias g = ^g)"), ["g"]);
     }
 
     #[test]
-    fn alias_names_drop_quotes_around_name() {
-        assert_eq!(*alias_names("alias \"a\" = ^a"), ["a"]);
-        assert_eq!(*alias_names("alias 'b' = ^b"), ["b"]);
-        assert_eq!(*alias_names("alias `c` = ^c"), ["c"]);
+    fn alias_heads_drop_quotes_around_name() {
+        assert_eq!(*alias_heads("alias \"a\" = ^a"), ["a"]);
+        assert_eq!(*alias_heads("alias 'b' = ^b"), ["b"]);
+        assert_eq!(*alias_heads("alias `c` = ^c"), ["c"]);
     }
 
     #[test]
-    fn alias_names_come_sorted_without_repeats() {
+    fn alias_heads_come_sorted_without_repeats() {
         assert_eq!(
-            *alias_names("alias b = ^b\nalias a = ^a\nalias b = ^c"),
+            *alias_heads("alias b = ^b\nalias a = ^a\nalias b = ^c"),
             ["a", "b"]
         );
     }
 
     #[test]
-    fn alias_names_omit_comments_and_strings() {
-        assert!(alias_names("# alias a = ^a").is_empty());
-        assert!(alias_names("print \"alias b = ^b\"").is_empty());
+    fn alias_heads_are_first_words_of_names() {
+        assert_eq!(
+            *alias_heads("alias \"str x\" = ^a\nalias 'str y z' = ^b\nalias a = ^c"),
+            ["a", "str"]
+        );
     }
 
     #[test]
-    fn alias_names_read_line_break_in_parentheses_as_space() {
-        assert!(alias_names("(ls\nalias a = ^a)").is_empty());
-        assert_eq!(*alias_names("(\nalias b = ^b\n)"), ["b"]);
-        assert_eq!(*alias_names("(do {\nls\nalias c = ^c\n})"), ["c"]);
-        assert_eq!(*alias_names("(# c\nalias d = ^d)"), ["d"]);
+    fn alias_heads_omit_comments_and_strings() {
+        assert!(alias_heads("# alias a = ^a").is_empty());
+        assert!(alias_heads("print \"alias b = ^b\"").is_empty());
     }
 
     #[test]
-    fn alias_names_skip_brackets_and_quotes_in_strings_and_comments() {
+    fn alias_heads_read_line_break_in_parentheses_as_space() {
+        assert!(alias_heads("(ls\nalias a = ^a)").is_empty());
+        assert_eq!(*alias_heads("(\nalias b = ^b\n)"), ["b"]);
+        assert_eq!(*alias_heads("(do {\nls\nalias c = ^c\n})"), ["c"]);
+        assert_eq!(*alias_heads("(# c\nalias d = ^d)"), ["d"]);
+    }
+
+    #[test]
+    fn alias_heads_skip_brackets_and_quotes_in_strings_and_comments() {
         for (src, name) in [
             ("print \"\\\"(\"\nalias a = ^a", "a"),
             ("print '('\nalias b = ^b", "b"),
@@ -1550,46 +1641,46 @@ mod tests {
             ("ls;# it's\nalias e = ^e", "e"),
             ("ls |# it's\nalias f = ^f", "f"),
         ] {
-            assert_eq!(*alias_names(src), [name], "{src:?}");
+            assert_eq!(*alias_heads(src), [name], "{src:?}");
         }
     }
 
     #[test]
-    fn alias_names_read_hash_inside_word_as_no_comment() {
-        assert_eq!(*alias_names("print [a#]\nalias a = ^a"), ["a"]);
+    fn alias_heads_read_hash_inside_word_as_no_comment() {
+        assert_eq!(*alias_heads("print [a#]\nalias a = ^a"), ["a"]);
     }
 
     #[test]
-    fn alias_names_omit_list_items() {
-        assert!(alias_names("[ls\nalias a = ^a]").is_empty());
-        assert!(alias_names("[alias b = ^b]").is_empty());
+    fn alias_heads_omit_list_items() {
+        assert!(alias_heads("[ls\nalias a = ^a]").is_empty());
+        assert!(alias_heads("[alias b = ^b]").is_empty());
     }
 
     #[test]
-    fn alias_names_come_from_blocks_in_lists() {
-        assert_eq!(*alias_names("[{\nalias a = ^a\n}]"), ["a"]);
+    fn alias_heads_come_from_blocks_in_lists() {
+        assert_eq!(*alias_heads("[{\nalias a = ^a\n}]"), ["a"]);
     }
 
     #[test]
-    fn alias_names_come_from_parentheses_in_interpolations() {
-        assert_eq!(*alias_names("print $\"(alias b = ^b; b)\""), ["b"]);
-        assert_eq!(*alias_names("print $'x((alias c = ^c))'"), ["c"]);
-        assert!(alias_names("print $\"(ls\nalias d = ^d)\"").is_empty());
-        assert!(alias_names("print $'(ls\nalias e = ^e)'").is_empty());
+    fn alias_heads_come_from_parentheses_in_interpolations() {
+        assert_eq!(*alias_heads("print $\"(alias b = ^b; b)\""), ["b"]);
+        assert_eq!(*alias_heads("print $'x((alias c = ^c))'"), ["c"]);
+        assert!(alias_heads("print $\"(ls\nalias d = ^d)\"").is_empty());
+        assert!(alias_heads("print $'(ls\nalias e = ^e)'").is_empty());
     }
 
     #[test]
-    fn alias_names_come_from_brackets_inside_words() {
-        assert_eq!(*alias_names("{a:{|| alias a = ^a; a}}"), ["a"]);
-        assert_eq!(*alias_names("ls --flag={ alias b = ^b }"), ["b"]);
-        assert_eq!(*alias_names("FOO=(alias c = ^c) ls"), ["c"]);
-        assert_eq!(*alias_names("ls --flag=(alias\nd = ^d)"), ["d"]);
-        assert_eq!(*alias_names("ls --flag={ export alias e = ^e }"), ["e"]);
+    fn alias_heads_come_from_brackets_inside_words() {
+        assert_eq!(*alias_heads("{a:{|| alias a = ^a; a}}"), ["a"]);
+        assert_eq!(*alias_heads("ls --flag={ alias b = ^b }"), ["b"]);
+        assert_eq!(*alias_heads("FOO=(alias c = ^c) ls"), ["c"]);
+        assert_eq!(*alias_heads("ls --flag=(alias\nd = ^d)"), ["d"]);
+        assert_eq!(*alias_heads("ls --flag={ export alias e = ^e }"), ["e"]);
         assert_eq!(
-            *alias_names("print {a:(do { alias f = ^f; f }), b: 1}"),
+            *alias_heads("print {a:(do { alias f = ^f; f }), b: 1}"),
             ["f"]
         );
-        assert_eq!(*alias_names("ls --g=(do { alias g = ^g }),x"), ["g"]);
+        assert_eq!(*alias_heads("ls --g=(do { alias g = ^g }),x"), ["g"]);
     }
 
     #[test]
@@ -1601,10 +1692,10 @@ mod tests {
     }
 
     #[test]
-    fn alias_names_skip_comments_and_strings_in_brackets_inside_words() {
-        assert!(alias_names("{a:{|| # x alias a = ^a\na [b,  c]}}").is_empty());
-        assert!(alias_names("{a:{|| print \"x alias b = ^b\"; b}}").is_empty());
-        assert!(alias_names("print a\"{alias c = ^c}\"").is_empty());
+    fn alias_heads_skip_comments_and_strings_in_brackets_inside_words() {
+        assert!(alias_heads("{a:{|| # x alias a = ^a\na [b,  c]}}").is_empty());
+        assert!(alias_heads("{a:{|| print \"x alias b = ^b\"; b}}").is_empty());
+        assert!(alias_heads("print a\"{alias c = ^c}\"").is_empty());
     }
 
     fn nested(depth: usize, inner: &str) -> String {
@@ -1612,22 +1703,22 @@ mod tests {
     }
 
     #[test]
-    fn alias_names_come_from_brackets_as_deep_as_parser_reads() {
-        assert_eq!(*alias_names(&nested(MAX_DEPTH, "alias a = ^a")), ["a"]);
+    fn alias_heads_come_from_brackets_as_deep_as_parser_reads() {
+        assert_eq!(*alias_heads(&nested(MAX_DEPTH, "alias a = ^a")), ["a"]);
     }
 
     #[test]
-    fn alias_names_leave_out_alias_too_deep_to_read() {
-        assert!(alias_names(&nested(MAX_DEPTH + 1, "alias a = ^a")).is_empty());
+    fn alias_heads_leave_out_alias_too_deep_to_read() {
+        assert!(alias_heads(&nested(MAX_DEPTH + 1, "alias a = ^a")).is_empty());
     }
 
     #[test]
-    fn alias_names_lex_no_deeper_than_parser_reads() {
+    fn alias_heads_lex_no_deeper_than_parser_reads() {
         // Lexing each of those brackets again would take minutes.
         let start = Instant::now();
-        assert!(alias_names(&nested(100_000, "alias a = ^a")).is_empty());
+        assert!(alias_heads(&nested(100_000, "alias a = ^a")).is_empty());
         let src = format!("alias b = ^b\n{}", nested(100_000, ""));
-        assert_eq!(*alias_names(&src), ["b"]);
+        assert_eq!(*alias_heads(&src), ["b"]);
         assert!(start.elapsed() < Duration::from_secs(30));
     }
 
@@ -1637,15 +1728,15 @@ mod tests {
     }
 
     #[test]
-    fn alias_names_omit_statement_naming_nothing() {
-        assert!(alias_names("alias").is_empty());
-        assert!(alias_names("export").is_empty());
-        assert!(alias_names("export alias").is_empty());
+    fn alias_heads_omit_statement_naming_nothing() {
+        assert!(alias_heads("alias").is_empty());
+        assert!(alias_heads("export").is_empty());
+        assert!(alias_heads("export alias").is_empty());
     }
 
     #[test]
-    fn alias_names_skip_alias_inside_other_word() {
-        assert_eq!(*alias_names("realias a = ^a\nalias b = ^b"), ["b"]);
+    fn alias_heads_skip_alias_inside_other_word() {
+        assert_eq!(*alias_heads("realias a = ^a\nalias b = ^b"), ["b"]);
     }
 
     #[test]
