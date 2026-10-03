@@ -13,7 +13,7 @@ let
   codium-headless = pkgs.writers.writeNu "codium-headless" ''
     def --wrapped main [...arguments] {
         hide-env --ignore-errors WAYLAND_DISPLAY
-        exec ${xvfb-run} --auto-servernum ${codium} --ozone-platform=x11 ...$arguments
+        exec ${xvfb-run} --auto-servernum ${codium} --ozone-platform=x11 --force-disable-user-env ...$arguments
     }
   '';
 in
