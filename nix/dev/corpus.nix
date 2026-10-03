@@ -3,11 +3,17 @@
   inputs,
   nushell,
 }:
-pkgs.runCommand "nuten-corpus" { } ''
-  mkdir $out
-  cp -r ${nushell.src}/crates/nu-std $out/nu-std
-  cp -r ${inputs.corpus-nu_scripts} $out/nu_scripts
-  cp -r ${inputs.corpus-nupm} $out/nupm
-  cp -r ${inputs.corpus-tree-sitter-nu}/test/corpus $out/tree-sitter-nu
-  cp -r ${inputs.corpus-kurokirasama-nushell_scripts} $out/kurokirasama-nushell_scripts
-''
+let
+  sources = {
+    nu-std = "${nushell.src}/crates/nu-std";
+    nu_scripts = inputs.corpus-nu_scripts;
+    nupm = inputs.corpus-nupm;
+    tree-sitter-nu = "${inputs.corpus-tree-sitter-nu}/test/corpus";
+    kurokirasama-nushell_scripts = inputs.corpus-kurokirasama-nushell_scripts;
+  };
+  nuten-corpus = ''
+    mkdir $out
+    ${pkgs.lib.concatMapAttrsStringSep "\n" (name: source: "cp -r ${source} $out/${name}") sources}
+  '';
+in
+pkgs.runCommand "nuten-corpus" { } nuten-corpus
