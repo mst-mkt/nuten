@@ -425,7 +425,7 @@ impl<'a> Parser<'a> {
             .nth_token(0)
             .filter(|token| token.kind == SyntaxKind::Word)?;
         Some(Relexed {
-            inner: self.nested(token.range, mode, self.depth),
+            inner: self.lexed_range(token.range, mode),
             token,
         })
     }
@@ -511,14 +511,13 @@ impl<'a> Parser<'a> {
             .tokens
             .first()
             .map_or(end, |token| token.range.start());
-        let mut inner = self.nested(TextRange::new(start, end), mode, self.depth);
+        let mut inner = self.lexed_range(TextRange::new(start, end), mode);
         self.read_inner(&mut inner, items);
         self.errors += inner.errors;
     }
 
-    /// It shows what `bump_relexed_to` would emit, before it does.
     pub(crate) fn lexed_range(&self, range: TextRange, mode: Mode) -> Parser<'a> {
-        self.nested(range, mode, self.depth)
+        Parser::lexed(self.src, range, mode, self.names.clone(), self.depth)
     }
 
     pub(crate) fn bump_bounded(&mut self, end: TextSize, items: impl FnOnce(&mut Parser<'a>)) {
@@ -555,10 +554,6 @@ impl<'a> Parser<'a> {
             errors: self.lex_errors.by_ref().take(errors).collect(),
             tokens,
         }
-    }
-
-    fn nested(&self, range: TextRange, mode: Mode, depth: usize) -> Parser<'a> {
-        Parser::lexed(self.src, range, mode, self.names.clone(), depth)
     }
 
     fn lexed(
