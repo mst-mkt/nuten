@@ -1,0 +1,57 @@
+name: fuzz
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [lex, parse]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      TARGET: ${{ matrix.target }}
+      CORPUS: tasks/fuzz/corpus/${{ matrix.target }}
+    defaults:
+      run:
+        shell: nix develop --no-update-lock-file ./nix/dev#fuzz --command bash -eo pipefail {0}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Restore corpus
+        id: corpus
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.CORPUS }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
+      - name: cargo fuzz run
+        run: cargo fuzz run --fuzz-dir tasks/fuzz "$TARGET" "$CORPUS" "$NUTEN_CORPUS" -- -max_total_time=1200 -timeout=10 -max_len=4096 -create_missing_dirs=1
+      - name: cargo fuzz cmin
+        if: ${{ !cancelled() }}
+        run: cargo fuzz cmin --fuzz-dir tasks/fuzz "$TARGET" "$CORPUS"
+      - name: Save corpus
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.CORPUS }}
+          key: ${{ steps.corpus.outputs.cache-primary-key }}
+      - name: Upload crash inputs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}
+          path: tasks/fuzz/artifacts/${{ matrix.target }}
