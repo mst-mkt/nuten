@@ -1,4 +1,4 @@
-//! Each setting says what it takes and what it changes in a `Config`, in one place.
+//! Each setting says what it takes and which change it makes, in one place.
 //! The loader and the JSON Schema both read them from here.
 
 use nuten_syntax::TextRange;
@@ -14,189 +14,122 @@ use crate::{
 pub(crate) struct Setting {
     pub(crate) key: &'static str,
     pub(crate) description: &'static str,
-    pub(crate) kind: Kind,
-    pub(crate) per_file: bool,
+    pub(crate) scope: Scope,
 }
 
 #[derive(Debug)]
-pub(crate) enum Kind {
+pub(crate) enum Scope {
+    File(Kind<FormatChange>),
+    Whole(Kind<Change>),
+}
+
+#[derive(Debug)]
+pub(crate) enum Kind<C: 'static> {
     Integer {
         min: i64,
         max: i64,
-        set: fn(Config, i64) -> Config,
+        change: fn(i64) -> C,
     },
-    Choice(&'static [Choice]),
-    Boolean {
-        set: fn(Config, bool) -> Config,
-    },
-    Patterns {
-        set: fn(Config, Patterns) -> Config,
-    },
-    Overrides {
-        set: fn(Config, Vec<Override>) -> Config,
-    },
+    Choice(&'static [Choice<C>]),
+    Boolean(fn(bool) -> C),
+    Patterns(fn(Patterns) -> C),
+    Overrides(fn(Vec<Override>) -> C),
     String,
 }
 
 #[derive(Debug)]
-pub(crate) struct Choice {
+pub(crate) struct Choice<C> {
     pub(crate) name: &'static str,
-    pub(crate) set: fn(Config) -> Config,
+    pub(crate) change: C,
 }
 
 pub(crate) static SETTINGS: [Setting; 10] = [
     Setting {
         key: "$schema",
         description: "Where an editor finds the JSON Schema; nuten does not read it.",
-        kind: Kind::String,
-        per_file: false,
+        scope: Scope::Whole(Kind::String),
     },
     Setting {
         key: "line_width",
         description: "Columns a line may take before it breaks where it can.",
-        kind: Kind::Integer {
+        scope: Scope::File(Kind::Integer {
             min: 1,
             max: u32::MAX as i64,
-            set: |config, width| Config {
-                format: FormatConfig {
-                    line_width: u32::try_from(width).expect("the width is from min to max"),
-                    ..config.format
-                },
-                ..config
+            change: |width| {
+                FormatChange::LineWidth(u32::try_from(width).expect("the width is from min to max"))
             },
-        },
-        per_file: true,
+        }),
     },
     Setting {
         key: "indent_style",
         description: "Whether to indent with spaces or with tabs.",
-        kind: Kind::Choice(&[
+        scope: Scope::File(Kind::Choice(&[
             Choice {
                 name: "space",
-                set: |config| Config {
-                    format: FormatConfig {
-                        indent_style: IndentStyle::Space,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::IndentStyle(IndentStyle::Space),
             },
             Choice {
                 name: "tab",
-                set: |config| Config {
-                    format: FormatConfig {
-                        indent_style: IndentStyle::Tab,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::IndentStyle(IndentStyle::Tab),
             },
-        ]),
-        per_file: true,
+        ])),
     },
     Setting {
         key: "indent_width",
         description: "Columns per indent level, and per tab when indenting with tabs.",
-        kind: Kind::Integer {
+        scope: Scope::File(Kind::Integer {
             min: 1,
             max: u8::MAX as i64,
-            set: |config, width| Config {
-                format: FormatConfig {
-                    indent_width: u8::try_from(width).expect("the width is from min to max"),
-                    ..config.format
-                },
-                ..config
+            change: |width| {
+                FormatChange::IndentWidth(
+                    u8::try_from(width).expect("the width is from min to max"),
+                )
             },
-        },
-        per_file: true,
+        }),
     },
     Setting {
         key: "line_ending",
         description: "What ends each line, where `auto` follows the first line break outside a \
                       string, a bare word, or an `@example` block; line breaks inside those stay \
                       as written.",
-        kind: Kind::Choice(&[
+        scope: Scope::File(Kind::Choice(&[
             Choice {
                 name: "lf",
-                set: |config| Config {
-                    format: FormatConfig {
-                        line_ending: LineEnding::Lf,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::LineEnding(LineEnding::Lf),
             },
             Choice {
                 name: "crlf",
-                set: |config| Config {
-                    format: FormatConfig {
-                        line_ending: LineEnding::CrLf,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::LineEnding(LineEnding::CrLf),
             },
             Choice {
                 name: "auto",
-                set: |config| Config {
-                    format: FormatConfig {
-                        line_ending: LineEnding::Auto,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::LineEnding(LineEnding::Auto),
             },
-        ]),
-        per_file: true,
+        ])),
     },
     Setting {
         key: "commas",
         description: "Where a `,` goes among the items of lists, records, tables, parameters, and \
                       type parameters: nowhere, between items on one line, between items, or also \
                       after the last item when they break over lines.",
-        kind: Kind::Choice(&[
+        scope: Scope::File(Kind::Choice(&[
             Choice {
                 name: "none",
-                set: |config| Config {
-                    format: FormatConfig {
-                        commas: Commas::None,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::Commas(Commas::None),
             },
             Choice {
                 name: "inline",
-                set: |config| Config {
-                    format: FormatConfig {
-                        commas: Commas::Inline,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::Commas(Commas::Inline),
             },
             Choice {
                 name: "always",
-                set: |config| Config {
-                    format: FormatConfig {
-                        commas: Commas::Always,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::Commas(Commas::Always),
             },
             Choice {
                 name: "trailing",
-                set: |config| Config {
-                    format: FormatConfig {
-                        commas: Commas::Trailing,
-                        ..config.format
-                    },
-                    ..config
-                },
+                change: FormatChange::Commas(Commas::Trailing),
             },
-        ]),
-        per_file: true,
+        ])),
     },
     Setting {
         key: "respect_gitignore",
@@ -204,13 +137,7 @@ pub(crate) static SETTINGS: [Setting; 10] = [
                       `.ignore`, the exclude file of the repository, or the global excludes file \
                       of git. The config file nearest the directory, or the one `--config` names, \
                       decides it for everything under the directory.",
-        kind: Kind::Boolean {
-            set: |config, respect_gitignore| Config {
-                respect_gitignore,
-                ..config
-            },
-        },
-        per_file: false,
+        scope: Scope::Whole(Kind::Boolean(Change::RespectGitignore)),
     },
     Setting {
         key: "include",
@@ -219,13 +146,7 @@ pub(crate) static SETTINGS: [Setting; 10] = [
                       depth; one with a `/` matches the path from the directory of the config \
                       file, or from the current directory for the config file `--config` names. \
                       A file named directly is formatted whether it matches or not.",
-        kind: Kind::Patterns {
-            set: |config, include| Config {
-                include,
-                ..config
-            },
-        },
-        per_file: false,
+        scope: Scope::Whole(Kind::Patterns(Change::Include)),
     },
     Setting {
         key: "exclude",
@@ -234,13 +155,7 @@ pub(crate) static SETTINGS: [Setting; 10] = [
                       matches a name at any depth; one with a `/` matches the path from the \
                       directory of the config file, or from the current directory for the \
                       config file `--config` names.",
-        kind: Kind::Patterns {
-            set: |config, exclude| Config {
-                exclude,
-                ..config
-            },
-        },
-        per_file: false,
+        scope: Scope::Whole(Kind::Patterns(Change::Exclude)),
     },
     Setting {
         key: "overrides",
@@ -248,13 +163,7 @@ pub(crate) static SETTINGS: [Setting; 10] = [
                       file to file. `include` picks the files of a record and `exclude` leaves \
                       some of them out, with patterns that match as the top-level ones do. A \
                       later record wins over an earlier one where both pick a file.",
-        kind: Kind::Overrides {
-            set: |config, overrides| Config {
-                overrides,
-                ..config
-            },
-        },
-        per_file: false,
+        scope: Scope::Whole(Kind::Overrides(Change::Overrides)),
     },
 ];
 
@@ -271,63 +180,74 @@ pub(crate) const PICKERS: [(&str, &str); 2] = [
     ),
 ];
 
-#[derive(Debug, Clone)]
-pub(crate) struct Change {
-    setting: &'static Setting,
-    given: Given,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FormatChange {
+    LineWidth(u32),
+    IndentStyle(IndentStyle),
+    IndentWidth(u8),
+    LineEnding(LineEnding),
+    Commas(Commas),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Given {
-    Integer(i64),
-    Choice(&'static str),
-    Boolean(bool),
-    Patterns(Patterns),
-    Overrides(Vec<Override>),
-    Nothing,
-}
-
-impl PartialEq for Change {
-    fn eq(&self, other: &Self) -> bool {
-        self.setting.key == other.setting.key && self.given == other.given
+impl FormatChange {
+    fn apply(self, format: &FormatConfig) -> FormatConfig {
+        match self {
+            FormatChange::LineWidth(line_width) => FormatConfig {
+                line_width,
+                ..*format
+            },
+            FormatChange::IndentStyle(indent_style) => FormatConfig {
+                indent_style,
+                ..*format
+            },
+            FormatChange::IndentWidth(indent_width) => FormatConfig {
+                indent_width,
+                ..*format
+            },
+            FormatChange::LineEnding(line_ending) => FormatConfig {
+                line_ending,
+                ..*format
+            },
+            FormatChange::Commas(commas) => FormatConfig {
+                commas,
+                ..*format
+            },
+        }
     }
 }
 
-impl Eq for Change {}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Change {
+    Format(FormatChange),
+    RespectGitignore(bool),
+    Include(Patterns),
+    Exclude(Patterns),
+    Overrides(Vec<Override>),
+}
 
 impl Change {
-    fn apply(&self, config: Config) -> Config {
-        match (&self.setting.kind, &self.given) {
-            (
-                Kind::Integer {
-                    set, ..
-                },
-                &Given::Integer(integer),
-            ) => set(config, integer),
-            (Kind::Choice(choices), Given::Choice(name)) => {
-                let choice = choices.iter().find(|choice| choice.name == *name);
-                (choice.expect("the name is of a choice").set)(config)
+    fn apply(self, config: Config) -> Config {
+        match self {
+            Change::Format(change) => Config {
+                format: change.apply(&config.format),
+                ..config
             },
-            (
-                Kind::Boolean {
-                    set,
-                },
-                &Given::Boolean(boolean),
-            ) => set(config, boolean),
-            (
-                Kind::Patterns {
-                    set,
-                },
-                Given::Patterns(patterns),
-            ) => set(config, patterns.clone()),
-            (
-                Kind::Overrides {
-                    set,
-                },
-                Given::Overrides(overrides),
-            ) => set(config, overrides.clone()),
-            (Kind::String, Given::Nothing) => config,
-            _ => unreachable!("a setting is given only a value it takes"),
+            Change::RespectGitignore(respect_gitignore) => Config {
+                respect_gitignore,
+                ..config
+            },
+            Change::Include(include) => Config {
+                include,
+                ..config
+            },
+            Change::Exclude(exclude) => Config {
+                exclude,
+                ..config
+            },
+            Change::Overrides(overrides) => Config {
+                overrides,
+                ..config
+            },
         }
     }
 }
@@ -336,7 +256,7 @@ impl Change {
 pub struct Override {
     include: Patterns,
     exclude: Patterns,
-    changes: Vec<Change>,
+    changes: Vec<FormatChange>,
 }
 
 impl Override {
@@ -348,17 +268,18 @@ impl Override {
         self.include.has_anchored() || !self.exclude.is_empty()
     }
 
-    pub(crate) fn apply(&self, config: Config) -> Config {
+    pub(crate) fn apply(&self, format: FormatConfig) -> FormatConfig {
         self.changes
             .iter()
-            .fold(config, |config, change| change.apply(config))
+            .fold(format, |format, change| change.apply(&format))
     }
 }
 
 pub(crate) fn config(value: &Value) -> Result<Config, Vec<ConfigError>> {
     let changes = value::all(record_fields(value)?.iter().map(change))?;
     Ok(changes
-        .iter()
+        .into_iter()
+        .flatten()
         .fold(Config::default(), |config, change| change.apply(config)))
 }
 
@@ -374,43 +295,56 @@ fn record_fields(value: &Value) -> Result<&[Field], Vec<ConfigError>> {
     }
 }
 
-fn change(field: &Field) -> Result<Change, Vec<ConfigError>> {
-    let Some(setting) = SETTINGS.iter().find(|setting| setting.key == field.key) else {
-        return Err(error(
-            ConfigErrorKind::UnknownKey(field.key.clone()),
-            field.key_range,
-        ));
-    };
-    let given = given(setting, &field.value)?;
-    Ok(Change {
-        setting,
-        given,
-    })
+fn change(field: &Field) -> Result<Option<Change>, Vec<ConfigError>> {
+    change_of(setting(field)?, &field.value)
 }
 
-fn given(setting: &'static Setting, value: &Value) -> Result<Given, Vec<ConfigError>> {
+fn setting(field: &Field) -> Result<&'static Setting, Vec<ConfigError>> {
+    SETTINGS
+        .iter()
+        .find(|setting| setting.key == field.key)
+        .ok_or_else(|| {
+            error(
+                ConfigErrorKind::UnknownKey(field.key.clone()),
+                field.key_range,
+            )
+        })
+}
+
+fn change_of(setting: &Setting, value: &Value) -> Result<Option<Change>, Vec<ConfigError>> {
+    match &setting.scope {
+        Scope::File(kind) => Ok(kind_change(setting.key, kind, value)?.map(Change::Format)),
+        Scope::Whole(kind) => kind_change(setting.key, kind, value),
+    }
+}
+
+fn kind_change<C: Clone>(
+    key: &'static str,
+    kind: &Kind<C>,
+    value: &Value,
+) -> Result<Option<C>, Vec<ConfigError>> {
     let at_value = |kind| error(kind, value.range);
     let wrong_type = |expected| {
         at_value(ConfigErrorKind::WrongType {
-            key: setting.key,
+            key,
             expected,
             found: value.kind.name(),
         })
     };
-    match (&setting.kind, &value.kind) {
+    match (kind, &value.kind) {
         (
             &Kind::Integer {
                 min,
                 max,
-                ..
+                change,
             },
             &ValueKind::Int(integer),
         ) => {
             if (min..=max).contains(&integer) {
-                Ok(Given::Integer(integer))
+                Ok(Some(change(integer)))
             } else {
                 Err(at_value(ConfigErrorKind::OutOfRange {
-                    key: setting.key,
+                    key,
                     min,
                     max,
                 }))
@@ -425,104 +359,70 @@ fn given(setting: &'static Setting, value: &Value) -> Result<Given, Vec<ConfigEr
         (Kind::Choice(choices), ValueKind::String(string)) => choices
             .iter()
             .find(|choice| choice.name == string)
-            .map(|choice| Given::Choice(choice.name))
+            .map(|choice| Some(choice.change.clone()))
             .ok_or_else(|| {
                 at_value(ConfigErrorKind::UnknownChoice {
-                    key: setting.key,
+                    key,
                     choices: choices.iter().map(|choice| choice.name).collect(),
                 })
             }),
-        (
-            Kind::Boolean {
-                ..
-            },
-            &ValueKind::Bool(boolean),
-        ) => Ok(Given::Boolean(boolean)),
-        (
-            Kind::Boolean {
-                ..
-            },
-            _,
-        ) => Err(wrong_type("a boolean")),
-        (
-            Kind::Patterns {
-                ..
-            },
-            ValueKind::List(values),
-        ) => Ok(Given::Patterns(patterns(setting.key, values)?)),
-        (
-            Kind::Patterns {
-                ..
-            },
-            _,
-        ) => Err(wrong_type("a list of strings")),
-        (
-            Kind::Overrides {
-                ..
-            },
-            ValueKind::List(values),
-        ) => {
+        (Kind::Boolean(change), &ValueKind::Bool(boolean)) => Ok(Some(change(boolean))),
+        (Kind::Boolean(_), _) => Err(wrong_type("a boolean")),
+        (Kind::Patterns(change), ValueKind::List(values)) => {
+            Ok(Some(change(patterns(key, values)?)))
+        },
+        (Kind::Patterns(_), _) => Err(wrong_type("a list of strings")),
+        (Kind::Overrides(change), ValueKind::List(values)) => {
             let overrides = values.iter().map(|value| match &value.kind {
                 ValueKind::Record(fields) => override_of(fields, value.range),
                 kind => Err(error(
                     ConfigErrorKind::WrongType {
-                        key: setting.key,
+                        key,
                         expected: "only records in its list",
                         found: kind.name(),
                     },
                     value.range,
                 )),
             });
-            Ok(Given::Overrides(value::all(overrides)?))
+            Ok(Some(change(value::all(overrides)?)))
         },
-        (
-            Kind::Overrides {
-                ..
-            },
-            _,
-        ) => Err(wrong_type("a list of records")),
-        (Kind::String, ValueKind::String(_)) => Ok(Given::Nothing),
+        (Kind::Overrides(_), _) => Err(wrong_type("a list of records")),
+        (Kind::String, ValueKind::String(_)) => Ok(None),
         (Kind::Choice(_) | Kind::String, _) => Err(wrong_type("a string")),
     }
 }
 
 fn override_of(fields: &[Field], range: TextRange) -> Result<Override, Vec<ConfigError>> {
     let changes = value::all(fields.iter().map(override_change))?;
-    let patterns_of = |key| {
-        changes
-            .iter()
-            .find(|change| change.setting.key == key)
-            .map(|change| match &change.given {
-                Given::Patterns(patterns) => patterns.clone(),
-                _ => unreachable!("`{key}` is given patterns"),
-            })
-    };
-    let include = patterns_of("include")
-        .ok_or_else(|| error(ConfigErrorKind::OverrideWithoutInclude, range))?;
-    let exclude = patterns_of("exclude").unwrap_or_else(|| NO_PATTERNS.clone());
+    let include = changes.iter().find_map(|change| match change {
+        Change::Include(patterns) => Some(patterns.clone()),
+        _ => None,
+    });
+    let exclude = changes.iter().find_map(|change| match change {
+        Change::Exclude(patterns) => Some(patterns.clone()),
+        _ => None,
+    });
     Ok(Override {
-        include,
-        exclude,
+        include: include.ok_or_else(|| error(ConfigErrorKind::OverrideWithoutInclude, range))?,
+        exclude: exclude.unwrap_or_else(|| NO_PATTERNS.clone()),
         changes: changes
             .into_iter()
-            .filter(|change| change.setting.per_file)
+            .filter_map(|change| match change {
+                Change::Format(change) => Some(change),
+                _ => None,
+            })
             .collect(),
     })
 }
 
-fn is_picker(key: &str) -> bool {
-    PICKERS.iter().any(|(picker, _)| *picker == key)
-}
-
 fn override_change(field: &Field) -> Result<Change, Vec<ConfigError>> {
-    let change = change(field)?;
-    if change.setting.per_file || is_picker(change.setting.key) {
-        Ok(change)
-    } else {
-        Err(error(
-            ConfigErrorKind::NotPerFile(change.setting.key),
+    let setting = setting(field)?;
+    match change_of(setting, &field.value)? {
+        Some(change @ (Change::Format(_) | Change::Include(_) | Change::Exclude(_))) => Ok(change),
+        _ => Err(error(
+            ConfigErrorKind::NotPerFile(setting.key),
             field.key_range,
-        ))
+        )),
     }
 }
 
@@ -556,7 +456,7 @@ fn patterns(key: &'static str, values: &[Value]) -> Result<Patterns, Vec<ConfigE
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use super::{Kind, SETTINGS};
+    use super::{Kind, SETTINGS, Scope};
     use crate::{
         Commas, Config, Format, FormatConfig, IndentStyle, LineEnding, Patterns, load,
         test_support::errors,
@@ -625,13 +525,19 @@ mod tests {
     #[test]
     fn each_choice_gives_its_own_config() {
         for setting in &SETTINGS {
-            let Kind::Choice(choices) = setting.kind else {
-                continue;
+            let names: Vec<_> = match setting.scope {
+                Scope::File(Kind::Choice(choices)) => {
+                    choices.iter().map(|choice| choice.name).collect()
+                },
+                Scope::Whole(Kind::Choice(choices)) => {
+                    choices.iter().map(|choice| choice.name).collect()
+                },
+                _ => continue,
             };
-            let configs: Vec<_> = choices
+            let configs: Vec<_> = names
                 .iter()
-                .map(|choice| {
-                    let text = format!(r#"{{"{}": "{}"}}"#, setting.key, choice.name);
+                .map(|name| {
+                    let text = format!(r#"{{"{}": "{name}"}}"#, setting.key);
                     load(&text, Format::Json).unwrap()
                 })
                 .collect();

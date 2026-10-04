@@ -85,16 +85,10 @@ impl Config {
     /// `file` must be canonical.
     pub fn format_of(&self, file: &Path) -> FormatConfig {
         let place = self.place(file);
-        // Not from a clone of `self`, since an override changes only the format.
-        let format = Config {
-            format: self.format.clone(),
-            ..Config::default()
-        };
         self.overrides
             .iter()
             .filter(|picking| picking.picks(place))
-            .fold(format, |config, picking| picking.apply(config))
-            .format
+            .fold(self.format.clone(), |format, picking| picking.apply(format))
     }
 
     fn place<'a>(&self, file: &'a Path) -> Place<'a> {

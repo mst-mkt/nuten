@@ -1,6 +1,6 @@
 use std::fmt::{self, Write};
 
-use crate::settings::{Kind, PICKERS, SETTINGS, Setting};
+use crate::settings::{Kind, PICKERS, SETTINGS, Scope, Setting};
 
 pub fn schema() -> String {
     let properties = SETTINGS
@@ -25,7 +25,14 @@ pub fn schema() -> String {
 
 fn property(setting: &Setting) -> Json {
     let description = ("description", Json::String(setting.description));
-    match setting.kind {
+    match &setting.scope {
+        Scope::File(kind) => property_of(description, kind),
+        Scope::Whole(kind) => property_of(description, kind),
+    }
+}
+
+fn property_of<C>(description: (&'static str, Json), kind: &Kind<C>) -> Json {
+    match *kind {
         // The schema lets `80.0` pass as an integer, which nuten rejects as a float.
         // No keyword tells the two apart.
         Kind::Integer {
@@ -50,15 +57,9 @@ fn property(setting: &Setting) -> Json {
                 ),
             ),
         ]),
-        Kind::Boolean {
-            ..
-        } => Json::object([description, ("type", Json::String("boolean"))]),
-        Kind::Patterns {
-            ..
-        } => patterns(description),
-        Kind::Overrides {
-            ..
-        } => Json::object([
+        Kind::Boolean(_) => Json::object([description, ("type", Json::String("boolean"))]),
+        Kind::Patterns(_) => patterns(description),
+        Kind::Overrides(_) => Json::object([
             description,
             ("type", Json::String("array")),
             ("items", override_record()),
@@ -80,7 +81,7 @@ fn override_record() -> Json {
         .map(|(key, description)| (key, patterns(("description", Json::String(description)))));
     let settings = SETTINGS
         .iter()
-        .filter(|setting| setting.per_file)
+        .filter(|setting| matches!(setting.scope, Scope::File(_)))
         .map(|setting| (setting.key, property(setting)));
     Json::object([
         ("type", Json::String("object")),
