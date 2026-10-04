@@ -14,6 +14,8 @@ let
   nuten-corpus = ''
     mkdir $out
     ${pkgs.lib.concatMapAttrsStringSep "\n" (name: source: "cp -r ${source} $out/${name}") sources}
+    chmod -R u+w $out
+    find $out -type f ! -name '*.nu' ! -name '*.nuon' -delete
   '';
 in
 pkgs.runCommand "nuten-corpus" { } nuten-corpus
