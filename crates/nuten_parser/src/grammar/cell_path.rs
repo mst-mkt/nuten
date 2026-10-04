@@ -193,7 +193,7 @@ mod tests {
     use nuten_syntax::SyntaxKind;
 
     use super::{Link, member};
-    use crate::{ParseErrorKind, parse};
+    use crate::{ParseErrorKind, parse, test_support::errors};
 
     #[test]
     fn string_or_non_negative_int_is_member() {
@@ -273,7 +273,7 @@ mod tests {
             "[a]b.c",
         ] {
             assert_eq!(cell_paths(src), 0, "{src:?}");
-            assert!(parse(src).errors().is_empty(), "{src:?}");
+            assert_eq!(errors(src), [], "{src:?}");
         }
     }
 
