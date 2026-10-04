@@ -51,15 +51,14 @@ const CLOSURE: Param = param(Takes::Word, false, true);
 
 #[derive(Debug)]
 struct Flag<'s> {
-    /// Empty for a flag with a short name alone.
-    long: &'s str,
+    long: Option<&'s str>,
     short: Option<char>,
     value: Option<Param>,
 }
 
 const fn flag(long: &'static str, short: Option<char>, value: Option<Param>) -> Flag<'static> {
     Flag {
-        long,
+        long: Some(long),
         short,
         value,
     }
@@ -84,9 +83,7 @@ impl Signature<'_> {
     }
 
     fn long(&self, name: &str) -> Option<&Flag<'_>> {
-        self.flags
-            .iter()
-            .find(|flag| !flag.long.is_empty() && flag.long == name)
+        self.flags.iter().find(|flag| flag.long == Some(name))
     }
 
     fn short(&self, name: char) -> Option<&Flag<'_>> {
@@ -174,7 +171,7 @@ fn arguments(signature: &Signature<'_>, items: &[&str]) -> Vec<Option<Param>> {
         } else if is_spread(item, Target::List) || is_spread(item, Target::Record) {
             // Nu takes a `{ }` spread as flags, and a `$` or `( )` one where the command has flags.
             // Every command has `--help`, which nu leaves out of that check.
-            let has_flags = signature.flags.iter().any(|flag| flag.long != "help");
+            let has_flags = signature.flags.iter().any(|flag| flag.long != Some("help"));
             let spreads_list =
                 is_spread(item, Target::List) && (!is_spread(item, Target::Record) || !has_flags);
             if spreads_list && signature.rest.is_some() && positional >= signature.required.len() {
@@ -310,9 +307,14 @@ struct Draft<'a> {
 }
 
 enum Name<'a> {
-    Positional { optional: bool },
+    Positional {
+        optional: bool,
+    },
     Rest,
-    Flag { long: &'a str, short: Option<char> },
+    Flag {
+        long: Option<&'a str>,
+        short: Option<char>,
+    },
 }
 
 fn drafts<'a>(items: impl IntoIterator<Item = Item<'a>>) -> Option<Vec<Draft<'a>>> {
@@ -363,13 +365,13 @@ fn name(text: &str) -> Option<Name<'_>> {
             None => (long, None),
         };
         return (!long.is_empty()).then_some(Name::Flag {
-            long,
+            long: Some(long),
             short,
         });
     }
     if text.starts_with('-') {
         return Some(Name::Flag {
-            long: "",
+            long: None,
             short: Some(short_name(text)?),
         });
     }
@@ -1843,7 +1845,7 @@ mod tests {
                 let value = flag.value.map(|value| format!("={}", code(value)));
                 format!(
                     "{}{}{}",
-                    flag.long,
+                    flag.long.unwrap_or_default(),
                     short.unwrap_or_default(),
                     value.unwrap_or_default()
                 )
