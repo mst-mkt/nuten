@@ -6,7 +6,7 @@ use nuten_syntax::{
     ast::{AstNode, Def, IoType, IoTypes},
 };
 
-use super::{Child, Formatter, children, line_break_or_space};
+use super::{Child, Formatter, children, container::ItemsLayout, line_break_or_space};
 use crate::Commas;
 
 impl<'a> Formatter<'a> {
@@ -48,11 +48,13 @@ impl<'a> Formatter<'a> {
                 self.items(
                     head,
                     inside,
-                    false,
-                    soft_line_break_or_space,
-                    soft_line_break_or_space,
                     &close,
-                    Commas::Always,
+                    ItemsLayout {
+                        expand: false,
+                        before_first: soft_line_break_or_space,
+                        before_close: soft_line_break_or_space,
+                        commas: Commas::Always,
+                    },
                 )
             },
             None => self.one_line_items(syntax.children_with_tokens(), |_| true),

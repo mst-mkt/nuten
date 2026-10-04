@@ -14,6 +14,14 @@ use crate::Commas;
 
 type SoftLine = fn() -> Element<'static>;
 
+#[derive(Clone, Copy)]
+pub(super) struct ItemsLayout {
+    pub(super) expand: bool,
+    pub(super) before_first: SoftLine,
+    pub(super) before_close: SoftLine,
+    pub(super) commas: Commas,
+}
+
 impl<'a> Formatter<'a> {
     pub(super) fn container(&mut self, container: &dyn Bracketed) -> Vec<Element<'a>> {
         let kind = container.syntax().kind();
@@ -29,11 +37,13 @@ impl<'a> Formatter<'a> {
         self.items(
             head,
             container.inside(),
-            is_arms,
-            line,
-            line,
             &container.close(),
-            commas,
+            ItemsLayout {
+                expand: is_arms,
+                before_first: line,
+                before_close: line,
+                commas,
+            },
         )
     }
 
@@ -53,28 +63,29 @@ impl<'a> Formatter<'a> {
         self.items(
             head,
             table.following(&semicolon.into()),
-            expand,
-            soft_line_break_or_space,
-            soft_line_break,
             &table.close(),
-            self.commas,
+            ItemsLayout {
+                expand,
+                before_first: soft_line_break_or_space,
+                before_close: soft_line_break,
+                commas: self.commas,
+            },
         )
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "each container lays out its items with its own choice of these"
-    )]
     pub(super) fn items(
         &mut self,
         head: Vec<Element<'a>>,
         elements: impl Iterator<Item = SyntaxElement>,
-        expand: bool,
-        before_first: SoftLine,
-        before_close: SoftLine,
         close: &SyntaxToken,
-        commas: Commas,
+        layout: ItemsLayout,
     ) -> Vec<Element<'a>> {
+        let ItemsLayout {
+            expand,
+            before_first,
+            before_close,
+            commas,
+        } = layout;
         let items: Vec<_> = without_separators(children(elements, &self.kept)).collect();
         let expand = expand
             || items.first().is_some_and(|first| first.newlines > 0)
