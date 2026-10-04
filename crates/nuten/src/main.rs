@@ -310,7 +310,7 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
         .chain(jobs.iter().flatten().map(|(_, lookup)| lookup))
         .any(Lookup::is_wrong);
     let outcomes = format_all(&jobs, formats.then_some(mode));
-    report_of(jobs, outcomes, all_excluded)
+    report_of(outcomes, all_excluded)
 }
 
 type Job = Result<(Candidate, Lookup), String>;
@@ -370,45 +370,34 @@ fn pick((candidate, lookup): &(Candidate, Lookup)) -> Pick {
     }
 }
 
-fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Result<bool, Vec<String>>> {
-    let files: Vec<_> = jobs.iter().flatten().collect();
-    parallel::map(&files, |(candidate, lookup)| match (lookup, mode) {
-        (Lookup::Found(config), Some(mode)) => {
-            let format = match &candidate.canonical {
-                Ok(file) => config.format_of(file),
-                // Reading the file reports why it cannot be resolved.
-                Err(_) => config.format.clone(),
-            };
-            format_file(&candidate.path, &format, mode)
-        },
-        (Lookup::Found(_), None) => Ok(false),
-        (lookup, _) => Err(lookup.problems()),
+type Outcome = Result<Option<PathBuf>, Vec<String>>;
+
+fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Outcome> {
+    parallel::map(jobs, |job| {
+        let (candidate, lookup) = job.as_ref().map_err(|problem| vec![problem.clone()])?;
+        let changed = match (lookup, mode) {
+            (Lookup::Found(config), Some(mode)) => {
+                let format = match &candidate.canonical {
+                    Ok(file) => config.format_of(file),
+                    // Reading the file reports why it cannot be resolved.
+                    Err(_) => config.format.clone(),
+                };
+                format_file(&candidate.path, &format, mode)?
+            },
+            (Lookup::Found(_), None) => false,
+            (lookup, _) => return Err(lookup.problems()),
+        };
+        Ok(changed.then(|| candidate.path.clone()))
     })
 }
 
-/// What formatting each file of `jobs` comes to is next in `outcomes`.
-fn report_of(
-    jobs: Vec<Job>,
-    outcomes: Vec<Result<bool, Vec<String>>>,
-    all_excluded: bool,
-) -> Report {
-    let mut outcomes = outcomes.into_iter();
-    let job_outcomes: Vec<_> = jobs
-        .into_iter()
-        .map(|job| match job {
-            Ok((candidate, _)) => outcomes
-                .next()
-                .expect("an outcome for each file")
-                .map(|changed| changed.then_some(candidate.path)),
-            Err(problem) => Err(vec![problem]),
-        })
-        .collect();
+fn report_of(outcomes: Vec<Outcome>, all_excluded: bool) -> Report {
     Report {
-        changed: job_outcomes
+        changed: outcomes
             .iter()
-            .filter_map(|result| result.as_ref().ok()?.clone())
+            .filter_map(|outcome| outcome.as_ref().ok()?.clone())
             .collect(),
-        problems: job_outcomes
+        problems: outcomes
             .into_iter()
             .filter_map(Result::err)
             .flatten()
