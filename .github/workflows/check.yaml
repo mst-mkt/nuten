@@ -95,11 +95,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Install nushell
         run: 7z x "$RUNNER_TEMP/nu.zip" -o"$USERPROFILE/.cargo/bin"
+      - name: Prepare corpus
+        run: |
+          nu scripts/prepare-corpus.nu "$RUNNER_TEMP/corpus"
+          echo "NUTEN_CORPUS=$RUNNER_TEMP/corpus" >> "$GITHUB_ENV"
       - run: cargo nextest run --workspace
-        env:
-          NUTEN_TEST_SKIP_CORPUS: "1"
       - if: ${{ !cancelled() }}
-        run: cargo oracle format tasks/oracle/test_data
+        run: cargo oracle format tasks/oracle/test_data "$NUTEN_CORPUS"
 
   test-editors:
     runs-on: ubuntu-24.04
