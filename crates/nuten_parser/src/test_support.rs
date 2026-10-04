@@ -1,6 +1,12 @@
 use std::{env, process::Command};
 
+use rowan::TextRange;
+
 use crate::{ParseErrorKind, parse};
+
+pub(crate) fn range(start: u32, end: u32) -> TextRange {
+    TextRange::new(start.into(), end.into())
+}
 
 pub(crate) fn errors(src: &str) -> Vec<ParseErrorKind> {
     parse(src).errors().iter().map(|error| error.kind).collect()

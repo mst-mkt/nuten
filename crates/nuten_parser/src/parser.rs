@@ -736,6 +736,7 @@ mod tests {
         ParseErrorKind,
         grammar::{Names, SQUARE},
         lexer::{self, Mode, Token},
+        test_support::range,
     };
 
     fn parser(src: &str) -> Parser<'_> {
@@ -793,10 +794,6 @@ mod tests {
         for src in ["\"a.b\"", "e>", ""] {
             assert!(parser(src).relexed(Mode::CellPath).is_none(), "{src:?}");
         }
-    }
-
-    fn range(start: u32, end: u32) -> TextRange {
-        TextRange::new(start.into(), end.into())
     }
 
     #[test]

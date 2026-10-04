@@ -467,7 +467,7 @@ mod tests {
         LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
         Lexed, Mode, item_brackets, lex, rejected_operator_kind,
     };
-    use crate::invariants::OPERATORS;
+    use crate::{invariants::OPERATORS, test_support::range};
 
     fn lex_all(src: &str) -> Lexed {
         lex_all_in(src, Mode::Block)
@@ -561,10 +561,6 @@ mod tests {
 
     fn assert_one_item(item: &str) {
         assert_eq!(split(&format!("{item} z")), [item, "z"], "{item:?}");
-    }
-
-    fn range(start: u32, end: u32) -> TextRange {
-        TextRange::new(start.into(), end.into())
     }
 
     #[test]
