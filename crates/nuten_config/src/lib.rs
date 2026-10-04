@@ -91,6 +91,15 @@ impl Config {
             .fold(self.format.clone(), |format, picking| picking.apply(format))
     }
 
+    pub fn format_of_text(&self, file: Option<&Path>) -> Result<Option<FormatConfig>, String> {
+        let file = match file {
+            // Not resolved unless it matters, since nuten may run in a directory that is removed.
+            Some(file) if self.depends_on_file() => resolved(file)?,
+            _ => return Ok(Some(self.format.clone())),
+        };
+        Ok((!self.excludes(&file)).then(|| self.format_of(&file)))
+    }
+
     fn place<'a>(&self, file: &'a Path) -> Place<'a> {
         Place::of(file, self.root.as_deref())
     }

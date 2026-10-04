@@ -287,15 +287,14 @@ fn formatting_at(
     // Found again for each request, so that a config file edited meanwhile is never missed.
     let config = config_of(place, uri).map_err(failed)?;
     let file = match place {
-        Place::File(path) if config.depends_on_file() => {
-            Some(nuten_config::resolved(path).map_err(|problem| failed(vec![problem]))?)
-        },
+        Place::File(path) => Some(path.as_path()),
         _ => None,
     };
-    let format = match &file {
-        Some(file) if config.excludes(file) => return Ok(None),
-        Some(file) => config.format_of(file),
-        None => config.format,
+    let Some(format) = config
+        .format_of_text(file)
+        .map_err(|problem| failed(vec![problem]))?
+    else {
+        return Ok(None);
     };
     Ok(match nuten_format::format(text, &format) {
         Ok(formatted) => Some(edit::between(text, &formatted).into_iter().collect()),

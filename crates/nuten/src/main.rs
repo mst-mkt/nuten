@@ -235,18 +235,13 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
             Some(config_file) => nuten_config::load_given(config_file)?,
             None => nuten_config::of_text(filepath)?,
         };
-        let file = match filepath {
-            // Not resolved unless it matters, since nuten may run in a directory that is removed.
-            Some(file) if config.depends_on_file() => {
-                Some(nuten_config::resolved(file).map_err(|problem| vec![problem])?)
-            },
-            _ => None,
-        };
-        let formatted = match &file {
+        let format = config
+            .format_of_text(filepath)
+            .map_err(|problem| vec![problem])?;
+        let formatted = match format {
+            Some(format) => format_text(name, &src, &format)?,
             // Written back as it is, since the caller takes stdout for what the file is to hold.
-            Some(file) if config.excludes(file) => src.clone(),
-            Some(file) => format_text(name, &src, &config.format_of(file))?,
-            None => format_text(name, &src, &config.format)?,
+            None => src.clone(),
         };
         Ok((src, formatted))
     });
