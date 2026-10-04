@@ -2279,6 +2279,30 @@ mod tests {
     }
 
     #[test]
+    fn declared_flag_with_short_name_alone_counts_as_flag_for_spread() {
+        assert_eq!(
+            with_flag("-s").arguments(&["...$x", "[b]"]),
+            [None, Some(LIST)]
+        );
+    }
+
+    #[test]
+    fn declared_flag_with_short_name_alone_has_no_long_name() {
+        use Item::{Colon, Word};
+        let signature = declared(&[
+            Word("a?"),
+            Colon,
+            Word("string"),
+            Word("-f"),
+            Colon,
+            Word("list"),
+        ])
+        .unwrap();
+        assert_eq!(signature.arguments(&["--f", "[a]"]), [None, Some(WORD)]);
+        assert_eq!(signature.arguments(&["-f", "[a]"]), [None, Some(LIST)]);
+    }
+
+    #[test]
     fn list_spread_fills_parameters_up_to_rest_even_with_flags() {
         assert_eq!(
             with_flag("--flag").arguments(&["...[1]", "[b]"]),
