@@ -28,7 +28,10 @@ struct FileNames<'a> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Callee {
-    Defined,
+    /// `words` is how many words of the call the name takes.
+    Defined {
+        words: usize,
+    },
     Unknowable,
     Undefined,
 }
@@ -83,66 +86,60 @@ impl<'a> Names<'a> {
         head: TextSize,
         word: impl Fn(usize) -> Option<&'w str>,
     ) -> Callee {
-        self.resolved(head, word).0
+        self.resolved(head, &self.spelled(word)).0
     }
 
-    pub(crate) fn defined_words<'w>(
-        &self,
-        head: TextSize,
-        word: impl Fn(usize) -> Option<&'w str>,
-    ) -> Option<usize> {
-        let (Callee::Defined, defining) = self.resolved(head, &word) else {
-            return None;
-        };
-        // Nu runs the longest name it finds.
-        // A longer import therefore beats the definition, even from an outer block.
-        let spelled = self.spelled(&word);
-        let imported = self
-            .scopes()
-            .filter_map(|scope| scope.imported_words(&spelled, head))
-            .max();
-        defining
-            .map(|defining| defining.definition.words.len())
-            .max(imported)
-    }
-
-    fn resolved<'w>(
-        &self,
-        head: TextSize,
-        word: impl Fn(usize) -> Option<&'w str>,
-    ) -> (Callee, Option<Defining<'_, 'a>>) {
-        let spelled = self.spelled(&word);
+    fn resolved(&self, head: TextSize, spelled: &[&str]) -> (Callee, Option<Defining<'_, 'a>>) {
         let imports_before = || self.scopes().flat_map(|scope| scope.imports_before(head));
         // Nu may take a definition over the alias, but leaving that unknowable only keeps its call.
-        if imports_before().any(|import| import.brings_alias(&spelled)) {
+        if imports_before().any(|import| import.brings_alias(spelled)) {
             return (Callee::Unknowable, None);
         }
-        let Some(defining) = self.defining(&spelled) else {
+        let Some(defining) = self.defining(spelled) else {
             let unknowable = imports_before().any(|import| import.brings.is_none())
-                && word(0).is_some_and(|head| !builtin::is_parser_keyword(head));
+                && spelled
+                    .first()
+                    .is_some_and(|word| !builtin::is_parser_keyword(word));
             let callee = if unknowable {
                 Callee::Unknowable
-            } else if !self
-                .scopes()
-                .any(|scope| scope.imported_words(&spelled, head).is_some())
-            {
-                Callee::Undefined
-            } else if self.is_hidden(spelled[0]) {
-                Callee::Unknowable
+            } else if let Some(words) = self.imported_words(spelled, head) {
+                if self.is_hidden(spelled[0]) {
+                    Callee::Unknowable
+                } else {
+                    Callee::Defined {
+                        words,
+                    }
+                }
             } else {
-                Callee::Defined
+                Callee::Undefined
             };
             return (callee, None);
         };
         let unknowable = self.is_hidden(defining.definition.words[0])
             || self
-                .replacing(&defining, &spelled, head)
+                .replacing(&defining, spelled, head)
                 .any(|import| import.brings.is_none());
         if unknowable {
-            (Callee::Unknowable, None)
-        } else {
-            (Callee::Defined, Some(defining))
+            return (Callee::Unknowable, None);
         }
+        // Nu runs the longest name it finds.
+        // A longer import therefore beats the definition, even from an outer block.
+        let defined = defining.definition.words.len();
+        let words = self
+            .imported_words(spelled, head)
+            .map_or(defined, |imported| imported.max(defined));
+        (
+            Callee::Defined {
+                words,
+            },
+            Some(defining),
+        )
+    }
+
+    fn imported_words(&self, spelled: &[&str], head: TextSize) -> Option<usize> {
+        self.scopes()
+            .filter_map(|scope| scope.imported_words(spelled, head))
+            .max()
     }
 
     /// Nu runs the longest name it finds, and of those as long, the one from the innermost block.
@@ -179,12 +176,13 @@ impl<'a> Names<'a> {
         head: TextSize,
         items: &[&str],
     ) -> Option<Vec<Option<Param>>> {
-        let (_, defining) = self.resolved(head, |nth| items.get(nth).copied());
+        let spelled = self.spelled(|nth| items.get(nth).copied());
+        let (_, defining) = self.resolved(head, &spelled);
         let defining = defining?;
         let definition = defining.definition;
         let declared = definition.declared.as_ref()?;
         let replaced = builtin::is_command(definition.words[0])
-            || self.replacing(&defining, items, head).next().is_some();
+            || self.replacing(&defining, &spelled, head).next().is_some();
         if replaced {
             return None;
         }
@@ -1146,7 +1144,12 @@ mod tests {
 
     #[test]
     fn inner_call_runs_outer_def() {
-        assert_eq!(callee_nested("def f [] {}", "f"), Callee::Defined);
+        assert_eq!(
+            callee_nested("def f [] {}", "f"),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
@@ -1161,7 +1164,9 @@ mod tests {
     fn inner_def_replaces_outer_unknowable_command() {
         assert_eq!(
             callee_nested("def f [] {}\nuse m.nu *", "def f [] {}\nf"),
-            Callee::Defined
+            Callee::Defined {
+                words: 1
+            }
         );
     }
 
@@ -1176,14 +1181,30 @@ mod tests {
             "def f (x) {}\nf",
             "def f []: any -> any {}\nf",
         ] {
-            assert_eq!(callee(src), Callee::Defined, "{src:?}");
+            assert_eq!(
+                callee(src),
+                Callee::Defined {
+                    words: 1
+                },
+                "{src:?}"
+            );
         }
     }
 
     #[test]
     fn def_after_other_statement_defines_command() {
-        assert_eq!(callee("f\ndef f [] {}\nf"), Callee::Defined);
-        assert_eq!(callee("print a; def f [] {}\nf"), Callee::Defined);
+        assert_eq!(
+            callee("f\ndef f [] {}\nf"),
+            Callee::Defined {
+                words: 1
+            }
+        );
+        assert_eq!(
+            callee("print a; def f [] {}\nf"),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
@@ -1193,7 +1214,13 @@ mod tests {
             "def 'f g' [] {}\nf g",
             "def `f g` [] {}\nf g",
         ] {
-            assert_eq!(callee(src), Callee::Defined, "{src:?}");
+            assert_eq!(
+                callee(src),
+                Callee::Defined {
+                    words: 2
+                },
+                "{src:?}"
+            );
         }
     }
 
@@ -1201,7 +1228,12 @@ mod tests {
     fn only_whole_name_runs_command() {
         assert_eq!(callee("def \"f g\" [] {}\nf"), Callee::Undefined);
         assert_eq!(callee("def \"f g\" [] {}\nf h"), Callee::Undefined);
-        assert_eq!(callee("def \"f g\" [] {}\nf g h"), Callee::Defined);
+        assert_eq!(
+            callee("def \"f g\" [] {}\nf g h"),
+            Callee::Defined {
+                words: 2
+            }
+        );
         assert_eq!(callee("def f [] {}\ng"), Callee::Undefined);
     }
 
@@ -1229,7 +1261,12 @@ mod tests {
     #[test]
     fn skipped_line_break_separates_no_statements() {
         let src = "\ndef f [] {};\nf";
-        assert_eq!(callee_lexed_in(src, 2, Mode::Paren), Callee::Defined);
+        assert_eq!(
+            callee_lexed_in(src, 2, Mode::Paren),
+            Callee::Defined {
+                words: 1
+            }
+        );
         let src = "ls\ndef f [] {};\nf";
         assert_eq!(callee_lexed_in(src, 2, Mode::Paren), Callee::Undefined);
     }
@@ -1244,7 +1281,9 @@ mod tests {
     fn def_after_attribute_line_defines_command() {
         assert_eq!(
             callee("@example \"e\" { f }\ndef f [] {}\nf"),
-            Callee::Defined
+            Callee::Defined {
+                words: 1
+            }
         );
     }
 
@@ -1276,13 +1315,19 @@ mod tests {
 
     #[test]
     fn keyword_name_nu_looks_up_defines_command() {
-        for src in [
-            "def \"if x\" [] {}\nif x",
-            "def \"return x\" [] {}\nreturn x",
-            "def \"plugin x\" [] {}\nplugin x",
-            "def else [] {}\nelse",
+        for (src, words) in [
+            ("def \"if x\" [] {}\nif x", 2),
+            ("def \"return x\" [] {}\nreturn x", 2),
+            ("def \"plugin x\" [] {}\nplugin x", 2),
+            ("def else [] {}\nelse", 1),
         ] {
-            assert_eq!(callee(src), Callee::Defined, "{src:?}");
+            assert_eq!(
+                callee(src),
+                Callee::Defined {
+                    words
+                },
+                "{src:?}"
+            );
         }
     }
 
@@ -1303,7 +1348,13 @@ mod tests {
     fn import_before_def_leaves_command_defined() {
         for keyword in ["use", "export use", "source", "source-env", "overlay use"] {
             let src = format!("{keyword} m.nu *\ndef f [] {{}}\nf");
-            assert_eq!(callee(&src), Callee::Defined, "{src:?}");
+            assert_eq!(
+                callee(&src),
+                Callee::Defined {
+                    words: 1
+                },
+                "{src:?}"
+            );
         }
     }
 
@@ -1321,7 +1372,12 @@ mod tests {
 
     #[test]
     fn import_after_call_leaves_command_defined() {
-        assert_eq!(callee_on("def f [] {}\nf\nuse m.nu *", 1), Callee::Defined);
+        assert_eq!(
+            callee_on("def f [] {}\nf\nuse m.nu *", 1),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
@@ -1363,19 +1419,25 @@ mod tests {
 
     #[test]
     fn module_import_brings_commands_it_names() {
-        for (import, call) in [
-            ("use m f", "f"),
-            ("use m", "m f"),
-            ("use m *", "g"),
-            ("use m [f g]", "g"),
-            ("use m [f, \"g\"]", "g"),
-            ("use m \"*\"", "f"),
-            ("use \"m\" f", "f"),
-            ("export use m f", "f"),
-            ("let x = use m f", "f"),
+        for (import, call, words) in [
+            ("use m f", "f", 1),
+            ("use m", "m f", 2),
+            ("use m *", "g", 1),
+            ("use m [f g]", "g", 1),
+            ("use m [f, \"g\"]", "g", 1),
+            ("use m \"*\"", "f", 1),
+            ("use \"m\" f", "f", 1),
+            ("export use m f", "f", 1),
+            ("let x = use m f", "f", 1),
         ] {
             let src = format!("{MODULE}\n{import}\n{call}");
-            assert_eq!(callee(&src), Callee::Defined, "{src:?}");
+            assert_eq!(
+                callee(&src),
+                Callee::Defined {
+                    words
+                },
+                "{src:?}"
+            );
         }
     }
 
@@ -1397,7 +1459,13 @@ mod tests {
         let module = "module m { export def main [] {}; export def f [] {} }";
         for import in ["use m", "use m *"] {
             let src = format!("{module}\n{import}\nm");
-            assert_eq!(callee(&src), Callee::Defined, "{src:?}");
+            assert_eq!(
+                callee(&src),
+                Callee::Defined {
+                    words: 1
+                },
+                "{src:?}"
+            );
         }
     }
 
@@ -1433,7 +1501,12 @@ mod tests {
             def g [] {}
             export def f [] {}
         }";
-        assert_eq!(callee(&format!("{module}\nuse m f\nf")), Callee::Defined);
+        assert_eq!(
+            callee(&format!("{module}\nuse m f\nf")),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
@@ -1453,13 +1526,23 @@ mod tests {
     #[test]
     fn module_import_of_alias_leaves_other_commands_defined() {
         let src = "module m {\nexport alias f = ls\nexport def g [] {}\n}\nuse m *\ng";
-        assert_eq!(callee(src), Callee::Defined);
+        assert_eq!(
+            callee(src),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
     fn module_import_of_alias_leaves_earlier_call_defined() {
         let src = "module m { export alias f = ls }\ndef f [] {}\nf\nuse m f";
-        assert_eq!(callee_on(src, 2), Callee::Defined);
+        assert_eq!(
+            callee_on(src, 2),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
@@ -1479,7 +1562,12 @@ mod tests {
         let alias = "export alias \"f g\" = ls";
         let src = |first, last| format!("module m {{\n{first}\n{last}\n}}\nuse m \"f g\"\nf g");
         assert_eq!(callee(&src(def, alias)), Callee::Unknowable);
-        assert_eq!(callee(&src(alias, def)), Callee::Defined);
+        assert_eq!(
+            callee(&src(alias, def)),
+            Callee::Defined {
+                words: 2
+            }
+        );
     }
 
     #[test]
@@ -1492,7 +1580,12 @@ mod tests {
     #[test]
     fn module_import_finds_module_by_name_unquoted_once() {
         let src = "module \"'if'\" { export def f [] {} }\nuse \"'if'\" f\nf";
-        assert_eq!(callee(src), Callee::Defined);
+        assert_eq!(
+            callee(src),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
@@ -1508,7 +1601,13 @@ mod tests {
             "module \"m\" { export def f [] {} }",
         ] {
             let src = format!("{module}\nuse m f\nf");
-            assert_eq!(callee(&src), Callee::Defined, "{src:?}");
+            assert_eq!(
+                callee(&src),
+                Callee::Defined {
+                    words: 1
+                },
+                "{src:?}"
+            );
         }
     }
 
@@ -1539,13 +1638,23 @@ mod tests {
     #[test]
     fn module_import_finds_last_earlier_module() {
         let src = "module m { export def f [] {} }\nmodule m { export def g [] {} }\nuse m *";
-        assert_eq!(callee(&format!("{src}\ng")), Callee::Defined);
+        assert_eq!(
+            callee(&format!("{src}\ng")),
+            Callee::Defined {
+                words: 1
+            }
+        );
         assert_eq!(callee(&format!("{src}\nf")), Callee::Undefined);
     }
 
     #[test]
     fn inner_module_import_finds_outer_module() {
-        assert_eq!(callee_nested(MODULE, "use m f\nf"), Callee::Defined);
+        assert_eq!(
+            callee_nested(MODULE, "use m f\nf"),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
@@ -1588,16 +1697,33 @@ mod tests {
     }
 
     #[test]
+    fn module_import_of_longer_name_takes_call_words_over_def() {
+        let module = "module m { export def \"f g\" [] {} }\nuse m \"f g\"";
+        let expected = Callee::Defined {
+            words: 2,
+        };
+        assert_eq!(callee(&format!("{module}\ndef f [] {{}}\nf g")), expected);
+        assert_eq!(callee_nested(module, "def f [] {}\nf g"), expected);
+    }
+
+    #[test]
     fn earlier_import_makes_longer_name_unknowable() {
         assert_eq!(callee("use m.nu *\ndef f [] {}\nf g"), Callee::Unknowable);
-        assert_eq!(callee("def f [] {}\nf g"), Callee::Defined);
+        assert_eq!(
+            callee("def f [] {}\nf g"),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]
     fn call_runs_longest_name_it_spells() {
         assert_eq!(
             callee("def f [] {}\nuse m.nu *\ndef \"f g\" [] {}\nf g"),
-            Callee::Defined
+            Callee::Defined {
+                words: 2
+            }
         );
         assert_eq!(
             callee("def \"f g\" [] {}\nuse m.nu *\ndef f [] {}\nf g"),
@@ -1619,7 +1745,12 @@ mod tests {
 
     #[test]
     fn hiding_other_name_leaves_command_defined() {
-        assert_eq!(callee("def f [] {}\nhide g\nf"), Callee::Defined);
+        assert_eq!(
+            callee("def f [] {}\nhide g\nf"),
+            Callee::Defined {
+                words: 1
+            }
+        );
     }
 
     #[test]

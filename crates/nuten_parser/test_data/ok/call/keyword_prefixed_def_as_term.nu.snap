@@ -1,0 +1,40 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/keyword_prefixed_def_as_term.nu
+---
+Root@0..38
+  Pipeline@0..21
+    PipelineElement@0..21
+      Def@0..21
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        String@4..10 "\"if x\""
+        Whitespace@10..11 " "
+        Signature@11..14
+          LBracket@11..12 "["
+          Param@12..13
+            Word@12..13 "y"
+          RBracket@13..14 "]"
+        Whitespace@14..15 " "
+        Block@15..21
+          LBrace@15..16 "{"
+          Whitespace@16..17 " "
+          Pipeline@17..19
+            PipelineElement@17..19
+              Word@17..19 "$y"
+          Whitespace@19..20 " "
+          RBrace@20..21 "}"
+  Newline@21..22 "\n"
+  Pipeline@22..37
+    PipelineElement@22..37
+      MathExpression@22..37
+        Word@22..23 "1"
+        Whitespace@23..24 " "
+        Operator@24..25 "+"
+        Whitespace@25..26 " "
+        Word@26..28 "if"
+        Whitespace@28..29 " "
+        Word@29..30 "x"
+        Whitespace@30..31 " "
+        Word@31..37 "{  1 }"
+  Newline@37..38 "\n"

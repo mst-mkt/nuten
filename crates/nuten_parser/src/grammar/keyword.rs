@@ -18,7 +18,7 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
     // Nu accepts some calls the syntax does not read, as with a `--` or a variable for the body.
     // Telling them from the calls nu rejects would need the shapes nu reads there.
     // So any call the syntax does not read stays as written, not as terms lacking an operator.
-    if !keyword(p) {
+    if !keyword(p, p.callee()) {
         while at_call_item(p) {
             p.bump();
         }
@@ -31,8 +31,8 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
 /// Where a block around the call defines a command of its name, nu may run that instead.
 /// A syntax may hold another with no brackets between them, as an `if` does in its condition.
 /// So it counts toward the depth limit of brackets, past which the call stays a call.
-pub(super) fn keyword(p: &mut Parser<'_>) -> bool {
-    if p.callee() != Callee::Undefined || !p.can_nest() {
+pub(super) fn keyword(p: &mut Parser<'_>, callee: Callee) -> bool {
+    if callee != Callee::Undefined || !p.can_nest() {
         return false;
     }
     p.deeper(|p| match p.peek_text() {

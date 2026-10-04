@@ -18,9 +18,9 @@ pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
     match head {
         Head::Missing => {},
         Head::Expression => expression(p),
-        Head::Call(shape) => {
-            if !keyword(p) {
-                call(p, shape);
+        Head::Call(shape, callee) => {
+            if !keyword(p, callee) {
+                call(p, shape, callee);
             }
         },
     }
@@ -31,7 +31,7 @@ pub(super) fn command(p: &mut Parser<'_>, assigning: bool) -> Option<Streams> {
 enum Head {
     Missing,
     Expression,
-    Call(Shape),
+    Call(Shape, Callee),
 }
 
 impl Head {
@@ -39,13 +39,16 @@ impl Head {
         match p.peek() {
             Some(kind) if is_file_redirection(kind) || kind == SyntaxKind::Assign => Head::Missing,
             _ if p.peek_text().is_some_and(is_math_expression_like) => Head::Expression,
-            _ => Head::Call(argument_shape(p)),
+            _ => {
+                let callee = p.callee();
+                Head::Call(argument_shape(p, callee), callee)
+            },
         }
     }
 
     fn shape(self) -> Shape {
         match self {
-            Head::Call(shape) => shape,
+            Head::Call(shape, _) => shape,
             Head::Missing | Head::Expression => Shape::UnknownArgument,
         }
     }
@@ -53,7 +56,7 @@ impl Head {
     fn redirected(self) -> Option<Streams> {
         match self {
             Head::Missing => None,
-            Head::Expression | Head::Call(_) => Some(Streams::default()),
+            Head::Expression | Head::Call(..) => Some(Streams::default()),
         }
     }
 }
@@ -240,7 +243,7 @@ pub(super) fn is_math_expression_like(text: &str) -> bool {
 /// A `^` skips the lookup and a `%` looks past any alias, so both come before the alias check.
 /// Nu runs `else` and `catch` externally wherever `if` and `try` have not taken them.
 /// Nu reads the arguments of a command a block defines as its own, never as an external's.
-pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
+pub(super) fn argument_shape(p: &Parser<'_>, callee: Callee) -> Shape {
     let Some(head) = p.peek_text() else {
         return Shape::UnknownArgument;
     };
@@ -253,14 +256,18 @@ pub(super) fn argument_shape(p: &Parser<'_>) -> Shape {
     } else if declaration(p).is_some() {
         Shape::VariableName
     } else {
-        match p.callee() {
+        match callee {
             // Nu runs its own command of a longer name, as `take until` over a defined `take`.
-            Callee::Defined
-                if builtin::row_condition_words(head, p.nth_text(1)) > p.defined_words() =>
+            Callee::Defined {
+                words,
+            } if builtin::row_condition_words(head, p.nth_text(1))
+                .is_some_and(|row| row > words) =>
             {
                 Shape::RowCondition
             },
-            Callee::Defined => Shape::KnownArgument,
+            Callee::Defined {
+                ..
+            } => Shape::KnownArgument,
             Callee::Unknowable => Shape::UnknownArgument,
             Callee::Undefined if matches!(head, "else" | "catch") => Shape::ExternalArgument,
             Callee::Undefined => command_shape(head, p.nth_text(1)),
@@ -292,13 +299,13 @@ fn command_shape(name: &str, next: Option<&str>) -> Shape {
     }
 }
 
-pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
+pub(super) fn call(p: &mut Parser<'_>, shape: Shape, callee: Callee) {
     let items = match shape {
         Shape::ExternalArgument | Shape::UnknownArgument => Vec::new(),
         _ => call_items(p),
     };
-    let params = call_parameters(p, shape, &items);
-    let words = call_name_words(p, shape, &items);
+    let params = call_parameters(p, shape, callee, &items);
+    let words = call_name_words(shape, callee, &items);
     open_call(p, shape);
     if words > 1 {
         p.start(SyntaxKind::CommandName);
@@ -323,12 +330,19 @@ pub(super) fn call(p: &mut Parser<'_>, shape: Shape) {
 }
 
 /// A `%` before the head looks up a command nu has, whatever the file defines.
-fn call_parameters(p: &Parser<'_>, shape: Shape, items: &[&str]) -> Vec<Option<Param>> {
+fn call_parameters(
+    p: &Parser<'_>,
+    shape: Shape,
+    callee: Callee,
+    items: &[&str],
+) -> Vec<Option<Param>> {
     if shape != Shape::KnownArgument {
         return Vec::new();
     }
-    match p.callee() {
-        Callee::Defined => p.defined_parameters(items).unwrap_or_default(),
+    match callee {
+        Callee::Defined {
+            ..
+        } => p.defined_parameters(items).unwrap_or_default(),
         Callee::Unknowable => Vec::new(),
         Callee::Undefined => parameters(&as_looked_up(items)),
     }
@@ -385,13 +399,15 @@ fn head(p: &mut Parser<'_>) {
 }
 
 /// Nu takes the longest name the items spell.
-fn call_name_words(p: &Parser<'_>, shape: Shape, items: &[&str]) -> usize {
+fn call_name_words(shape: Shape, callee: Callee, items: &[&str]) -> usize {
     if matches!(shape, Shape::ExternalArgument | Shape::UnknownArgument) {
         return 1;
     }
     let builtin = builtin::name_words(&as_looked_up(items));
-    match p.callee() {
-        Callee::Defined => builtin.max(p.defined_words().unwrap_or(1)),
+    match callee {
+        Callee::Defined {
+            words,
+        } => builtin.max(words),
         Callee::Unknowable | Callee::Undefined => builtin,
     }
 }

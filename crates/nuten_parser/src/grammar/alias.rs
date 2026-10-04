@@ -40,9 +40,10 @@ fn replacement(p: &mut Parser<'_>, assigned: Assigned) {
     if p.peek() == Some(SyntaxKind::Newline) {
         bump_newlines(p);
     }
-    let shape = argument_shape(p);
+    let callee = p.callee();
+    let shape = argument_shape(p, callee);
     // Nu rejects a keyword syntax with an item past its own, such as a `|` or a redirection.
-    if call_ends_statement(p) && keyword(p) {
+    if call_ends_statement(p) && keyword(p, callee) {
         return;
     }
     if p.peek().is_some_and(SyntaxKind::is_item) {

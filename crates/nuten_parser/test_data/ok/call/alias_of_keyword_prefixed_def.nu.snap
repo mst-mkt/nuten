@@ -1,0 +1,50 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/call/alias_of_keyword_prefixed_def.nu
+---
+Root@0..44
+  Pipeline@0..21
+    PipelineElement@0..21
+      Def@0..21
+        Word@0..3 "def"
+        Whitespace@3..4 " "
+        String@4..10 "\"if x\""
+        Whitespace@10..11 " "
+        Signature@11..14
+          LBracket@11..12 "["
+          Param@12..13
+            Word@12..13 "y"
+          RBracket@13..14 "]"
+        Whitespace@14..15 " "
+        Block@15..21
+          LBrace@15..16 "{"
+          Whitespace@16..17 " "
+          Pipeline@17..19
+            PipelineElement@17..19
+              Word@17..19 "$y"
+          Whitespace@19..20 " "
+          RBrace@20..21 "}"
+  Newline@21..22 "\n"
+  Pipeline@22..43
+    PipelineElement@22..43
+      Alias@22..43
+        Word@22..27 "alias"
+        Whitespace@27..28 " "
+        Word@28..29 "f"
+        Whitespace@29..30 " "
+        Assign@30..31 "="
+        Whitespace@31..32 " "
+        Call@32..43
+          Word@32..34 "if"
+          Whitespace@34..35 " "
+          Word@35..36 "x"
+          Whitespace@36..37 " "
+          Block@37..43
+            LBrace@37..38 "{"
+            Whitespace@38..40 "  "
+            Pipeline@40..41
+              PipelineElement@40..41
+                Word@40..41 "1"
+            Whitespace@41..42 " "
+            RBrace@42..43 "}"
+  Newline@43..44 "\n"

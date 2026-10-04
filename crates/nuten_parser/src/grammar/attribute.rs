@@ -73,9 +73,10 @@ fn attribute_block(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
     p.start(SyntaxKind::AttributeBlock);
     attributes(p, assigned, None);
     p.bump();
-    let shape = argument_shape(p);
-    if !keyword(p) {
-        call(p, shape);
+    let callee = p.callee();
+    let shape = argument_shape(p, callee);
+    if !keyword(p, callee) {
+        call(p, shape, callee);
     }
     p.finish();
     Ended {
@@ -118,7 +119,7 @@ fn attribute_arguments(p: &mut Parser<'_>, shape: Shape) {
 
 /// Nu runs the head as a command of that name.
 fn attributed_call(p: &mut Parser<'_>, assigned: Assigned) -> Ended {
-    let shape = argument_shape(p);
+    let shape = argument_shape(p, p.callee());
     start_call(p, shape);
     let after = loop {
         attribute_arguments(p, shape);

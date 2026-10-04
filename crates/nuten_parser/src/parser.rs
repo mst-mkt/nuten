@@ -205,15 +205,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(crate) fn defined_words(&self) -> Option<usize> {
-        let head = self.peek_range()?;
-        self.names.defined_words(head.start(), |nth| {
-            self.nth_token(nth)
-                .filter(|token| token.kind.is_item())
-                .map(|token| &self.src[token.range])
-        })
-    }
-
     pub(crate) fn can_nest(&self) -> bool {
         self.depth < MAX_DEPTH
     }
