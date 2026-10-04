@@ -65,6 +65,7 @@ in
       LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
         pkgs.stdenv.cc.cc.lib # libFuzzer needs libstdc++
       ];
+      NUTEN_CORPUS = corpus;
     };
   };
 }
