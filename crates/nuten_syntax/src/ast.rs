@@ -98,17 +98,11 @@ pub fn kind_of(element: &Element) -> SyntaxKind {
 
 pub trait Bracketed: AstNode<Language = NuLanguage> {
     fn open(&self) -> SyntaxToken {
-        self.syntax()
-            .first_child_or_token()
-            .and_then(SyntaxElement::into_token)
-            .expect("a bracketed node opens with its bracket")
+        first_child_token(self.syntax()).expect("a bracketed node opens with its bracket")
     }
 
     fn close(&self) -> SyntaxToken {
-        self.syntax()
-            .last_child_or_token()
-            .and_then(SyntaxElement::into_token)
-            .expect("a bracketed node closes with its bracket")
+        last_child_token(self.syntax()).expect("a bracketed node closes with its bracket")
     }
 
     fn inside(&self) -> Inside {
@@ -190,7 +184,7 @@ impl Node {
     fn bracket_flaw(&self) -> Option<&'static str> {
         let pairs = self.brackets()?;
         let node = self.syntax();
-        let first = node.first_child_or_token();
+        let first = first_child_token(node);
         let lead = match self {
             Node::Type(_) => Some("does not start with its name"),
             Node::Binary(_) => Some("does not start with its prefix"),
@@ -198,22 +192,17 @@ impl Node {
         };
         let opening = match lead {
             Some(flaw) => {
-                if first.as_ref().and_then(kind_if_token) != Some(SyntaxKind::Word) {
+                if first.as_ref().map(SyntaxToken::kind) != Some(SyntaxKind::Word) {
                     return Some(flaw);
                 }
-                first.and_then(|word| word.next_sibling_or_token())
+                first.as_ref().and_then(token_after)
             },
             None => first,
         };
-        let Some(close) = opening
-            .as_ref()
-            .and_then(kind_if_token)
-            .and_then(|open| closer(pairs, open))
-        else {
+        let Some(close) = opening.and_then(|open| closer(pairs, open.kind())) else {
             return Some("does not open with its bracket");
         };
-        let last = node.last_child_or_token();
-        (last.as_ref().and_then(kind_if_token) != Some(close))
+        (last_child_token(node).as_ref().map(SyntaxToken::kind) != Some(close))
             .then_some("does not close with its bracket")
     }
 
@@ -233,10 +222,10 @@ impl Node {
                 .then_some("does not hold its column names and their `;` first"),
             Node::IoTypes(_) => {
                 let node = self.syntax();
-                let opens = node.first_child_or_token().as_ref().and_then(kind_if_token)
-                    == Some(SyntaxKind::LBracket);
-                let closes = node.last_child_or_token().as_ref().and_then(kind_if_token)
-                    == Some(SyntaxKind::RBracket);
+                let opens =
+                    first_child_token(node).is_some_and(|open| open.kind() == SyntaxKind::LBracket);
+                let closes = last_child_token(node)
+                    .is_some_and(|close| close.kind() == SyntaxKind::RBracket);
                 (opens != closes).then_some("holds one of its brackets without the other")
             },
             Node::CellPath(_) | Node::Range(_) | Node::Spread(_) | Node::Interpolation(_) => self
@@ -249,14 +238,20 @@ impl Node {
     }
 }
 
+fn first_child_token(node: &SyntaxNode) -> Option<SyntaxToken> {
+    node.first_child_or_token()
+        .and_then(SyntaxElement::into_token)
+}
+
+fn last_child_token(node: &SyntaxNode) -> Option<SyntaxToken> {
+    node.last_child_or_token()
+        .and_then(SyntaxElement::into_token)
+}
+
 fn token_after(token: &SyntaxToken) -> Option<SyntaxToken> {
     token
         .next_sibling_or_token()
         .and_then(SyntaxElement::into_token)
-}
-
-fn kind_if_token(element: &SyntaxElement) -> Option<SyntaxKind> {
-    element.as_token().map(SyntaxToken::kind)
 }
 
 fn closer(pairs: &[(SyntaxKind, SyntaxKind)], open: SyntaxKind) -> Option<SyntaxKind> {
@@ -321,25 +316,16 @@ impl ExportEnv {
 
 impl Type {
     pub fn name(&self) -> SyntaxToken {
-        self.syntax()
-            .first_child_or_token()
-            .and_then(SyntaxElement::into_token)
-            .expect("a type starts with its name")
+        first_child_token(self.syntax()).expect("a type starts with its name")
     }
 }
 
 impl IoTypes {
     pub fn brackets(&self) -> Option<(SyntaxToken, Inside, SyntaxToken)> {
-        let open = self
-            .syntax()
-            .first_child_or_token()
-            .and_then(SyntaxElement::into_token)
-            .filter(|open| open.kind() == SyntaxKind::LBracket)?;
-        let close = self
-            .syntax()
-            .last_child_or_token()
-            .and_then(SyntaxElement::into_token)
-            .expect("types that open with `[` close with `]`");
+        let open =
+            first_child_token(self.syntax()).filter(|open| open.kind() == SyntaxKind::LBracket)?;
+        let close =
+            last_child_token(self.syntax()).expect("types that open with `[` close with `]`");
         let inside = Inside {
             next: open.next_sibling_or_token(),
             close: close.clone(),
@@ -350,10 +336,7 @@ impl IoTypes {
 
 impl Binary {
     pub fn prefix(&self) -> SyntaxToken {
-        self.syntax()
-            .first_child_or_token()
-            .and_then(SyntaxElement::into_token)
-            .expect("a binary starts with its prefix")
+        first_child_token(self.syntax()).expect("a binary starts with its prefix")
     }
 }
 
