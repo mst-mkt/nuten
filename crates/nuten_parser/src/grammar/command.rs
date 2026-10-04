@@ -499,11 +499,10 @@ mod tests {
     use super::{
         is_math_expression_like, is_operator, operator_precedence, takes_operator, unknown_operator,
     };
-    use crate::{ParseErrorKind, parse, test_support::asked};
-
-    fn errors(src: &str) -> Vec<ParseErrorKind> {
-        parse(src).errors().iter().map(|error| error.kind).collect()
-    }
+    use crate::{
+        ParseErrorKind,
+        test_support::{asked, errors},
+    };
 
     #[test]
     fn value_starts_are_math_expression_like() {

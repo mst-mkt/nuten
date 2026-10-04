@@ -65,11 +65,7 @@ fn row_items(p: &mut Parser<'_>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ParseErrorKind, parse};
-
-    fn errors(src: &str) -> Vec<ParseErrorKind> {
-        parse(src).errors().iter().map(|error| error.kind).collect()
-    }
+    use crate::{ParseErrorKind, test_support::errors};
 
     #[test]
     fn pipes_in_header_or_row_report_as_in_list() {

@@ -1,5 +1,11 @@
 use std::{env, process::Command};
 
+use crate::{ParseErrorKind, parse};
+
+pub(crate) fn errors(src: &str) -> Vec<ParseErrorKind> {
+    parse(src).errors().iter().map(|error| error.kind).collect()
+}
+
 /// Nu failing means the pipeline no longer asks what it meant to, which must not pass.
 pub(crate) fn asked(pipeline: &str) -> Option<Vec<String>> {
     let output = match Command::new("nu").args(["-n", "-c", pipeline]).output() {

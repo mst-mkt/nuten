@@ -83,11 +83,7 @@ fn reads_as_space(kind: SyntaxKind) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ParseErrorKind, parse};
-
-    fn errors(src: &str) -> Vec<ParseErrorKind> {
-        parse(src).errors().iter().map(|error| error.kind).collect()
-    }
+    use crate::{ParseErrorKind, test_support::errors};
 
     #[test]
     fn pipe_ending_list_reports_pipe_ends_list() {
