@@ -109,6 +109,7 @@
       );
 
       packages = forAllSystems (pkgs: {
+        inherit (toolchainOf pkgs) nushell;
         inherit (nufmt.packages.${pkgs.stdenv.hostPlatform.system}) nufmt;
       });
 
