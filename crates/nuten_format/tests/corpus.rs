@@ -8,7 +8,9 @@ mod support;
 use std::{
     borrow::Cow,
     collections::BTreeSet,
-    env, fs, io,
+    env,
+    ffi::OsStr,
+    fs, io,
     path::{Path, PathBuf},
 };
 
@@ -67,7 +69,13 @@ fn every_file_keeps_invariants_with_syntax_errors_as_listed() {
     let mut problems = Vec::new();
     let mut unseen: BTreeSet<_> = SYNTAX_ERRORS.iter().copied().collect();
     for path in paths {
-        let name = path.strip_prefix(&dir).unwrap().display().to_string();
+        let name = path
+            .strip_prefix(&dir)
+            .unwrap()
+            .iter()
+            .map(OsStr::to_string_lossy)
+            .collect::<Vec<_>>()
+            .join("/");
         let listed = unseen.remove(name.as_str());
         let src = match fs::read_to_string(&path) {
             Ok(src) => src,
