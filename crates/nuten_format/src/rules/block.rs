@@ -17,18 +17,16 @@ pub(super) struct BlockLayout<'a> {
     expand: bool,
 }
 
+impl<'a> BlockLayout<'a> {
+    fn grouped(self) -> Vec<Element<'a>> {
+        let rest = self.rest.into_iter().chain(self.expand.then(expand_parent));
+        self.head.into_iter().chain([group(rest)]).collect()
+    }
+}
+
 impl<'a> Formatter<'a> {
     pub(super) fn block(&mut self, block: &Block) -> Vec<Element<'a>> {
-        let BlockLayout {
-            mut head,
-            mut rest,
-            expand,
-        } = self.block_layout(block);
-        if expand {
-            rest.push(expand_parent());
-        }
-        head.push(group(rest));
-        head
+        self.block_layout(block).grouped()
     }
 
     pub(super) fn element_or_body(
@@ -40,14 +38,11 @@ impl<'a> Formatter<'a> {
             NodeOrToken::Node(Node::Block(block))
                 if Some(block) == body && !self.kept.keeps(&ast::untyped(element)) =>
             {
-                let BlockLayout {
-                    mut head,
-                    mut rest,
-                    ..
-                } = self.block_layout(block);
-                rest.push(expand_parent());
-                head.push(group(rest));
-                head
+                BlockLayout {
+                    expand: true,
+                    ..self.block_layout(block)
+                }
+                .grouped()
             },
             element => self.element(element),
         }
