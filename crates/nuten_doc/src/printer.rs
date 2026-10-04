@@ -247,13 +247,18 @@ impl<'a> Printer<'a> {
             return false;
         };
         let mut has_line_suffix = !self.line_suffixes.is_empty();
-        let mut nested = vec![(Measure::Flat, elements.iter())];
-        let mut rest = self.stack.iter().rev();
+        let rest = self
+            .stack
+            .iter()
+            .rev()
+            .map(|frame| (Measure::from(frame.mode), frame.element));
+        let mut outer = elements
+            .iter()
+            .map(|element| (Measure::Flat, element))
+            .chain(rest);
+        let mut nested = Vec::new();
         loop {
-            let next = next_nested(&mut nested).or_else(|| {
-                rest.next()
-                    .map(|frame| (Measure::from(frame.mode), frame.element))
-            });
+            let next = next_nested(&mut nested).or_else(|| outer.next());
             let Some((measure, element)) = next else {
                 return true;
             };
