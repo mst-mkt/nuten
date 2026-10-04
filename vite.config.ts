@@ -33,9 +33,10 @@ export default defineConfig({
         output: [],
       },
       "test:oracle": {
-        command: "cargo oracle format tasks/oracle/test_data",
+        // Vite+ sets FORCE_COLOR=1, which makes nu color the error messages the oracle compares.
+        command: 'env -u FORCE_COLOR cargo oracle format tasks/oracle/test_data "$NUTEN_CORPUS"',
         input: [{ auto: true }, "!target/**"],
-        env: ["PATH"],
+        env: ["PATH", "NUTEN_CORPUS"],
         output: [],
       },
       "test:zed": {
