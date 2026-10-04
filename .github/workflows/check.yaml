@@ -1,0 +1,132 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NIX_CONFIG: |
+    extra-substituters = https://nuten.cachix.org
+    extra-trusted-public-keys = nuten.cachix.org-1:UQhrCY0F6u/dOjkl0oySJqXRlG0gbYXl8o7AQ4bmcDs=
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: vp run format:check
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run format:check
+
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: pnpm install
+        id: install
+        run: nix develop --no-update-lock-file ./nix/dev --command pnpm install --frozen-lockfile
+      - name: vp run lint:rust
+        if: ${{ !cancelled() }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run lint:rust
+      - name: vp run lint:ts
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run lint:ts
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: vp run test:rust
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run test:rust
+      - name: vp run test:oracle
+        if: ${{ !cancelled() }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run test:oracle
+      - name: vp run test:nu
+        if: ${{ !cancelled() }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run test:nu
+
+  test-windows:
+    runs-on: windows-2025
+    timeout-minutes: 90
+    env:
+      RUST_VERSION: 1.98.1
+      NEXTEST_VERSION: 0.9.143
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: rustup default "$RUST_VERSION"
+      - name: Install cargo-nextest
+        run: curl --location --fail --silent --show-error "https://get.nexte.st/$NEXTEST_VERSION/windows-tar" | tar --extract --gzip --directory ~/.cargo/bin
+      - name: Read nushell version
+        run: echo "NU_VERSION=$(jq --raw-output '.nodes[.nodes.root.inputs.nushell].original.ref' nix/dev/flake.lock)" >> "$GITHUB_ENV"
+      - name: Download nushell
+        run: gh release download "$NU_VERSION" --repo nushell/nushell --pattern "nu-$NU_VERSION-x86_64-pc-windows-msvc.zip" --output "$RUNNER_TEMP/nu.zip"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Install nushell
+        run: 7z x "$RUNNER_TEMP/nu.zip" -o"$USERPROFILE/.cargo/bin"
+      - run: cargo nextest run --workspace
+        env:
+          NUTEN_TEST_SKIP_CORPUS: "1"
+      - if: ${{ !cancelled() }}
+        run: cargo oracle format tasks/oracle/test_data
+
+  test-editors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: pnpm install
+        id: install
+        run: nix develop --no-update-lock-file ./nix/dev --command pnpm install --frozen-lockfile
+      - name: vp run test:zed
+        if: ${{ !cancelled() }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run test:zed
+      - name: vp run test:vscode
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run test:vscode
+
+  lock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - run: nix flake lock
+      - run: nix flake update nuten --flake ./nix/dev
+      - run: git diff --exit-code flake.lock nix/dev/flake.lock
