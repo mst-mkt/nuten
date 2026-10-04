@@ -45,7 +45,7 @@ impl Brackets {
             return true;
         }
         // Without the last byte, the only error is the first bracket left unclosed.
-        let (open, _, close) = split(range);
+        let (open, _, close) = bracket_parts(range);
         let lexed = lexer::lex(
             src,
             TextRange::new(range.start(), close.start()),
@@ -103,12 +103,12 @@ pub(crate) struct Enclosed<'a> {
 impl<'a> Enclosed<'a> {
     pub(crate) fn tokens_in(&self, mode: Mode) -> impl Iterator<Item = (Token, &'a str)> {
         let src = self.src;
-        let (_, inside, _) = split(self.range);
+        let (_, inside, _) = bracket_parts(self.range);
         lexer::tokens(src, inside, mode).map(move |token| (token, &src[token.range]))
     }
 
     pub(crate) fn lexed_in(self, mode: Mode) -> Bracketed<'a> {
-        let (_, inside, _) = split(self.range);
+        let (_, inside, _) = bracket_parts(self.range);
         Bracketed {
             inner: Parser::lexed(self.src, inside, mode, self.names, self.depth),
             token: self.token,
@@ -401,7 +401,7 @@ impl<'a> Parser<'a> {
             self.bump();
             return 0;
         }
-        let (open, _, close) = split(range);
+        let (open, _, close) = bracket_parts(range);
         self.start(node);
         self.pos += 1;
         if let Affix::Name(_) = affix {
@@ -716,7 +716,7 @@ fn has_glued_comment(src: &str, tokens: &[Token]) -> bool {
         })
 }
 
-fn split(range: TextRange) -> (TextRange, TextRange, TextRange) {
+fn bracket_parts(range: TextRange) -> (TextRange, TextRange, TextRange) {
     let one = TextSize::new(1);
     let (start, end) = (range.start() + one, range.end() - one);
     (
