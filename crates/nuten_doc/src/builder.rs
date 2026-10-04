@@ -144,14 +144,14 @@ mod tests {
             doc,
             Element::Group {
                 id: None,
-                elements: vec![
+                elements: Box::new([
                     Element::Space,
                     text("a"),
                     Element::Indent {
                         group: None,
-                        elements: vec![text("a"), Element::Line(LineMode::SoftOrSpace)],
+                        elements: Box::new([text("a"), Element::Line(LineMode::SoftOrSpace)]),
                     },
-                ],
+                ]),
             }
         );
     }

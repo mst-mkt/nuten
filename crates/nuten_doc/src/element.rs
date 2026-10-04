@@ -15,26 +15,26 @@ pub enum Element<'a> {
     Space,
     Line(LineMode),
     ExpandParent,
-    LineSuffix(Vec<Element<'a>>),
+    LineSuffix(Box<[Element<'a>]>),
     LineSuffixBoundary,
     IfBreak {
-        broken: Vec<Element<'a>>,
-        flat: Vec<Element<'a>>,
+        broken: Box<[Element<'a>]>,
+        flat: Box<[Element<'a>]>,
     },
     Group {
         id: Option<GroupId>,
-        elements: Vec<Element<'a>>,
+        elements: Box<[Element<'a>]>,
     },
     /// `group` must name one around the indent, or one printed before it.
     Indent {
         group: Option<GroupId>,
-        elements: Vec<Element<'a>>,
+        elements: Box<[Element<'a>]>,
     },
     /// `group` must name one around the alignment, or one printed before it.
     Align {
         columns: u32,
         group: Option<GroupId>,
-        elements: Vec<Element<'a>>,
+        elements: Box<[Element<'a>]>,
     },
 }
 
