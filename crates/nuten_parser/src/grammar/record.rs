@@ -6,7 +6,7 @@ use super::{
     value,
 };
 use crate::{
-    lexer::{Mode, Token},
+    lexer::{self, Mode, Token},
     parser::{Bracketed, Parser},
 };
 
@@ -59,8 +59,10 @@ pub(super) fn record_sign<'a>(
 }
 
 fn nu_lexes_as_pipe(kind: SyntaxKind, text: &str) -> bool {
-    matches!(kind, SyntaxKind::Pipe | SyntaxKind::PipePipe)
-        || matches!(text, "o>|" | "out>|" | "&&" | "2>&1")
+    matches!(
+        lexer::rejected_operator_kind(text).unwrap_or(kind),
+        SyntaxKind::Pipe | SyntaxKind::PipePipe
+    )
 }
 
 enum RecordItem {

@@ -72,6 +72,7 @@ pub(super) fn is_binary_like(text: &str) -> bool {
 
 /// Nu reads no binary where it lexes a pipe, a redirection, or an assignment among the items.
 fn ends_item(kind: SyntaxKind, text: &str) -> bool {
+    let kind = lexer::rejected_operator_kind(text).unwrap_or(kind);
     matches!(
         kind,
         SyntaxKind::Pipe
@@ -80,7 +81,6 @@ fn ends_item(kind: SyntaxKind, text: &str) -> bool {
             | SyntaxKind::OutErrGtPipe
             | SyntaxKind::Assign
     ) || is_file_redirection(kind)
-        || matches!(text, "o>|" | "out>|" | "&&" | "2>" | "2>&1")
 }
 
 fn items(tokens: &[(Token, &str)]) -> String {
@@ -163,6 +163,7 @@ mod tests {
             "0x[ff 2> 00]",
             "0x[ff 2>&1 00]",
             "0x[ff o>| 00]",
+            "0x[ff out>| 00]",
             "0z[ff]",
         ] {
             assert!(!is_binary_like(text), "{text:?}");

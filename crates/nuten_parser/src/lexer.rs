@@ -432,6 +432,16 @@ fn operator_kind(text: &[u8]) -> Option<SyntaxKind> {
     Some(kind)
 }
 
+/// Nu lexes these as the pipe or redirection it takes them to mean, and then reports an error.
+/// They stay words here, so the grammar looks up the kind nu reads them with.
+pub(crate) fn rejected_operator_kind(text: &str) -> Option<SyntaxKind> {
+    match text {
+        "o>|" | "out>|" | "&&" | "2>&1" => Some(SyntaxKind::Pipe),
+        "2>" => Some(SyntaxKind::ErrGt),
+        _ => None,
+    }
+}
+
 fn is_redirection(text: &[u8]) -> bool {
     matches!(
         operator_kind(text),
@@ -455,7 +465,7 @@ mod tests {
     use super::{
         LexError,
         LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
-        Lexed, Mode, item_brackets, lex,
+        Lexed, Mode, item_brackets, lex, rejected_operator_kind,
     };
     use crate::invariants::OPERATORS;
 
@@ -776,6 +786,22 @@ mod tests {
     fn spellings_nu_rejects_stay_words() {
         for text in ["o>|", "out>|", "&&", "2>", "2>&1"] {
             assert_eq!(kind_of(text), Word, "{text:?}");
+        }
+    }
+
+    #[test]
+    fn only_spellings_nu_rejects_take_kinds_nu_lexes_them_as() {
+        for (text, expected) in [
+            ("o>|", Some(Pipe)),
+            ("out>|", Some(Pipe)),
+            ("&&", Some(Pipe)),
+            ("2>&1", Some(Pipe)),
+            ("2>", Some(ErrGt)),
+            ("||", None),
+            ("e>|", None),
+            ("2>>", None),
+        ] {
+            assert_eq!(rejected_operator_kind(text), expected, "{text:?}");
         }
     }
 
