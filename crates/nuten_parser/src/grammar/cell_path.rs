@@ -184,9 +184,7 @@ pub(super) fn cell_path<'a>(p: &mut Parser<'a>, ahead: CellPathAhead<'a>, shape:
                 Link::Separator | Link::Member => p.bump(),
             }
         }
-        while p.peek().is_some() {
-            p.bump();
-        }
+        p.bump_rest();
     });
 }
 

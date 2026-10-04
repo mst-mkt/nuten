@@ -13,9 +13,7 @@ pub(super) fn use_(p: &mut Parser<'_>) -> bool {
         return false;
     }
     p.start(SyntaxKind::Use);
-    for _ in 0..words + leading_flags(&items[words..]) {
-        p.bump();
-    }
+    p.bump_n(words + leading_flags(&items[words..]));
     if at_call_item(p) {
         item(p, Shape::KnownArgument);
     }

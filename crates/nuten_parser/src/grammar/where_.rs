@@ -11,9 +11,7 @@ pub(super) fn where_(p: &mut Parser<'_>) -> bool {
         return false;
     }
     p.start(SyntaxKind::Where);
-    for _ in 0..=flags {
-        p.bump();
-    }
+    p.bump_n(flags + 1);
     row_condition(p, condition);
     p.finish();
     true

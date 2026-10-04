@@ -282,6 +282,12 @@ fn at_call_item(p: &Parser<'_>) -> bool {
     p.peek().is_some_and(|kind| !ends_call(kind))
 }
 
+fn bump_call_items(p: &mut Parser<'_>) {
+    while at_call_item(p) {
+        p.bump();
+    }
+}
+
 fn call_items<'a>(p: &Parser<'a>) -> Vec<&'a str> {
     p.remaining_tokens()
         .filter(|(token, _)| !p.is_skipped(token.kind))

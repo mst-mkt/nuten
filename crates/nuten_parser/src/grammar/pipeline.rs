@@ -212,9 +212,7 @@ fn pipeline_element(
         None
     } else if first && let Some((keyword, words)) = declaration(p) {
         p.start(SyntaxKind::Let);
-        for _ in 0..words {
-            p.bump();
-        }
+        p.bump_n(words);
         var_type(p, keyword);
         arguments(p, Some(Streams::default()), Shape::VariableName, true);
         assignment_operator(p);

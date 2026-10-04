@@ -27,9 +27,7 @@ pub(super) fn alias_ahead(p: &Parser<'_>) -> bool {
 
 pub(super) fn alias(p: &mut Parser<'_>, assigned: Assigned) {
     p.start(SyntaxKind::Alias);
-    for _ in 0..keyword_words(p) + 2 {
-        p.bump();
-    }
+    p.bump_n(keyword_words(p) + 2);
     replacement(p, assigned);
     p.finish();
 }

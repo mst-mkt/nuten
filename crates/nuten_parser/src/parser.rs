@@ -624,6 +624,18 @@ impl<'a> Parser<'a> {
         self.bump_one();
     }
 
+    pub(crate) fn bump_n(&mut self, count: usize) {
+        for _ in 0..count {
+            self.bump();
+        }
+    }
+
+    pub(crate) fn bump_rest(&mut self) {
+        while self.peek().is_some() {
+            self.bump();
+        }
+    }
+
     pub(crate) fn bump_error(&mut self, kind: ParseErrorKind) {
         let token = self.nth_token(0).expect("bump_error at the end");
         self.bump_error_to(
@@ -860,16 +872,10 @@ mod tests {
         assert_eq!(p.nth_range(3), None);
     }
 
-    fn bump_all(p: &mut Parser<'_>) {
-        while p.peek().is_some() {
-            p.bump();
-        }
-    }
-
     #[test]
     fn bump_relexed_to_emits_relexed_tokens() {
         let mut p = parser("a<b c");
-        p.bump_relexed_to(TextSize::new(3), Mode::Signature, bump_all);
+        p.bump_relexed_to(TextSize::new(3), Mode::Signature, Parser::bump_rest);
         assert_eq!(p.peek_text(), Some("c"));
         assert_eq!(p.errors, 1);
         assert!(matches!(p.events[1], Event::Error(_)));
@@ -880,7 +886,7 @@ mod tests {
         let src = "\na";
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Paren);
         let mut p = Parser::new(src, lexed, Mode::Paren.skips_newline(), Names::of(src), 0);
-        p.bump_relexed_to(TextSize::of(src), Mode::VarType, bump_all);
+        p.bump_relexed_to(TextSize::of(src), Mode::VarType, Parser::bump_rest);
         assert_eq!(
             p.events,
             [
@@ -899,7 +905,7 @@ mod tests {
     #[test]
     fn bump_relexed_to_drops_replaced_errors() {
         let mut p = parser("a) b)");
-        p.bump_relexed_to(TextSize::new(2), Mode::Signature, bump_all);
+        p.bump_relexed_to(TextSize::new(2), Mode::Signature, Parser::bump_rest);
         p.bump();
         let errors: Vec<_> = p
             .events
@@ -916,7 +922,7 @@ mod tests {
     fn bump_bounded_hides_tokens_past_end() {
         let mut p = parser("a b) c");
         p.bump_bounded(TextSize::new(4), |p| {
-            bump_all(p);
+            p.bump_rest();
             assert_eq!(p.peek(), None);
         });
         assert_eq!(p.peek_text(), Some("c"));
@@ -926,7 +932,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "end inside a token")]
     fn bump_relexed_to_panics_at_end_inside_token() {
-        parser("ab").bump_relexed_to(TextSize::new(1), Mode::Signature, bump_all);
+        parser("ab").bump_relexed_to(TextSize::new(1), Mode::Signature, Parser::bump_rest);
     }
 
     #[test]
@@ -975,11 +981,7 @@ mod tests {
         for src in ["[a #c\n]", "[a\n#c\n]", "[ #c\n]"] {
             let mut p = parser(src);
             let bracketed = p.bracketed(&SQUARE, Mode::List).unwrap();
-            p.bump_bracketed(SyntaxKind::List, bracketed, |p| {
-                while p.peek().is_some() {
-                    p.bump();
-                }
-            });
+            p.bump_bracketed(SyntaxKind::List, bracketed, Parser::bump_rest);
             assert_eq!(p.events[0], Event::Start(SyntaxKind::List), "{src:?}");
         }
     }

@@ -1,5 +1,6 @@
 use nuten_syntax::SyntaxKind;
 
+use super::pipeline::bump_newlines;
 use crate::{
     ParseErrorKind,
     lexer::Mode,
@@ -185,16 +186,12 @@ fn type_fields(p: &mut Parser<'_>) {
         p.start(SyntaxKind::TypeField);
         p.bump();
         if colon_ahead(p) {
-            while p.peek() == Some(SyntaxKind::Newline) {
-                p.bump();
-            }
+            bump_newlines(p);
             p.bump();
             // Nu takes the token after the `:` for the type of the key, whatever it is.
             // A line break before it is whitespace to nu.
             if p.remaining_kinds().any(|kind| !kind.is_trivia()) {
-                while p.peek() == Some(SyntaxKind::Newline) {
-                    p.bump();
-                }
+                bump_newlines(p);
                 type_(p);
             }
         }

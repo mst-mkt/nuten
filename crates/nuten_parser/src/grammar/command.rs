@@ -77,9 +77,7 @@ pub(super) fn expression(p: &mut Parser<'_>) {
 /// The items after the condition are other arguments, so the expression takes none of them.
 pub(super) fn condition(p: &mut Parser<'_>, items: &[&str]) {
     let flags = leading_flags(items);
-    for _ in 0..flags {
-        p.bump();
-    }
+    p.bump_n(flags);
     if flags < items.len() {
         let end = p
             .nth_range(items.len() - flags - 1)

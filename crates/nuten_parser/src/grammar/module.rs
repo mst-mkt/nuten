@@ -1,7 +1,7 @@
 use nuten_syntax::SyntaxKind;
 
 use super::{
-    CURLY, Shape, at_call_item, block::params_start, call_items, file, is_flag, keyword_words,
+    CURLY, Shape, block::params_start, bump_call_items, call_items, file, is_flag, keyword_words,
     value,
 };
 use crate::{lexer::Mode, parser::Parser};
@@ -34,18 +34,14 @@ pub(super) fn export_env(p: &mut Parser<'_>) -> bool {
 
 fn module_with_body(p: &mut Parser<'_>, words: usize) {
     p.start(SyntaxKind::Module);
-    for _ in 0..=words {
-        p.bump();
-    }
+    p.bump_n(words + 1);
     body(p);
     p.finish();
 }
 
 fn call_as_written(p: &mut Parser<'_>) {
     p.start(SyntaxKind::Call);
-    while at_call_item(p) {
-        p.bump();
-    }
+    bump_call_items(p);
     p.finish();
 }
 

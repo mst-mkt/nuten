@@ -46,11 +46,9 @@ pub(super) fn binary_ahead<'a>(p: &Parser<'a>, shape: Shape) -> Option<BinaryAhe
 
 pub(super) fn binary<'a>(p: &mut Parser<'a>, ahead: BinaryAhead<'a>) {
     match ahead {
-        BinaryAhead::Decoded(bracketed) => p.bump_bracketed(SyntaxKind::Binary, bracketed, |p| {
-            while p.peek().is_some() {
-                p.bump();
-            }
-        }),
+        BinaryAhead::Decoded(bracketed) => {
+            p.bump_bracketed(SyntaxKind::Binary, bracketed, Parser::bump_rest);
+        },
         BinaryAhead::Undecodable => p.bump_error(ParseErrorKind::BinaryDigits),
     }
 }

@@ -16,9 +16,7 @@ pub(super) fn def(p: &mut Parser<'_>) -> bool {
         return false;
     };
     p.start(SyntaxKind::Def);
-    for _ in 0..shape.signature {
-        p.bump();
-    }
+    p.bump_n(shape.signature);
     let affix = if shape.attached_colon {
         Affix::Suffix(SyntaxKind::Colon)
     } else {
@@ -76,9 +74,7 @@ fn io_types(p: &mut Parser<'_>, count: usize, attached_colon: bool) {
         p.bump_relexed_to(range.end(), Mode::IoTypes, io_type_pairs);
         p.finish();
     } else {
-        for _ in 0..count {
-            p.bump();
-        }
+        p.bump_n(count);
     }
 }
 

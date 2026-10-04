@@ -1,5 +1,5 @@
 use super::{
-    Callee, at_call_item,
+    Callee, bump_call_items,
     control::control,
     def::def,
     if_::if_,
@@ -19,9 +19,7 @@ pub(super) fn keyword_as_term(p: &mut Parser<'_>) -> bool {
     // Telling them from the calls nu rejects would need the shapes nu reads there.
     // So any call the syntax does not read stays as written, not as terms lacking an operator.
     if !keyword(p, p.callee()) {
-        while at_call_item(p) {
-            p.bump();
-        }
+        bump_call_items(p);
     }
     true
 }
