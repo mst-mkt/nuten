@@ -37,11 +37,12 @@ pub(crate) enum Callee {
 }
 
 impl<'a> Names<'a> {
-    pub(crate) fn of(src: &'a str) -> Names<'a> {
+    /// `tokens` must be all of `src` lexed in block mode.
+    pub(crate) fn of(src: &'a str, tokens: &[Token]) -> Names<'a> {
         Names {
             file: Rc::new(FileNames {
-                alias_heads: alias_heads(src),
-                hidden: hidden_words(src),
+                alias_heads: alias_heads(src, tokens),
+                hidden: hidden_words(src, tokens),
             }),
             scope: None,
         }
@@ -789,8 +790,8 @@ fn unexported<'a>(mut words: impl Iterator<Item = &'a str>) -> Option<&'a str> {
 /// One in brackets too deep for the parser is left out: it counts only there, kept as written.
 /// A call of an alias named in several words starts with its first word.
 /// Taking in a call of another command with that word only leaves it read as it was written.
-fn alias_heads(src: &str) -> Box<[&str]> {
-    let mut heads: Vec<_> = statements_holding(src, "alias")
+fn alias_heads<'a>(src: &'a str, file_tokens: &[Token]) -> Box<[&'a str]> {
+    let mut heads: Vec<_> = statements_holding(src, file_tokens, "alias")
         .0
         .iter()
         .map(Vec::as_slice)
@@ -805,8 +806,8 @@ fn alias_heads(src: &str) -> Box<[&str]> {
 /// A `hide` may follow an assignment operator, so one anywhere in a statement counts.
 /// Nu hides a name even outside the block of the `hide`.
 /// Taking in more words than it hides only leaves a call read as it was written.
-fn hidden_words(src: &str) -> Option<Box<[&str]>> {
-    let (statements, too_deep) = statements_holding(src, "hide");
+fn hidden_words<'a>(src: &'a str, file_tokens: &[Token]) -> Option<Box<[&'a str]>> {
+    let (statements, too_deep) = statements_holding(src, file_tokens, "hide");
     if too_deep
         || statements
             .iter()
@@ -835,7 +836,11 @@ const HIDDEN_TRIM: [char; 6] = ['"', '\'', '`', '[', ']', ','];
 /// The lexer splits them, so that strings, comments, and line breaks read as nu reads them.
 /// Only brackets that hold `word` are lexed again, which spares most files any lexing.
 /// Each level lexes the levels inside it again, so the depth bounds the time.
-fn statements_holding<'a>(src: &'a str, word: &str) -> (Vec<Vec<&'a str>>, bool) {
+fn statements_holding<'a>(
+    src: &'a str,
+    file_tokens: &[Token],
+    word: &str,
+) -> (Vec<Vec<&'a str>>, bool) {
     let mut pending = vec![(TextRange::up_to(TextSize::of(src)), Mode::Block, 0)];
     let mut statements = Vec::new();
     let mut too_deep = false;
@@ -847,7 +852,11 @@ fn statements_holding<'a>(src: &'a str, word: &str) -> (Vec<Vec<&'a str>>, bool)
             too_deep = true;
             continue;
         }
-        let tokens = significant_tokens(src, range, mode);
+        let tokens = if depth == 0 {
+            significant_tokens(file_tokens.iter().copied(), mode)
+        } else {
+            significant_tokens(lexer::tokens(src, range, mode), mode)
+        };
         statements.extend(
             statements_of(src, &tokens, mode).filter(|statement| statement.contains(&word)),
         );
@@ -861,8 +870,8 @@ fn statements_holding<'a>(src: &'a str, word: &str) -> (Vec<Vec<&'a str>>, bool)
     (statements, too_deep)
 }
 
-fn significant_tokens(src: &str, range: TextRange, mode: Mode) -> Vec<Token> {
-    lexer::tokens(src, range, mode)
+fn significant_tokens(tokens: impl Iterator<Item = Token>, mode: Mode) -> Vec<Token> {
+    tokens
         .filter(|token| {
             !(matches!(token.kind, SyntaxKind::Whitespace | SyntaxKind::Comment)
                 || (token.kind == SyntaxKind::Newline && mode.skips_newline()))
@@ -946,11 +955,23 @@ mod tests {
 
     use rowan::{TextRange, TextSize};
 
-    use super::{Callee, MAX_DEPTH, Names, alias_heads, hidden_words};
+    use super::{Callee, MAX_DEPTH, Names};
     use crate::{
         grammar::parameters::Takes,
-        lexer::{self, Mode},
+        lexer::{self, Mode, Token},
     };
+
+    fn file_tokens(src: &str) -> Vec<Token> {
+        lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block).tokens
+    }
+
+    fn alias_heads(src: &str) -> Box<[&str]> {
+        super::alias_heads(src, &file_tokens(src))
+    }
+
+    fn hidden_words(src: &str) -> Option<Box<[&str]>> {
+        super::hidden_words(src, &file_tokens(src))
+    }
 
     fn defined_takes(src: &str) -> Option<Vec<Option<Takes>>> {
         defined_takes_on(src, src.lines().count() - 1)
@@ -960,7 +981,7 @@ mod tests {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
         let start: usize = src.lines().take(line).map(|text| text.len() + 1).sum();
         let words: Vec<_> = src.lines().nth(line)?.split_whitespace().collect();
-        let params = Names::of(src)
+        let params = Names::of(src, &lexed.tokens)
             .within(src, &lexed.tokens, false)
             .defined_parameters(TextSize::try_from(start).unwrap(), &words)?;
         Some(
@@ -1098,7 +1119,7 @@ mod tests {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), mode);
         let start: usize = src.lines().take(line).map(|text| text.len() + 1).sum();
         let words: Vec<_> = src.lines().nth(line).unwrap().split_whitespace().collect();
-        Names::of(src)
+        Names::of(src, &file_tokens(src))
             .within(src, &lexed.tokens, mode.skips_newline())
             .callee(TextSize::try_from(start).unwrap(), |nth| {
                 words.get(nth).copied()
@@ -1135,10 +1156,9 @@ mod tests {
         let inner_tokens = lex(TextRange::new(inner_start, TextSize::of(src.as_str())));
         let last_line_start = src.rfind('\n').unwrap() + 1;
         let words: Vec<_> = src[last_line_start..].split_whitespace().collect();
-        let names =
-            Names::of(&src)
-                .within(&src, &outer_tokens, false)
-                .within(&src, &inner_tokens, false);
+        let names = Names::of(&src, &file_tokens(&src))
+            .within(&src, &outer_tokens, false)
+            .within(&src, &inner_tokens, false);
         read(&names, TextSize::try_from(last_line_start).unwrap(), &words)
     }
 

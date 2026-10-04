@@ -137,7 +137,8 @@ impl<'a> Relexed<'a> {
 }
 
 pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
-    let mut parser = Parser::new(src, lexed, Mode::Block.skips_newline(), Names::of(src), 0);
+    let names = Names::of(src, &lexed.tokens);
+    let mut parser = Parser::new(src, lexed, Mode::Block.skips_newline(), names, 0);
     // Not `start`: that would put leading trivia outside Root.
     parser.events.push(Event::Start(SyntaxKind::Root));
     grammar::file(&mut parser);
@@ -741,7 +742,8 @@ mod tests {
 
     fn parser(src: &str) -> Parser<'_> {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-        Parser::new(src, lexed, Mode::Block.skips_newline(), Names::of(src), 0)
+        let names = Names::of(src, &lexed.tokens);
+        Parser::new(src, lexed, Mode::Block.skips_newline(), names, 0)
     }
 
     #[test]
@@ -876,8 +878,10 @@ mod tests {
     #[test]
     fn bump_relexed_to_keeps_skipped_tokens() {
         let src = "\na";
-        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Paren);
-        let mut p = Parser::new(src, lexed, Mode::Paren.skips_newline(), Names::of(src), 0);
+        let whole = TextRange::up_to(TextSize::of(src));
+        let names = Names::of(src, &lexer::lex(src, whole, Mode::Block).tokens);
+        let lexed = lexer::lex(src, whole, Mode::Paren);
+        let mut p = Parser::new(src, lexed, Mode::Paren.skips_newline(), names, 0);
         p.bump_relexed_to(TextSize::of(src), Mode::VarType, Parser::bump_rest);
         assert_eq!(
             p.events,
