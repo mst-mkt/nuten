@@ -1,11 +1,7 @@
 use crate::{Element, LineMode, TextWidth};
 
 pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
-    elements
-        .iter()
-        .map(flat_element)
-        .collect::<Option<Vec<_>>>()
-        .map(|elements| elements.into_iter().flatten().collect())
+    flat_onto(Vec::with_capacity(elements.len()), elements)
 }
 
 /// A forced break inside a `LineSuffix` counts too, since `fits` measures the suffix with the line.
@@ -32,7 +28,17 @@ pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
     })
 }
 
-fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
+fn flat_onto<'a>(
+    flattened: Vec<Element<'a>>,
+    elements: &[Element<'a>],
+) -> Option<Vec<Element<'a>>> {
+    elements.iter().try_fold(flattened, flat_element_onto)
+}
+
+fn flat_element_onto<'a>(
+    flattened: Vec<Element<'a>>,
+    element: &Element<'a>,
+) -> Option<Vec<Element<'a>>> {
     match element {
         Element::Text {
             width: TextWidth::Multiline,
@@ -53,9 +59,9 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
             ..
         }
         | Element::Space
-        | Element::LineSuffixBoundary => Some(vec![element.clone()]),
-        Element::Line(LineMode::Soft) | Element::ExpandParent => Some(Vec::new()),
-        Element::Line(LineMode::SoftOrSpace) => Some(vec![Element::Space]),
+        | Element::LineSuffixBoundary => Some(pushed(flattened, element.clone())),
+        Element::Line(LineMode::Soft) | Element::ExpandParent => Some(flattened),
+        Element::Line(LineMode::SoftOrSpace) => Some(pushed(flattened, Element::Space)),
         Element::Group {
             elements, ..
         }
@@ -67,8 +73,13 @@ fn flat_element<'a>(element: &Element<'a>) -> Option<Vec<Element<'a>>> {
         }
         | Element::IfBreak {
             flat: elements, ..
-        } => flat(elements),
+        } => flat_onto(flattened, elements),
     }
+}
+
+fn pushed<'a>(mut elements: Vec<Element<'a>>, element: Element<'a>) -> Vec<Element<'a>> {
+    elements.push(element);
+    elements
 }
 
 #[cfg(test)]
