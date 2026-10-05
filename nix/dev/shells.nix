@@ -35,6 +35,9 @@ in
     ]
     ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
       pkgs.valgrind # Valgrind is broken on darwin
+    ]
+    ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+      pkgs.libiconv # The libc crate links it on darwin
     ];
 
     env = {
@@ -59,6 +62,9 @@ in
     packages = [
       toolchain.nightlyRust
       pkgs.cargo-fuzz
+    ]
+    ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+      pkgs.libiconv # The libc crate links it on darwin
     ];
 
     env = {
