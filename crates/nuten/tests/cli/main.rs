@@ -10,6 +10,7 @@ mod overrides;
 mod patterns;
 #[cfg(unix)]
 mod removed_current_dir;
+mod reporter;
 mod stdin;
 mod subcommands;
 mod summary;

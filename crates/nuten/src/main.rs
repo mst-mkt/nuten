@@ -1,5 +1,6 @@
 mod diff;
 mod files;
+mod github;
 mod overwrite;
 mod parallel;
 mod problem;
@@ -51,6 +52,10 @@ enum Command {
         example(
             "nuten format --check",
             header = "Show what would change, without changing any file"
+        ),
+        example(
+            "nuten format --reporter github",
+            header = "Annotate the lines that would change in a pull request, on GitHub Actions"
         ),
         example(
             "nuten format --stdin-filepath src/a.nu -",
@@ -125,6 +130,9 @@ struct Format {
     /// List the files that would change and nothing else, for a script to read
     #[usage(short = 'l', long, conflicts("check"))]
     list_different: bool,
+    /// Report what would change and every problem in a form a CI service reads, changing no file
+    #[usage(long, value_enum, conflicts("check", "list_different"))]
+    reporter: Option<Reporter>,
     /// Path of the file stdin holds, to find its config file by and to name it in reports
     #[usage(long, value_hint = usage::ValueHint::FilePath, extensions("nu", "nuon"))]
     stdin_filepath: Option<PathBuf>,
@@ -132,6 +140,12 @@ struct Format {
     /// `-` for stdin
     #[usage(default = ".", value_hint = usage::ValueHint::FilePath, extensions("nu", "nuon"))]
     paths: Vec<PathBuf>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum Reporter {
+    /// Annotations of GitHub Actions
+    Github,
 }
 
 const STDIN_PATH: &str = "-";
@@ -143,6 +157,7 @@ enum Mode {
     Write,
     Check,
     List,
+    Report(Reporter),
 }
 
 #[derive(Debug)]
@@ -176,14 +191,15 @@ fn main() -> ExitCode {
 }
 
 fn run_format(args: &Format) -> ExitCode {
-    if let Some(problem) = argument_problem(args) {
-        return fail(&[problem]);
-    }
-    let mode = match (args.check, args.list_different) {
-        (true, _) => Mode::Check,
-        (_, true) => Mode::List,
+    let mode = match (args.check, args.list_different, args.reporter) {
+        (_, _, Some(reporter)) => Mode::Report(reporter),
+        (true, _, _) => Mode::Check,
+        (_, true, _) => Mode::List,
         _ => Mode::Write,
     };
+    if let Some(problem) = argument_problem(args) {
+        return finish(&[], vec![problem], mode, Style::stdout());
+    }
     if reads_stdin(args) {
         let filepath = args.stdin_filepath.as_deref();
         return format_stdin(filepath, args.config.as_deref(), mode);
@@ -195,7 +211,7 @@ fn run_format(args: &Format) -> ExitCode {
         .transpose()
     {
         Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
-        Err(errors) => fail(&problems_of(errors)),
+        Err(errors) => finish(&[], problems_of(errors), mode, Style::stdout()),
     }
 }
 
@@ -214,6 +230,10 @@ fn argument_problem(args: &Format) -> Option<Problem> {
     } else if filepath.is_some() && !takes_stdin {
         Some(Problem::new(
             "`--stdin-filepath` needs `-`, which reads stdin",
+        ))
+    } else if args.reporter.is_some() && takes_stdin && filepath.is_none() {
+        Some(Problem::new(
+            "`--reporter` needs `--stdin-filepath` on stdin, which names the file to report on",
         ))
     } else {
         filepath
@@ -311,7 +331,7 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
 }
 
 fn finish(changed: &[Changed], problems: Vec<Problem>, mode: Mode, style: Style) -> ExitCode {
-    let written = write_stdout(&stdout_text(changed, mode, style));
+    let written = write_stdout(&stdout_text(changed, &problems, mode, style));
     let problems: Vec<_> = problems.into_iter().chain(written.err()).collect();
     if !problems.is_empty() {
         fail(&problems)
@@ -322,11 +342,19 @@ fn finish(changed: &[Changed], problems: Vec<Problem>, mode: Mode, style: Style)
     }
 }
 
-fn stdout_text(changed: &[Changed], mode: Mode, style: Style) -> String {
+/// A reporter writes problems too, since what reads it reads only stdout.
+fn stdout_text(changed: &[Changed], problems: &[Problem], mode: Mode, style: Style) -> String {
     match mode {
         Mode::Write => String::new(),
         Mode::Check => views_text(changed, style),
         Mode::List => listing(changed.iter().map(|changed| changed.path.as_path())),
+        Mode::Report(Reporter::Github) => {
+            detail_texts(changed).collect::<String>()
+                + &problems
+                    .iter()
+                    .map(github::problem_annotation)
+                    .collect::<String>()
+        },
     }
 }
 
@@ -549,6 +577,9 @@ fn detail(path: &Path, src: &str, formatted: &str, mode: Mode, style: Style) -> 
     let text_of: fn(&Path, &Difference<'_>, Style) -> String = match mode {
         Mode::Write | Mode::List => return None,
         Mode::Check => view,
+        Mode::Report(Reporter::Github) => {
+            |path, difference, _| github::file_annotation(path, difference)
+        },
     };
     let difference = Difference::new(src, formatted);
     Some(Detail {

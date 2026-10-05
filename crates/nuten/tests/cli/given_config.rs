@@ -94,9 +94,21 @@ fn format_writes_nothing_when_given_config_file_is_wrong() {
     let dir = TempDir::new();
     dir.file("two.nuon", "{indent_width: 2, a: 1}");
     let path = dir.file("a.nu", "ls|first");
-    let output = format_in(&dir, &["-c", "two.nuon", "a.nu"]);
-    assert_eq!(output.status.code(), Some(2));
-    assert_eq!(stderr(&output), "error: two.nuon:1:19: unknown key `a`\n");
+    for flags in [&[][..], &["--check"], &["--list-different"]] {
+        let args: Vec<_> = flags
+            .iter()
+            .chain(&["-c", "two.nuon", "a.nu"])
+            .copied()
+            .collect();
+        let output = format_in(&dir, &args);
+        assert_eq!(output.status.code(), Some(2), "{flags:?}");
+        assert!(output.stdout.is_empty(), "{flags:?}");
+        assert_eq!(
+            stderr(&output),
+            "error: two.nuon:1:19: unknown key `a`\n",
+            "{flags:?}"
+        );
+    }
     assert_eq!(read(&path), "ls|first");
 }
 

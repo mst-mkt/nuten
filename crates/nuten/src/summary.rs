@@ -20,8 +20,8 @@ impl Counts {
 pub(crate) fn summary(counts: &Counts, mode: Mode, style: Style) -> Option<String> {
     let changed = match (mode, counts.changed) {
         (Mode::Write, _) => "formatted",
-        (Mode::Check, 1) => "needs formatting",
-        (Mode::Check, _) => "need formatting",
+        (Mode::Check | Mode::Report(_), 1) => "needs formatting",
+        (Mode::Check | Mode::Report(_), _) => "need formatting",
         // Not after a list, which a script reads, as with other formatters.
         (Mode::List, _) => return None,
     };
@@ -59,7 +59,7 @@ pub(crate) fn summary(counts: &Counts, mode: Mode, style: Style) -> Option<Strin
 #[cfg(test)]
 mod tests {
     use super::{Counts, summary};
-    use crate::{Mode, style::Style};
+    use crate::{Mode, Reporter, style::Style};
 
     fn plain(counts: Counts, mode: Mode) -> Option<String> {
         summary(&counts, mode, Style::PLAIN)
@@ -95,6 +95,10 @@ mod tests {
         };
         assert_eq!(
             plain(one, Mode::Check),
+            Some("1 file: 1 needs formatting".to_string())
+        );
+        assert_eq!(
+            plain(one, Mode::Report(Reporter::Github)),
             Some("1 file: 1 needs formatting".to_string())
         );
         assert_eq!(
