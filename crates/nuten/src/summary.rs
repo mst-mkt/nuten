@@ -15,11 +15,13 @@ impl Counts {
     }
 }
 
-pub(crate) fn summary(counts: &Counts, mode: Mode, style: Style) -> String {
+pub(crate) fn summary(counts: &Counts, mode: Mode, style: Style) -> Option<String> {
     let changed = match (mode, counts.changed) {
         (Mode::Write, _) => "formatted",
         (Mode::Check, 1) => "needs formatting",
         (Mode::Check, _) => "need formatting",
+        // Not after a list, which a script reads, as with other formatters.
+        (Mode::List, _) => return None,
     };
     let parts: Vec<_> = [
         (counts.changed, changed),
@@ -36,9 +38,9 @@ pub(crate) fn summary(counts: &Counts, mode: Mode, style: Style) -> String {
     let files = if total == 1 { "file" } else { "files" };
     let head = format!("{} {files}", style.bold(&total.to_string()));
     if parts.is_empty() {
-        head
+        Some(head)
     } else {
-        format!("{head}: {}", parts.join(", "))
+        Some(format!("{head}: {}", parts.join(", ")))
     }
 }
 
@@ -47,7 +49,7 @@ mod tests {
     use super::{Counts, summary};
     use crate::{Mode, style::Style};
 
-    fn plain(counts: Counts, mode: Mode) -> String {
+    fn plain(counts: Counts, mode: Mode) -> Option<String> {
         summary(&counts, mode, Style::PLAIN)
     }
 
@@ -62,7 +64,7 @@ mod tests {
         };
         assert_eq!(
             plain(counts, Mode::Write),
-            "10 files: 2 formatted, 1 failed, 3 skipped, 4 excluded"
+            Some("10 files: 2 formatted, 1 failed, 3 skipped, 4 excluded".to_string())
         );
     }
 
@@ -77,16 +79,27 @@ mod tests {
             unchanged: 1,
             ..Counts::default()
         };
-        assert_eq!(plain(one, Mode::Check), "1 file: 1 needs formatting");
+        assert_eq!(
+            plain(one, Mode::Check),
+            Some("1 file: 1 needs formatting".to_string())
+        );
         assert_eq!(
             plain(two, Mode::Check),
-            "3 files: 2 need formatting, 1 unchanged"
+            Some("3 files: 2 need formatting, 1 unchanged".to_string())
         );
     }
 
     #[test]
+    fn summary_is_left_out_for_list() {
+        assert_eq!(plain(Counts::default(), Mode::List), None);
+    }
+
+    #[test]
     fn summary_of_no_files_is_count_alone() {
-        assert_eq!(plain(Counts::default(), Mode::Write), "0 files");
+        assert_eq!(
+            plain(Counts::default(), Mode::Write),
+            Some("0 files".to_string())
+        );
     }
 
     #[test]
@@ -97,11 +110,11 @@ mod tests {
         };
         assert_eq!(
             summary(&counts, Mode::Write, Style::COLORED),
-            "\u{1b}[1m1\u{1b}[0m file: \u{1b}[1m1\u{1b}[0m formatted"
+            Some("\u{1b}[1m1\u{1b}[0m file: \u{1b}[1m1\u{1b}[0m formatted".to_string())
         );
         assert_eq!(
             summary(&Counts::default(), Mode::Write, Style::COLORED),
-            "\u{1b}[1m0\u{1b}[0m files"
+            Some("\u{1b}[1m0\u{1b}[0m files".to_string())
         );
     }
 }

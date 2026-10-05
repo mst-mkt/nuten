@@ -3,6 +3,7 @@ mod completions;
 mod config_file;
 mod files;
 mod given_config;
+mod list;
 mod lsp;
 mod no_paths;
 mod overrides;

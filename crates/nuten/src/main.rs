@@ -122,6 +122,9 @@ struct Format {
     /// List the files that would change, instead of changing them
     #[usage(long)]
     check: bool,
+    /// List the files that would change and nothing else, for a script to read
+    #[usage(short = 'l', long, conflicts("check"))]
+    list_different: bool,
     /// Path of the file stdin holds, to find its config file by and to name it in reports
     #[usage(long, value_hint = usage::ValueHint::FilePath, extensions("nu", "nuon"))]
     stdin_filepath: Option<PathBuf>,
@@ -139,6 +142,7 @@ const STDIN_NAME: &str = "<stdin>";
 enum Mode {
     Write,
     Check,
+    List,
 }
 
 #[derive(Debug)]
@@ -161,7 +165,11 @@ fn run_format(args: &Format) -> ExitCode {
     if let Some(problem) = argument_problem(args) {
         return fail(&[problem]);
     }
-    let mode = if args.check { Mode::Check } else { Mode::Write };
+    let mode = match (args.check, args.list_different) {
+        (true, _) => Mode::Check,
+        (_, true) => Mode::List,
+        _ => Mode::Write,
+    };
     if reads_stdin(args) {
         let filepath = args.stdin_filepath.as_deref();
         return format_stdin(filepath, args.config.as_deref(), mode);
@@ -261,7 +269,13 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
     match (formatted, mode) {
         (Err(problems), _) => fail(&problems),
         (Ok((src, formatted)), Mode::Check) if formatted != src => ExitCode::from(1),
-        (Ok(_), Mode::Check) => ExitCode::SUCCESS,
+        (Ok((src, formatted)), Mode::List) if formatted != src => {
+            match write_stdout(&listing(&[name.to_path_buf()])) {
+                Ok(()) => ExitCode::from(1),
+                Err(problem) => fail(&[problem]),
+            }
+        },
+        (Ok(_), Mode::Check | Mode::List) => ExitCode::SUCCESS,
         (Ok((_, formatted)), Mode::Write) => print(&formatted),
     }
 }
@@ -270,7 +284,7 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
     let report = report(paths, given, mode);
     let listed = match mode {
         Mode::Write => Ok(()),
-        Mode::Check => write_stdout(&listing(&report.changed)),
+        Mode::Check | Mode::List => write_stdout(&listing(&report.changed)),
     };
     let problems: Vec<_> = unique(report.problems.iter())
         .cloned()
@@ -278,12 +292,14 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
         .collect();
     let code = if !problems.is_empty() {
         fail(&problems)
-    } else if mode == Mode::Check && !report.changed.is_empty() {
+    } else if mode != Mode::Write && !report.changed.is_empty() {
         ExitCode::from(1)
     } else {
         ExitCode::SUCCESS
     };
-    write_stderr(&summary(&report.counts, mode, Style::stderr()));
+    if let Some(summary) = summary(&report.counts, mode, Style::stderr()) {
+        write_stderr(&summary);
+    }
     code
 }
 
