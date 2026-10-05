@@ -1,8 +1,6 @@
-use std::{
-    io,
-    path::{self, Component, Path, PathBuf},
-};
+use std::path::Path;
 
+use super::absolute_as_written;
 use crate::{diff::Difference, problem::Problem};
 
 const TITLE: &str = "nuten";
@@ -54,20 +52,6 @@ fn file_property(path: &Path) -> String {
         .to_string()
 }
 
-/// Not canonical, since the runner compares the path with its workspace as written.
-fn absolute_as_written(path: &Path) -> io::Result<PathBuf> {
-    let absolute = path::absolute(path)?;
-    Ok(absolute
-        .components()
-        .fold(PathBuf::new(), |resolved, component| match component {
-            Component::ParentDir => resolved
-                .parent()
-                .map_or(resolved.clone(), Path::to_path_buf),
-            Component::CurDir => resolved,
-            component => resolved.join(component),
-        }))
-}
-
 fn escape_data(text: &str) -> String {
     text.replace('%', "%25")
         .replace('\r', "%0D")
@@ -82,9 +66,7 @@ fn escape_property(text: &str) -> String {
 mod tests {
     use std::{env, path::Path};
 
-    use super::{
-        absolute_as_written, escape_data, escape_property, file_annotation, problem_annotation,
-    };
+    use super::{escape_data, escape_property, file_annotation, problem_annotation};
     use crate::{
         diff::Difference,
         problem::{Position, Problem},
@@ -139,19 +121,6 @@ mod tests {
         assert_eq!(
             problem_annotation(&Problem::new("a%\nb")),
             "::error title=nuten::a%25%0Ab\n"
-        );
-    }
-
-    #[test]
-    fn absolute_as_written_joins_current_directory_and_drops_dots() {
-        let current = env::current_dir().unwrap();
-        assert_eq!(
-            absolute_as_written(Path::new("./a/../b.nu")).unwrap(),
-            current.join("b.nu")
-        );
-        assert_eq!(
-            absolute_as_written(Path::new("../b.nu")).unwrap(),
-            current.parent().unwrap().join("b.nu")
         );
     }
 

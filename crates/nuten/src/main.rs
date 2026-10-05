@@ -1,9 +1,9 @@
 mod diff;
 mod files;
-mod github;
 mod overwrite;
 mod parallel;
 mod problem;
+mod reporter;
 mod style;
 mod summary;
 mod view;
@@ -29,6 +29,7 @@ use crate::{
     files::{Candidate, Entry},
     overwrite::{Contents, Failure, OnDisk, overwrite},
     problem::Problem,
+    reporter::github,
     style::Style,
     summary::{Counts, summary},
     view::view,
