@@ -1,5 +1,10 @@
 #![expect(clippy::print_stderr, reason = "errors go to the user")]
 
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "`--check` is yet to report through it")
+)]
+mod diff;
 mod files;
 mod overwrite;
 mod parallel;
