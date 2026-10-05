@@ -272,16 +272,16 @@ def "compare marks input head timed out on" [] {
 }
 
 @test
-def "main passes when head does same work as base" [] {
+def "main finds no regression when head does same work as base" [] {
     let context = $in
     put-picks $context.corpus (open $INPUTS)
 
-    let actual = ^$nu.current-exe $BASE $context.corpus $context.nuten $context.nuten | complete
+    let actual = main $context.corpus $context.nuten $context.nuten
 
-    assert equal $actual.exit_code 0 $actual.stderr
-    for name in (inputs $context.corpus (open $INPUTS) | get name) {
-        assert str contains $actual.stdout $name
-    }
+    let names = inputs $context.corpus (open $INPUTS) | get name
+    assert equal ($actual | get input | uniq) $names
+    assert equal ($actual | length) (($names | length) * ($METRICS | length))
+    assert equal ($actual | where regressed | length) 0
 }
 
 @test

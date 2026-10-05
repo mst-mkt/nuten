@@ -16,13 +16,13 @@ const TIMED_OUT = {
     peak_bytes: null
 }
 
-# Prints how the work of head differs from that of base on each input, and fails if it grows past the threshold or runs out of time.
-def main [
+# How the work of head differs from that of base on each input.
+export def main [
     corpus: path # The corpus directory, as NUTEN_CORPUS names it
     base: path # The nuten binary to compare against
     head: path # The nuten binary to compare
     --time-limit: duration = 100sec # How long one run may take before it is cut off
-]: nothing -> nothing {
+]: nothing -> table {
     let missing = [valgrind, timeout, taskset] | where { which $in | is-empty }
     if not ($missing | is-empty) {
         print --stderr $"($missing | str join ', ') not found"
@@ -36,12 +36,7 @@ def main [
         print --stderr $"base timed out on ($unmeasured | str join ', ')"
         exit 2
     }
-    let comparison = compare $before (measure-each $head $inputs $time_limit)
-
-    print $comparison
-    if ($comparison | any { $in.regressed }) {
-        exit 1
-    }
+    compare $before (measure-each $head $inputs $time_limit)
 }
 
 def measure-each [nuten: path, inputs: list<record>, limit: duration]: nothing -> table {
