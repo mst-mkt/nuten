@@ -4,7 +4,7 @@ use std::{fs, path::PathBuf};
 
 #[cfg(target_os = "linux")]
 use crate::support::nuten_command;
-use crate::support::{BLOCK, TempDir, format, format_in, io_error_line, read, stderr};
+use crate::support::{BLOCK, TempDir, format, format_in, io_error_line, problems, read, stderr};
 #[cfg(unix)]
 use crate::support::{fifo, format_in_time};
 
@@ -142,7 +142,7 @@ fn format_writes_nothing_when_any_config_file_is_wrong() {
     let output = format(&[&right, &wrong]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!(
             "{}:2:19: `indent_width` takes an integer from 1 to 255\n",
             dir.path("a/nuten.json").display()
@@ -160,7 +160,7 @@ fn format_reports_every_error_in_config_file() {
     let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!(
             "{0}:1:16: `indent_width` takes an integer from 1 to 255\n\
              {0}:1:19: unknown key `a`\n",
@@ -177,7 +177,7 @@ fn format_reports_config_error_line_in_crlf_file() {
     let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!(
             "{}:2:19: `indent_width` takes an integer from 1 to 255\n",
             config.display()
@@ -194,7 +194,7 @@ fn format_reports_each_wrong_config_file_once() {
     let output = format(&paths.each_ref().map(PathBuf::as_path));
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!(
             "{}:1:2: unknown key `a`\n{}:1:1: Unterminated object\n",
             nuon.display(),
@@ -212,7 +212,7 @@ fn format_does_not_fall_back_from_wrong_config_file_to_next_name() {
     let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!("{}:1:1: unclosed quote or bracket\n", nuon.display())
     );
     assert_eq!(read(&path), BLOCK);
@@ -229,7 +229,7 @@ fn format_does_not_fall_back_from_dangling_symlink_config_file() {
     let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(2));
     let error = fs::read(&nuon).unwrap_err();
-    assert_eq!(stderr(&output), io_error_line(&nuon, &error));
+    assert_eq!(problems(&output), io_error_line(&nuon, &error));
     assert_eq!(read(&path), BLOCK);
 }
 
@@ -241,7 +241,7 @@ fn format_writes_nothing_when_config_file_is_directory() {
     let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!("{}: not a regular file\n", nuon.display())
     );
     assert_eq!(read(&path), "ls|first");
@@ -257,7 +257,7 @@ fn format_writes_nothing_without_waiting_when_config_file_is_fifo() {
     let output = format_in_time(&[&path]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!("{}: not a regular file\n", nuon.display())
     );
     assert_eq!(read(&path), "ls|first");
@@ -294,7 +294,7 @@ fn format_writes_nothing_when_existence_of_config_file_cannot_be_told() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(stderr(&output), io_error_line(&nuon, &error));
+    assert_eq!(problems(&output), io_error_line(&nuon, &error));
     for path in &paths {
         assert_eq!(read(path), "ls|first");
     }
@@ -309,7 +309,7 @@ fn format_reports_file_in_missing_directory_and_continues() {
     let output = format(&[&missing, &good]);
     assert_eq!(output.status.code(), Some(2));
     let error = fs::read(&missing).unwrap_err();
-    assert_eq!(stderr(&output), io_error_line(&missing, &error));
+    assert_eq!(problems(&output), io_error_line(&missing, &error));
     assert_eq!(read(&good), "ls | first\n");
 }
 
@@ -322,7 +322,7 @@ fn format_reports_file_under_regular_file_and_continues() {
     let output = format(&[&under, &good]);
     assert_eq!(output.status.code(), Some(2));
     let error = fs::read(&under).unwrap_err();
-    assert_eq!(stderr(&output), io_error_line(&under, &error));
+    assert_eq!(problems(&output), io_error_line(&under, &error));
     assert_eq!(read(&good), "ls | first\n");
 }
 
@@ -345,7 +345,7 @@ fn format_reports_file_in_unsearchable_directory_alongside_wrong_config_file() {
     };
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         io_error_line(&locked, &error) + &format!("{}:1:1: Unterminated object\n", json.display())
     );
     assert_eq!(read(&locked), "ls|first");

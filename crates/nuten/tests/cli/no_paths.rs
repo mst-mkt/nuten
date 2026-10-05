@@ -1,5 +1,5 @@
 #[cfg(unix)]
-use crate::support::stderr;
+use crate::support::problems;
 use crate::support::{
     BLOCK, FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command,
     read, write_unformatted,
@@ -24,8 +24,8 @@ fn format_reports_files_under_current_directory_without_paths_by_paths_relative_
     dir.file("a/bad.nu", "ls ||");
     let output = format_in(&dir, &[]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert!(stderr.starts_with("a/bad.nu:1:4: "), "{stderr}");
+    let problems = problems(&output);
+    assert!(problems.starts_with("a/bad.nu:1:4: "), "{problems}");
 }
 
 #[test]

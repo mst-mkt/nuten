@@ -2,13 +2,13 @@ use std::{fs, path::Path, process::Output};
 
 use crate::support::{
     BLOCK, FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, io_error_line,
-    nuten_command, read, stderr, write_unformatted,
+    nuten_command, problems, read, stderr, write_unformatted,
 };
 #[cfg(unix)]
 use crate::support::{fifo, format_in_time};
 
 fn reported_paths(output: &Output) -> Vec<String> {
-    stderr(output)
+    problems(output)
         .lines()
         .map(|line| {
             let end = line.find(':').expect("a line reports a path");
@@ -215,11 +215,11 @@ fn format_reports_ignore_file_line_it_cannot_read_and_leaves_files_under_it_alon
     let [taken] = write_unformatted(&dir, ["d/a.nu"]);
     let output = format_in(&dir, &["d"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
     assert!(
-        stderr.starts_with(&format!("{}:2: ", gitignore.display())),
-        "{stderr}"
+        problems.starts_with(&format!("{}:2: ", gitignore.display())),
+        "{problems}"
     );
     for path in &skipped {
         assert_eq!(read(path), UNFORMATTED, "{}", path.display());
@@ -234,11 +234,11 @@ fn format_leaves_directory_given_alone_when_its_ignore_file_has_line_it_cannot_r
     let [skipped, taken] = write_unformatted(&dir, ["d/a.nu", "b.nu"]);
     let output = format_in(&dir, &["d", "b.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
     assert!(
-        stderr.starts_with(&format!("{}:1: ", ignore.display())),
-        "{stderr}"
+        problems.starts_with(&format!("{}:1: ", ignore.display())),
+        "{problems}"
     );
     assert_eq!(read(&skipped), UNFORMATTED);
     assert_eq!(read(&taken), FORMATTED);
@@ -250,16 +250,16 @@ fn format_reports_each_ignore_file_line_it_cannot_read() {
     let ignore = dir.file("d/.ignore", "a{b\nc\nd{e\n");
     let output = format_in(&dir, &["d"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    let lines: Vec<_> = stderr.lines().collect();
-    assert_eq!(lines.len(), 2, "{stderr}");
+    let problems = problems(&output);
+    let lines: Vec<_> = problems.lines().collect();
+    assert_eq!(lines.len(), 2, "{problems}");
     assert!(
         lines[0].starts_with(&format!("{}:1: ", ignore.display())),
-        "{stderr}"
+        "{problems}"
     );
     assert!(
         lines[1].starts_with(&format!("{}:3: ", ignore.display())),
-        "{stderr}"
+        "{problems}"
     );
 }
 
@@ -270,11 +270,11 @@ fn format_leaves_directory_alone_when_ignore_file_above_it_has_line_it_cannot_re
     let [skipped] = write_unformatted(&dir, ["d/e/a.nu"]);
     let output = format_in(&dir, &["d/e"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
     assert!(
-        stderr.starts_with(&format!("{}:1: ", ignore.display())),
-        "{stderr}"
+        problems.starts_with(&format!("{}:1: ", ignore.display())),
+        "{problems}"
     );
     assert_eq!(read(&skipped), UNFORMATTED);
 }
@@ -292,11 +292,11 @@ fn format_leaves_directories_alone_when_global_excludes_file_of_git_has_line_it_
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
     assert!(
-        stderr.starts_with(&format!("{}:1: ", excludes.display())),
-        "{stderr}"
+        problems.starts_with(&format!("{}:1: ", excludes.display())),
+        "{problems}"
     );
     assert_eq!(read(&skipped), UNFORMATTED);
     assert_eq!(read(&taken), FORMATTED);
@@ -308,11 +308,11 @@ fn format_reports_problem_of_directory_once_when_given_twice() {
     let ignore = dir.file("d/.ignore", "a{b\n");
     let output = format_in(&dir, &["d", "d"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
     assert!(
-        stderr.starts_with(&format!("{}:1: ", ignore.display())),
-        "{stderr}"
+        problems.starts_with(&format!("{}:1: ", ignore.display())),
+        "{problems}"
     );
 }
 
@@ -324,8 +324,8 @@ fn format_reports_problem_of_ignore_file_once_when_above_one_directory_and_in_an
     for paths in [["d", "d/e"], ["d/e", "d"]] {
         let output = format_in(&dir, &paths);
         assert_eq!(output.status.code(), Some(2));
-        let stderr = stderr(&output);
-        assert_eq!(stderr.lines().count(), 1, "{paths:?}: {stderr}");
+        let problems = problems(&output);
+        assert_eq!(problems.lines().count(), 1, "{paths:?}: {problems}");
     }
 }
 
@@ -345,7 +345,7 @@ fn format_reports_unreadable_current_directory_by_dot() {
     };
     for output in &outputs {
         assert_eq!(output.status.code(), Some(2));
-        assert_eq!(stderr(output), io_error_line(Path::new("."), &error));
+        assert_eq!(problems(output), io_error_line(Path::new("."), &error));
     }
 }
 
@@ -365,7 +365,7 @@ fn format_reports_unreadable_directory_once_when_given_with_dot_or_trailing_slas
         return;
     };
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(stderr(&output), io_error_line(Path::new("u"), &error));
+    assert_eq!(problems(&output), io_error_line(Path::new("u"), &error));
 }
 
 #[cfg(unix)]
@@ -423,15 +423,15 @@ fn format_reports_files_under_directory_in_path_order_where_directory_is_given()
     }
     let output = format_in(&dir, &["z.nu", "d", "y.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    let heads: Vec<_> = stderr
+    let problems = problems(&output);
+    let heads: Vec<_> = problems
         .lines()
         .map(|line| &line[..line.find(':').unwrap()])
         .collect();
     assert_eq!(
         heads,
         ["z.nu", "d/a/c.nu", "d/a.nu", "d/b.nu", "y.nu"],
-        "{stderr}"
+        "{problems}"
     );
 }
 
@@ -443,8 +443,11 @@ fn format_reports_files_under_current_directory_by_paths_relative_to_it() {
     for given in [".", "./"] {
         let output = format_in(&dir, &[given]);
         assert_eq!(output.status.code(), Some(2));
-        let stderr = stderr(&output);
-        assert!(stderr.starts_with("a/bad.nu:1:4: "), "{given}: {stderr}");
+        let problems = problems(&output);
+        assert!(
+            problems.starts_with("a/bad.nu:1:4: "),
+            "{given}: {problems}"
+        );
     }
 }
 
@@ -455,9 +458,9 @@ fn format_reports_file_under_overlapping_directories_once_at_first_path() {
     dir.file("d/e/bad.nu", "ls ||");
     let output = format_in(&dir, &["d/e", "d", "d/e/bad.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
-    assert!(stderr.starts_with("d/e/bad.nu:1:4: "), "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
+    assert!(problems.starts_with("d/e/bad.nu:1:4: "), "{problems}");
 }
 
 #[test]
@@ -492,7 +495,7 @@ fn format_writes_nothing_when_config_file_under_directory_is_wrong() {
     let output = format_in(&dir, &["d"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!("{}:1:2: unknown key `a`\n", nuon.display())
     );
     for path in &paths {
@@ -518,7 +521,7 @@ fn format_reports_unreadable_directory_under_directory_and_continues() {
     };
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         io_error_line(Path::new("d/locked"), &error)
     );
     assert_eq!(read(&locked), UNFORMATTED);
@@ -556,7 +559,7 @@ fn format_reports_problems_met_while_walking_directory_among_its_files() {
         reported_paths(&output),
         ["d/a.nu", &ignore, "d/c.nu"],
         "{}",
-        stderr(&output)
+        problems(&output)
     );
 }
 
@@ -572,7 +575,7 @@ fn format_reports_path_it_cannot_resolve_where_it_is_given() {
         reported_paths(&output),
         ["z.nu", "missing/a.nu", "y.nu"],
         "{}",
-        stderr(&output)
+        problems(&output)
     );
 }
 
@@ -622,7 +625,7 @@ fn format_reports_problem_of_global_excludes_file_once_at_first_directory_respec
         reported_paths(&output),
         ["z.nu", "off/y.nu", &excludes],
         "{}",
-        stderr(&output)
+        problems(&output)
     );
     for path in &skipped {
         assert_eq!(read(path), UNFORMATTED, "{}", path.display());
@@ -706,8 +709,8 @@ fn format_reads_no_global_excludes_file_of_git_when_respect_gitignore_is_off() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
     assert_eq!(read(&on), UNFORMATTED);
     assert_eq!(read(&off), FORMATTED);
 }
@@ -743,7 +746,7 @@ fn format_reports_missing_file_once_when_given_config_file() {
     let output = format_in(&dir, &["-c", "two.nuon", "missing.nu"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         io_error_line(Path::new("missing.nu"), &error)
     );
 }
@@ -756,7 +759,7 @@ fn format_writes_nothing_when_config_file_of_directory_is_wrong() {
     let output = format_in(&dir, &["a.nu", "d"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!(
             "{}:1:21: `respect_gitignore` takes a boolean, not an integer\n",
             nuon.display()

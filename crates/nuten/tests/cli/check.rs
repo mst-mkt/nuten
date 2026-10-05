@@ -3,8 +3,8 @@ use std::fs;
 use std::{io, path::MAIN_SEPARATOR};
 
 use crate::support::{
-    FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command, read,
-    stderr, stdout, write_unformatted,
+    FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command, problems,
+    read, stderr, stdout, write_unformatted,
 };
 
 #[test]
@@ -45,9 +45,9 @@ fn format_check_exits_with_2_on_problem_though_files_would_change() {
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(stdout(&output), "a.nu\n");
     assert!(
-        stderr(&output).starts_with("bad.nu:1:4: "),
+        problems(&output).starts_with("bad.nu:1:4: "),
         "{}",
-        stderr(&output)
+        problems(&output)
     );
     assert_eq!(read(&bad), "ls ||");
     assert_eq!(read(&path), UNFORMATTED);
@@ -97,7 +97,7 @@ fn format_check_reports_list_it_cannot_write() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert!(stderr.starts_with("stdout: "), "{stderr}");
+    let problems = problems(&output);
+    assert!(problems.starts_with("stdout: "), "{problems}");
     assert_eq!(read(&path), UNFORMATTED);
 }

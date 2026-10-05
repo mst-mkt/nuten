@@ -56,9 +56,15 @@ fn format_writes_nothing_when_given_config_file_cannot_be_read() {
     for (config, expected) in [
         (
             "missing.nuon",
-            io_error_line(Path::new("missing.nuon"), &missing_error),
+            format!(
+                "error: {}",
+                io_error_line(Path::new("missing.nuon"), &missing_error)
+            ),
         ),
-        ("dir.json", "dir.json: not a regular file\n".to_string()),
+        (
+            "dir.json",
+            "error: dir.json: not a regular file\n".to_string(),
+        ),
     ] {
         let output = format_in(&dir, &["-c", config, "a.nu"]);
         assert_eq!(output.status.code(), Some(2), "{config}");
@@ -77,7 +83,7 @@ fn format_rejects_given_config_file_without_config_extension() {
         assert_eq!(output.status.code(), Some(2), "{config}");
         assert_eq!(
             stderr(&output),
-            format!("{config}: {NO_CONFIG_EXTENSION}\n")
+            format!("error: {config}: {NO_CONFIG_EXTENSION}\n")
         );
         assert_eq!(read(&path), "ls|first", "{config}");
     }
@@ -90,7 +96,7 @@ fn format_writes_nothing_when_given_config_file_is_wrong() {
     let path = dir.file("a.nu", "ls|first");
     let output = format_in(&dir, &["-c", "two.nuon", "a.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(stderr(&output), "two.nuon:1:19: unknown key `a`\n");
+    assert_eq!(stderr(&output), "error: two.nuon:1:19: unknown key `a`\n");
     assert_eq!(read(&path), "ls|first");
 }
 

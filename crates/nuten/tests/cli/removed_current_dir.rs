@@ -5,7 +5,9 @@ use std::{
     process::{Command, Output, Stdio},
 };
 
-use crate::support::{BLOCK, TempDir, UNFORMATTED, assert_succeeds_quietly, read, stderr, stdout};
+use crate::support::{
+    BLOCK, TempDir, UNFORMATTED, assert_succeeds_quietly, problems, read, stdout,
+};
 
 /// The shell removes `removed` before it runs the binary, which `Command` cannot.
 #[cfg(unix)]
@@ -60,9 +62,9 @@ fn format_reports_removed_current_directory_given_config_file_takes_patterns_fro
         config.display()
     );
     assert!(
-        stderr(&output).starts_with(&expected),
+        problems(&output).starts_with(&expected),
         "{}",
-        stderr(&output)
+        problems(&output)
     );
     assert_eq!(read(&path), UNFORMATTED);
 }

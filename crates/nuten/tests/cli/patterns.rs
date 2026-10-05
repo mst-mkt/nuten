@@ -3,8 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::support::{
-    FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command, read,
-    stderr, write_unformatted,
+    FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command, problems,
+    read, stderr, write_unformatted,
 };
 
 fn assert_formatted_only(formatted: &[PathBuf], unformatted: &[PathBuf]) {
@@ -233,7 +233,7 @@ fn format_writes_nothing_when_config_file_nearest_file_include_misses_is_wrong()
     let output = format_in(&dir, &["d"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!(
             "{}:1:11: `include` takes a list of strings, not an integer\n",
             nuon.display()

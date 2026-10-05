@@ -3,7 +3,8 @@ use std::fs;
 use std::{ffi::OsStr, io};
 
 use crate::support::{
-    FORMATTED, TempDir, format_in, format_stdin_in, nuten, nuten_command, read, stderr, stdout,
+    FORMATTED, TempDir, format_in, format_stdin_in, nuten, nuten_command, problems, read, stderr,
+    stdout,
 };
 
 #[test]
@@ -84,6 +85,6 @@ fn schema_reports_write_error() {
     let full = fs::File::options().write(true).open("/dev/full").unwrap();
     let output = nuten_command().arg("schema").stdout(full).output().unwrap();
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert!(stderr.starts_with("stdout: "), "{stderr}");
+    let problems = problems(&output);
+    assert!(problems.starts_with("stdout: "), "{problems}");
 }

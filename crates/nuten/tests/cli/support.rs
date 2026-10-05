@@ -119,6 +119,14 @@ pub(crate) fn stderr(output: &Output) -> String {
     String::from_utf8(output.stderr.clone()).unwrap()
 }
 
+pub(crate) fn problems(output: &Output) -> String {
+    stderr(output)
+        .lines()
+        .filter_map(|line| line.strip_prefix("error: "))
+        .flat_map(|line| [line, "\n"])
+        .collect()
+}
+
 pub(crate) fn stdout(output: &Output) -> String {
     String::from_utf8(output.stdout.clone()).unwrap()
 }

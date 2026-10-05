@@ -215,7 +215,7 @@ fn serve_lsp() -> ExitCode {
 
 fn fail(problems: &[String]) -> ExitCode {
     for problem in problems {
-        write_stderr(problem);
+        write_stderr(&format!("error: {problem}"));
     }
     ExitCode::from(2)
 }

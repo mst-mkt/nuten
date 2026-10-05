@@ -4,7 +4,8 @@ use std::{io, path::Path, process::Stdio, thread};
 
 use crate::support::{
     BLOCK, FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in,
-    format_stdin_command, format_stdin_in, nuten_command, read, stderr, stdout, write_unformatted,
+    format_stdin_command, format_stdin_in, nuten_command, problems, read, stderr, stdout,
+    write_unformatted,
 };
 
 #[test]
@@ -65,9 +66,9 @@ fn format_writes_nothing_to_stdout_and_reports_syntax_error_of_stdin() {
     let output = format_stdin_in(&dir, &["-"], b"ls\nls ||");
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
-    assert!(stderr.starts_with("<stdin>:2:4: "), "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
+    assert!(problems.starts_with("<stdin>:2:4: "), "{problems}");
 }
 
 #[test]
@@ -76,8 +77,8 @@ fn format_reports_stdin_that_is_not_utf8() {
     let output = format_stdin_in(&dir, &["-"], b"ls \xff");
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    let stderr = stderr(&output);
-    assert!(stderr.starts_with("<stdin>: "), "{stderr}");
+    let problems = problems(&output);
+    assert!(problems.starts_with("<stdin>: "), "{problems}");
 }
 
 #[test]
@@ -88,7 +89,7 @@ fn format_writes_nothing_to_stdout_when_config_file_for_stdin_is_wrong() {
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!("{}:1:2: unknown key `a`\n", nuon.display())
     );
 }
@@ -119,7 +120,7 @@ fn format_rejects_stdin_with_other_paths() {
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
         assert_eq!(
-            stderr(&output),
+            problems(&output),
             "`-` must be the only path, since it reads stdin\n"
         );
         assert_eq!(read(&path), UNFORMATTED);
@@ -133,7 +134,7 @@ fn format_rejects_stdin_with_other_paths_before_reading_given_config_file() {
     let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         "`-` must be the only path, since it reads stdin\n"
     );
 }
@@ -174,8 +175,8 @@ fn format_check_on_stdin_exits_with_2_on_syntax_error() {
     let output = format_stdin_in(&dir, &["--check", "-"], b"ls ||");
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    let stderr = stderr(&output);
-    assert!(stderr.starts_with("<stdin>:1:4: "), "{stderr}");
+    let problems = problems(&output);
+    assert!(problems.starts_with("<stdin>:1:4: "), "{problems}");
 }
 
 #[test]
@@ -201,8 +202,8 @@ fn format_reports_stdin_formatted_it_cannot_write() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert!(stderr.starts_with("stdout: "), "{stderr}");
+    let problems = problems(&output);
+    assert!(problems.starts_with("stdout: "), "{problems}");
 }
 
 #[test]
@@ -264,9 +265,9 @@ fn format_reports_syntax_error_of_stdin_at_stdin_filepath() {
     let output = format_stdin_in(&dir, &args, b"ls ||");
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    let stderr = stderr(&output);
+    let problems = problems(&output);
     let expected = format!("{}:1:4: ", Path::new("d/a.nu").display());
-    assert!(stderr.starts_with(&expected), "{stderr}");
+    assert!(problems.starts_with(&expected), "{problems}");
 }
 
 #[test]
@@ -276,9 +277,9 @@ fn format_reports_stdin_that_is_not_utf8_at_stdin_filepath() {
     let output = format_stdin_in(&dir, &args, b"ls \xff");
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    let stderr = stderr(&output);
+    let problems = problems(&output);
     let expected = format!("{}: ", Path::new("d/a.nu").display());
-    assert!(stderr.starts_with(&expected), "{stderr}");
+    assert!(problems.starts_with(&expected), "{problems}");
 }
 
 #[test]
@@ -371,7 +372,7 @@ fn format_rejects_stdin_filepath_without_stdin() {
         let output = format_in(&dir, args);
         assert_eq!(output.status.code(), Some(2));
         assert_eq!(
-            stderr(&output),
+            problems(&output),
             "`--stdin-filepath` needs `-`, which reads stdin\n"
         );
         assert_eq!(read(&path), UNFORMATTED);
@@ -388,7 +389,7 @@ fn format_rejects_stdin_filepath_of_no_file() {
         assert_eq!(output.status.code(), Some(2), "{filepath:?}");
         assert!(output.stdout.is_empty(), "{filepath:?}");
         let expected = format!("`--stdin-filepath` needs the path of a file, not `{filepath}`\n");
-        assert_eq!(stderr(&output), expected);
+        assert_eq!(problems(&output), expected);
     }
 }
 
@@ -399,13 +400,13 @@ fn format_rejects_stdin_filepath_before_reading_given_config_file() {
     let args = ["-c", "missing.nuon", "--stdin-filepath", "a.nu", "a.nu"];
     let output = format_in(&dir, &args);
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         "`--stdin-filepath` needs `-`, which reads stdin\n"
     );
     let args = ["-c", "missing.nuon", "--stdin-filepath", "d", "-"];
     let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         "`--stdin-filepath` needs the path of a file, not `d`\n"
     );
 }

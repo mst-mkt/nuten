@@ -2,7 +2,7 @@
 use std::fs;
 use std::{ffi::OsStr, io};
 
-use crate::support::{nuten, nuten_command, stderr, stdout};
+use crate::support::{nuten, nuten_command, problems, stderr, stdout};
 
 #[test]
 fn completions_prints_script_whose_request_names_given_shell() {
@@ -56,8 +56,8 @@ fn completions_reports_write_error() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert!(stderr.starts_with("stdout: "), "{stderr}");
+    let problems = problems(&output);
+    assert!(problems.starts_with("stdout: "), "{problems}");
 }
 
 /// A line starting with U+0001 asks the script to complete something else, such as files.

@@ -6,7 +6,7 @@ use std::{fs, path::Path};
 use crate::support::{BLOCK, fifo, format_in_time};
 use crate::support::{
     FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format, format_in, io_error_line,
-    nuten_command, read, stderr, write_unformatted,
+    nuten_command, problems, read, stderr, write_unformatted,
 };
 
 /// Sorted, since `read_dir` yields them in no set order.
@@ -68,7 +68,7 @@ fn format_reports_read_only_file_and_leaves_its_directory_unchanged() {
     };
     let output = format(&[&path]);
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(stderr(&output), io_error_line(&path, &error));
+    assert_eq!(problems(&output), io_error_line(&path, &error));
     assert_eq!(read(&path), UNFORMATTED);
     assert_eq!(names_in(&dir.0), ["a.nu"]);
 }
@@ -186,17 +186,32 @@ fn format_succeeds_though_it_cannot_write_that_exclude_leaves_out_every_file() {
 }
 
 #[test]
+fn format_marks_each_problem_as_error() {
+    let dir = TempDir::new();
+    let bad = dir.file("bad.nu", "ls || x\nls || y\n");
+    let missing = dir.path("missing.nu");
+    let output = format(&[&bad, &missing]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert_eq!(stderr.lines().count(), 3, "{stderr}");
+    assert!(
+        stderr.lines().all(|line| line.starts_with("error: ")),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn format_reports_syntax_error_position_and_continues() {
     let dir = TempDir::new();
     let bad = dir.file("bad.nu", "ls\n\n  ls || x\n");
     let good = dir.file("good.nu", "ls|first");
     let output = format(&[&bad, &good]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
     assert!(
-        stderr.starts_with(&format!("{}:3:6: ", bad.display())),
-        "{stderr}"
+        problems.starts_with(&format!("{}:3:6: ", bad.display())),
+        "{problems}"
     );
     assert_eq!(read(&bad), "ls\n\n  ls || x\n");
     assert_eq!(read(&good), "ls | first\n");
@@ -208,7 +223,7 @@ fn format_reports_unreadable_file() {
     let missing = dir.path("missing.nu");
     let output = format(&[&missing]);
     assert_eq!(output.status.code(), Some(2));
-    assert!(stderr(&output).starts_with(&format!("{}: ", missing.display())));
+    assert!(problems(&output).starts_with(&format!("{}: ", missing.display())));
 }
 
 #[cfg(unix)]
@@ -221,7 +236,7 @@ fn format_reports_fifo_without_waiting_and_continues() {
     let output = format_in_time(&[&fifo_path, &good]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         format!("{}: not a regular file\n", fifo_path.display())
     );
     assert_eq!(read(&good), "ls | first\n");
@@ -270,12 +285,12 @@ fn format_reports_files_in_order_given() {
         .iter()
         .map(|path| format!("{}:1:4", path.display()))
         .collect();
-    let stderr = stderr(&output);
-    let heads: Vec<_> = stderr
+    let problems = problems(&output);
+    let heads: Vec<_> = problems
         .lines()
         .map(|line| &line[..line.find(": ").unwrap()])
         .collect();
-    assert_eq!(heads, expected, "{stderr}");
+    assert_eq!(heads, expected, "{problems}");
     for path in &good {
         assert_eq!(read(path), "ls | first\n");
     }
@@ -287,8 +302,8 @@ fn format_reports_every_syntax_error_of_file_in_order_of_position() {
     let bad = dir.file("bad.nu", "ls ||\n\n日 || x\n");
     let output = format(&[&bad]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    let heads: Vec<_> = stderr
+    let problems = problems(&output);
+    let heads: Vec<_> = problems
         .lines()
         .map(|line| &line[..line.find(": ").unwrap()])
         .collect();
@@ -298,7 +313,7 @@ fn format_reports_every_syntax_error_of_file_in_order_of_position() {
             format!("{}:1:4", bad.display()),
             format!("{}:3:3", bad.display())
         ],
-        "{stderr}"
+        "{problems}"
     );
 }
 
@@ -309,9 +324,9 @@ fn format_reports_file_given_by_several_paths_once() {
     let bad = dir.file("bad.nu", "ls ||");
     let output = format_in(&dir, &["bad.nu", "a/../bad.nu", "bad.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
-    assert!(stderr.starts_with("bad.nu:1:4: "), "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
+    assert!(problems.starts_with("bad.nu:1:4: "), "{problems}");
     assert_eq!(read(&bad), "ls ||");
 }
 
@@ -322,7 +337,7 @@ fn format_reports_missing_file_once_when_given_twice() {
     let output = format_in(&dir, &["missing.nu", "missing.nu"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         io_error_line(Path::new("missing.nu"), &error)
     );
 }
@@ -334,7 +349,7 @@ fn format_reports_each_missing_file() {
     let output = format_in(&dir, &["a.nu", "b.nu"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        stderr(&output),
+        problems(&output),
         io_error_line(Path::new("a.nu"), &a) + &io_error_line(Path::new("b.nu"), &b)
     );
 }
@@ -347,9 +362,9 @@ fn format_reports_file_given_with_symlink_to_it_once_at_first_path() {
     std::os::unix::fs::symlink(&bad, dir.path("link.nu")).unwrap();
     let output = format_in(&dir, &["link.nu", "bad.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 1, "{stderr}");
-    assert!(stderr.starts_with("link.nu:1:4: "), "{stderr}");
+    let problems = problems(&output);
+    assert_eq!(problems.lines().count(), 1, "{problems}");
+    assert!(problems.starts_with("link.nu:1:4: "), "{problems}");
 }
 
 #[cfg(unix)]
