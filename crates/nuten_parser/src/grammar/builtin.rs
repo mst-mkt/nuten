@@ -770,19 +770,22 @@ mod tests {
         let Some(names) = asked(COMMANDS_OF_NU) else {
             return;
         };
-        assert_eq!(without_windows_only(COMMANDS), names);
+        assert_eq!(on_this_os(COMMANDS), names);
     }
 
-    /// The tests run nu on unix.
-    fn without_windows_only<'a>(names: &[&'a str]) -> Vec<&'a str> {
+    fn on_this_os<'a>(names: &[&'a str]) -> Vec<&'a str> {
         names
             .iter()
             .copied()
-            .filter(|name| !WINDOWS_ONLY.contains(name))
+            .filter(|name| !OTHER_OS_ONLY.contains(name))
             .collect()
     }
 
-    const WINDOWS_ONLY: &[&str] = &["registry", "registry query"];
+    /// Nu has these only on another system than the one the tests run on.
+    #[cfg(unix)]
+    const OTHER_OS_ONLY: &[&str] = &["registry", "registry query"];
+    #[cfg(windows)]
+    const OTHER_OS_ONLY: &[&str] = &["job unfreeze", "ulimit", "umask"];
 
     #[test]
     fn multiword_names_are_what_nu_has() {
@@ -794,7 +797,7 @@ mod tests {
             .map(String::as_str)
             .filter(|name| name.contains(' '))
             .collect();
-        assert_eq!(without_windows_only(MULTIWORD_NAMES), multiword);
+        assert_eq!(on_this_os(MULTIWORD_NAMES), multiword);
     }
 
     #[test]

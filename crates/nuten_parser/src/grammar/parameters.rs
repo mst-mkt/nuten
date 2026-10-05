@@ -1865,8 +1865,11 @@ mod tests {
         let Some(declared) = asked(COMMANDS_OF_NU) else {
             return;
         };
-        let mut lines: Vec<_> = COMMANDS.iter().map(line).collect();
+        // Nu declares every flag of ulimit only on Linux.
+        let compared = |line: &String| cfg!(target_os = "linux") || !line.starts_with("ulimit|");
+        let mut lines: Vec<_> = COMMANDS.iter().map(line).filter(compared).collect();
         lines.sort();
+        let declared: Vec<_> = declared.into_iter().filter(compared).collect();
         assert_eq!(lines, declared);
     }
 
