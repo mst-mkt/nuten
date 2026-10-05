@@ -24,6 +24,7 @@ let
     "doc"
     "format"
     "config"
+    "line-index"
     "nix"
     "oracle"
     "benchmark"
