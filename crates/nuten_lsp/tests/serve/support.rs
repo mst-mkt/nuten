@@ -60,8 +60,19 @@ impl Drop for TempDir {
 }
 
 /// `path` must have no character a URI would escape.
+#[cfg(unix)]
 pub(crate) fn file_uri(path: &Path) -> String {
     format!("file://{}", path.display())
+}
+
+/// `path` must have no character a URI would escape.
+#[cfg(windows)]
+pub(crate) fn file_uri(path: &Path) -> String {
+    let path = path.display().to_string();
+    format!(
+        "file:///{}",
+        path.trim_start_matches(r"\\?\").replace('\\', "/")
+    )
 }
 
 pub(crate) struct Client {
