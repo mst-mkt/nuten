@@ -7,14 +7,16 @@ use std::{
 };
 
 use ignore::{DirEntry, WalkBuilder, gitignore::Gitignore};
-use nuten_config::{Lookup, VCS_DIRS};
+use nuten_config::{Lookup, LookupError, VCS_DIRS};
 
-pub(crate) type Entry = Result<Candidate, String>;
+use crate::problem::{Position, Problem};
+
+pub(crate) type Entry = Result<Candidate, Problem>;
 
 #[derive(Debug)]
 pub(crate) struct Candidate {
     pub(crate) path: PathBuf,
-    pub(crate) canonical: Result<PathBuf, String>,
+    pub(crate) canonical: Result<PathBuf, LookupError>,
     pub(crate) given: bool,
 }
 
@@ -50,16 +52,20 @@ pub(crate) fn expand(paths: &[PathBuf], dir_lookups: &HashMap<&Path, Lookup>) ->
             },
             Some(Lookup::Found(config)) => walk(path, config.respect_gitignore),
             // Not walked, since the config to walk it with is unknown.
-            Some(lookup) => lookup.problems().into_iter().map(Err).collect(),
+            Some(lookup) => lookup
+                .errors()
+                .into_iter()
+                .map(|error| Err(error.into()))
+                .collect(),
         })
         .collect()
 }
 
 /// The walker drops the lines of the global excludes file of git unseen.
-fn global_ignore_problems() -> Vec<String> {
+fn global_ignore_problems() -> Vec<Problem> {
     Gitignore::global()
         .1
-        .map_or_else(Vec::new, |error| problem_lines(&error))
+        .map_or_else(Vec::new, |error| problems(&error))
 }
 
 /// Walks no symlink, since a link could lead out of `dir` or back into it.
@@ -115,7 +121,7 @@ fn walk(dir: &Path, respect_gitignore: bool) -> Vec<Entry> {
 }
 
 fn failed(error: &ignore::Error) -> Vec<Entry> {
-    problem_lines(error).into_iter().map(Err).collect()
+    problems(error).into_iter().map(Err).collect()
 }
 
 fn is_vcs_dir(entry: &DirEntry) -> bool {
@@ -145,14 +151,14 @@ fn shown(path: &Path) -> PathBuf {
 }
 
 /// Not the walker's own message, which names the path of an IO error twice.
-fn problem_lines(error: &ignore::Error) -> Vec<String> {
+fn problems(error: &ignore::Error) -> Vec<Problem> {
     match error {
-        ignore::Error::Partial(errors) => errors.iter().flat_map(problem_lines).collect(),
+        ignore::Error::Partial(errors) => errors.iter().flat_map(problems).collect(),
         ignore::Error::WithPath {
             path,
             err,
         } => {
-            let line = match (&**err, err.io_error()) {
+            let problem = match (&**err, err.io_error()) {
                 (
                     ignore::Error::WithLineNumber {
                         line,
@@ -163,16 +169,18 @@ fn problem_lines(error: &ignore::Error) -> Vec<String> {
                     // Canonical, as the walker names the ignore files above the walk root.
                     // One ignore file is then named one way wherever it is met.
                     let path = fs::canonicalize(path).unwrap_or_else(|_| path.clone());
-                    format!("{}:{line}: {err}", path.display())
+                    let position = Position {
+                        line: usize::try_from(*line).expect("a line of a file in memory"),
+                        column: None,
+                    };
+                    Problem::at(&path, position, err)
                 },
-                (_, Some(io_error)) => {
-                    format!("{}: {}", shown(path).display(), innermost(io_error))
-                },
-                _ => format!("{}: {err}", shown(path).display()),
+                (_, Some(io_error)) => Problem::in_file(&shown(path), innermost(io_error)),
+                _ => Problem::in_file(&shown(path), err),
             };
-            vec![line]
+            vec![problem]
         },
-        _ => vec![error.to_string()],
+        _ => vec![Problem::new(error)],
     }
 }
 
@@ -186,10 +194,10 @@ fn innermost(error: &io::Error) -> &io::Error {
 
 /// One of `excluded` under another name is dropped too, since `exclude` leaves that file alone.
 pub(crate) fn distinct<T>(
-    entries: Vec<Result<T, String>>,
+    entries: Vec<Result<T, Problem>>,
     excluded: &[PathBuf],
     path_of: impl Fn(&T) -> &PathBuf,
-) -> Vec<Result<T, String>> {
+) -> Vec<Result<T, Problem>> {
     let mut seen: HashSet<_> = excluded.iter().map(|path| identity(path)).collect();
     entries
         .into_iter()
@@ -231,4 +239,36 @@ type FileId = PathBuf;
 #[cfg(not(unix))]
 fn file_id(path: &Path) -> io::Result<FileId> {
     fs::canonicalize(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::problems;
+    use crate::problem::{Position, Problem};
+
+    #[test]
+    fn problems_place_line_of_ignore_file_without_column() {
+        let path = PathBuf::from("missing/.gitignore");
+        let error = ignore::Error::WithPath {
+            path: path.clone(),
+            err: Box::new(ignore::Error::WithLineNumber {
+                line: 2,
+                err: Box::new(ignore::Error::InvalidDefinition),
+            }),
+        };
+        let position = Position {
+            line: 2,
+            column: None,
+        };
+        assert_eq!(
+            problems(&error),
+            [Problem::at(
+                &path,
+                position,
+                ignore::Error::InvalidDefinition
+            )]
+        );
+    }
 }

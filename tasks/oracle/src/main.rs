@@ -73,7 +73,9 @@ fn run_format(args: &Format) -> ExitCode {
         None => Config::default(),
         Some(Ok(config)) => config.format,
         Some(Err(problems)) => {
-            eprintln!("{}", problems.join("\n"));
+            for problem in problems {
+                eprintln!("{problem}");
+            }
             return ExitCode::from(2);
         },
     };

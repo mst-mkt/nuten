@@ -4,6 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::LookupError;
+
 pub const FILE_NAMES: [&str; 3] = ["nuten.nuon", "nuten.jsonc", "nuten.json"];
 
 pub const VCS_DIRS: [&str; 5] = [".git", ".hg", ".svn", ".bzr", ".jj"];
@@ -17,6 +19,12 @@ pub struct FindError {
 impl fmt::Display for FindError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.path.display(), self.source)
+    }
+}
+
+impl From<FindError> for LookupError {
+    fn from(error: FindError) -> LookupError {
+        LookupError::new(&error.path, error.source)
     }
 }
 
@@ -41,7 +49,7 @@ pub fn find(dir: &Path) -> Result<Option<PathBuf>, FindError> {
 /// An ancestor they share is probed once, since a walk looks for the config of every file.
 pub(crate) fn find_each<'a>(
     dirs: impl IntoIterator<Item = &'a Path>,
-) -> HashMap<&'a Path, Result<Option<PathBuf>, String>> {
+) -> HashMap<&'a Path, Result<Option<PathBuf>, LookupError>> {
     let mut path = PathBuf::new();
     let mut found = HashMap::new();
     for dir in dirs {
@@ -56,8 +64,8 @@ pub(crate) fn find_each<'a>(
 fn search<'a>(
     path: &mut PathBuf,
     dir: &'a Path,
-    found: &HashMap<&Path, Result<Option<PathBuf>, String>>,
-) -> (Vec<&'a Path>, Result<Option<PathBuf>, String>) {
+    found: &HashMap<&Path, Result<Option<PathBuf>, LookupError>>,
+) -> (Vec<&'a Path>, Result<Option<PathBuf>, LookupError>) {
     let mut passed = Vec::new();
     for ancestor in dir.ancestors() {
         if let Some(known) = found.get(ancestor) {
@@ -67,7 +75,7 @@ fn search<'a>(
         match step(path, ancestor) {
             Ok(Step::GoesOn) => {},
             Ok(Step::Ends(file)) => return (passed, Ok(file)),
-            Err(error) => return (passed, Err(error.to_string())),
+            Err(error) => return (passed, Err(error.into())),
         }
     }
     (passed, Ok(None))
@@ -110,12 +118,12 @@ fn exists(path: &mut PathBuf, dir: &Path, name: &str) -> Result<bool, FindError>
 #[cfg(test)]
 mod tests {
     use std::{
-        env, fs,
+        env, fs, io,
         path::{Path, PathBuf},
     };
 
-    use super::{FILE_NAMES, exists, find, find_each};
-    use crate::Format;
+    use super::{FILE_NAMES, FindError, exists, find, find_each};
+    use crate::{Format, LookupError};
 
     #[test]
     fn file_names_take_extension_of_each_format_in_order() {
@@ -145,7 +153,7 @@ mod tests {
             .collect();
         let found = find_each(dirs.iter().map(PathBuf::as_path));
         for dir in &dirs {
-            let expected = find(dir).map_err(|error| error.to_string());
+            let expected = find(dir).map_err(LookupError::from);
             assert_eq!(found[dir.as_path()], expected, "{}", dir.display());
         }
     }
@@ -156,5 +164,17 @@ mod tests {
         exists(&mut path, Path::new("missing/a"), "b").unwrap();
         exists(&mut path, Path::new("missing/c"), "d").unwrap();
         assert_eq!(path, Path::new("missing/c/d"));
+    }
+
+    #[test]
+    fn lookup_error_of_find_error_names_its_path() {
+        let error = FindError {
+            path: PathBuf::from("a/nuten.nuon"),
+            source: io::Error::other("e"),
+        };
+        assert_eq!(
+            LookupError::from(error),
+            LookupError::new(Path::new("a/nuten.nuon"), "e")
+        );
     }
 }

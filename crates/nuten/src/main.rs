@@ -2,6 +2,7 @@ mod diff;
 mod files;
 mod overwrite;
 mod parallel;
+mod problem;
 mod style;
 mod summary;
 mod view;
@@ -16,7 +17,7 @@ use std::{
 };
 
 use nuten_config::{
-    Config, FormatConfig, Lookup,
+    Config, FormatConfig, Lookup, LookupError,
     file::{located, read_regular_file},
 };
 use nuten_format::format;
@@ -26,6 +27,7 @@ use usage::{Args, Cli, Subcommands, ValueEnum};
 use crate::{
     files::{Candidate, Entry},
     overwrite::{Contents, Failure, OnDisk, overwrite},
+    problem::Problem,
     style::Style,
     summary::{Counts, summary},
     view::{View, view},
@@ -146,7 +148,7 @@ enum Mode {
 #[derive(Debug)]
 struct Report {
     changed: Vec<Changed>,
-    problems: Vec<String>,
+    problems: Vec<Problem>,
     counts: Counts,
 }
 
@@ -186,7 +188,7 @@ fn run_format(args: &Format) -> ExitCode {
         .transpose()
     {
         Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
-        Err(problems) => fail(&problems),
+        Err(errors) => fail(&problems_of(errors)),
     }
 }
 
@@ -195,21 +197,25 @@ fn reads_stdin(args: &Format) -> bool {
 }
 
 /// Not `conflicts` of usage, which relates arguments and cannot tell `-` from other paths.
-fn argument_problem(args: &Format) -> Option<String> {
+fn argument_problem(args: &Format) -> Option<Problem> {
     let takes_stdin = reads_stdin(args);
     let filepath = args.stdin_filepath.as_deref();
     if takes_stdin && args.paths.len() > 1 {
-        Some("`-` must be the only path, since it reads stdin".to_string())
+        Some(Problem::new(
+            "`-` must be the only path, since it reads stdin",
+        ))
     } else if filepath.is_some() && !takes_stdin {
-        Some("`--stdin-filepath` needs `-`, which reads stdin".to_string())
+        Some(Problem::new(
+            "`--stdin-filepath` needs `-`, which reads stdin",
+        ))
     } else {
         filepath
             .filter(|file| file.file_name().is_none() || file.is_dir())
             .map(|file| {
-                format!(
+                Problem::new(format!(
                     "`--stdin-filepath` needs the path of a file, not `{}`",
                     file.display()
-                )
+                ))
             })
     }
 }
@@ -226,11 +232,11 @@ fn serve_lsp() -> ExitCode {
     match nuten_lsp::serve_stdio() {
         Ok(Exit::AfterShutdown) => ExitCode::SUCCESS,
         Ok(Exit::WithoutShutdown) => ExitCode::from(1),
-        Err(problem) => fail(&[problem]),
+        Err(problem) => fail(&[Problem::new(problem)]),
     }
 }
 
-fn fail(problems: &[String]) -> ExitCode {
+fn fail(problems: &[Problem]) -> ExitCode {
     let error = Style::stderr().error("error:");
     for problem in problems {
         write_stderr(&format!("{error} {problem}"));
@@ -243,27 +249,27 @@ fn write_stderr(line: &str) {
     writeln!(io::stderr(), "{line}").ok();
 }
 
-fn write_stdout(text: &str) -> Result<(), String> {
+fn write_stdout(text: &str) -> Result<(), Problem> {
     match io::stdout().write_all(text.as_bytes()) {
         // A reader that stops early, as `head` does, took what it wanted.
         Err(error) if error.kind() == io::ErrorKind::BrokenPipe => Ok(()),
-        result => result.map_err(|error| format!("stdout: {error}")),
+        result => result.map_err(|error| Problem::new(format!("stdout: {error}"))),
     }
 }
 
 fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode) -> ExitCode {
     let name = filepath.unwrap_or(Path::new(STDIN_NAME));
     // Read in full first, so that a writer is not cut off when a config file has a problem.
-    let src = io::read_to_string(io::stdin())
-        .map_err(|error| vec![format!("{}: {error}", name.display())]);
+    let src = io::read_to_string(io::stdin()).map_err(|error| vec![Problem::in_file(name, error)]);
     let formatted = src.and_then(|src| {
         let config = match config_file {
-            Some(config_file) => nuten_config::load_given(config_file)?,
-            None => nuten_config::of_text(filepath)?,
-        };
+            Some(config_file) => nuten_config::load_given(config_file),
+            None => nuten_config::of_text(filepath),
+        }
+        .map_err(problems_of)?;
         let format = config
             .format_of_text(filepath)
-            .map_err(|problem| vec![problem])?;
+            .map_err(|error| vec![error.into()])?;
         let formatted = match format {
             Some(format) => format_text(name, &src, &format)?,
             // Written back as it is, since the caller takes stdout for what the file is to hold.
@@ -358,7 +364,7 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode, style: Style) -
         .iter()
         .filter_map(|entry| {
             let candidate = entry.as_ref().ok()?;
-            Some(candidate.canonical.as_deref().map_err(String::as_str))
+            Some(candidate.canonical.as_deref())
         })
         .collect();
     let lookups = nuten_config::of_files(&canonicals, given);
@@ -377,7 +383,7 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode, style: Style) -
     report_of(outcomes, excluded_count)
 }
 
-type Job = Result<(Candidate, Lookup), String>;
+type Job = Result<(Candidate, Lookup), Problem>;
 
 /// `lookups` holds the config of each file of `entries`.
 fn with_lookups(entries: Vec<Entry>, lookups: Vec<Lookup>) -> Vec<Job> {
@@ -439,10 +445,10 @@ enum Outcome {
     Changed(Changed),
     Unchanged,
     /// Left alone, since some config file is wrong.
-    Skipped(Vec<String>),
-    Failed(Vec<String>),
+    Skipped(Vec<Problem>),
+    Failed(Vec<Problem>),
     /// Of no file, such as a line of an ignore file.
-    Unattached(Vec<String>),
+    Unattached(Vec<Problem>),
 }
 
 /// Takes `style`, since the views of `--check` build here in parallel.
@@ -466,8 +472,8 @@ fn format_all(jobs: &[Job], mode: Option<Mode>, style: Style) -> Vec<Outcome> {
                 }
             },
             (Lookup::Found(_), None) => Outcome::Skipped(Vec::new()),
-            (Lookup::Unresolved(problem), _) => Outcome::Failed(vec![problem.clone()]),
-            (Lookup::Wrong(problems), _) => Outcome::Skipped(problems.clone()),
+            (Lookup::Unresolved(error), _) => Outcome::Failed(vec![error.clone().into()]),
+            (Lookup::Wrong(errors), _) => Outcome::Skipped(problems_of(errors.clone())),
         }
     })
 }
@@ -518,8 +524,8 @@ fn format_file(
     config: &FormatConfig,
     mode: Mode,
     style: Style,
-) -> Result<Option<Changed>, Vec<String>> {
-    let io_problem = |error: io::Error| vec![format!("{}: {error}", path.display())];
+) -> Result<Option<Changed>, Vec<Problem>> {
+    let io_problem = |error: io::Error| vec![Problem::in_file(path, error)];
     let src = read_regular_file(path).map_err(io_problem)?;
     let formatted = format_text(path, &src, config)?;
     if formatted == src {
@@ -536,47 +542,56 @@ fn format_file(
     }))
 }
 
-fn overwrite_problem(path: &Path, failure: &Failure) -> String {
-    let (path, error) = (path.display(), &failure.error);
-    match (
-        failure.contents,
-        failure.backup.as_deref().map(Path::display),
-    ) {
-        (Contents::New, Some(backup)) => {
-            format!("{backup}: {error}; {path} is formatted, but this backup of it is left behind")
+fn overwrite_problem(path: &Path, failure: &Failure) -> Problem {
+    let error = &failure.error;
+    match (failure.contents, failure.backup.as_deref()) {
+        (Contents::New, Some(backup)) => Problem::in_file(
+            backup,
+            format!(
+                "{error}; {} is formatted, but this backup of it is left behind",
+                path.display()
+            ),
+        ),
+        (Contents::Broken, Some(backup)) => Problem::in_file(
+            path,
+            format!("{error}; its old contents are in {}", backup.display()),
+        ),
+        (Contents::Broken, None) => {
+            Problem::in_file(path, format!("{error}; it may be left partly written"))
         },
-        (Contents::Broken, Some(backup)) => {
-            format!("{path}: {error}; its old contents are in {backup}")
-        },
-        (Contents::Broken, None) => format!("{path}: {error}; it may be left partly written"),
-        (Contents::Old, Some(backup)) => format!("{path}: {error}; {backup} is left behind"),
-        (_, None) => format!("{path}: {error}"),
+        (Contents::Old, Some(backup)) => Problem::in_file(
+            path,
+            format!("{error}; {} is left behind", backup.display()),
+        ),
+        (_, None) => Problem::in_file(path, error),
     }
 }
 
-fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, Vec<String>> {
+fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, Vec<Problem>> {
     catch_panic(path, || {
         format(src, config).map_err(|errors| {
             located(
-                path,
                 src,
                 errors
                     .errors
                     .iter()
                     .map(|error| (error.range.start().into(), error.kind)),
             )
+            .into_iter()
+            .map(|(line_column, kind)| Problem::at(path, line_column.into(), kind))
+            .collect()
         })
     })?
 }
 
 /// Not left to end the run, which would lose the report of the other files.
-fn catch_panic<T>(path: &Path, f: impl FnOnce() -> T + UnwindSafe) -> Result<T, Vec<String>> {
-    panic::catch_unwind(f).map_err(|_| {
-        vec![format!(
-            "{}: nuten panicked while formatting",
-            path.display()
-        )]
-    })
+fn catch_panic<T>(path: &Path, f: impl FnOnce() -> T + UnwindSafe) -> Result<T, Vec<Problem>> {
+    panic::catch_unwind(f)
+        .map_err(|_| vec![Problem::in_file(path, "nuten panicked while formatting")])
+}
+
+fn problems_of(errors: Vec<LookupError>) -> Vec<Problem> {
+    errors.into_iter().map(Problem::from).collect()
 }
 
 fn unique<T: Copy + Eq + Hash>(items: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
@@ -591,19 +606,41 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use super::{Changed, Outcome, View, catch_panic, overwrite_problem, report_of, views_text};
+    use nuten_config::FormatConfig;
+
+    use super::{
+        Changed, Outcome, Problem, View, catch_panic, format_text, overwrite_problem, report_of,
+        views_text,
+    };
     use crate::{
         overwrite::{Contents, Failure},
+        problem::Position,
         style::Style,
     };
+
+    #[test]
+    fn format_text_places_each_syntax_error_at_its_line_and_column() {
+        let problems =
+            format_text(Path::new("a.nu"), "ls\nls ||", &FormatConfig::default()).unwrap_err();
+        let places: Vec<_> = problems
+            .into_iter()
+            .map(|problem| (problem.path, problem.position))
+            .collect();
+        let position = Position {
+            line: 2,
+            column: Some(4),
+        };
+        assert_eq!(places, [(Some(PathBuf::from("a.nu")), Some(position))]);
+    }
 
     #[test]
     fn catch_panic_turns_panic_into_problem_naming_file() {
         assert_eq!(
             catch_panic(Path::new("dir/a.nu"), || panic!("bug")),
-            Err::<(), _>(vec![
-                "dir/a.nu: nuten panicked while formatting".to_string()
-            ])
+            Err::<(), _>(vec![Problem::in_file(
+                Path::new("dir/a.nu"),
+                "nuten panicked while formatting"
+            )])
         );
     }
 
@@ -639,7 +676,10 @@ mod tests {
                 contents,
                 backup: backup.map(PathBuf::from),
             };
-            assert_eq!(overwrite_problem(Path::new("a.nu"), &failure), expected);
+            assert_eq!(
+                overwrite_problem(Path::new("a.nu"), &failure).to_string(),
+                expected
+            );
         }
     }
 

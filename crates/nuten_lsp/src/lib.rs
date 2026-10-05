@@ -292,7 +292,7 @@ fn formatting_at(
     };
     let Some(format) = config
         .format_of_text(file)
-        .map_err(|problem| failed(vec![problem]))?
+        .map_err(|error| failed(vec![error.to_string()]))?
     else {
         return Ok(None);
     };
@@ -304,9 +304,13 @@ fn formatting_at(
 }
 
 fn config_of(place: &Place, uri: &str) -> Result<Config, Vec<String>> {
+    let of_text = |file| {
+        nuten_config::of_text(file)
+            .map_err(|errors| errors.iter().map(ToString::to_string).collect())
+    };
     match place {
-        Place::File(path) => nuten_config::of_text(Some(path)),
-        Place::NoFile => nuten_config::of_text(None),
+        Place::File(path) => of_text(Some(path)),
+        Place::NoFile => of_text(None),
         // Not the config of another place, which could override the author's.
         Place::UnknownFile => Err(vec![format!(
             "{uri}: its file, and so its config, is unknown"

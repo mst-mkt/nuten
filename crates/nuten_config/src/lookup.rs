@@ -1,22 +1,51 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs,
+    error, fmt, fs,
     path::{Component, Path, PathBuf},
 };
 
 use crate::{
     Config, Format,
-    file::{located, read_regular_file},
+    file::{LineColumn, located, read_regular_file},
     find::find_each,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LookupError {
+    pub path: PathBuf,
+    pub line_column: Option<LineColumn>,
+    pub message: String,
+}
+
+impl LookupError {
+    pub(crate) fn new(path: &Path, message: impl fmt::Display) -> LookupError {
+        LookupError {
+            path: path.to_path_buf(),
+            line_column: None,
+            message: message.to_string(),
+        }
+    }
+}
+
+impl error::Error for LookupError {}
+
+impl fmt::Display for LookupError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.path.display())?;
+        if let Some(line_column) = self.line_column {
+            write!(f, ":{}:{}", line_column.line, line_column.column)?;
+        }
+        write!(f, ": {}", self.message)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Lookup {
     Found(Config),
     /// The path cannot be resolved, which puts the config of no other path in doubt.
-    Unresolved(String),
+    Unresolved(LookupError),
     /// Formatting the files with another config would override the author's.
-    Wrong(Vec<String>),
+    Wrong(Vec<LookupError>),
 }
 
 impl Lookup {
@@ -24,30 +53,30 @@ impl Lookup {
         matches!(self, Lookup::Wrong(_))
     }
 
-    pub fn into_config(self) -> Result<Config, Vec<String>> {
+    pub fn into_config(self) -> Result<Config, Vec<LookupError>> {
         match self {
             Lookup::Found(config) => Ok(config),
-            lookup => Err(lookup.problems()),
+            lookup => Err(lookup.errors()),
         }
     }
 
-    pub fn problems(&self) -> Vec<String> {
+    pub fn errors(&self) -> Vec<LookupError> {
         match self {
             Lookup::Found(_) => Vec::new(),
-            Lookup::Unresolved(problem) => vec![problem.clone()],
-            Lookup::Wrong(problems) => problems.clone(),
+            Lookup::Unresolved(error) => vec![error.clone()],
+            Lookup::Wrong(errors) => errors.clone(),
         }
     }
 }
 
-/// Each file is canonical, as `canonical` gives it, or the problem resolving it.
-pub fn of_files(files: &[Result<&Path, &str>], given: Option<&Config>) -> Vec<Lookup> {
+/// Each file is canonical, as `canonical` gives it, or the error resolving it.
+pub fn of_files(files: &[Result<&Path, &LookupError>], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, files.len(), || {
         files
             .iter()
             .map(|file| match file {
                 Ok(file) => Ok(search_start(file)),
-                Err(problem) => Err((*problem).to_string()),
+                Err(error) => Err((*error).clone()),
             })
             .collect()
     })
@@ -59,17 +88,17 @@ pub fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     })
 }
 
-pub fn of_text(file: Option<&Path>) -> Result<Config, Vec<String>> {
+pub fn of_text(file: Option<&Path>) -> Result<Config, Vec<LookupError>> {
     match file {
         Some(file) if file.exists() => of_file(file),
         // An editor may not have written the file or its directories yet.
-        Some(file) => of_dir(&nearest_existing_dir(file).map_err(|problem| vec![problem])?),
+        Some(file) => of_dir(&nearest_existing_dir(file).map_err(|error| vec![error])?),
         None => of_dir(Path::new(".")),
     }
 }
 
-fn of_file(file: &Path) -> Result<Config, Vec<String>> {
-    let file = canonical(file).map_err(|problem| vec![problem])?;
+fn of_file(file: &Path) -> Result<Config, Vec<LookupError>> {
+    let file = canonical(file).map_err(|error| vec![error])?;
     of_files(&[Ok(&file)], None)
         .into_iter()
         .next()
@@ -77,7 +106,7 @@ fn of_file(file: &Path) -> Result<Config, Vec<String>> {
         .into_config()
 }
 
-fn of_dir(dir: &Path) -> Result<Config, Vec<String>> {
+fn of_dir(dir: &Path) -> Result<Config, Vec<LookupError>> {
     of_dirs(&[dir], None)
         .into_iter()
         .next()
@@ -90,7 +119,7 @@ fn of_dir(dir: &Path) -> Result<Config, Vec<String>> {
 fn given_or_nearest(
     given: Option<&Config>,
     count: usize,
-    starts: impl FnOnce() -> Vec<Result<PathBuf, String>>,
+    starts: impl FnOnce() -> Vec<Result<PathBuf, LookupError>>,
 ) -> Vec<Lookup> {
     match given {
         Some(given) => vec![Lookup::Found(given.clone()); count],
@@ -98,30 +127,30 @@ fn given_or_nearest(
     }
 }
 
-fn nearest(starts: &[Result<PathBuf, String>]) -> Vec<Lookup> {
+fn nearest(starts: &[Result<PathBuf, LookupError>]) -> Vec<Lookup> {
     let found = find_each(starts.iter().flatten().map(PathBuf::as_path));
     let config_files: HashSet<&Path> = starts
         .iter()
         .flatten()
         .filter_map(|dir| found[dir.as_path()].as_ref().ok()?.as_deref())
         .collect();
-    let loaded: HashMap<&Path, Result<Config, Vec<String>>> = config_files
+    let loaded: HashMap<&Path, Result<Config, Vec<LookupError>>> = config_files
         .into_iter()
         .map(|file| (file, load_nearest(file)))
         .collect();
     let lookup = |dir: &Path| match &found[dir] {
-        Err(problem) => Lookup::Wrong(vec![problem.clone()]),
+        Err(error) => Lookup::Wrong(vec![error.clone()]),
         Ok(None) => Lookup::Found(Config::default()),
         Ok(Some(file)) => match &loaded[file.as_path()] {
             Ok(config) => Lookup::Found(config.clone()),
-            Err(problems) => Lookup::Wrong(problems.clone()),
+            Err(errors) => Lookup::Wrong(errors.clone()),
         },
     };
     starts
         .iter()
         .map(|start| match start {
             Ok(dir) => lookup(dir),
-            Err(problem) => Lookup::Unresolved(problem.clone()),
+            Err(error) => Lookup::Unresolved(error.clone()),
         })
         .collect()
 }
@@ -133,31 +162,31 @@ fn search_start(file: &Path) -> PathBuf {
 
 /// Symlinks are resolved, since what a path names is where they lead.
 /// Resolves `..` too, since `find` reads it as written.
-pub fn canonical(path: &Path) -> Result<PathBuf, String> {
-    fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))
+pub fn canonical(path: &Path) -> Result<PathBuf, LookupError> {
+    fs::canonicalize(path).map_err(|error| LookupError::new(path, error))
 }
 
-pub fn resolved(file: &Path) -> Result<PathBuf, String> {
+pub fn resolved(file: &Path) -> Result<PathBuf, LookupError> {
     if file.exists() {
         return canonical(file);
     }
     let name = file
         .file_name()
-        .ok_or_else(|| format!("{}: names no file", file.display()))?;
+        .ok_or_else(|| LookupError::new(file, "names no file"))?;
     Ok(resolved_dir(file)?.join(name))
 }
 
-fn nearest_existing_dir(path: &Path) -> Result<PathBuf, String> {
+fn nearest_existing_dir(path: &Path) -> Result<PathBuf, LookupError> {
     // None on a drive of Windows that does not exist.
     resolved_dir(path)?
         .ancestors()
         .find(|dir| dir.is_dir())
         .map(Path::to_path_buf)
-        .ok_or_else(|| format!("{}: no directory above it exists", path.display()))
+        .ok_or_else(|| LookupError::new(path, "no directory above it exists"))
 }
 
 /// A `..` after a directory that does not exist yet resolves as written, since it holds no symlink.
-fn resolved_dir(path: &Path) -> Result<PathBuf, String> {
+fn resolved_dir(path: &Path) -> Result<PathBuf, LookupError> {
     // Not the file itself, which is no directory to go into even when it is a symlink to one.
     let parent = path.parent().unwrap_or(Path::new(""));
     // Not the current directory for an absolute path, since nuten may run in one that is removed.
@@ -183,17 +212,19 @@ fn resolved_dir(path: &Path) -> Result<PathBuf, String> {
         })
 }
 
-pub fn load_given(path: &Path) -> Result<Config, Vec<String>> {
+pub fn load_given(path: &Path) -> Result<Config, Vec<LookupError>> {
     let config = load_file(path)?;
     // Not resolved unless a pattern needs it, since nuten may run in a directory that is removed.
     if !config.needs_root() {
         return Ok(config);
     }
     let root = fs::canonicalize(".").map_err(|error| {
-        vec![format!(
-            "{}: its patterns are relative to the current directory, which cannot be resolved: \
-             {error}",
-            path.display()
+        vec![LookupError::new(
+            path,
+            format!(
+                "its patterns are relative to the current directory, which cannot be resolved: \
+                 {error}"
+            ),
         )]
     })?;
     Ok(Config {
@@ -203,7 +234,7 @@ pub fn load_given(path: &Path) -> Result<Config, Vec<String>> {
 }
 
 /// `path` is in a canonical directory.
-fn load_nearest(path: &Path) -> Result<Config, Vec<String>> {
+fn load_nearest(path: &Path) -> Result<Config, Vec<LookupError>> {
     let config = load_file(path)?;
     Ok(Config {
         root: path.parent().map(Path::to_path_buf),
@@ -211,27 +242,76 @@ fn load_nearest(path: &Path) -> Result<Config, Vec<String>> {
     })
 }
 
-fn load_file(path: &Path) -> Result<Config, Vec<String>> {
+fn load_file(path: &Path) -> Result<Config, Vec<LookupError>> {
     let Some(format) = Format::of_path(path) else {
         let extensions: Vec<_> = Format::ALL
             .iter()
             .map(|format| format!("`.{}`", format.extension()))
             .collect();
-        return Err(vec![format!(
-            "{}: config file needs one of the extensions {}",
-            path.display(),
-            extensions.join(", ")
+        return Err(vec![LookupError::new(
+            path,
+            format!(
+                "config file needs one of the extensions {}",
+                extensions.join(", ")
+            ),
         )]);
     };
-    let text =
-        read_regular_file(path).map_err(|error| vec![format!("{}: {error}", path.display())])?;
+    let text = read_regular_file(path).map_err(|error| vec![LookupError::new(path, error)])?;
     crate::load(&text, format).map_err(|errors| {
         located(
-            path,
             &text,
             errors
                 .iter()
                 .map(|error| (error.range.start().into(), &error.kind)),
         )
+        .into_iter()
+        .map(|(line_column, kind)| LookupError {
+            line_column: Some(line_column),
+            ..LookupError::new(path, kind)
+        })
+        .collect()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{env, fs, path::PathBuf, process};
+
+    use super::{LookupError, load_given};
+    use crate::file::LineColumn;
+
+    #[test]
+    fn lookup_error_reads_as_path_line_column_and_message() {
+        let error = LookupError {
+            path: PathBuf::from("nuten.nuon"),
+            line_column: None,
+            message: "e".to_string(),
+        };
+        let placed = LookupError {
+            line_column: Some(LineColumn {
+                line: 2,
+                column: 3,
+            }),
+            ..error.clone()
+        };
+        assert_eq!(error.to_string(), "nuten.nuon: e");
+        assert_eq!(placed.to_string(), "nuten.nuon:2:3: e");
+    }
+
+    #[test]
+    fn load_given_places_each_error_of_config_text() {
+        let path = env::temp_dir().join(format!("nuten-load-given-{}.nuon", process::id()));
+        fs::write(&path, "{\n  a: 1}").unwrap();
+        let errors = load_given(&path).unwrap_err();
+        fs::remove_file(&path).ok();
+        let expected = LookupError {
+            path,
+            line_column: Some(LineColumn {
+                line: 2,
+                column: 3,
+            }),
+            message: "unknown key `a`".to_string(),
+        };
+        assert_eq!(errors, [expected]);
+    }
 }

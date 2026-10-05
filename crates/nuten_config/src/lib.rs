@@ -23,8 +23,9 @@ use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
 pub use crate::{
+    file::LineColumn,
     find::{FILE_NAMES, FindError, VCS_DIRS, find},
-    lookup::{Lookup, canonical, load_given, of_dirs, of_files, of_text, resolved},
+    lookup::{Lookup, LookupError, canonical, load_given, of_dirs, of_files, of_text, resolved},
     patterns::{PatternProblem, Patterns},
     schema::schema,
     settings::Override,
@@ -91,7 +92,7 @@ impl Config {
             .fold(self.format.clone(), |format, picking| picking.apply(format))
     }
 
-    pub fn format_of_text(&self, file: Option<&Path>) -> Result<Option<FormatConfig>, String> {
+    pub fn format_of_text(&self, file: Option<&Path>) -> Result<Option<FormatConfig>, LookupError> {
         let file = match file {
             // Not resolved unless it matters, since nuten may run in a directory that is removed.
             Some(file) if self.depends_on_file() => resolved(file)?,
