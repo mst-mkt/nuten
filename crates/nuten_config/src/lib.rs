@@ -28,17 +28,21 @@ pub use crate::{
     schema::schema,
     settings::Override,
 };
-use crate::{patterns::Place, value::Value};
+use crate::{
+    patterns::Place,
+    settings::{FormatChange, apply},
+    value::Value,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
-    pub format: FormatConfig,
     pub respect_gitignore: bool,
     pub include: Patterns,
     pub exclude: Patterns,
     pub overrides: Vec<Override>,
     /// It is canonical.
     pub root: Option<PathBuf>,
+    pub(crate) changes: Vec<FormatChange>,
 }
 
 // Built once, since these stand for every file without a config file and a build is slow.
@@ -50,12 +54,12 @@ pub(crate) static NO_PATTERNS: LazyLock<Patterns> =
 impl Default for Config {
     fn default() -> Self {
         Self {
-            format: FormatConfig::default(),
             respect_gitignore: true,
             include: DEFAULT_INCLUDE.clone(),
             exclude: NO_PATTERNS.clone(),
             overrides: Vec::new(),
             root: None,
+            changes: Vec::new(),
         }
     }
 }
@@ -63,6 +67,10 @@ impl Default for Config {
 impl Config {
     pub fn depends_on_file(&self) -> bool {
         !self.exclude.is_empty() || !self.overrides.is_empty()
+    }
+
+    pub fn format_without_file(&self) -> FormatConfig {
+        apply(FormatConfig::default(), &self.changes)
     }
 
     pub(crate) fn needs_root(&self) -> bool {
@@ -87,14 +95,16 @@ impl Config {
         self.overrides
             .iter()
             .filter(|picking| picking.picks(place))
-            .fold(self.format.clone(), |format, picking| picking.apply(format))
+            .fold(self.format_without_file(), |format, picking| {
+                picking.apply(format)
+            })
     }
 
     pub fn format_of_text(&self, file: Option<&Path>) -> Result<Option<FormatConfig>, LookupError> {
         let file = match file {
             // Not resolved unless it matters, since nuten may run in a directory that is removed.
             Some(file) if self.depends_on_file() => resolved(file)?,
-            _ => return Ok(Some(self.format.clone())),
+            _ => return Ok(Some(self.format_without_file())),
         };
         Ok((!self.excludes(&file)).then(|| self.format_of(&file)))
     }

@@ -151,7 +151,13 @@ mod tests {
             [("`$schema` takes a string, not a list".to_string(), "[1,]")]
         );
         let text = "/* c */ {\"line_width\": 80,} // c\n";
-        assert_eq!(load(text, Format::Jsonc).unwrap().format.line_width, 80);
+        assert_eq!(
+            load(text, Format::Jsonc)
+                .unwrap()
+                .format_without_file()
+                .line_width,
+            80
+        );
     }
 
     #[test]
@@ -192,7 +198,7 @@ mod tests {
     fn string_escapes_are_decoded() {
         let text = r#"{"indent_style": "t\u0061b", "l\u0069ne_width": 80}"#;
         assert_eq!(
-            load(text, Format::Json).unwrap().format,
+            load(text, Format::Json).unwrap().format_without_file(),
             FormatConfig {
                 indent_style: IndentStyle::Tab,
                 line_width: 80,
@@ -204,9 +210,21 @@ mod tests {
     #[test]
     fn crlf_line_endings_are_read() {
         let text = "{\r\n  \"line_width\": 80 // c\r\n}\r\n";
-        assert_eq!(load(text, Format::Jsonc).unwrap().format.line_width, 80);
+        assert_eq!(
+            load(text, Format::Jsonc)
+                .unwrap()
+                .format_without_file()
+                .line_width,
+            80
+        );
         let text = "{\r\n  \"line_width\": 80\r\n}\r\n";
-        assert_eq!(load(text, Format::Json).unwrap().format.line_width, 80);
+        assert_eq!(
+            load(text, Format::Json)
+                .unwrap()
+                .format_without_file()
+                .line_width,
+            80
+        );
     }
 
     #[test]

@@ -297,18 +297,23 @@ mod tests {
             "    commas: none respect_gitignore: false\n",
             "}\n",
         );
-        let expected = Config {
-            format: FormatConfig {
+        let config = load(text, Format::Nuon).unwrap();
+        assert_eq!(
+            config.format_without_file(),
+            FormatConfig {
                 line_width: 80,
                 indent_style: IndentStyle::Tab,
                 indent_width: 2,
                 line_ending: LineEnding::CrLf,
                 commas: Commas::None,
-            },
+            }
+        );
+        let expected = Config {
             respect_gitignore: false,
+            changes: config.changes.clone(),
             ..Config::default()
         };
-        assert_eq!(load(text, Format::Nuon), Ok(expected));
+        assert_eq!(config, expected);
     }
 
     #[test]
@@ -321,7 +326,7 @@ mod tests {
         assert_eq!(
             load("{line_width:80}", Format::Nuon)
                 .unwrap()
-                .format
+                .format_without_file()
                 .line_width,
             80
         );
@@ -332,7 +337,10 @@ mod tests {
         let text = "{\n  line_width:\n  # c\n  80,\n  \"indent_width\" : 2,\n}";
         let config = load(text, Format::Nuon).unwrap();
         assert_eq!(
-            (config.format.line_width, config.format.indent_width),
+            (
+                config.format_without_file().line_width,
+                config.format_without_file().indent_width
+            ),
             (80, 2)
         );
     }
@@ -340,13 +348,25 @@ mod tests {
     #[test]
     fn crlf_line_endings_are_read() {
         let text = "{\r\n  line_width: 80 # c\r\n}\r\n";
-        assert_eq!(load(text, Format::Nuon).unwrap().format.line_width, 80);
+        assert_eq!(
+            load(text, Format::Nuon)
+                .unwrap()
+                .format_without_file()
+                .line_width,
+            80
+        );
     }
 
     #[test]
     fn schema_key_is_read_when_quoted() {
         let text = r#"{"$schema": "./nuten.schema.json", line_width: 80}"#;
-        assert_eq!(load(text, Format::Nuon).unwrap().format.line_width, 80);
+        assert_eq!(
+            load(text, Format::Nuon)
+                .unwrap()
+                .format_without_file()
+                .line_width,
+            80
+        );
     }
 
     #[test]

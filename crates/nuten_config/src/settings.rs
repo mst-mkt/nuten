@@ -229,7 +229,7 @@ impl Change {
     fn apply(self, config: Config) -> Config {
         match self {
             Change::Format(change) => Config {
-                format: change.apply(&config.format),
+                changes: config.changes.into_iter().chain([change]).collect(),
                 ..config
             },
             Change::RespectGitignore(respect_gitignore) => Config {
@@ -269,10 +269,14 @@ impl Override {
     }
 
     pub(crate) fn apply(&self, format: FormatConfig) -> FormatConfig {
-        self.changes
-            .iter()
-            .fold(format, |format, change| change.apply(&format))
+        apply(format, &self.changes)
     }
+}
+
+pub(crate) fn apply(format: FormatConfig, changes: &[FormatChange]) -> FormatConfig {
+    changes
+        .iter()
+        .fold(format, |format, change| change.apply(&format))
 }
 
 pub(crate) fn config(value: &Value) -> Result<Config, Vec<ConfigError>> {
@@ -474,21 +478,25 @@ mod tests {
             "include": ["*.nush"],
             "exclude": ["vendor"]
         }"#;
-        let expected = Config {
-            format: FormatConfig {
+        let config = load(text, Format::Json).unwrap();
+        assert_eq!(
+            config.format_without_file(),
+            FormatConfig {
                 line_width: 80,
                 indent_style: IndentStyle::Tab,
                 indent_width: 2,
                 line_ending: LineEnding::CrLf,
                 commas: Commas::Trailing,
-            },
+            }
+        );
+        let expected = Config {
             respect_gitignore: false,
             include: Patterns::new(["*.nush"]).unwrap(),
             exclude: Patterns::new(["vendor"]).unwrap(),
-            overrides: Vec::new(),
-            root: None,
+            changes: config.changes.clone(),
+            ..Config::default()
         };
-        assert_eq!(load(text, Format::Json), Ok(expected));
+        assert_eq!(config, expected);
     }
 
     #[test]
@@ -496,15 +504,17 @@ mod tests {
         assert_eq!(load("{}", Format::Json), Ok(Config::default()));
         let config = load(r#"{"indent_width": 2}"#, Format::Json).unwrap();
         assert_eq!(
-            config,
-            Config {
-                format: FormatConfig {
-                    indent_width: 2,
-                    ..FormatConfig::default()
-                },
-                ..Config::default()
+            config.format_without_file(),
+            FormatConfig {
+                indent_width: 2,
+                ..FormatConfig::default()
             }
         );
+        let expected = Config {
+            changes: config.changes.clone(),
+            ..Config::default()
+        };
+        assert_eq!(config, expected);
     }
 
     #[test]
@@ -518,7 +528,11 @@ mod tests {
             let text = format!(r#"{{"respect_gitignore": {boolean}}}"#);
             let config = load(&text, Format::Json).unwrap();
             assert_eq!(config.respect_gitignore, boolean, "{text}");
-            assert_eq!(config.format, FormatConfig::default(), "{text}");
+            assert_eq!(
+                config.format_without_file(),
+                FormatConfig::default(),
+                "{text}"
+            );
         }
     }
 
@@ -551,23 +565,33 @@ mod tests {
     fn choices_set_what_they_name() {
         let config = |text| load(text, Format::Json).unwrap();
         assert_eq!(
-            config(r#"{"indent_style": "space"}"#).format.indent_style,
+            config(r#"{"indent_style": "space"}"#)
+                .format_without_file()
+                .indent_style,
             IndentStyle::Space
         );
         assert_eq!(
-            config(r#"{"indent_style": "tab"}"#).format.indent_style,
+            config(r#"{"indent_style": "tab"}"#)
+                .format_without_file()
+                .indent_style,
             IndentStyle::Tab
         );
         assert_eq!(
-            config(r#"{"line_ending": "lf"}"#).format.line_ending,
+            config(r#"{"line_ending": "lf"}"#)
+                .format_without_file()
+                .line_ending,
             LineEnding::Lf
         );
         assert_eq!(
-            config(r#"{"line_ending": "crlf"}"#).format.line_ending,
+            config(r#"{"line_ending": "crlf"}"#)
+                .format_without_file()
+                .line_ending,
             LineEnding::CrLf
         );
         assert_eq!(
-            config(r#"{"line_ending": "auto"}"#).format.line_ending,
+            config(r#"{"line_ending": "auto"}"#)
+                .format_without_file()
+                .line_ending,
             LineEnding::Auto
         );
         for (name, commas) in [
@@ -578,7 +602,7 @@ mod tests {
         ] {
             let text = format!(r#"{{"commas": "{name}"}}"#);
             let config = load(&text, Format::Json).unwrap();
-            assert_eq!(config.format.commas, commas, "{text}");
+            assert_eq!(config.format_without_file().commas, commas, "{text}");
         }
     }
 
@@ -587,13 +611,19 @@ mod tests {
         let text = r#"{"line_width": 4294967295, "indent_width": 255}"#;
         let config = load(text, Format::Json).unwrap();
         assert_eq!(
-            (config.format.line_width, config.format.indent_width),
+            (
+                config.format_without_file().line_width,
+                config.format_without_file().indent_width
+            ),
             (u32::MAX, u8::MAX)
         );
         let text = r#"{"line_width": 1, "indent_width": 1}"#;
         let config = load(text, Format::Json).unwrap();
         assert_eq!(
-            (config.format.line_width, config.format.indent_width),
+            (
+                config.format_without_file().line_width,
+                config.format_without_file().indent_width
+            ),
             (1, 1)
         );
     }
@@ -607,7 +637,13 @@ mod tests {
     #[test]
     fn schema_key_changes_no_setting() {
         let text = r#"{"line_width": 80, "$schema": "x"}"#;
-        assert_eq!(load(text, Format::Json).unwrap().format.line_width, 80);
+        assert_eq!(
+            load(text, Format::Json)
+                .unwrap()
+                .format_without_file()
+                .line_width,
+            80
+        );
     }
 
     #[test]
@@ -884,7 +920,7 @@ mod tests {
         let text =
             r#"{"overrides": [{"include": ["d/*.nush"], "exclude": ["e"], "indent_width": 2}]}"#;
         let config = load(text, Format::Json).unwrap();
-        assert_eq!(config.format, FormatConfig::default());
+        assert_eq!(config.format_without_file(), FormatConfig::default());
         assert_eq!(config.include, Config::default().include);
         assert_eq!(config.exclude, Config::default().exclude);
     }

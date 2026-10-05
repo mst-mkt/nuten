@@ -507,7 +507,7 @@ fn format_all(jobs: &[Job], mode: Option<Mode>, style: Style) -> Vec<Outcome> {
                 let format = match &candidate.canonical {
                     Ok(file) => config.format_of(file),
                     // Reading the file reports why it cannot be resolved.
-                    Err(_) => config.format.clone(),
+                    Err(_) => config.format_without_file(),
                 };
                 match format_file(&candidate.path, &format, mode, style) {
                     Ok(Some(changed)) => Outcome::Changed(changed),

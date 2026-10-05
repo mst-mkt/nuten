@@ -71,7 +71,7 @@ fn main() -> ExitCode {
 fn run_format(args: &Format) -> ExitCode {
     let config = match args.config.as_deref().map(nuten_config::load_given) {
         None => Config::default(),
-        Some(Ok(config)) => config.format,
+        Some(Ok(config)) => config.format_without_file(),
         Some(Err(problems)) => {
             for problem in problems {
                 eprintln!("{problem}");
