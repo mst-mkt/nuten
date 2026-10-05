@@ -3,8 +3,8 @@ use std::fs;
 use std::{io, path::MAIN_SEPARATOR};
 
 use crate::support::{
-    FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command, problems,
-    read, stderr, stdout, write_unformatted,
+    FORMATTED, TempDir, UNFORMATTED, assert_succeeds, format_in, nuten_command, problems, read,
+    stderr, stdout, write_unformatted,
 };
 
 #[test]
@@ -14,7 +14,7 @@ fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
     let formatted = dir.file("b.nu", FORMATTED);
     let output = format_in(&dir, &["--check", "z.nu", "b.nu", "d"]);
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
-    assert!(output.stderr.is_empty(), "{}", stderr(&output));
+    assert!(problems(&output).is_empty(), "{}", stderr(&output));
     assert_eq!(
         stdout(&output),
         format!("z.nu\nd{MAIN_SEPARATOR}a.nu\nd{MAIN_SEPARATOR}c.nuon\n")
@@ -26,13 +26,13 @@ fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
 }
 
 #[test]
-fn format_check_succeeds_quietly_when_every_file_is_formatted() {
+fn format_check_succeeds_and_lists_nothing_when_every_file_is_formatted() {
     let dir = TempDir::new();
     dir.file("a.nu", FORMATTED);
     dir.file("nuten.nuon", "{ indent_width: 2 }\n");
     dir.file("b.nu", "if true {\n  ls\n}\n");
     let output = format_in(&dir, &["--check"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert!(output.stdout.is_empty());
 }
 
@@ -81,7 +81,7 @@ fn format_check_counts_list_as_written_when_reader_closes_first() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert!(problems(&output).is_empty(), "{}", stderr(&output));
 }
 
 #[cfg(target_os = "linux")]

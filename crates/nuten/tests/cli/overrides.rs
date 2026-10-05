@@ -1,6 +1,6 @@
 use crate::support::{
-    BLOCK, TempDir, assert_succeeds_quietly, format_in, format_stdin_in, nuten_command, read,
-    stdout,
+    BLOCK, TempDir, assert_succeeds, assert_succeeds_quietly, format_in, format_stdin_in,
+    nuten_command, read, stdout,
 };
 
 #[test]
@@ -23,7 +23,7 @@ fn format_takes_overrides_for_files_they_pick_under_directory_and_given_directly
     ]
     .map(|name| dir.file(name, BLOCK));
     let output = format_in(&dir, &["two", "eight/a.nu", "a.nu"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     let indents = paths.map(|path| read(&path).lines().nth(1).unwrap().len() - "ls".len());
     assert_eq!(indents, [2, 3, 4, 8, 4]);
 }
@@ -37,7 +37,7 @@ fn format_takes_overrides_of_given_config_file_from_current_directory() {
     );
     let path = dir.file("d/a.nu", BLOCK);
     let output = format_in(&dir, &["-c", "config/nuten.nuon", "d"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), "if true {\n  ls\n}\n");
 }
 
@@ -100,7 +100,7 @@ fn format_takes_only_overrides_without_slash_outside_current_directory_of_given_
         .current_dir(dir.dir("e"))
         .output()
         .unwrap();
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&a), "if true {\n  ls\n}\n");
     assert_eq!(read(&b), "if true {\n    ls\n}\n");
 }

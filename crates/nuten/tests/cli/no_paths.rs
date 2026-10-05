@@ -1,8 +1,8 @@
 #[cfg(unix)]
 use crate::support::problems;
 use crate::support::{
-    BLOCK, FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command,
-    read, write_unformatted,
+    BLOCK, FORMATTED, TempDir, UNFORMATTED, assert_succeeds, format_in, nuten_command, read,
+    write_unformatted,
 };
 
 #[test]
@@ -12,7 +12,7 @@ fn format_formats_current_directory_without_paths() {
     dir.file(".gitignore", "gen/\n");
     let [taken, ignored] = write_unformatted(&dir, ["a/a.nu", "gen/a.nu"]);
     let output = format_in(&dir, &[]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&taken), FORMATTED);
     assert_eq!(read(&ignored), UNFORMATTED);
 }
@@ -39,7 +39,7 @@ fn format_takes_respect_gitignore_from_config_file_above_current_directory_witho
         .current_dir(dir.path("c/d"))
         .output()
         .unwrap();
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), FORMATTED);
 }
 
@@ -49,6 +49,6 @@ fn format_takes_given_config_file_for_current_directory_without_paths() {
     dir.file("two.nuon", "{indent_width: 2}");
     let path = dir.file("a.nu", BLOCK);
     let output = format_in(&dir, &["-c", "two.nuon"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), "if true {\n  ls\n}\n");
 }

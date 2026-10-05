@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::support::{
-    BLOCK, TempDir, UNFORMATTED, assert_succeeds_quietly, problems, read, stdout,
+    BLOCK, TempDir, UNFORMATTED, assert_succeeds, assert_succeeds_quietly, problems, read, stdout,
 };
 
 /// The shell removes `removed` before it runs the binary, which `Command` cannot.
@@ -39,7 +39,7 @@ fn format_takes_given_config_file_whose_patterns_need_no_directory_in_removed_cu
         path.as_os_str(),
     ];
     let output = nuten_in_removed(&dir.dir("removed"), &args, Stdio::null());
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), "if true {\n  ls\n}\n");
 }
 

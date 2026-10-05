@@ -11,5 +11,6 @@ mod patterns;
 mod removed_current_dir;
 mod stdin;
 mod subcommands;
+mod summary;
 mod support;
 mod walk;

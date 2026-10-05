@@ -8,7 +8,7 @@ use crate::support::{
 };
 
 #[test]
-fn format_help_examples_each_succeed_quietly_on_formatted_files() {
+fn format_help_examples_each_succeed_on_formatted_files() {
     let help = stdout(&format_in(&TempDir::new(), &["--help"]));
     let examples: Vec<_> = help
         .lines()
@@ -25,7 +25,7 @@ fn format_help_examples_each_succeed_quietly_on_formatted_files() {
         dir.file("src/a.nu", FORMATTED);
         let output = format_stdin_in(&dir, &args, FORMATTED.as_bytes());
         assert_eq!(
-            (output.status.code(), stderr(&output).as_str()),
+            (output.status.code(), problems(&output).as_str()),
             (Some(0), ""),
             "{example}"
         );

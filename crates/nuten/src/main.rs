@@ -7,6 +7,7 @@ mod files;
 mod overwrite;
 mod parallel;
 mod style;
+mod summary;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -29,6 +30,7 @@ use crate::{
     files::{Candidate, Entry},
     overwrite::{Contents, Failure, OnDisk, overwrite},
     style::Style,
+    summary::{Counts, summary},
 };
 
 #[derive(Cli)]
@@ -143,7 +145,7 @@ enum Mode {
 struct Report {
     changed: Vec<PathBuf>,
     problems: Vec<String>,
-    all_excluded: bool,
+    counts: Counts,
 }
 
 fn main() -> ExitCode {
@@ -274,17 +276,15 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
         .cloned()
         .chain(listed.err())
         .collect();
-    if !problems.is_empty() {
+    let code = if !problems.is_empty() {
         fail(&problems)
     } else if mode == Mode::Check && !report.changed.is_empty() {
         ExitCode::from(1)
     } else {
-        // Not a problem, since a tool may pass every file it has, whatever the config leaves out.
-        if report.all_excluded {
-            write_stderr("nothing to format, since `exclude` leaves out every file");
-        }
         ExitCode::SUCCESS
-    }
+    };
+    write_stderr(&summary(&report.counts, mode, Style::stderr()));
+    code
 }
 
 fn listing(paths: &[PathBuf]) -> String {
@@ -315,13 +315,15 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
     // After the files are picked, since telling two files apart reads each.
     // Also keeps two threads off one file, which could read it halfway written.
     let jobs = files::distinct(taken, &excluded, |(candidate, _)| &candidate.path);
-    let all_excluded = !excluded.is_empty() && jobs.is_empty();
+    // Not one per path, since a file given under two names is excluded once.
+    let excluded_count =
+        files::distinct(excluded.into_iter().map(Ok).collect(), &[], |path| path).len();
     let formats = !dir_lookups
         .values()
         .chain(jobs.iter().flatten().map(|(_, lookup)| lookup))
         .any(Lookup::is_wrong);
     let outcomes = format_all(&jobs, formats.then_some(mode));
-    report_of(outcomes, all_excluded)
+    report_of(outcomes, excluded_count)
 }
 
 type Job = Result<(Candidate, Lookup), String>;
@@ -381,39 +383,73 @@ fn pick((candidate, lookup): &(Candidate, Lookup)) -> Pick {
     }
 }
 
-type Outcome = Result<Option<PathBuf>, Vec<String>>;
+#[derive(Debug)]
+enum Outcome {
+    Changed(PathBuf),
+    Unchanged,
+    /// Left alone, since some config file is wrong.
+    Skipped(Vec<String>),
+    Failed(Vec<String>),
+    /// Of no file, such as a line of an ignore file.
+    Unattached(Vec<String>),
+}
 
 fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Outcome> {
     parallel::map(jobs, |job| {
-        let (candidate, lookup) = job.as_ref().map_err(|problem| vec![problem.clone()])?;
-        let changed = match (lookup, mode) {
+        let (candidate, lookup) = match job {
+            Ok(found) => found,
+            Err(problem) => return Outcome::Unattached(vec![problem.clone()]),
+        };
+        match (lookup, mode) {
             (Lookup::Found(config), Some(mode)) => {
                 let format = match &candidate.canonical {
                     Ok(file) => config.format_of(file),
                     // Reading the file reports why it cannot be resolved.
                     Err(_) => config.format.clone(),
                 };
-                format_file(&candidate.path, &format, mode)?
+                match format_file(&candidate.path, &format, mode) {
+                    Ok(true) => Outcome::Changed(candidate.path.clone()),
+                    Ok(false) => Outcome::Unchanged,
+                    Err(problems) => Outcome::Failed(problems),
+                }
             },
-            (Lookup::Found(_), None) => false,
-            (lookup, _) => return Err(lookup.problems()),
-        };
-        Ok(changed.then(|| candidate.path.clone()))
+            (Lookup::Found(_), None) => Outcome::Skipped(Vec::new()),
+            (Lookup::Unresolved(problem), _) => Outcome::Failed(vec![problem.clone()]),
+            (Lookup::Wrong(problems), _) => Outcome::Skipped(problems.clone()),
+        }
     })
 }
 
-fn report_of(outcomes: Vec<Outcome>, all_excluded: bool) -> Report {
+fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
+    let count =
+        |kind: fn(&Outcome) -> bool| outcomes.iter().filter(|outcome| kind(outcome)).count();
+    let counts = Counts {
+        changed: count(|outcome| matches!(outcome, Outcome::Changed(_))),
+        unchanged: count(|outcome| matches!(outcome, Outcome::Unchanged)),
+        failed: count(|outcome| matches!(outcome, Outcome::Failed(_))),
+        skipped: count(|outcome| matches!(outcome, Outcome::Skipped(_))),
+        excluded,
+    };
+    let changed = outcomes
+        .iter()
+        .filter_map(|outcome| match outcome {
+            Outcome::Changed(path) => Some(path.clone()),
+            _ => None,
+        })
+        .collect();
+    let problems = outcomes
+        .into_iter()
+        .flat_map(|outcome| match outcome {
+            Outcome::Skipped(problems)
+            | Outcome::Failed(problems)
+            | Outcome::Unattached(problems) => problems,
+            Outcome::Changed(_) | Outcome::Unchanged => Vec::new(),
+        })
+        .collect();
     Report {
-        changed: outcomes
-            .iter()
-            .filter_map(|outcome| outcome.as_ref().ok()?.clone())
-            .collect(),
-        problems: outcomes
-            .into_iter()
-            .filter_map(Result::err)
-            .flatten()
-            .collect(),
-        all_excluded,
+        changed,
+        problems,
+        counts,
     }
 }
 

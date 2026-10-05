@@ -3,8 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::support::{
-    FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command, problems,
-    read, stderr, write_unformatted,
+    FORMATTED, TempDir, UNFORMATTED, assert_succeeds, format_in, nuten_command, problems, read,
+    stderr, write_unformatted,
 };
 
 fn assert_formatted_only(formatted: &[PathBuf], unformatted: &[PathBuf]) {
@@ -23,7 +23,7 @@ fn format_takes_files_include_matches_under_directory_in_place_of_nu_files() {
     let taken = write_unformatted(&dir, ["d/a.nush", "d/e/b.nush", "d/bin/run"]);
     let skipped = write_unformatted(&dir, ["d/a.nu", "d/e/bin/run", "d/bin/sub/run"]);
     let output = format_in(&dir, &["d"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&taken, &skipped);
 }
 
@@ -45,7 +45,7 @@ fn format_skips_files_exclude_matches_under_directory() {
     );
     let taken = write_unformatted(&dir, ["d/a.nu", "d/e/gen/a.nu", "d/gen/e/a.nu"]);
     let output = format_in(&dir, &["d"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&taken, &skipped);
 }
 
@@ -55,7 +55,7 @@ fn format_skips_file_both_include_and_exclude_match() {
     dir.file("nuten.nuon", r#"{include: ["*.nu"], exclude: ["a.nu"]}"#);
     let [skipped, taken] = write_unformatted(&dir, ["a.nu", "b.nu"]);
     let output = format_in(&dir, &["."]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&[taken], &[skipped]);
 }
 
@@ -66,7 +66,7 @@ fn format_matches_patterns_from_directory_of_config_file() {
     let skipped = write_unformatted(&dir, ["d/a.nu", "d/e/b.nu", "d/e/f/a.nu"]);
     let taken = write_unformatted(&dir, ["d/e/a.nu", "d/b.nu"]);
     let output = format_in(&dir, &["d/e", "d/a.nu", "d/b.nu"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&taken, &skipped);
 }
 
@@ -79,7 +79,7 @@ fn format_takes_include_and_exclude_from_config_file_nearest_each_file() {
     let skipped = write_unformatted(&dir, ["d/a.nu", "d/f/b.nu"]);
     let taken = write_unformatted(&dir, ["d/b.nu", "d/e/a.nu", "d/f/a.nush"]);
     let output = format_in(&dir, &["d"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&taken, &skipped);
 }
 
@@ -89,7 +89,7 @@ fn format_matches_patterns_of_given_config_file_from_current_directory() {
     dir.file("config/nuten.nuon", r#"{exclude: ["d/a.nu"]}"#);
     let [skipped, taken] = write_unformatted(&dir, ["d/a.nu", "d/e/d/a.nu"]);
     let output = format_in(&dir, &["-c", "config/nuten.nuon", "d"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&[taken], &[skipped]);
 }
 
@@ -103,13 +103,13 @@ fn format_matches_only_patterns_without_slash_outside_current_directory_of_given
         .current_dir(dir.dir("e"))
         .output()
         .unwrap();
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     let output = nuten_command()
         .args(["format", "-c", "../nuten.nuon", "../d"])
         .current_dir(dir.path("e"))
         .output()
         .unwrap();
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&[taken], &[skipped]);
 }
 
@@ -119,11 +119,9 @@ fn format_formats_file_given_directly_though_include_misses_it() {
     dir.file("nuten.nuon", r#"{include: ["*.nush"]}"#);
     let [path] = write_unformatted(&dir, ["a.nu"]);
     let output = format_in(&dir, &["a.nu"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), FORMATTED);
 }
-
-const ALL_EXCLUDED: &str = "nothing to format, since `exclude` leaves out every file\n";
 
 #[test]
 fn format_leaves_file_given_directly_alone_when_exclude_matches() {
@@ -131,12 +129,12 @@ fn format_leaves_file_given_directly_alone_when_exclude_matches() {
     dir.file("nuten.nuon", r#"{exclude: ["vendor"]}"#);
     let [skipped, taken] = write_unformatted(&dir, ["vendor/a.nu", "b.nu"]);
     let output = format_in(&dir, &["vendor/a.nu", "b.nu"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&[taken], &[skipped]);
 }
 
 #[test]
-fn format_says_so_and_succeeds_when_exclude_leaves_out_every_file() {
+fn format_counts_files_exclude_leaves_out_and_succeeds() {
     let dir = TempDir::new();
     dir.file("nuten.nuon", r#"{exclude: ["vendor"]}"#);
     let unformatted = dir.file("vendor/a.nu", UNFORMATTED);
@@ -148,7 +146,7 @@ fn format_says_so_and_succeeds_when_exclude_leaves_out_every_file() {
     ] {
         let output = format_in(&dir, args);
         assert_eq!(output.status.code(), Some(0), "{args:?}");
-        assert_eq!(stderr(&output), ALL_EXCLUDED, "{args:?}");
+        assert_eq!(stderr(&output), "2 files: 2 excluded\n", "{args:?}");
         assert!(output.stdout.is_empty(), "{args:?}");
     }
     assert_eq!(read(&unformatted), UNFORMATTED);
@@ -156,12 +154,14 @@ fn format_says_so_and_succeeds_when_exclude_leaves_out_every_file() {
 }
 
 #[test]
-fn format_succeeds_quietly_when_exclude_matches_only_files_include_skips() {
+fn format_counts_no_excluded_file_when_exclude_matches_only_files_include_skips() {
     let dir = TempDir::new();
     dir.file("nuten.nuon", r#"{exclude: ["vendor"]}"#);
     dir.file("vendor/a.txt", "");
     let output = format_in(&dir, &["."]);
-    assert_succeeds_quietly(&output);
+    assert_eq!(output.status.code(), Some(0));
+    // The config file is the one file it takes.
+    assert_eq!(stderr(&output), "1 file: 1 formatted\n");
 }
 
 #[test]
@@ -174,7 +174,7 @@ fn format_matches_exclude_without_slash_of_given_config_file_with_directories() 
     ] {
         let [skipped, taken] = write_unformatted(&dir, ["vendor/e/a.nu", "a.nu"]);
         let output = format_in(&dir, args);
-        assert_succeeds_quietly(&output);
+        assert_succeeds(&output);
         assert_formatted_only(&[taken], &[skipped]);
     }
 }
@@ -187,7 +187,7 @@ fn format_matches_patterns_where_symlinked_directory_given_leads() {
     let [taken, skipped] = write_unformatted(&dir, ["real/a.nu", "real/b.nu"]);
     std::os::unix::fs::symlink(dir.path("real"), dir.path("link")).unwrap();
     let output = format_in(&dir, &["link"]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_formatted_only(&[taken], &[skipped]);
 }
 
@@ -200,7 +200,7 @@ fn format_leaves_symlink_given_directly_alone_when_exclude_matches_where_it_lead
     std::os::unix::fs::symlink(&path, dir.path("link.nu")).unwrap();
     let output = format_in(&dir, &["link.nu"]);
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(stderr(&output), ALL_EXCLUDED);
+    assert_eq!(stderr(&output), "1 file: 1 excluded\n");
     assert_eq!(read(&path), UNFORMATTED);
 }
 
@@ -212,14 +212,16 @@ fn format_leaves_file_alone_under_every_name_when_exclude_matches_one() {
     dir.file("nuten.nuon", "{ exclude: [vendor, \"nuten.nuon\"] }\n");
     let [path] = write_unformatted(&dir, ["vendor/a.nu"]);
     fs::hard_link(&path, dir.path("b.nu")).unwrap();
-    for args in [
-        &["vendor/a.nu", "b.nu"][..],
-        &["b.nu", "vendor/a.nu"],
-        &["."],
+    // Under `.`, the config file is one more file it excludes.
+    for (args, summary) in [
+        (&["vendor/a.nu", "b.nu"][..], "1 file: 1 excluded\n"),
+        (&["vendor/a.nu", "./vendor/a.nu"], "1 file: 1 excluded\n"),
+        (&["b.nu", "vendor/a.nu"], "1 file: 1 excluded\n"),
+        (&["."], "2 files: 2 excluded\n"),
     ] {
         let output = format_in(&dir, args);
         assert_eq!(output.status.code(), Some(0), "{args:?}");
-        assert_eq!(stderr(&output), ALL_EXCLUDED, "{args:?}");
+        assert_eq!(stderr(&output), summary, "{args:?}");
         assert_eq!(read(&path), UNFORMATTED, "{args:?}");
     }
 }

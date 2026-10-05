@@ -26,6 +26,10 @@ impl Style {
         self.wrap("\u{1b}[1m\u{1b}[31m", text)
     }
 
+    pub(crate) fn bold(self, text: &str) -> String {
+        self.wrap("\u{1b}[1m", text)
+    }
+
     fn wrap(self, start: &str, text: &str) -> String {
         if self.colored {
             format!("{start}{text}\u{1b}[0m")

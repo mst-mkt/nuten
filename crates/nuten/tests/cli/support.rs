@@ -175,6 +175,15 @@ pub(crate) fn write_unformatted<const N: usize>(dir: &TempDir, names: [&str; N])
     names.map(|name| dir.file(name, UNFORMATTED))
 }
 
+pub(crate) fn assert_succeeds(output: &Output) {
+    let stderr = stderr(output);
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert!(
+        stderr.lines().count() == 1 && problems(output).is_empty(),
+        "{stderr}"
+    );
+}
+
 pub(crate) fn assert_succeeds_quietly(output: &Output) {
     assert_eq!(output.status.code(), Some(0), "{}", stderr(output));
     assert!(output.stderr.is_empty(), "{}", stderr(output));

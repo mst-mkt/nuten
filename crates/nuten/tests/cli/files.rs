@@ -5,7 +5,7 @@ use std::{fs, path::Path};
 #[cfg(unix)]
 use crate::support::{BLOCK, fifo, format_in_time};
 use crate::support::{
-    FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format, format_in, io_error_line,
+    FORMATTED, TempDir, UNFORMATTED, assert_succeeds, format, format_in, io_error_line,
     nuten_command, problems, read, stderr, write_unformatted,
 };
 
@@ -25,9 +25,8 @@ fn format_rewrites_each_file_in_place() {
     let a = dir.file("a.nu", "ls|first");
     let b = dir.file("b.nu", "echo   a\n\n\n");
     let output = format(&[&a, &b]);
-    assert_eq!(output.status.code(), Some(0));
+    assert_succeeds(&output);
     assert!(output.stdout.is_empty());
-    assert!(output.stderr.is_empty());
     assert_eq!(read(&a), "ls | first\n");
     assert_eq!(read(&b), "echo a\n");
 }
@@ -41,8 +40,7 @@ fn format_leaves_formatted_file_alone() {
     permissions.set_readonly(true);
     fs::set_permissions(&path, permissions).unwrap();
     let output = format(&[&path]);
-    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_succeeds(&output);
 }
 
 #[test]
@@ -50,7 +48,7 @@ fn format_leaves_nothing_beside_file_it_rewrites() {
     let dir = TempDir::new();
     let [path] = write_unformatted(&dir, ["a.nu"]);
     let output = format(&[&path]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), FORMATTED);
     assert_eq!(names_in(&dir.0), ["a.nu"]);
 }
@@ -80,7 +78,7 @@ fn format_rewrites_file_under_each_of_its_hard_links() {
     let other = dir.path("b.nu");
     fs::hard_link(&path, &other).unwrap();
     let output = format(&[&path]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&other), FORMATTED);
     assert_eq!(names_in(&dir.0), ["a.nu", "b.nu"]);
 }
@@ -94,7 +92,7 @@ fn format_keeps_permissions_of_file_it_rewrites() {
     let [path] = write_unformatted(&dir, ["a.nu"]);
     fs::set_permissions(&path, fs::Permissions::from_mode(0o751)).unwrap();
     let output = format(&[&path]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), FORMATTED);
     let mode = fs::metadata(&path).unwrap().permissions().mode();
     assert_eq!(mode & 0o7777, 0o751);
@@ -108,7 +106,7 @@ fn format_rewrites_file_through_symlink_and_keeps_symlink() {
     let link = dir.path("link.nu");
     std::os::unix::fs::symlink(&path, &link).unwrap();
     let output = format(&[&link]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert!(fs::symlink_metadata(&link).unwrap().is_symlink());
     assert_eq!(read(&path), FORMATTED);
     assert_eq!(names_in(&dir.0), ["a.nu", "link.nu"]);
@@ -131,7 +129,7 @@ fn format_rewrites_file_in_directory_it_cannot_write() {
     if !denied {
         return;
     }
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), FORMATTED);
     assert_eq!(names_in(&locked), ["a.nu"]);
 }
@@ -149,7 +147,7 @@ fn format_rewrites_file_whose_name_leaves_no_room_for_backup() {
         written => written.unwrap(),
     }
     let output = format(&[&path]);
-    assert_succeeds_quietly(&output);
+    assert_succeeds(&output);
     assert_eq!(read(&path), FORMATTED);
     assert_eq!(names_in(&dir.0), [name]);
 }
@@ -169,22 +167,6 @@ fn format_exits_with_2_though_it_cannot_write_problems() {
     assert_eq!(output.status.code(), Some(2));
 }
 
-#[cfg(target_os = "linux")]
-#[test]
-fn format_succeeds_though_it_cannot_write_that_exclude_leaves_out_every_file() {
-    let dir = TempDir::new();
-    dir.file("nuten.nuon", r#"{exclude: ["vendor"]}"#);
-    dir.file("vendor/a.nu", UNFORMATTED);
-    let full = fs::File::options().write(true).open("/dev/full").unwrap();
-    let output = nuten_command()
-        .args(["format", "vendor"])
-        .current_dir(&dir.0)
-        .stderr(full)
-        .output()
-        .unwrap();
-    assert_eq!(output.status.code(), Some(0));
-}
-
 #[test]
 fn format_marks_each_problem_as_error() {
     let dir = TempDir::new();
@@ -193,9 +175,12 @@ fn format_marks_each_problem_as_error() {
     let output = format(&[&bad, &missing]);
     assert_eq!(output.status.code(), Some(2));
     let stderr = stderr(&output);
-    assert_eq!(stderr.lines().count(), 3, "{stderr}");
+    let lines: Vec<_> = stderr.lines().collect();
+    // The last is the summary.
+    let (_, problems) = lines.split_last().unwrap();
+    assert_eq!(problems.len(), 3, "{stderr}");
     assert!(
-        stderr.lines().all(|line| line.starts_with("error: ")),
+        problems.iter().all(|line| line.starts_with("error: ")),
         "{stderr}"
     );
 }
