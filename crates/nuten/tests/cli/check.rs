@@ -1,6 +1,6 @@
 #[cfg(target_os = "linux")]
 use std::fs;
-use std::io;
+use std::{io, path::MAIN_SEPARATOR};
 
 use crate::support::{
     FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in, nuten_command, read,
@@ -15,7 +15,10 @@ fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
     let output = format_in(&dir, &["--check", "z.nu", "b.nu", "d"]);
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
     assert!(output.stderr.is_empty(), "{}", stderr(&output));
-    assert_eq!(stdout(&output), "z.nu\nd/a.nu\nd/c.nuon\n");
+    assert_eq!(
+        stdout(&output),
+        format!("z.nu\nd{MAIN_SEPARATOR}a.nu\nd{MAIN_SEPARATOR}c.nuon\n")
+    );
     assert_eq!(read(&z), UNFORMATTED);
     assert_eq!(read(&a), UNFORMATTED);
     assert_eq!(read(&c), UNFORMATTED);
