@@ -93,12 +93,23 @@ fn step(path: &mut PathBuf, dir: &Path) -> Result<Step, FindError> {
         }
     }
     // A config file above the root would format the repository by where it is cloned.
-    for name in VCS_DIRS {
-        if exists(path, dir, name)? {
-            return Ok(Step::Ends(None));
-        }
+    if holds_vcs_dir_in(path, dir)? {
+        return Ok(Step::Ends(None));
     }
     Ok(Step::GoesOn)
+}
+
+pub(crate) fn holds_vcs_dir(dir: &Path) -> Result<bool, FindError> {
+    holds_vcs_dir_in(&mut PathBuf::new(), dir)
+}
+
+fn holds_vcs_dir_in(path: &mut PathBuf, dir: &Path) -> Result<bool, FindError> {
+    for name in VCS_DIRS {
+        if exists(path, dir, name)? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn exists(path: &mut PathBuf, dir: &Path, name: &str) -> Result<bool, FindError> {

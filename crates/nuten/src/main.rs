@@ -296,11 +296,11 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
     // Read in full first, so that a writer is not cut off when a config file has a problem.
     let src = io::read_to_string(io::stdin()).map_err(|error| vec![Problem::in_file(name, error)]);
     let formatted = src.and_then(|src| {
-        let config = match config_file {
-            Some(config_file) => nuten_config::load_given(config_file),
-            None => nuten_config::of_text(filepath),
-        }
-        .map_err(problems_of)?;
+        let given = config_file
+            .map(nuten_config::load_given)
+            .transpose()
+            .map_err(problems_of)?;
+        let config = nuten_config::of_text(filepath, given.as_ref()).map_err(problems_of)?;
         let format = config
             .format_of_text(filepath)
             .map_err(|error| vec![error.into()])?;

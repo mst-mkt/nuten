@@ -125,6 +125,23 @@ fn format_reporter_github_annotates_problem_of_given_config_file() {
 }
 
 #[test]
+fn format_reporter_github_annotates_problem_of_editorconfig_that_cannot_be_read() {
+    let dir = TempDir::new();
+    let editorconfig = dir.dir("d/.editorconfig");
+    let path = dir.file("d/a.nu", UNFORMATTED);
+    let output = format_in(&dir, &["--reporter", "github", path.to_str().unwrap()]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        stdout(&output),
+        format!(
+            "::error file={},title=nuten::not a regular file\n",
+            file_property(&editorconfig)
+        )
+    );
+    assert_eq!(read(&path), UNFORMATTED);
+}
+
+#[test]
 fn format_reporter_cannot_be_used_with_check_or_list_different() {
     let dir = TempDir::new();
     let [path] = write_unformatted(&dir, ["a.nu"]);

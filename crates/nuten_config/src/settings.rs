@@ -43,7 +43,7 @@ pub(crate) struct Choice<C> {
     pub(crate) change: C,
 }
 
-pub(crate) static SETTINGS: [Setting; 10] = [
+pub(crate) static SETTINGS: [Setting; 11] = [
     Setting {
         key: "$schema",
         description: "Where an editor finds the JSON Schema; nuten does not read it.",
@@ -140,6 +140,15 @@ pub(crate) static SETTINGS: [Setting; 10] = [
         scope: Scope::Whole(Kind::Boolean(Change::RespectGitignore)),
     },
     Setting {
+        key: "editorconfig",
+        description: "Whether formatting takes `indent_style`, `indent_size` and `tab_width` (as \
+                      `indent_width`), `end_of_line` (as `line_ending`), and `max_line_length` (as \
+                      `line_width`) from the `.editorconfig` files above each file, up to one with \
+                      `root = true` or the root of the repository. This config file and its \
+                      `overrides` win over them.",
+        scope: Scope::Whole(Kind::Boolean(Change::Editorconfig)),
+    },
+    Setting {
         key: "include",
         description: "Glob patterns of the files formatting a directory takes, in place of \
                       `*.nu` and `*.nuon`. A pattern without a `/` matches a file name at any \
@@ -220,6 +229,7 @@ impl FormatChange {
 pub(crate) enum Change {
     Format(FormatChange),
     RespectGitignore(bool),
+    Editorconfig(bool),
     Include(Patterns),
     Exclude(Patterns),
     Overrides(Vec<Override>),
@@ -234,6 +244,10 @@ impl Change {
             },
             Change::RespectGitignore(respect_gitignore) => Config {
                 respect_gitignore,
+                ..config
+            },
+            Change::Editorconfig(editorconfig) => Config {
+                editorconfig,
                 ..config
             },
             Change::Include(include) => Config {
@@ -475,6 +489,7 @@ mod tests {
             "line_ending": "crlf",
             "commas": "trailing",
             "respect_gitignore": false,
+            "editorconfig": false,
             "include": ["*.nush"],
             "exclude": ["vendor"]
         }"#;
@@ -491,6 +506,7 @@ mod tests {
         );
         let expected = Config {
             respect_gitignore: false,
+            editorconfig: false,
             include: Patterns::new(["*.nush"]).unwrap(),
             exclude: Patterns::new(["vendor"]).unwrap(),
             changes: config.changes.clone(),
@@ -515,6 +531,25 @@ mod tests {
             ..Config::default()
         };
         assert_eq!(config, expected);
+    }
+
+    #[test]
+    fn editorconfig_is_read_by_default() {
+        assert!(Config::default().editorconfig);
+    }
+
+    #[test]
+    fn editorconfig_takes_either_boolean() {
+        for boolean in [true, false] {
+            let text = format!(r#"{{"editorconfig": {boolean}}}"#);
+            let config = load(&text, Format::Json).unwrap();
+            assert_eq!(config.editorconfig, boolean, "{text}");
+            assert_eq!(
+                config.format_without_file(),
+                FormatConfig::default(),
+                "{text}"
+            );
+        }
     }
 
     #[test]

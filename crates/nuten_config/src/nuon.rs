@@ -294,7 +294,7 @@ mod tests {
             "    line_width: 80 # c\n",
             "    'indent_style': tab,\n",
             "    \"indent_width\": 2, `line_ending`: \"crlf\"\n",
-            "    commas: none respect_gitignore: false\n",
+            "    commas: none respect_gitignore: false editorconfig: false\n",
             "}\n",
         );
         let config = load(text, Format::Nuon).unwrap();
@@ -310,6 +310,7 @@ mod tests {
         );
         let expected = Config {
             respect_gitignore: false,
+            editorconfig: false,
             changes: config.changes.clone(),
             ..Config::default()
         };

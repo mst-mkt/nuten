@@ -88,3 +88,28 @@ fn format_takes_given_config_file_without_exclude_for_stdin_in_removed_current_d
     assert_succeeds_quietly(&output);
     assert_eq!(stdout(&output), "if true {\n  ls\n}\n");
 }
+
+#[cfg(unix)]
+#[test]
+fn format_takes_editorconfig_for_absolute_stdin_filepath_in_removed_current_directory() {
+    let dir = TempDir::new();
+    dir.file(".editorconfig", "[*]\nindent_size = 2\n");
+    let config = dir.file("config/nuten.nuon", "{}");
+    let path = dir.file("a.nu", BLOCK);
+    let input = dir.file("stdin.input", BLOCK);
+    for given in [&[][..], &[OsStr::new("-c"), config.as_os_str()]] {
+        let args: Vec<_> = [OsStr::new("format")]
+            .into_iter()
+            .chain(given.iter().copied())
+            .chain([
+                OsStr::new("--stdin-filepath"),
+                path.as_os_str(),
+                OsStr::new("-"),
+            ])
+            .collect();
+        let stdin = Stdio::from(fs::File::open(&input).unwrap());
+        let output = nuten_in_removed(&dir.dir("removed"), &args, stdin);
+        assert_succeeds_quietly(&output);
+        assert_eq!(stdout(&output), "if true {\n  ls\n}\n", "{given:?}");
+    }
+}

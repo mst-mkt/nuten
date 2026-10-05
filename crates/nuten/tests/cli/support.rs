@@ -21,15 +21,17 @@ impl TempDir {
         let dir = TempDir(fs::canonicalize(&dir).unwrap());
         let above = nuten_config::find(&dir.0).unwrap();
         assert_eq!(above, None, "a config file above the temporary directory");
-        let ignoring: Vec<_> = dir
+        let affecting: Vec<_> = dir
             .0
             .ancestors()
-            .flat_map(|ancestor| [".git", ".gitignore", ".ignore"].map(|name| ancestor.join(name)))
+            .flat_map(|ancestor| {
+                [".git", ".gitignore", ".ignore", ".editorconfig"].map(|name| ancestor.join(name))
+            })
             .filter(|path| path.exists())
             .collect();
         assert!(
-            ignoring.is_empty(),
-            "{ignoring:?} above the temporary directory"
+            affecting.is_empty(),
+            "{affecting:?} above the temporary directory"
         );
         dir
     }

@@ -38,6 +38,16 @@ impl TempDir {
         let dir = TempDir(fs::canonicalize(&dir).unwrap());
         let above = nuten_config::find(&dir.0).unwrap();
         assert_eq!(above, None, "a config file above the temporary directory");
+        let affecting: Vec<_> = dir
+            .0
+            .ancestors()
+            .map(|ancestor| ancestor.join(".editorconfig"))
+            .filter(|path| path.exists())
+            .collect();
+        assert!(
+            affecting.is_empty(),
+            "{affecting:?} above the temporary directory"
+        );
         dir
     }
 

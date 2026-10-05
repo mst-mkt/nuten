@@ -6,7 +6,7 @@ use std::{
 
 use nuten_line_index::{LineColumn, located};
 
-use crate::{Config, Format, find::find_each};
+use crate::{Config, Format, editorconfig, find::find_each};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LookupError {
@@ -69,60 +69,104 @@ impl Lookup {
 
 /// Each file is canonical, as `canonical` gives it, or the error resolving it.
 pub fn of_files(files: &[Result<&Path, &LookupError>], given: Option<&Config>) -> Vec<Lookup> {
-    given_or_nearest(given, files.len(), || {
-        files
-            .iter()
-            .map(|file| match file {
-                Ok(file) => Ok(search_start(file)),
-                Err(error) => Err((*error).clone()),
-            })
-            .collect()
-    })
+    let starts: Vec<_> = files
+        .iter()
+        .map(|file| match file {
+            Ok(file) => Ok(search_start(file)),
+            Err(error) => Err((*error).clone()),
+        })
+        .collect();
+    let lookups = given_or_nearest(given, files.len(), || nearest(&starts));
+    with_editorconfig_files(
+        lookups
+            .into_iter()
+            .zip(starts.iter().map(|start| start.as_deref().ok())),
+    )
 }
 
 pub fn of_dirs(dirs: &[&Path], given: Option<&Config>) -> Vec<Lookup> {
     given_or_nearest(given, dirs.len(), || {
-        dirs.iter().map(|dir| canonical(dir)).collect()
+        let starts: Vec<_> = dirs.iter().map(|dir| canonical(dir)).collect();
+        nearest(&starts)
     })
 }
 
-pub fn of_text(file: Option<&Path>) -> Result<Config, Vec<LookupError>> {
+pub fn of_text(file: Option<&Path>, given: Option<&Config>) -> Result<Config, Vec<LookupError>> {
     match file {
-        Some(file) if file.exists() => of_file(file),
+        Some(file) if file.exists() => {
+            let file = canonical(file).map_err(|error| vec![error])?;
+            sole_config(of_files(&[Ok(&file)], given))
+        },
         // An editor may not have written the file or its directories yet.
-        Some(file) => of_dir(&nearest_existing_dir(file).map_err(|error| vec![error])?),
-        None => of_dir(Path::new(".")),
+        Some(file) => of_unwritten(file, given),
+        // Without a file, no section of `.editorconfig` could name it.
+        None => sole_config(of_dirs(&[Path::new(".")], given)),
     }
 }
 
-fn of_file(file: &Path) -> Result<Config, Vec<LookupError>> {
-    let file = canonical(file).map_err(|error| vec![error])?;
-    of_files(&[Ok(&file)], None)
+fn of_unwritten(file: &Path, given: Option<&Config>) -> Result<Config, Vec<LookupError>> {
+    match (nearest_existing_dir(file), given) {
+        (Ok(dir), _) => {
+            let lookups = of_dirs(&[&dir], given);
+            sole_config(with_editorconfig_files(
+                lookups.into_iter().zip([Some(dir.as_path())]),
+            ))
+        },
+        // A file that is nowhere has no `.editorconfig` either.
+        (Err(_), Some(given)) => Ok(given.clone()),
+        (Err(error), None) => Err(vec![error]),
+    }
+}
+
+fn sole_config(lookups: Vec<Lookup>) -> Result<Config, Vec<LookupError>> {
+    lookups
         .into_iter()
         .next()
-        .expect("one lookup for one file")
+        .expect("one lookup for one path")
         .into_config()
 }
 
-fn of_dir(dir: &Path) -> Result<Config, Vec<LookupError>> {
-    of_dirs(&[dir], None)
-        .into_iter()
-        .next()
-        .expect("one lookup for one directory")
-        .into_config()
-}
-
-/// `starts` is lazy, since resolving it when `given` would report a path that cannot be resolved.
+/// `nearest` is lazy, since with a config given, resolving would report an unresolvable path.
 /// Formatting reports that path again.
 fn given_or_nearest(
     given: Option<&Config>,
     count: usize,
-    starts: impl FnOnce() -> Vec<Result<PathBuf, LookupError>>,
+    nearest: impl FnOnce() -> Vec<Lookup>,
 ) -> Vec<Lookup> {
     match given {
         Some(given) => vec![Lookup::Found(given.clone()); count],
-        None => nearest(&starts()),
+        None => nearest(),
     }
+}
+
+/// A lookup paired with no directory takes no `.editorconfig`.
+fn with_editorconfig_files<'a>(
+    lookups: impl IntoIterator<Item = (Lookup, Option<&'a Path>)>,
+) -> Vec<Lookup> {
+    let lookups: Vec<_> = lookups
+        .into_iter()
+        .map(|(lookup, dir)| {
+            let reading = match &lookup {
+                Lookup::Found(config) if config.editorconfig => dir,
+                _ => None,
+            };
+            (lookup, reading)
+        })
+        .collect();
+    let found = editorconfig::find_each(lookups.iter().filter_map(|(_, reading)| *reading));
+    lookups
+        .into_iter()
+        .map(
+            |(lookup, reading)| match (lookup, reading.map(|dir| &found[dir])) {
+                (Lookup::Found(config), Some(Ok(editorconfig_files))) => Lookup::Found(Config {
+                    editorconfig_files: editorconfig_files.clone(),
+                    ..config
+                }),
+                (Lookup::Found(_), Some(Err(error))) => Lookup::Wrong(vec![error.clone()]),
+                (lookup, _) => lookup,
+            },
+        )
+        .collect()
 }
 
 fn nearest(starts: &[Result<PathBuf, LookupError>]) -> Vec<Lookup> {
@@ -272,7 +316,7 @@ fn load_file(path: &Path) -> Result<Config, Vec<LookupError>> {
 }
 
 /// Not `fs::read_to_string` alone, which waits forever on a FIFO.
-fn read_regular_file(path: &Path) -> io::Result<String> {
+pub(crate) fn read_regular_file(path: &Path) -> io::Result<String> {
     if fs::metadata(path)?.is_file() {
         fs::read_to_string(path)
     } else {

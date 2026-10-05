@@ -52,6 +52,10 @@ expression: schema()
       "description": "Whether formatting a directory skips the files ignored by `.gitignore`, `.ignore`, the exclude file of the repository, or the global excludes file of git. The config file nearest the directory, or the one `--config` names, decides it for everything under the directory.",
       "type": "boolean"
     },
+    "editorconfig": {
+      "description": "Whether formatting takes `indent_style`, `indent_size` and `tab_width` (as `indent_width`), `end_of_line` (as `line_ending`), and `max_line_length` (as `line_width`) from the `.editorconfig` files above each file, up to one with `root = true` or the root of the repository. This config file and its `overrides` win over them.",
+      "type": "boolean"
+    },
     "include": {
       "description": "Glob patterns of the files formatting a directory takes, in place of `*.nu` and `*.nuon`. A pattern without a `/` matches a file name at any depth; one with a `/` matches the path from the directory of the config file, or from the current directory for the config file `--config` names. A file named directly is formatted whether it matches or not.",
       "type": "array",

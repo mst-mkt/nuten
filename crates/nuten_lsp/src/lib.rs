@@ -305,7 +305,7 @@ fn formatting_at(
 
 fn config_of(place: &Place, uri: &str) -> Result<Config, Vec<String>> {
     let of_text = |file| {
-        nuten_config::of_text(file)
+        nuten_config::of_text(file, None)
             .map_err(|errors| errors.iter().map(ToString::to_string).collect())
     };
     match place {

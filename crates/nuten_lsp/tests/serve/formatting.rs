@@ -1,3 +1,5 @@
+use std::fs;
+
 use lsp_server::ErrorCode;
 use lsp_types::{
     OneOf, Position, Range, TextEdit,
@@ -155,6 +157,48 @@ fn formatting_follows_config_file_nearest_file() {
 }
 
 #[test]
+fn formatting_follows_editorconfig_above_file() {
+    let dir = TempDir::new();
+    dir.file(
+        ".editorconfig",
+        "[*.nu]\nindent_size = 2\nend_of_line = crlf\n",
+    );
+    let uri = file_uri(&dir.file("sub/a.nu", ""));
+    let (client, _) = Client::initialized();
+    client.open(&uri, "if true {\nls\n}\n");
+    let edits = client.format(&uri).unwrap();
+    let expected = edit((0, 0), (3, 0), "if true {\r\n  ls\r\n}\r\n");
+    assert_eq!(edits, Some(vec![expected]));
+    client.shut_down();
+}
+
+#[test]
+fn formatting_follows_editorconfig_changed_after_open() {
+    let dir = TempDir::new();
+    let uri = file_uri(&dir.file("a.nu", ""));
+    let (client, _) = Client::initialized();
+    client.open(&uri, "if true {\nls\n}\n");
+    let edits = client.format(&uri).unwrap();
+    assert_eq!(edits, Some(vec![edit((1, 0), (2, 0), "    ls\n")]));
+    dir.file(".editorconfig", "[*]\nindent_size = 2\n");
+    let edits = client.format(&uri).unwrap();
+    assert_eq!(edits, Some(vec![edit((1, 0), (2, 0), "  ls\n")]));
+    client.shut_down();
+}
+
+#[test]
+fn formatting_follows_editorconfig_for_file_not_yet_written() {
+    let dir = TempDir::new();
+    dir.file(".editorconfig", "[new/dir/*.nu]\nindent_size = 2\n");
+    let uri = file_uri(&dir.path("new/dir/a.nu"));
+    let (client, _) = Client::initialized();
+    client.open(&uri, "if true {\nls\n}\n");
+    let edits = client.format(&uri).unwrap();
+    assert_eq!(edits, Some(vec![edit((1, 0), (2, 0), "  ls\n")]));
+    client.shut_down();
+}
+
+#[test]
 fn formatting_follows_config_file_changed_after_open() {
     let dir = TempDir::new();
     let uri = file_uri(&dir.file("a.nu", ""));
@@ -254,6 +298,21 @@ fn wrong_config_file_fails_formatting_with_its_problems() {
         "{config}:2:19: `indent_width` takes an integer from 1 to 255\n\
          {config}:3:3: unknown key `x`"
     );
+    assert_eq!(error.message, expected);
+    client.shut_down();
+}
+
+#[test]
+fn unreadable_editorconfig_fails_formatting_with_its_problem() {
+    let dir = TempDir::new();
+    let editorconfig = dir.path("d/.editorconfig");
+    fs::create_dir_all(&editorconfig).unwrap();
+    let uri = file_uri(&dir.file("d/a.nu", ""));
+    let (client, _) = Client::initialized();
+    client.open(&uri, "ls   |   length\n");
+    let error = client.format(&uri).unwrap_err();
+    assert_eq!(error.code, ErrorCode::RequestFailed as i32);
+    let expected = format!("{}: not a regular file", editorconfig.display());
     assert_eq!(error.message, expected);
     client.shut_down();
 }

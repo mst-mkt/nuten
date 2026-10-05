@@ -1,6 +1,7 @@
 mod check;
 mod completions;
 mod config_file;
+mod editorconfig;
 mod files;
 mod given_config;
 mod list;

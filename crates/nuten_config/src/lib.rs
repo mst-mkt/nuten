@@ -1,3 +1,4 @@
+mod editorconfig;
 mod escape;
 mod find;
 mod json;
@@ -21,6 +22,12 @@ pub use nuten_format::{Commas, Config as FormatConfig, IndentStyle, LineEnding};
 use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
+use crate::{
+    editorconfig::EditorconfigFiles,
+    patterns::Place,
+    settings::{FormatChange, apply},
+    value::Value,
+};
 pub use crate::{
     find::{FILE_NAMES, FindError, VCS_DIRS, find},
     lookup::{Lookup, LookupError, canonical, load_given, of_dirs, of_files, of_text, resolved},
@@ -28,21 +35,20 @@ pub use crate::{
     schema::schema,
     settings::Override,
 };
-use crate::{
-    patterns::Place,
-    settings::{FormatChange, apply},
-    value::Value,
-};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
     pub respect_gitignore: bool,
+    pub editorconfig: bool,
     pub include: Patterns,
     pub exclude: Patterns,
     pub overrides: Vec<Override>,
     /// It is canonical.
     pub root: Option<PathBuf>,
+    /// Changes rather than a format, since a setting left out gives way to `.editorconfig`.
     pub(crate) changes: Vec<FormatChange>,
+    /// Those of the directory it was looked up for, since a found config is copied to each.
+    pub(crate) editorconfig_files: EditorconfigFiles,
 }
 
 // Built once, since these stand for every file without a config file and a build is slow.
@@ -55,18 +61,22 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             respect_gitignore: true,
+            editorconfig: true,
             include: DEFAULT_INCLUDE.clone(),
             exclude: NO_PATTERNS.clone(),
             overrides: Vec::new(),
             root: None,
             changes: Vec::new(),
+            editorconfig_files: EditorconfigFiles::default(),
         }
     }
 }
 
 impl Config {
     pub fn depends_on_file(&self) -> bool {
-        !self.exclude.is_empty() || !self.overrides.is_empty()
+        !self.exclude.is_empty()
+            || !self.overrides.is_empty()
+            || !self.editorconfig_files.is_empty()
     }
 
     pub fn format_without_file(&self) -> FormatConfig {
@@ -92,10 +102,26 @@ impl Config {
     /// `file` must be canonical.
     pub fn format_of(&self, file: &Path) -> FormatConfig {
         let place = self.place(file);
+        let editorconfig = self.editorconfig_files.properties_of(file);
+        let with_editorconfig_style = FormatConfig {
+            indent_style: editorconfig
+                .indent_style
+                .unwrap_or(FormatConfig::default().indent_style),
+            ..FormatConfig::default()
+        };
+        // `.editorconfig` gives the indent width by the style, which this config may set over it.
+        let indent_style = self
+            .format_over(with_editorconfig_style, place)
+            .indent_style;
+        let from_editorconfig = apply(FormatConfig::default(), &editorconfig.changes(indent_style));
+        self.format_over(from_editorconfig, place)
+    }
+
+    fn format_over(&self, below: FormatConfig, place: Place<'_>) -> FormatConfig {
         self.overrides
             .iter()
             .filter(|picking| picking.picks(place))
-            .fold(self.format_without_file(), |format, picking| {
+            .fold(apply(below, &self.changes), |format, picking| {
                 picking.apply(format)
             })
     }
