@@ -39,6 +39,16 @@ usage = { package = "usage-rs", version = "6.9.1", default-features = false, fea
 lto = "fat"
 codegen-units = 1
 
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 rust_2018_idioms = { level = "warn", priority = -1 }
