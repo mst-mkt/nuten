@@ -20,7 +20,15 @@ fn format_check_ends_with_summary_of_files_that_need_formatting() {
     dir.file("c.nu", FORMATTED);
     let output = format_in(&dir, &["--check", "a.nu", "b.nu", "c.nu"]);
     assert_eq!(output.status.code(), Some(1));
-    assert_eq!(stderr(&output), "3 files: 2 need formatting, 1 unchanged\n");
+    assert_eq!(
+        stderr(&output),
+        "3 files: 2 need formatting (2 lines, 2 whitespace only), 1 unchanged\n"
+    );
+    let one = format_in(&dir, &["--check", "a.nu"]);
+    assert_eq!(
+        stderr(&one),
+        "1 file: 1 needs formatting (1 line, 1 whitespace only)\n"
+    );
 }
 
 #[test]

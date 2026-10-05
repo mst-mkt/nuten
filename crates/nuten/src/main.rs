@@ -28,7 +28,7 @@ use crate::{
     overwrite::{Contents, Failure, OnDisk, overwrite},
     style::Style,
     summary::{Counts, summary},
-    view::view,
+    view::{View, view},
 };
 
 #[derive(Cli)]
@@ -154,7 +154,7 @@ struct Report {
 struct Changed {
     path: PathBuf,
     /// Only for `--check`, which shows it.
-    view: Option<String>,
+    view: Option<View>,
 }
 
 fn main() -> ExitCode {
@@ -328,7 +328,7 @@ fn views_text(changed: &[Changed], style: Style) -> String {
     }
     let views: String = changed
         .iter()
-        .filter_map(|changed| changed.view.as_deref())
+        .filter_map(|changed| Some(changed.view.as_ref()?.text.as_str()))
         .collect();
     heading(changed.len(), style) + &views
 }
@@ -475,12 +475,20 @@ fn format_all(jobs: &[Job], mode: Option<Mode>, style: Style) -> Vec<Outcome> {
 fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
     let count =
         |kind: fn(&Outcome) -> bool| outcomes.iter().filter(|outcome| kind(outcome)).count();
+    let views = || {
+        outcomes.iter().filter_map(|outcome| match outcome {
+            Outcome::Changed(changed) => changed.view.as_ref(),
+            _ => None,
+        })
+    };
     let counts = Counts {
         changed: count(|outcome| matches!(outcome, Outcome::Changed(_))),
         unchanged: count(|outcome| matches!(outcome, Outcome::Unchanged)),
         failed: count(|outcome| matches!(outcome, Outcome::Failed(_))),
         skipped: count(|outcome| matches!(outcome, Outcome::Skipped(_))),
         excluded,
+        changed_lines: views().map(|view| view.changed_lines).sum(),
+        whitespace_only_lines: views().map(|view| view.whitespace_only_lines).sum(),
     };
     let (changed, problems): (Vec<_>, Vec<_>) = outcomes
         .into_iter()
@@ -583,7 +591,7 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use super::{Changed, catch_panic, overwrite_problem, views_text};
+    use super::{Changed, Outcome, View, catch_panic, overwrite_problem, report_of, views_text};
     use crate::{
         overwrite::{Contents, Failure},
         style::Style,
@@ -638,8 +646,23 @@ mod tests {
     fn changed(name: &str) -> Changed {
         Changed {
             path: PathBuf::from(name),
-            view: Some(format!("{name}\n")),
+            view: Some(View {
+                text: format!("{name}\n"),
+                changed_lines: 3,
+                whitespace_only_lines: 1,
+            }),
         }
+    }
+
+    #[test]
+    fn report_of_sums_lines_of_each_view() {
+        let outcomes = vec![
+            Outcome::Changed(changed("a")),
+            Outcome::Unchanged,
+            Outcome::Changed(changed("b")),
+        ];
+        let counts = report_of(outcomes, 0).counts;
+        assert_eq!((counts.changed_lines, counts.whitespace_only_lines), (6, 2));
     }
 
     #[test]

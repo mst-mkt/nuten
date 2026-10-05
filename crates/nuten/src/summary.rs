@@ -7,6 +7,8 @@ pub(crate) struct Counts {
     pub(crate) failed: usize,
     pub(crate) skipped: usize,
     pub(crate) excluded: usize,
+    pub(crate) changed_lines: usize,
+    pub(crate) whitespace_only_lines: usize,
 }
 
 impl Counts {
@@ -23,8 +25,18 @@ pub(crate) fn summary(counts: &Counts, mode: Mode, style: Style) -> Option<Strin
         // Not after a list, which a script reads, as with other formatters.
         (Mode::List, _) => return None,
     };
+    let whitespace = match counts.whitespace_only_lines {
+        0 => String::new(),
+        count => format!(", {count} whitespace only"),
+    };
+    let lines = match counts.changed_lines {
+        0 => String::new(),
+        1 => format!(" (1 line{whitespace})"),
+        count => format!(" ({count} lines{whitespace})"),
+    };
+    let changed_part = format!("{changed}{lines}");
     let parts: Vec<_> = [
-        (counts.changed, changed),
+        (counts.changed, changed_part.as_str()),
         (counts.unchanged, "unchanged"),
         (counts.failed, "failed"),
         (counts.skipped, "skipped"),
@@ -61,6 +73,8 @@ mod tests {
             failed: 1,
             skipped: 3,
             excluded: 4,
+            changed_lines: 0,
+            whitespace_only_lines: 0,
         };
         assert_eq!(
             plain(counts, Mode::Write),
@@ -86,6 +100,52 @@ mod tests {
         assert_eq!(
             plain(two, Mode::Check),
             Some("3 files: 2 need formatting, 1 unchanged".to_string())
+        );
+    }
+
+    #[test]
+    fn summary_of_check_counts_lines_that_change() {
+        let one = Counts {
+            changed: 1,
+            changed_lines: 1,
+            ..Counts::default()
+        };
+        let many = Counts {
+            changed: 2,
+            changed_lines: 5,
+            ..Counts::default()
+        };
+        assert_eq!(
+            plain(one, Mode::Check),
+            Some("1 file: 1 needs formatting (1 line)".to_string())
+        );
+        assert_eq!(
+            plain(many, Mode::Check),
+            Some("2 files: 2 need formatting (5 lines)".to_string())
+        );
+    }
+
+    #[test]
+    fn summary_of_check_counts_whitespace_only_lines_apart() {
+        let one = Counts {
+            changed: 1,
+            changed_lines: 1,
+            whitespace_only_lines: 1,
+            ..Counts::default()
+        };
+        let many = Counts {
+            changed: 2,
+            changed_lines: 5,
+            whitespace_only_lines: 3,
+            ..Counts::default()
+        };
+        assert_eq!(
+            plain(one, Mode::Check),
+            Some("1 file: 1 needs formatting (1 line, 1 whitespace only)".to_string())
+        );
+        assert_eq!(
+            plain(many, Mode::Check),
+            Some("2 files: 2 need formatting (5 lines, 3 whitespace only)".to_string())
         );
     }
 
