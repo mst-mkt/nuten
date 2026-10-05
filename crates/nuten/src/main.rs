@@ -6,6 +6,7 @@ mod diff;
 mod files;
 mod overwrite;
 mod parallel;
+mod style;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -27,6 +28,7 @@ use usage::{Args, Cli, Subcommands, ValueEnum};
 use crate::{
     files::{Candidate, Entry},
     overwrite::{Contents, Failure, OnDisk, overwrite},
+    style::Style,
 };
 
 #[derive(Cli)]
@@ -214,8 +216,9 @@ fn serve_lsp() -> ExitCode {
 }
 
 fn fail(problems: &[String]) -> ExitCode {
+    let error = Style::stderr().error("error:");
     for problem in problems {
-        write_stderr(&format!("error: {problem}"));
+        write_stderr(&format!("{error} {problem}"));
     }
     ExitCode::from(2)
 }

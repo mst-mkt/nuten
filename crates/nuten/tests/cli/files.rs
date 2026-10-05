@@ -201,6 +201,38 @@ fn format_marks_each_problem_as_error() {
 }
 
 #[test]
+fn format_colors_error_mark_when_clicolor_force_is_set() {
+    let dir = TempDir::new();
+    dir.file("bad.nu", "ls || x\n");
+    let output = nuten_command()
+        .args(["format", "bad.nu"])
+        .current_dir(&dir.0)
+        .env("CLICOLOR_FORCE", "1")
+        .output()
+        .unwrap();
+    let stderr = stderr(&output);
+    assert!(
+        stderr.starts_with("\u{1b}[1m\u{1b}[31merror:\u{1b}[0m bad.nu:1:4: "),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn format_leaves_error_mark_plain_when_no_color_is_set_though_clicolor_force_is_set() {
+    let dir = TempDir::new();
+    dir.file("bad.nu", "ls || x\n");
+    let output = nuten_command()
+        .args(["format", "bad.nu"])
+        .current_dir(&dir.0)
+        .env("CLICOLOR_FORCE", "1")
+        .env("NO_COLOR", "1")
+        .output()
+        .unwrap();
+    let stderr = stderr(&output);
+    assert!(stderr.starts_with("error: bad.nu:1:4: "), "{stderr}");
+}
+
+#[test]
 fn format_reports_syntax_error_position_and_continues() {
     let dir = TempDir::new();
     let bad = dir.file("bad.nu", "ls\n\n  ls || x\n");
