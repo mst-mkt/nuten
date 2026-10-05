@@ -74,7 +74,6 @@ jobs:
     timeout-minutes: 90
     env:
       RUST_VERSION: 1.98.1
-      NEXTEST_VERSION: 0.9.143
     defaults:
       run:
         shell: bash
@@ -86,7 +85,7 @@ jobs:
       - name: Install Rust
         run: rustup default "$RUST_VERSION"
       - name: Install cargo-nextest
-        run: curl --location --fail --silent --show-error "https://get.nexte.st/$NEXTEST_VERSION/windows-tar" | tar --extract --gzip --directory ~/.cargo/bin
+        run: curl --location --fail --silent --show-error https://get.nexte.st/latest/windows-tar | tar --extract --gzip --directory ~/.cargo/bin
       - name: Read nushell version
         run: echo "NU_VERSION=$(jq --raw-output '.nodes[.nodes.root.inputs.nushell].original.ref' nix/dev/flake.lock)" >> "$GITHUB_ENV"
       - name: Download nushell
