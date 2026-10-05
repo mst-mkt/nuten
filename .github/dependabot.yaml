@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  - package-ecosystem: cargo
+    directories: [/, /editors/zed, /tasks/fuzz]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      cargo:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      npm:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: vite-plus # Matches the vp from nix.
+      - dependency-name: "@types/vscode" # Matches the oldest VS Code the extension supports.
+      - dependency-name: "@types/node" # Matches the Node.js that VS Code runs extensions on.
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      github-actions:
+        patterns: ["*"]
