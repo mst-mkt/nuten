@@ -1,8 +1,13 @@
-use std::path::Path;
+use std::{
+    collections::HashSet,
+    path::{MAIN_SEPARATOR, Path},
+};
+
+use serde_json::{Value, json};
 
 use crate::support::{
-    FORMATTED, TempDir, UNFORMATTED, format_in, format_stdin_in, problems, read, stderr, stdout,
-    write_unformatted,
+    FORMATTED, TempDir, UNFORMATTED, format_in, format_stdin_in, nuten_command, problems, read,
+    stderr, stdout, write_unformatted,
 };
 
 /// The `file` of an annotation names `path` as written, with its `:` escaped as GitHub asks.
@@ -130,4 +135,157 @@ fn format_reporter_cannot_be_used_with_check_or_list_different() {
         assert!(stderr.contains("cannot be used with"), "{flag}: {stderr}");
     }
     assert_eq!(read(&path), UNFORMATTED);
+}
+
+fn issues(stdout: &str) -> Vec<Value> {
+    serde_json::from_str(stdout).unwrap()
+}
+
+fn location(issue: &Value) -> Value {
+    json!([
+        issue["check_name"],
+        issue["severity"],
+        issue["location"]["path"],
+        issue["location"]["lines"]["begin"],
+        issue["location"]["lines"]["end"],
+    ])
+}
+
+#[test]
+fn format_reporter_gitlab_lists_issue_for_each_file_that_would_change_and_each_problem() {
+    let dir = TempDir::new();
+    let [a] = write_unformatted(&dir, ["d/a.nu"]);
+    dir.file("d/b.nu", "ls\nls\nls|x\nls\nls|y\n");
+    dir.file("d/c.nu", FORMATTED);
+    dir.file("d/bad.nu", "ls\nls ||");
+    let output = format_in(&dir, &["--reporter", "gitlab", "d"]);
+    assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
+    let issues = issues(&stdout(&output));
+    let locations: Vec<_> = issues.iter().map(location).collect();
+    assert_eq!(issues[0]["description"], "Would be reformatted");
+    assert_eq!(
+        locations,
+        [
+            json!(["nuten/format", "minor", "d/a.nu", 1, 1]),
+            json!(["nuten/format", "minor", "d/b.nu", 3, 5]),
+            json!(["nuten/problem", "major", "d/bad.nu", 2, 2]),
+        ]
+    );
+    let fingerprints: HashSet<_> = issues
+        .iter()
+        .map(|issue| issue["fingerprint"].to_string())
+        .collect();
+    assert_eq!(fingerprints.len(), issues.len(), "{fingerprints:?}");
+    let problems = problems(&output);
+    assert!(
+        problems.starts_with(&format!("d{MAIN_SEPARATOR}bad.nu:2:4: ")),
+        "{problems}"
+    );
+    assert_eq!(read(&a), UNFORMATTED);
+}
+
+#[test]
+fn format_reporter_gitlab_lists_no_issue_when_nothing_would_change() {
+    let dir = TempDir::new();
+    dir.file("a.nu", FORMATTED);
+    let output = format_in(&dir, &["--reporter", "gitlab", "a.nu"]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert_eq!(stdout(&output), "[]\n");
+}
+
+#[test]
+fn format_reporter_gitlab_keeps_fingerprint_of_change_while_other_lines_move() {
+    let dir = TempDir::new();
+    let path = dir.file("a.nu", "ls|x\n");
+    let before = issues(&stdout(&format_in(&dir, &["--reporter", "gitlab", "a.nu"])));
+    std::fs::write(&path, "ls\nls\nls|x\n").unwrap();
+    let after = issues(&stdout(&format_in(&dir, &["--reporter", "gitlab", "a.nu"])));
+    assert_eq!(after[0]["location"]["lines"]["begin"], 3);
+    assert_eq!(before[0]["fingerprint"], after[0]["fingerprint"]);
+}
+
+#[test]
+fn format_reporter_gitlab_names_files_from_ci_project_dir() {
+    let dir = TempDir::new();
+    let [a] = write_unformatted(&dir, ["d/a.nu"]);
+    let bad = dir.file("d/bad.nu", "ls ||");
+    let output = nuten_command()
+        .args(["format", "--reporter", "gitlab"])
+        .args([&a, &bad])
+        .current_dir(dir.path("d"))
+        .env("CI_PROJECT_DIR", &dir.0)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
+    let paths: Vec<_> = issues(&stdout(&output))
+        .iter()
+        .map(|issue| issue["location"]["path"].clone())
+        .collect();
+    assert_eq!(paths, ["d/a.nu", "d/bad.nu"]);
+}
+
+#[test]
+fn format_reporter_gitlab_tells_apart_files_alike_and_changes_of_one_file() {
+    let dir = TempDir::new();
+    write_unformatted(&dir, ["a.nu", "b.nu"]);
+    let fingerprints = |name: &str| {
+        let output = format_in(&dir, &["--reporter", "gitlab", name]);
+        issues(&stdout(&output))[0]["fingerprint"].clone()
+    };
+    let a = fingerprints("a.nu");
+    assert_ne!(fingerprints("b.nu"), a);
+    dir.file("a.nu", "ls|last");
+    assert_ne!(fingerprints("a.nu"), a);
+}
+
+#[test]
+fn format_reporter_gitlab_lists_issue_of_stdin_under_stdin_filepath() {
+    let dir = TempDir::new();
+    let output = format_stdin_in(
+        &dir,
+        &["--reporter", "gitlab", "--stdin-filepath", "d/a.nu", "-"],
+        UNFORMATTED.as_bytes(),
+    );
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let locations: Vec<_> = issues(&stdout(&output)).iter().map(location).collect();
+    assert_eq!(
+        locations,
+        [json!(["nuten/format", "minor", "d/a.nu", 1, 1])]
+    );
+}
+
+#[test]
+fn format_reporter_gitlab_names_files_from_current_directory_when_ci_project_dir_is_empty() {
+    let dir = TempDir::new();
+    write_unformatted(&dir, ["a.nu"]);
+    let output = nuten_command()
+        .args(["format", "--reporter", "gitlab", "a.nu"])
+        .current_dir(&dir.0)
+        .env("CI_PROJECT_DIR", "")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(issues(&stdout(&output))[0]["location"]["path"], "a.nu");
+}
+
+#[test]
+fn format_reporter_gitlab_keeps_fingerprint_however_file_is_named() {
+    let dir = TempDir::new();
+    write_unformatted(&dir, ["d/a.nu"]);
+    let fingerprint = |path: &str| {
+        let output = format_in(&dir, &["--reporter", "gitlab", path]);
+        issues(&stdout(&output))[0]["fingerprint"].clone()
+    };
+    assert_eq!(fingerprint("d"), fingerprint("./d/a.nu"));
+}
+
+#[test]
+fn format_reporter_gitlab_keeps_fingerprint_wherever_project_is_checked_out() {
+    let fingerprint = || {
+        let dir = TempDir::new();
+        write_unformatted(&dir, ["d/a.nu"]);
+        let output = format_in(&dir, &["--reporter", "gitlab", "d"]);
+        issues(&stdout(&output))[0]["fingerprint"].clone()
+    };
+    assert_eq!(fingerprint(), fingerprint());
 }

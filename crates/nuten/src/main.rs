@@ -29,7 +29,7 @@ use crate::{
     files::{Candidate, Entry},
     overwrite::{Contents, Failure, OnDisk, overwrite},
     problem::Problem,
-    reporter::github,
+    reporter::{github, gitlab},
     style::Style,
     summary::{Counts, summary},
     view::view,
@@ -57,6 +57,10 @@ enum Command {
         example(
             "nuten format --reporter github",
             header = "Annotate the lines that would change in a pull request, on GitHub Actions"
+        ),
+        example(
+            "nuten format --reporter gitlab",
+            header = "Write a Code Quality report for merge requests to stdout, on GitLab CI"
         ),
         example(
             "nuten format --stdin-filepath src/a.nu -",
@@ -147,6 +151,8 @@ struct Format {
 enum Reporter {
     /// Annotations of GitHub Actions
     Github,
+    /// Code Quality report of GitLab CI
+    Gitlab,
 }
 
 const STDIN_PATH: &str = "-";
@@ -356,6 +362,11 @@ fn stdout_text(changed: &[Changed], problems: &[Problem], mode: Mode, style: Sty
                     .map(github::problem_annotation)
                     .collect::<String>()
         },
+        Mode::Report(Reporter::Gitlab) => gitlab::report(
+            detail_texts(changed)
+                .map(str::to_string)
+                .chain(problems.iter().filter_map(gitlab::problem_issue)),
+        ),
     }
 }
 
@@ -580,6 +591,9 @@ fn detail(path: &Path, src: &str, formatted: &str, mode: Mode, style: Style) -> 
         Mode::Check => view,
         Mode::Report(Reporter::Github) => {
             |path, difference, _| github::file_annotation(path, difference)
+        },
+        Mode::Report(Reporter::Gitlab) => {
+            |path, difference, _| gitlab::file_issue(path, difference)
         },
     };
     let difference = Difference::new(src, formatted);

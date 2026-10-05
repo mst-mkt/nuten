@@ -60,6 +60,7 @@ impl Drop for TempDir {
 
 /// Blind to the git config of the user, which could ignore the files of a test.
 /// Blind to the color settings of the user too, which could change the colors a test reads.
+/// Blind to the project of GitLab CI too, which would move the paths of a report.
 pub(crate) fn nuten_command() -> Command {
     let nowhere = env::temp_dir().join("nuten-cli-nowhere");
     let mut command = Command::new(env!("CARGO_BIN_EXE_nuten"));
@@ -69,7 +70,8 @@ pub(crate) fn nuten_command() -> Command {
         .env("GIT_CONFIG_SYSTEM", &nowhere)
         .env_remove("GIT_CONFIG_GLOBAL")
         .env_remove("CLICOLOR_FORCE")
-        .env_remove("NO_COLOR");
+        .env_remove("NO_COLOR")
+        .env_remove("CI_PROJECT_DIR");
     command
 }
 

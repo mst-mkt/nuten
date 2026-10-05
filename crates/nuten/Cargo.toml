@@ -12,10 +12,8 @@ nuten-config = { workspace = true }
 nuten-format = { workspace = true }
 nuten-line-index = { workspace = true }
 nuten-lsp = { workspace = true }
-usage = { workspace = true }
-
-[dev-dependencies]
 serde_json = { workspace = true }
+usage = { workspace = true }
 
 [lints]
 workspace = true
