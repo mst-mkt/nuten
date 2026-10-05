@@ -20,6 +20,7 @@ export default defineConfig({
         ],
         input: [{ auto: true }, "!target/**", "!editors/zed/target/**"],
         env: ["PATH"],
+        untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],
       },
       "lint:ts": {
@@ -30,6 +31,7 @@ export default defineConfig({
         command: "cargo nextest run --workspace",
         input: ["Cargo.toml", "Cargo.lock", ".cargo/**", "crates/**", "tasks/oracle/**"],
         env: ["PATH", "NUTEN_CORPUS"],
+        untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],
       },
       "test:oracle": {
@@ -37,18 +39,21 @@ export default defineConfig({
         command: 'env -u FORCE_COLOR cargo oracle format tasks/oracle/test_data "$NUTEN_CORPUS"',
         input: [{ auto: true }, "!target/**"],
         env: ["PATH", "NUTEN_CORPUS"],
+        untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],
       },
       "test:zed": {
         command: "cargo test --manifest-path editors/zed/Cargo.toml",
         input: [{ auto: true }, "!editors/zed/target/**"],
         env: ["PATH"],
+        untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],
       },
       "test:nu": {
         command: "nu scripts/test-nu.nu",
         input: [{ auto: true }, "!target/**"],
         env: ["PATH", "NU_LIB_DIRS"],
+        untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],
       },
       "test:fuzz": {

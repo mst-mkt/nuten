@@ -37,6 +37,7 @@ export default defineConfig({
       "build:nuten": {
         command: "cargo build --package nuten",
         env: ["PATH"],
+        untrackedEnv: ["NIX_*", "SDKROOT"],
         input: [{ auto: true }, { pattern: "!target/**", base: "workspace" }],
         output: [{ pattern: "target/debug/nuten", base: "workspace" }],
       },
