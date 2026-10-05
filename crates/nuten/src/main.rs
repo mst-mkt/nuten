@@ -1,5 +1,3 @@
-#![expect(clippy::print_stderr, reason = "errors go to the user")]
-
 #[cfg_attr(
     not(test),
     expect(dead_code, reason = "`--check` is yet to report through it")
@@ -217,9 +215,14 @@ fn serve_lsp() -> ExitCode {
 
 fn fail(problems: &[String]) -> ExitCode {
     for problem in problems {
-        eprintln!("{problem}");
+        write_stderr(problem);
     }
     ExitCode::from(2)
+}
+
+/// Not a panic or a failure when stderr takes nothing, since the exit code still tells the outcome.
+fn write_stderr(line: &str) {
+    writeln!(io::stderr(), "{line}").ok();
 }
 
 fn write_stdout(text: &str) -> Result<(), String> {
@@ -275,7 +278,7 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
     } else {
         // Not a problem, since a tool may pass every file it has, whatever the config leaves out.
         if report.all_excluded {
-            eprintln!("nothing to format, since `exclude` leaves out every file");
+            write_stderr("nothing to format, since `exclude` leaves out every file");
         }
         ExitCode::SUCCESS
     }

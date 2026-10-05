@@ -6,7 +6,7 @@ use std::{fs, path::Path};
 use crate::support::{BLOCK, fifo, format_in_time};
 use crate::support::{
     FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format, format_in, io_error_line,
-    read, stderr, write_unformatted,
+    nuten_command, read, stderr, write_unformatted,
 };
 
 /// Sorted, since `read_dir` yields them in no set order.
@@ -152,6 +152,37 @@ fn format_rewrites_file_whose_name_leaves_no_room_for_backup() {
     assert_succeeds_quietly(&output);
     assert_eq!(read(&path), FORMATTED);
     assert_eq!(names_in(&dir.0), [name]);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn format_exits_with_2_though_it_cannot_write_problems() {
+    let dir = TempDir::new();
+    dir.file("bad.nu", "ls || x\n");
+    let full = fs::File::options().write(true).open("/dev/full").unwrap();
+    let output = nuten_command()
+        .args(["format", "bad.nu"])
+        .current_dir(&dir.0)
+        .stderr(full)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn format_succeeds_though_it_cannot_write_that_exclude_leaves_out_every_file() {
+    let dir = TempDir::new();
+    dir.file("nuten.nuon", r#"{exclude: ["vendor"]}"#);
+    dir.file("vendor/a.nu", UNFORMATTED);
+    let full = fs::File::options().write(true).open("/dev/full").unwrap();
+    let output = nuten_command()
+        .args(["format", "vendor"])
+        .current_dir(&dir.0)
+        .stderr(full)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
 }
 
 #[test]
