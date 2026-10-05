@@ -24,12 +24,13 @@ use nuten_lsp::Exit;
 use usage::{Args, Cli, Subcommands, ValueEnum};
 
 use crate::{
+    diff::Difference,
     files::{Candidate, Entry},
     overwrite::{Contents, Failure, OnDisk, overwrite},
     problem::Problem,
     style::Style,
     summary::{Counts, summary},
-    view::{View, view},
+    view::view,
 };
 
 #[derive(Cli)]
@@ -154,8 +155,15 @@ struct Report {
 #[derive(Debug)]
 struct Changed {
     path: PathBuf,
-    /// Only for `--check`, which shows it.
-    view: Option<View>,
+    /// Only for the modes that tell how a file changes.
+    detail: Option<Detail>,
+}
+
+#[derive(Debug)]
+struct Detail {
+    text: String,
+    changed_lines: usize,
+    whitespace_only_lines: usize,
 }
 
 fn main() -> ExitCode {
@@ -276,66 +284,63 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
         };
         Ok((src, formatted))
     });
-    match (formatted, mode) {
-        (Err(problems), _) => fail(&problems),
-        (Ok((src, formatted)), Mode::Check) if formatted != src => {
-            let style = Style::stdout();
-            let changed = Changed {
+    let style = Style::stdout();
+    let (changed, problems) = match formatted {
+        Ok((_, formatted)) if mode == Mode::Write => return print(&formatted),
+        Ok((src, formatted)) => {
+            let changed = (formatted != src).then(|| Changed {
                 path: name.to_path_buf(),
-                view: Some(view(name, &src, &formatted, style)),
-            };
-            match write_stdout(&views_text(&[changed], style)) {
-                Ok(()) => ExitCode::from(1),
-                Err(problem) => fail(&[problem]),
-            }
+                detail: detail(name, &src, &formatted, mode, style),
+            });
+            (changed.into_iter().collect(), Vec::new())
         },
-        (Ok((src, formatted)), Mode::List) if formatted != src => {
-            match write_stdout(&listing([name])) {
-                Ok(()) => ExitCode::from(1),
-                Err(problem) => fail(&[problem]),
-            }
-        },
-        (Ok(_), Mode::Check | Mode::List) => ExitCode::SUCCESS,
-        (Ok((_, formatted)), Mode::Write) => print(&formatted),
-    }
+        Err(problems) => (Vec::new(), problems),
+    };
+    finish(&changed, problems, mode, style)
 }
 
 fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
     let style = Style::stdout();
     let report = report(paths, given, mode, style);
-    let listed = match mode {
-        Mode::Write => Ok(()),
-        Mode::Check => write_stdout(&views_text(&report.changed, style)),
-        Mode::List => write_stdout(&listing(
-            report.changed.iter().map(|changed| changed.path.as_path()),
-        )),
-    };
-    let problems: Vec<_> = unique(report.problems.iter())
-        .cloned()
-        .chain(listed.err())
-        .collect();
-    let code = if !problems.is_empty() {
-        fail(&problems)
-    } else if mode != Mode::Write && !report.changed.is_empty() {
-        ExitCode::from(1)
-    } else {
-        ExitCode::SUCCESS
-    };
+    let problems = unique(report.problems.iter()).cloned().collect();
+    let code = finish(&report.changed, problems, mode, style);
     if let Some(summary) = summary(&report.counts, mode, Style::stderr()) {
         write_stderr(&summary);
     }
     code
 }
 
+fn finish(changed: &[Changed], problems: Vec<Problem>, mode: Mode, style: Style) -> ExitCode {
+    let written = write_stdout(&stdout_text(changed, mode, style));
+    let problems: Vec<_> = problems.into_iter().chain(written.err()).collect();
+    if !problems.is_empty() {
+        fail(&problems)
+    } else if mode != Mode::Write && !changed.is_empty() {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+fn stdout_text(changed: &[Changed], mode: Mode, style: Style) -> String {
+    match mode {
+        Mode::Write => String::new(),
+        Mode::Check => views_text(changed, style),
+        Mode::List => listing(changed.iter().map(|changed| changed.path.as_path())),
+    }
+}
+
+fn detail_texts(changed: &[Changed]) -> impl Iterator<Item = &str> {
+    changed
+        .iter()
+        .filter_map(|changed| Some(changed.detail.as_ref()?.text.as_str()))
+}
+
 fn views_text(changed: &[Changed], style: Style) -> String {
     if changed.is_empty() {
         return String::new();
     }
-    let views: String = changed
-        .iter()
-        .filter_map(|changed| Some(changed.view.as_ref()?.text.as_str()))
-        .collect();
-    heading(changed.len(), style) + &views
+    heading(changed.len(), style) + &detail_texts(changed).collect::<String>()
 }
 
 fn heading(count: usize, style: Style) -> String {
@@ -450,7 +455,7 @@ enum Outcome {
     Unattached(Vec<Problem>),
 }
 
-/// Takes `style`, since the views of `--check` build here in parallel.
+/// Takes `style`, since the detail of each file builds here in parallel.
 fn format_all(jobs: &[Job], mode: Option<Mode>, style: Style) -> Vec<Outcome> {
     parallel::map(jobs, |job| {
         let (candidate, lookup) = match job {
@@ -480,9 +485,9 @@ fn format_all(jobs: &[Job], mode: Option<Mode>, style: Style) -> Vec<Outcome> {
 fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
     let count =
         |kind: fn(&Outcome) -> bool| outcomes.iter().filter(|outcome| kind(outcome)).count();
-    let views = || {
+    let details = || {
         outcomes.iter().filter_map(|outcome| match outcome {
-            Outcome::Changed(changed) => changed.view.as_ref(),
+            Outcome::Changed(changed) => changed.detail.as_ref(),
             _ => None,
         })
     };
@@ -492,8 +497,8 @@ fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
         failed: count(|outcome| matches!(outcome, Outcome::Failed(_))),
         skipped: count(|outcome| matches!(outcome, Outcome::Skipped(_))),
         excluded,
-        changed_lines: views().map(|view| view.changed_lines).sum(),
-        whitespace_only_lines: views().map(|view| view.whitespace_only_lines).sum(),
+        changed_lines: details().map(|detail| detail.changed_lines).sum(),
+        whitespace_only_lines: details().map(|detail| detail.whitespace_only_lines).sum(),
     };
     let (changed, problems): (Vec<_>, Vec<_>) = outcomes
         .into_iter()
@@ -534,11 +539,23 @@ fn format_file(
         overwrite(&OnDisk(path), src.as_bytes(), formatted.as_bytes())
             .map_err(|failure| vec![overwrite_problem(path, &failure)])?;
     }
-    let view = (mode == Mode::Check).then(|| view(path, &src, &formatted, style));
     Ok(Some(Changed {
         path: path.to_path_buf(),
-        view,
+        detail: detail(path, &src, &formatted, mode, style),
     }))
+}
+
+fn detail(path: &Path, src: &str, formatted: &str, mode: Mode, style: Style) -> Option<Detail> {
+    let text_of: fn(&Path, &Difference<'_>, Style) -> String = match mode {
+        Mode::Write | Mode::List => return None,
+        Mode::Check => view,
+    };
+    let difference = Difference::new(src, formatted);
+    Some(Detail {
+        text: text_of(path, &difference, style),
+        changed_lines: difference.changed_lines(),
+        whitespace_only_lines: difference.whitespace_only_lines(),
+    })
 }
 
 /// Not `fs::read_to_string` alone, which waits forever on a FIFO.
@@ -617,7 +634,7 @@ mod tests {
     use nuten_config::FormatConfig;
 
     use super::{
-        Changed, Outcome, Problem, View, catch_panic, format_text, overwrite_problem, report_of,
+        Changed, Detail, Outcome, Problem, catch_panic, format_text, overwrite_problem, report_of,
         views_text,
     };
     use crate::{
@@ -694,7 +711,7 @@ mod tests {
     fn changed(name: &str) -> Changed {
         Changed {
             path: PathBuf::from(name),
-            view: Some(View {
+            detail: Some(Detail {
                 text: format!("{name}\n"),
                 changed_lines: 3,
                 whitespace_only_lines: 1,

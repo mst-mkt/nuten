@@ -1,21 +1,14 @@
 use std::{iter, ops::Range, path::Path};
 
 use crate::{
-    diff::{Change, Hunk, changes, hunks},
+    diff::{Change, Difference, Hunk, changes},
     style::{Style, Tone},
 };
 
 /// Bounds comparing within a change, which can cost the square of both sides.
 const COMPARED_CHARS: usize = 10_000;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct View {
-    pub(crate) text: String,
-    pub(crate) changed_lines: usize,
-    pub(crate) whitespace_only_lines: usize,
-}
-
-pub(crate) fn view(path: &Path, old: &str, new: &str, style: Style) -> View {
+pub(crate) fn view(path: &Path, difference: &Difference<'_>, style: Style) -> String {
     // Lossy for names that are not UTF-8, as the list of `--list-different` is.
     let path: String = path
         .display()
@@ -23,66 +16,34 @@ pub(crate) fn view(path: &Path, old: &str, new: &str, style: Style) -> View {
         .chars()
         .map(char_picture)
         .collect();
-    let body = if old.replace("\r\n", "\n") == new.replace("\r\n", "\n") {
-        endings_body(&path, old, new, style)
-    } else {
-        hunks_body(&path, old, new, style)
+    let body = match &difference.hunks {
+        Some(hunks) => hunks_body(&path, hunks, difference, style),
+        None => endings_body(&path, difference, style),
     };
-    View {
-        text: body.text + &style.tone(Tone::Dim, "╰─") + "\n",
-        ..body
-    }
+    body + &style.tone(Tone::Dim, "╰─") + "\n"
 }
 
 /// Not line by line, which would repeat one mark on every line.
-fn endings_body(path: &str, old: &str, new: &str, style: Style) -> View {
-    let note = format!("line endings: {} → {}", endings(old), endings(new));
-    let lines = old.split_inclusive('\n').count();
-    View {
-        text: corner("╭─ ", path, style) + &edge(style) + &note + "\n",
-        changed_lines: lines,
-        whitespace_only_lines: lines,
-    }
+fn endings_body(path: &str, difference: &Difference<'_>, style: Style) -> String {
+    let note = format!(
+        "line endings: {} → {}",
+        endings(difference.old),
+        endings(difference.new)
+    );
+    corner("╭─ ", path, style) + &edge(style) + &note + "\n"
 }
 
-fn hunks_body(path: &str, old: &str, new: &str, style: Style) -> View {
-    let old_lines: Vec<_> = old.split_inclusive('\n').collect();
-    let new_lines: Vec<_> = new.split_inclusive('\n').collect();
-    let hunks = hunks(&old_lines, &new_lines);
-    let changes = || hunks.iter().flat_map(|hunk| &hunk.changes);
-    let span = |change: &Change| change.old.len().max(change.new.len());
-    let changed_lines = changes().map(span).sum();
-    let whitespace_only_lines = changes()
-        .filter(|change| differs_in_whitespace_alone(change, &old_lines, &new_lines))
-        .map(span)
-        .sum();
-    let text = hunks
+fn hunks_body(path: &str, hunks: &[Hunk], difference: &Difference<'_>, style: Style) -> String {
+    hunks
         .iter()
         .enumerate()
         .map(|(index, hunk)| {
             let mark = if index == 0 { "╭─ " } else { "├─ " };
             let line = hunk.changes[0].old.start + 1;
             corner(mark, &format!("{path}:{line}"), style)
-                + &hunk_text(hunk, &old_lines, &new_lines, style)
+                + &hunk_text(hunk, &difference.old_lines, &difference.new_lines, style)
         })
-        .collect();
-    View {
-        text,
-        changed_lines,
-        whitespace_only_lines,
-    }
-}
-
-/// Line breaks count as whitespace, since formatting joins and splits lines.
-fn differs_in_whitespace_alone(change: &Change, old_lines: &[&str], new_lines: &[&str]) -> bool {
-    let visible = |lines: &[&str]| {
-        lines
-            .iter()
-            .flat_map(|line| line.chars())
-            .filter(|ch| !ch.is_whitespace())
-            .collect::<String>()
-    };
-    visible(&old_lines[change.old.clone()]) == visible(&new_lines[change.new.clone()])
+        .collect()
 }
 
 fn endings(text: &str) -> &'static str {
@@ -330,23 +291,21 @@ mod tests {
     use std::path::Path;
 
     use super::{COMPARED_CHARS, view};
-    use crate::style::Style;
+    use crate::{diff::Difference, style::Style};
 
     fn plain(old: &str, new: &str) -> String {
-        view(Path::new("a.nu"), old, new, Style::PLAIN).text
-    }
-
-    fn line_counts(old: &str, new: &str) -> (usize, usize) {
-        let view = view(Path::new("a.nu"), old, new, Style::PLAIN);
-        (view.changed_lines, view.whitespace_only_lines)
+        view(Path::new("a.nu"), &Difference::new(old, new), Style::PLAIN)
     }
 
     /// The colored view without its colors, with each run of bold characters in brackets.
     fn bracketed(old: &str, new: &str) -> String {
-        let colored = view(Path::new("a.nu"), old, new, Style::COLORED)
-            .text
-            .replace("\u{1b}[1m\u{1b}[31m", "\u{1b}[Sm")
-            .replace("\u{1b}[1m\u{1b}[32m", "\u{1b}[Sm");
+        let colored = view(
+            Path::new("a.nu"),
+            &Difference::new(old, new),
+            Style::COLORED,
+        )
+        .replace("\u{1b}[1m\u{1b}[31m", "\u{1b}[Sm")
+        .replace("\u{1b}[1m\u{1b}[32m", "\u{1b}[Sm");
         colored
             .split('\u{1b}')
             .map(|piece| piece.split_once('m').unwrap_or(("", piece)))
@@ -576,7 +535,11 @@ mod tests {
 
     #[test]
     fn view_shows_control_characters_of_path_as_pictures() {
-        let text = view(Path::new("a\u{1b}.nu"), "ls|x\n", "ls | x\n", Style::PLAIN).text;
+        let text = view(
+            Path::new("a\u{1b}.nu"),
+            &Difference::new("ls|x\n", "ls | x\n"),
+            Style::PLAIN,
+        );
         assert!(text.starts_with("╭─ a␛.nu:1\n"), "{text}");
     }
 
@@ -628,29 +591,10 @@ mod tests {
         assert_eq!(
             view(
                 Path::new("a.nu"),
-                "ls x\nls |x",
-                "ls x\nls | y\n",
+                &Difference::new("ls x\nls |x", "ls x\nls | y\n"),
                 Style::COLORED
-            )
-            .text,
+            ),
             lines.map(|line| line + "\n").concat()
         );
-    }
-
-    #[test]
-    fn view_counts_lines_of_longer_side_of_each_change() {
-        assert_eq!(line_counts("a\nb\nc\n", "x\nc\n").0, 2);
-        assert_eq!(line_counts("ls | x\n", "ls\n| x\n").0, 2);
-    }
-
-    #[test]
-    fn view_counts_lines_of_changes_in_whitespace_alone() {
-        assert_eq!(line_counts("ls|x\n\n\nls\n", "ls | x\n\n\nls -a\n"), (2, 1));
-        assert_eq!(line_counts("ls\n| x\n", "ls | x\n"), (2, 2));
-    }
-
-    #[test]
-    fn view_counts_every_line_of_change_of_line_endings_alone_as_whitespace() {
-        assert_eq!(line_counts("a\r\nb\r\n", "a\nb\n"), (2, 2));
     }
 }

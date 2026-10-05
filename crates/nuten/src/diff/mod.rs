@@ -1,8 +1,12 @@
+mod difference;
 mod myers;
 
 use std::ops::Range;
 
-pub(crate) use self::myers::{Change, changes};
+pub(crate) use self::{
+    difference::Difference,
+    myers::{Change, changes},
+};
 
 const CONTEXT: usize = 3;
 
