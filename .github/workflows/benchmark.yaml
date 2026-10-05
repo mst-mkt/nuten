@@ -1,0 +1,67 @@
+name: benchmark
+
+on:
+  pull_request:
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - .cargo/**
+      - crates/**
+      - flake.nix
+      - flake.lock
+      - nix/nuten.nix
+      - nix/toolchain.nix
+      - nix/dev/flake.lock
+      - nix/dev/corpus.nix
+      - tasks/benchmark/**
+      - scripts/benchmark-comment.nu
+      - .github/workflows/benchmark.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NIX_CONFIG: |
+    extra-substituters = https://nuten.cachix.org
+    extra-trusted-public-keys = nuten.cachix.org-1:UQhrCY0F6u/dOjkl0oySJqXRlG0gbYXl8o7AQ4bmcDs=
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        shell: nix develop --no-update-lock-file ./nix/dev --command bash -eo pipefail {0}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: nix build
+        run: |
+          base=$(nix build --no-link --print-out-paths --no-update-lock-file ./base)
+          head=$(nix build --no-link --print-out-paths --no-update-lock-file .)
+          echo "BASE_NUTEN=$base/bin/nuten" >> "$GITHUB_ENV"
+          echo "HEAD_NUTEN=$head/bin/nuten" >> "$GITHUB_ENV"
+      - name: Benchmark
+        run: |
+          nu scripts/benchmark-comment.nu "$NUTEN_CORPUS" "$BASE_NUTEN" "$HEAD_NUTEN" > "$RUNNER_TEMP/comment.md"
+          cat "$RUNNER_TEMP/comment.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: gh pr comment "$PR" --edit-last --create-if-none --body-file "$RUNNER_TEMP/comment.md"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
