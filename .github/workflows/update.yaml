@@ -1,0 +1,54 @@
+name: update
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  BRANCH: update/flake
+  TITLE: "chore(nix): update the flake inputs"
+  GIT_NAME: github-actions[bot]
+  GIT_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+
+jobs:
+  flake:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Update root flake (./flake.lock)
+        run: nix flake update
+      - name: Update dev flake (./nix/dev/flake.lock)
+        run: nix flake update --flake ./nix/dev
+      - name: Follow flake
+        run: nix shell --inputs-from ./nix/dev nixpkgs#nushell --command nu scripts/follow-flake.nu
+      - name: Check for changes
+        id: diff
+        run: git diff --quiet || echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Commit changes
+        if: ${{ steps.diff.outputs.changed }}
+        run: git -c user.name="$GIT_NAME" -c user.email="$GIT_EMAIL" commit --all --message "$TITLE"
+      - name: Push changes
+        if: ${{ steps.diff.outputs.changed }}
+        run: git push --force "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY" "HEAD:refs/heads/$BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Create pull request
+        if: ${{ steps.diff.outputs.changed }}
+        run: gh pr view "$BRANCH" || gh pr create --head "$BRANCH" --title "$TITLE" --body ""
+        env:
+          GH_TOKEN: ${{ github.token }}
