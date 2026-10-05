@@ -171,6 +171,10 @@ pub(crate) fn output_in_time(command: &mut Command) -> Output {
 pub(crate) const UNFORMATTED: &str = "ls|first";
 pub(crate) const FORMATTED: &str = "ls | first\n";
 
+pub(crate) fn view_of_unformatted(name: &str) -> String {
+    format!("╭─ {name}:1\n│ -ls|first\n│ +ls | first⏎\n╰─\n")
+}
+
 pub(crate) fn write_unformatted<const N: usize>(dir: &TempDir, names: [&str; N]) -> [PathBuf; N] {
     names.map(|name| dir.file(name, UNFORMATTED))
 }

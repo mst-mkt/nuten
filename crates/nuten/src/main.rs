@@ -1,13 +1,10 @@
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "`--check` is yet to report through it")
-)]
 mod diff;
 mod files;
 mod overwrite;
 mod parallel;
 mod style;
 mod summary;
+mod view;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -31,6 +28,7 @@ use crate::{
     overwrite::{Contents, Failure, OnDisk, overwrite},
     style::Style,
     summary::{Counts, summary},
+    view::view,
 };
 
 #[derive(Cli)]
@@ -50,7 +48,7 @@ enum Command {
         ),
         example(
             "nuten format --check",
-            header = "List the files that would change, without changing them"
+            header = "Show what would change, without changing any file"
         ),
         example(
             "nuten format --stdin-filepath src/a.nu -",
@@ -119,7 +117,7 @@ struct Format {
         extensions("nuon", "jsonc", "json")
     )]
     config: Option<PathBuf>,
-    /// List the files that would change, instead of changing them
+    /// Show what would change, without changing any file
     #[usage(long)]
     check: bool,
     /// List the files that would change and nothing else, for a script to read
@@ -147,9 +145,16 @@ enum Mode {
 
 #[derive(Debug)]
 struct Report {
-    changed: Vec<PathBuf>,
+    changed: Vec<Changed>,
     problems: Vec<String>,
     counts: Counts,
+}
+
+#[derive(Debug)]
+struct Changed {
+    path: PathBuf,
+    /// Only for `--check`, which shows it.
+    view: Option<String>,
 }
 
 fn main() -> ExitCode {
@@ -268,9 +273,19 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
     });
     match (formatted, mode) {
         (Err(problems), _) => fail(&problems),
-        (Ok((src, formatted)), Mode::Check) if formatted != src => ExitCode::from(1),
+        (Ok((src, formatted)), Mode::Check) if formatted != src => {
+            let style = Style::stdout();
+            let changed = Changed {
+                path: name.to_path_buf(),
+                view: Some(view(name, &src, &formatted, style)),
+            };
+            match write_stdout(&views_text(&[changed], style)) {
+                Ok(()) => ExitCode::from(1),
+                Err(problem) => fail(&[problem]),
+            }
+        },
         (Ok((src, formatted)), Mode::List) if formatted != src => {
-            match write_stdout(&listing(&[name.to_path_buf()])) {
+            match write_stdout(&listing([name])) {
                 Ok(()) => ExitCode::from(1),
                 Err(problem) => fail(&[problem]),
             }
@@ -281,10 +296,14 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
 }
 
 fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
-    let report = report(paths, given, mode);
+    let style = Style::stdout();
+    let report = report(paths, given, mode, style);
     let listed = match mode {
         Mode::Write => Ok(()),
-        Mode::Check | Mode::List => write_stdout(&listing(&report.changed)),
+        Mode::Check => write_stdout(&views_text(&report.changed, style)),
+        Mode::List => write_stdout(&listing(
+            report.changed.iter().map(|changed| changed.path.as_path()),
+        )),
     };
     let problems: Vec<_> = unique(report.problems.iter())
         .cloned()
@@ -303,15 +322,31 @@ fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCo
     code
 }
 
-fn listing(paths: &[PathBuf]) -> String {
+fn views_text(changed: &[Changed], style: Style) -> String {
+    if changed.is_empty() {
+        return String::new();
+    }
+    let views: String = changed
+        .iter()
+        .filter_map(|changed| changed.view.as_deref())
+        .collect();
+    heading(changed.len(), style) + &views
+}
+
+fn heading(count: usize, style: Style) -> String {
+    let files = if count == 1 { "file" } else { "files" };
+    style.bold(&format!("{count} {files} would be reformatted:")) + "\n\n"
+}
+
+fn listing<'a>(paths: impl IntoIterator<Item = &'a Path>) -> String {
     // Lossy for names that are not UTF-8, as the lists of other formatters are.
     paths
-        .iter()
+        .into_iter()
         .map(|path| path.display().to_string() + "\n")
         .collect()
 }
 
-fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
+fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode, style: Style) -> Report {
     let dirs = files::dirs(paths);
     let dir_lookups: HashMap<_, _> = dirs
         .iter()
@@ -338,7 +373,7 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> Report {
         .values()
         .chain(jobs.iter().flatten().map(|(_, lookup)| lookup))
         .any(Lookup::is_wrong);
-    let outcomes = format_all(&jobs, formats.then_some(mode));
+    let outcomes = format_all(&jobs, formats.then_some(mode), style);
     report_of(outcomes, excluded_count)
 }
 
@@ -401,7 +436,7 @@ fn pick((candidate, lookup): &(Candidate, Lookup)) -> Pick {
 
 #[derive(Debug)]
 enum Outcome {
-    Changed(PathBuf),
+    Changed(Changed),
     Unchanged,
     /// Left alone, since some config file is wrong.
     Skipped(Vec<String>),
@@ -410,7 +445,8 @@ enum Outcome {
     Unattached(Vec<String>),
 }
 
-fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Outcome> {
+/// Takes `style`, since the views of `--check` build here in parallel.
+fn format_all(jobs: &[Job], mode: Option<Mode>, style: Style) -> Vec<Outcome> {
     parallel::map(jobs, |job| {
         let (candidate, lookup) = match job {
             Ok(found) => found,
@@ -423,9 +459,9 @@ fn format_all(jobs: &[Job], mode: Option<Mode>) -> Vec<Outcome> {
                     // Reading the file reports why it cannot be resolved.
                     Err(_) => config.format.clone(),
                 };
-                match format_file(&candidate.path, &format, mode) {
-                    Ok(true) => Outcome::Changed(candidate.path.clone()),
-                    Ok(false) => Outcome::Unchanged,
+                match format_file(&candidate.path, &format, mode, style) {
+                    Ok(Some(changed)) => Outcome::Changed(changed),
+                    Ok(None) => Outcome::Unchanged,
                     Err(problems) => Outcome::Failed(problems),
                 }
             },
@@ -446,21 +482,21 @@ fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
         skipped: count(|outcome| matches!(outcome, Outcome::Skipped(_))),
         excluded,
     };
-    let changed = outcomes
-        .iter()
-        .filter_map(|outcome| match outcome {
-            Outcome::Changed(path) => Some(path.clone()),
-            _ => None,
-        })
-        .collect();
-    let problems = outcomes
+    let (changed, problems): (Vec<_>, Vec<_>) = outcomes
         .into_iter()
-        .flat_map(|outcome| match outcome {
+        .filter_map(|outcome| match outcome {
+            Outcome::Changed(changed) => Some(Ok(changed)),
+            Outcome::Unchanged => None,
             Outcome::Skipped(problems)
             | Outcome::Failed(problems)
-            | Outcome::Unattached(problems) => problems,
-            Outcome::Changed(_) | Outcome::Unchanged => Vec::new(),
+            | Outcome::Unattached(problems) => Some(Err(problems)),
         })
+        .partition(Result::is_ok);
+    let changed = changed.into_iter().filter_map(Result::ok).collect();
+    let problems = problems
+        .into_iter()
+        .filter_map(Result::err)
+        .flatten()
         .collect();
     Report {
         changed,
@@ -469,16 +505,27 @@ fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
     }
 }
 
-fn format_file(path: &Path, config: &FormatConfig, mode: Mode) -> Result<bool, Vec<String>> {
+fn format_file(
+    path: &Path,
+    config: &FormatConfig,
+    mode: Mode,
+    style: Style,
+) -> Result<Option<Changed>, Vec<String>> {
     let io_problem = |error: io::Error| vec![format!("{}: {error}", path.display())];
     let src = read_regular_file(path).map_err(io_problem)?;
     let formatted = format_text(path, &src, config)?;
-    let changed = formatted != src;
-    if changed && mode == Mode::Write {
+    if formatted == src {
+        return Ok(None);
+    }
+    if mode == Mode::Write {
         overwrite(&OnDisk(path), src.as_bytes(), formatted.as_bytes())
             .map_err(|failure| vec![overwrite_problem(path, &failure)])?;
     }
-    Ok(changed)
+    let view = (mode == Mode::Check).then(|| view(path, &src, &formatted, style));
+    Ok(Some(Changed {
+        path: path.to_path_buf(),
+        view,
+    }))
 }
 
 fn overwrite_problem(path: &Path, failure: &Failure) -> String {
@@ -536,8 +583,11 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use super::{catch_panic, overwrite_problem};
-    use crate::overwrite::{Contents, Failure};
+    use super::{Changed, catch_panic, overwrite_problem, views_text};
+    use crate::{
+        overwrite::{Contents, Failure},
+        style::Style,
+    };
 
     #[test]
     fn catch_panic_turns_panic_into_problem_naming_file() {
@@ -583,5 +633,25 @@ mod tests {
             };
             assert_eq!(overwrite_problem(Path::new("a.nu"), &failure), expected);
         }
+    }
+
+    fn changed(name: &str) -> Changed {
+        Changed {
+            path: PathBuf::from(name),
+            view: Some(format!("{name}\n")),
+        }
+    }
+
+    #[test]
+    fn views_text_heads_views_with_count_in_bold() {
+        assert_eq!(
+            views_text(&[changed("a")], Style::COLORED),
+            "\u{1b}[1m1 file would be reformatted:\u{1b}[0m\n\na\n"
+        );
+        assert_eq!(
+            views_text(&[changed("a"), changed("b")], Style::PLAIN),
+            "2 files would be reformatted:\n\na\nb\n"
+        );
+        assert_eq!(views_text(&[], Style::PLAIN), "");
     }
 }

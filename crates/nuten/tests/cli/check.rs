@@ -4,20 +4,25 @@ use std::{io, path::MAIN_SEPARATOR};
 
 use crate::support::{
     FORMATTED, TempDir, UNFORMATTED, assert_succeeds, format_in, nuten_command, problems, read,
-    stderr, stdout, write_unformatted,
+    stderr, stdout, view_of_unformatted, write_unformatted,
 };
 
 #[test]
-fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
+fn format_check_shows_files_it_would_change_in_order_given_and_changes_none() {
     let dir = TempDir::new();
     let [z, a, c] = write_unformatted(&dir, ["z.nu", "d/a.nu", "d/c.nuon"]);
     let formatted = dir.file("b.nu", FORMATTED);
     let output = format_in(&dir, &["--check", "z.nu", "b.nu", "d"]);
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
     assert!(problems(&output).is_empty(), "{}", stderr(&output));
+    let views = [
+        view_of_unformatted("z.nu"),
+        view_of_unformatted(&format!("d{MAIN_SEPARATOR}a.nu")),
+        view_of_unformatted(&format!("d{MAIN_SEPARATOR}c.nuon")),
+    ];
     assert_eq!(
         stdout(&output),
-        format!("z.nu\nd{MAIN_SEPARATOR}a.nu\nd{MAIN_SEPARATOR}c.nuon\n")
+        format!("3 files would be reformatted:\n\n{}", views.concat())
     );
     assert_eq!(read(&z), UNFORMATTED);
     assert_eq!(read(&a), UNFORMATTED);
@@ -26,7 +31,7 @@ fn format_check_lists_files_it_would_change_in_order_given_and_changes_none() {
 }
 
 #[test]
-fn format_check_succeeds_and_lists_nothing_when_every_file_is_formatted() {
+fn format_check_succeeds_and_shows_nothing_when_every_file_is_formatted() {
     let dir = TempDir::new();
     dir.file("a.nu", FORMATTED);
     dir.file("nuten.nuon", "{ indent_width: 2 }\n");
@@ -43,7 +48,13 @@ fn format_check_exits_with_2_on_problem_though_files_would_change() {
     let [path] = write_unformatted(&dir, ["a.nu"]);
     let output = format_in(&dir, &["--check", "bad.nu", "a.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(stdout(&output), "a.nu\n");
+    assert_eq!(
+        stdout(&output),
+        format!(
+            "1 file would be reformatted:\n\n{}",
+            view_of_unformatted("a.nu")
+        )
+    );
     assert!(
         problems(&output).starts_with("bad.nu:1:4: "),
         "{}",
@@ -54,7 +65,7 @@ fn format_check_exits_with_2_on_problem_though_files_would_change() {
 }
 
 #[test]
-fn format_check_lists_nothing_when_any_config_file_is_wrong() {
+fn format_check_shows_nothing_when_any_config_file_is_wrong() {
     let dir = TempDir::new();
     dir.file("bad/nuten.nuon", "{a: 1}");
     let paths = write_unformatted(&dir, ["bad/a.nu", "ok/b.nu"]);
@@ -69,7 +80,7 @@ fn format_check_lists_nothing_when_any_config_file_is_wrong() {
 }
 
 #[test]
-fn format_check_counts_list_as_written_when_reader_closes_first() {
+fn format_check_counts_view_as_written_when_reader_closes_first() {
     let dir = TempDir::new();
     write_unformatted(&dir, ["a.nu"]);
     let (reader, writer) = io::pipe().unwrap();
@@ -86,7 +97,7 @@ fn format_check_counts_list_as_written_when_reader_closes_first() {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn format_check_reports_list_it_cannot_write() {
+fn format_check_reports_view_it_cannot_write() {
     let dir = TempDir::new();
     let [path] = write_unformatted(&dir, ["a.nu"]);
     let full = fs::File::options().write(true).open("/dev/full").unwrap();
@@ -100,4 +111,21 @@ fn format_check_reports_list_it_cannot_write() {
     let problems = problems(&output);
     assert!(problems.starts_with("stdout: "), "{problems}");
     assert_eq!(read(&path), UNFORMATTED);
+}
+
+#[test]
+fn format_check_shows_view_in_color_when_clicolor_force_is_set() {
+    let dir = TempDir::new();
+    dir.file("a.nu", UNFORMATTED);
+    let output = nuten_command()
+        .args(["format", "--check", "a.nu"])
+        .current_dir(&dir.0)
+        .env("CLICOLOR_FORCE", "1")
+        .output()
+        .unwrap();
+    let stdout = stdout(&output);
+    assert!(
+        stdout.starts_with("\u{1b}[1m1 file would be reformatted:\u{1b}[0m\n\n\u{1b}[2m╭─ "),
+        "{stdout:?}"
+    );
 }

@@ -5,7 +5,7 @@ use std::{io, path::Path, process::Stdio, thread};
 use crate::support::{
     BLOCK, FORMATTED, TempDir, UNFORMATTED, assert_succeeds_quietly, format_in,
     format_stdin_command, format_stdin_in, nuten_command, problems, read, stderr, stdout,
-    write_unformatted,
+    view_of_unformatted, write_unformatted,
 };
 
 #[test]
@@ -95,12 +95,33 @@ fn format_writes_nothing_to_stdout_when_config_file_for_stdin_is_wrong() {
 }
 
 #[test]
-fn format_check_on_stdin_exits_with_1_and_writes_nothing_when_it_would_change() {
+fn format_check_on_stdin_exits_with_1_and_shows_what_would_change() {
     let dir = TempDir::new();
-    let output = format_stdin_in(&dir, &["--check", "-"], UNFORMATTED.as_bytes());
+    let unnamed = format_stdin_in(&dir, &["--check", "-"], UNFORMATTED.as_bytes());
+    assert_eq!(unnamed.status.code(), Some(1), "{}", stderr(&unnamed));
+    assert_eq!(
+        stdout(&unnamed),
+        format!(
+            "1 file would be reformatted:\n\n{}",
+            view_of_unformatted("<stdin>")
+        )
+    );
+    assert!(unnamed.stderr.is_empty());
+}
+
+#[test]
+fn format_check_on_stdin_shows_change_under_stdin_filepath() {
+    let dir = TempDir::new();
+    let args = ["--check", "--stdin-filepath", "a.nu", "-"];
+    let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
-    assert!(output.stdout.is_empty());
-    assert!(output.stderr.is_empty());
+    assert_eq!(
+        stdout(&output),
+        format!(
+            "1 file would be reformatted:\n\n{}",
+            view_of_unformatted("a.nu")
+        )
+    );
 }
 
 #[test]
