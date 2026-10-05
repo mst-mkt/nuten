@@ -73,7 +73,7 @@ def formatters [nuten: path, nufmt: path]: nothing -> list<record> {
             name: nuten
             command: $nuten
             arguments: {|file| [format, --stdin-filepath, $file, -] }
-            directory: {|dir| [format, --check, $dir] }
+            directory: {|dir| [format, --list-different, $dir] }
         }
         {
             name: nufmt

@@ -20,7 +20,7 @@ def setup []: nothing -> record {
             name: nuten
             command: $env.NUTEN
             arguments: {|file| [format, --stdin-filepath, $file, -] }
-            directory: {|dir| [format, --check, $dir] }
+            directory: {|dir| [format, --list-different, $dir] }
         }
         oracle: $env.NUTEN_ORACLE
     }
@@ -73,7 +73,7 @@ def time-directories-in-child [
 ]: nothing -> record {
     let script = $"
         source ($NUFMT | to nuon)
-        let formatter = { name: nuten command: $env.FORMATTER directory: {|dir| [format --check $dir] } }
+        let formatter = { name: nuten command: $env.FORMATTER directory: {|dir| [format --list-different $dir] } }
         time-directories [$env.FILE] $env.CORPUS [$formatter \($formatter | update name nufmt\)] 1 null
     "
     let environment = { TMPDIR: $tmp, FILE: $file, CORPUS: $corpus, FORMATTER: $formatter }
@@ -93,7 +93,7 @@ def "formatters passes nuten path of file and nufmt stdin flag" [] {
 def "formatters checks directory with nuten and dry-runs it with nufmt" [] {
     let actual = formatters /bin/nuten /bin/nufmt
 
-    assert equal (do $actual.0.directory /d) [format --check /d]
+    assert equal (do $actual.0.directory /d) [format --list-different /d]
     assert equal (do $actual.1.directory /d) [--dry-run /d]
 }
 

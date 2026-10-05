@@ -106,11 +106,11 @@ def file-inputs [corpus: path, picks: record]: nothing -> list<record> {
       }
 }
 
-# nuten checks with 1 when a file would change, which is no failure here.
+# nuten exits with 1 when a file would change, which is no failure here.
 def directory-input [corpus: path, directory: string]: nothing -> record {
     {
         name: $directory
-        arguments: [format, --check, ($corpus | path join $directory)]
+        arguments: [format, --list-different, ($corpus | path join $directory)]
         stdin: null
         exit_codes: [0, 1]
     }

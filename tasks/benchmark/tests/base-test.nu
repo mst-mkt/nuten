@@ -129,7 +129,7 @@ def "directory-input checks directory in place" [] {
 
     let actual = directory-input $context.corpus nu-std
 
-    assert equal $actual.arguments [format --check ($context.corpus | path join nu-std)]
+    assert equal $actual.arguments [format --list-different ($context.corpus | path join nu-std)]
     assert equal $actual.stdin null
 }
 
