@@ -12,6 +12,8 @@ jsonc-parser = { workspace = true }
 nuten-format = { workspace = true }
 nuten-parser = { workspace = true }
 nuten-syntax = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }

@@ -20,7 +20,10 @@ expression: schema()
     },
     "indent_style": {
       "description": "Whether to indent with spaces or with tabs.",
-      "enum": ["space", "tab"]
+      "enum": [
+        "space",
+        "tab"
+      ]
     },
     "indent_width": {
       "description": "Columns per indent level, and per tab when indenting with tabs.",
@@ -30,11 +33,20 @@ expression: schema()
     },
     "line_ending": {
       "description": "What ends each line, where `auto` follows the first line break outside a string, a bare word, or an `@example` block; line breaks inside those stay as written.",
-      "enum": ["lf", "crlf", "auto"]
+      "enum": [
+        "lf",
+        "crlf",
+        "auto"
+      ]
     },
     "commas": {
       "description": "Where a `,` goes among the items of lists, records, tables, parameters, and type parameters: nowhere, between items on one line, between items, or also after the last item when they break over lines.",
-      "enum": ["none", "inline", "always", "trailing"]
+      "enum": [
+        "none",
+        "inline",
+        "always",
+        "trailing"
+      ]
     },
     "respect_gitignore": {
       "description": "Whether formatting a directory skips the files ignored by `.gitignore`, `.ignore`, the exclude file of the repository, or the global excludes file of git. The config file nearest the directory, or the one `--config` names, decides it for everything under the directory.",
@@ -82,7 +94,10 @@ expression: schema()
           },
           "indent_style": {
             "description": "Whether to indent with spaces or with tabs.",
-            "enum": ["space", "tab"]
+            "enum": [
+              "space",
+              "tab"
+            ]
           },
           "indent_width": {
             "description": "Columns per indent level, and per tab when indenting with tabs.",
@@ -92,14 +107,25 @@ expression: schema()
           },
           "line_ending": {
             "description": "What ends each line, where `auto` follows the first line break outside a string, a bare word, or an `@example` block; line breaks inside those stay as written.",
-            "enum": ["lf", "crlf", "auto"]
+            "enum": [
+              "lf",
+              "crlf",
+              "auto"
+            ]
           },
           "commas": {
             "description": "Where a `,` goes among the items of lists, records, tables, parameters, and type parameters: nowhere, between items on one line, between items, or also after the last item when they break over lines.",
-            "enum": ["none", "inline", "always", "trailing"]
+            "enum": [
+              "none",
+              "inline",
+              "always",
+              "trailing"
+            ]
           }
         },
-        "required": ["include"],
+        "required": [
+          "include"
+        ],
         "additionalProperties": false
       }
     }

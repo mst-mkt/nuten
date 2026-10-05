@@ -1,4 +1,4 @@
-use std::fmt::{self, Write};
+use serde::{Serialize, Serializer};
 
 use crate::settings::{Kind, PICKERS, SETTINGS, Scope, Setting};
 
@@ -20,7 +20,7 @@ pub fn schema() -> String {
         ("properties", Json::object(properties)),
         ("additionalProperties", Json::Bool(false)),
     ]);
-    format!("{root}\n")
+    serde_json::to_string_pretty(&root).expect("the schema has only string keys") + "\n"
 }
 
 fn property(setting: &Setting) -> Json {
@@ -94,6 +94,7 @@ fn override_record() -> Json {
     ])
 }
 
+/// Not `serde_json::Value`, whose map sorts the keys unless `preserve_order` brings in `indexmap`.
 #[derive(Debug)]
 enum Json {
     Object(Vec<(&'static str, Json)>),
@@ -107,50 +108,20 @@ impl Json {
     fn object(fields: impl IntoIterator<Item = (&'static str, Json)>) -> Json {
         Json::Object(fields.into_iter().collect())
     }
+}
 
-    /// An array stays on one line, since the schema holds no array but short ones of strings.
-    fn write(&self, f: &mut fmt::Formatter<'_>, depth: usize) -> fmt::Result {
-        let indent = |depth| "  ".repeat(depth);
+impl Serialize for Json {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Json::Object(fields) if fields.is_empty() => f.write_str("{}"),
             Json::Object(fields) => {
-                f.write_str("{\n")?;
-                for (index, (key, value)) in fields.iter().enumerate() {
-                    let separator = if index + 1 == fields.len() { "" } else { "," };
-                    write!(f, "{}", indent(depth + 1))?;
-                    write_string(f, key)?;
-                    f.write_str(": ")?;
-                    value.write(f, depth + 1)?;
-                    writeln!(f, "{separator}")?;
-                }
-                write!(f, "{}}}", indent(depth))
+                serializer.collect_map(fields.iter().map(|(key, value)| (key, value)))
             },
-            Json::Array(items) => {
-                f.write_char('[')?;
-                for (index, item) in items.iter().enumerate() {
-                    if index > 0 {
-                        f.write_str(", ")?;
-                    }
-                    item.write(f, depth)?;
-                }
-                f.write_char(']')
-            },
-            Json::String(text) => write_string(f, text),
-            Json::Integer(integer) => write!(f, "{integer}"),
-            Json::Bool(boolean) => write!(f, "{boolean}"),
+            Json::Array(items) => serializer.collect_seq(items),
+            Json::String(text) => serializer.serialize_str(text),
+            Json::Integer(integer) => serializer.serialize_i64(*integer),
+            Json::Bool(boolean) => serializer.serialize_bool(*boolean),
         }
     }
-}
-
-impl fmt::Display for Json {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.write(f, 0)
-    }
-}
-
-/// Keys, choices, and descriptions have no control characters, so only `"` and `\` need escapes.
-fn write_string(f: &mut fmt::Formatter<'_>, text: &str) -> fmt::Result {
-    write!(f, "\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
 #[cfg(test)]
@@ -158,26 +129,17 @@ mod tests {
     use super::Json;
 
     #[test]
-    fn object_puts_each_field_on_its_own_line() {
-        let json = Json::object([
-            ("a", Json::Integer(1)),
-            ("b", Json::object([("c", Json::Bool(true))])),
-            ("d", Json::object([])),
-        ]);
+    fn object_keeps_order_of_its_fields() {
+        let json = Json::object([("b", Json::Integer(1)), ("a", Json::Bool(true))]);
+        assert_eq!(serde_json::to_string(&json).unwrap(), r#"{"b":1,"a":true}"#);
+    }
+
+    #[test]
+    fn string_escapes_quote_backslash_and_control_characters() {
+        let json = Json::String("a\"b\\c\nd\u{1}");
         assert_eq!(
-            json.to_string(),
-            "{\n  \"a\": 1,\n  \"b\": {\n    \"c\": true\n  },\n  \"d\": {}\n}"
+            serde_json::to_string(&json).unwrap(),
+            r#""a\"b\\c\nd\u0001""#
         );
-    }
-
-    #[test]
-    fn array_stays_on_one_line() {
-        let json = Json::Array(vec![Json::String("a"), Json::Integer(-1)]);
-        assert_eq!(json.to_string(), r#"["a", -1]"#);
-    }
-
-    #[test]
-    fn string_escapes_quote_and_backslash() {
-        assert_eq!(Json::String(r#"a"b\c"#).to_string(), r#""a\"b\\c""#);
     }
 }
