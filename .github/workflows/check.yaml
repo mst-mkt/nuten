@@ -72,8 +72,6 @@ jobs:
   test-windows:
     runs-on: windows-2025
     timeout-minutes: 90
-    env:
-      RUST_VERSION: 1.98.1
     defaults:
       run:
         shell: bash
@@ -83,7 +81,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Rust
-        run: rustup default "$RUST_VERSION"
+        run: rustup toolchain install
       - name: Install cargo-nextest
         run: curl --location --fail --silent --show-error https://get.nexte.st/latest/windows-tar | tar --extract --gzip --directory ~/.cargo/bin
       - name: Read nushell version
