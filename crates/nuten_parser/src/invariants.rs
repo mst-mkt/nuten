@@ -397,10 +397,7 @@ mod tests {
     };
 
     fn token(kind: SyntaxKind, start: u32, end: u32) -> Token {
-        Token {
-            kind,
-            range: TextRange::new(start.into(), end.into()),
-        }
+        Token::new(kind, TextRange::new(start.into(), end.into()))
     }
 
     fn lex_error(kind: LexErrorKind, start: u32, end: u32) -> LexError {

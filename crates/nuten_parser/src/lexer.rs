@@ -5,10 +5,62 @@ use std::{fmt, ops::Range};
 use nuten_syntax::SyntaxKind;
 use rowan::{TextRange, TextSize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub(crate) struct Token {
     pub(crate) kind: SyntaxKind,
     pub(crate) range: TextRange,
+    first_bracket: FirstBracket,
+}
+
+// A token put together without the lexer does not know its first bracket.
+impl PartialEq for Token {
+    fn eq(&self, other: &Token) -> bool {
+        self.kind == other.kind && self.range == other.range
+    }
+}
+
+impl Token {
+    pub(crate) fn new(kind: SyntaxKind, range: TextRange) -> Token {
+        Token {
+            kind,
+            range,
+            first_bracket: FirstBracket::UNKNOWN,
+        }
+    }
+
+    pub(crate) fn first_bracket_spans(self, range: TextRange) -> Option<bool> {
+        let byte = |len: TextSize| {
+            u8::try_from(u32::from(len))
+                .ok()
+                .filter(|&len| len < u8::MAX)
+        };
+        if byte(range.start() - self.range.start())? != self.first_bracket.from_start {
+            return None;
+        }
+        Some(byte(self.range.end() - range.end())? == self.first_bracket.to_end)
+    }
+}
+
+/// Bytes keep it within the padding of a token, which is copied a lot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct FirstBracket {
+    from_start: u8,
+    to_end: u8,
+}
+
+impl FirstBracket {
+    const UNKNOWN: FirstBracket = FirstBracket {
+        from_start: u8::MAX,
+        to_end: u8::MAX,
+    };
+
+    fn of(item: Range<usize>, bracket: Range<usize>) -> FirstBracket {
+        let byte = |len: usize| u8::try_from(len).unwrap_or(u8::MAX);
+        FirstBracket {
+            from_start: byte(bracket.start - item.start),
+            to_end: byte(item.end - bracket.end),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -191,24 +243,26 @@ impl Iterator for Lexer<'_> {
 
     fn next(&mut self) -> Option<Token> {
         let start = self.pos;
-        let kind = match self.rest() {
+        let unknown = |kind| (kind, FirstBracket::UNKNOWN);
+        let (kind, first_bracket) = match self.rest() {
             [] => return None,
-            [b'|', b'|', ..] => self.eat(2, SyntaxKind::PipePipe),
-            [b'|', ..] => self.eat(1, SyntaxKind::Pipe),
-            [b';', ..] => self.eat(1, SyntaxKind::Semicolon),
-            [b'\n', ..] => self.eat(1, SyntaxKind::Newline),
-            [b'\r', b'\n', ..] => self.eat(2, SyntaxKind::Newline),
-            [b' ' | b'\t' | b'\r', ..] => self.whitespace(),
-            [b'#', ..] => self.comment(),
+            [b'|', b'|', ..] => unknown(self.eat(2, SyntaxKind::PipePipe)),
+            [b'|', ..] => unknown(self.eat(1, SyntaxKind::Pipe)),
+            [b';', ..] => unknown(self.eat(1, SyntaxKind::Semicolon)),
+            [b'\n', ..] => unknown(self.eat(1, SyntaxKind::Newline)),
+            [b'\r', b'\n', ..] => unknown(self.eat(2, SyntaxKind::Newline)),
+            [b' ' | b'\t' | b'\r', ..] => unknown(self.whitespace()),
+            [b'#', ..] => unknown(self.comment()),
             _ => self.item().unwrap_or_else(|error| {
                 self.errors.push(error);
-                SyntaxKind::Error
+                unknown(SyntaxKind::Error)
             }),
         };
         assert!(self.pos > start, "empty token at {start}");
         Some(Token {
             kind,
             range: text_range(start..self.pos),
+            first_bracket,
         })
     }
 }
@@ -261,12 +315,13 @@ impl<'a> Lexer<'a> {
         SyntaxKind::Comment
     }
 
-    fn item(&mut self) -> Result<SyntaxKind, LexError> {
+    fn item(&mut self) -> Result<(SyntaxKind, FirstBracket), LexError> {
         if let Some(kind) = self.peek().and_then(|byte| self.mode.special_kind(byte)) {
-            return Ok(self.eat(1, kind));
+            return Ok((self.eat(1, kind), FirstBracket::UNKNOWN));
         }
         let start = self.pos;
         let mut closers = Vec::new();
+        let mut first_bracket = None;
         let mut leading_string = None;
 
         while let Some(byte) = self.peek()
@@ -307,9 +362,11 @@ impl<'a> Lexer<'a> {
                 {
                     if let Some((_, opened)) = closers.pop()
                         && closers.is_empty()
-                        && let Some(brackets) = &mut self.brackets
                     {
-                        brackets.push(text_range(opened..at + 1));
+                        first_bracket.get_or_insert(opened..at + 1);
+                        if let Some(brackets) = &mut self.brackets {
+                            brackets.push(text_range(opened..at + 1));
+                        }
                     }
                 },
                 // Nu keeps a `]` with nothing open in the word, unlike `}` and `)`.
@@ -327,10 +384,14 @@ impl<'a> Lexer<'a> {
         if self.peek() == Some(b'|') && is_redirection(&self.src.as_bytes()[start..self.pos]) {
             self.pos += 1;
         }
-        Ok(match leading_string {
+        let kind = match leading_string {
             Some((kind, end)) if end == self.pos => kind,
             _ => operator_kind(&self.src.as_bytes()[start..self.pos]).unwrap_or(SyntaxKind::Word),
-        })
+        };
+        let first_bracket = first_bracket.map_or(FirstBracket::UNKNOWN, |bracket| {
+            FirstBracket::of(start..self.pos, bracket)
+        });
+        Ok((kind, first_bracket))
     }
 
     fn comment_in_item(&mut self, top_level: bool) {
@@ -561,6 +622,46 @@ mod tests {
 
     fn assert_one_item(item: &str) {
         assert_eq!(split(&format!("{item} z")), [item, "z"], "{item:?}");
+    }
+
+    fn first_bracket_spans(src: &str, bracket: TextRange) -> Option<bool> {
+        lex_all(src).tokens[0].first_bracket_spans(bracket)
+    }
+
+    #[test]
+    fn first_bracket_is_first_closed_at_top_level() {
+        for (src, bracket, expected) in [
+            ("[a]", range(0, 3), true),
+            ("[[a]]", range(0, 5), true),
+            ("[a]:", range(0, 3), true),
+            ("0x[ff]", range(2, 6), true),
+            ("[a]b]", range(0, 5), false),
+            ("[a][b]", range(0, 6), false),
+        ] {
+            assert_eq!(first_bracket_spans(src, bracket), Some(expected), "{src:?}");
+        }
+    }
+
+    #[test]
+    fn first_bracket_closing_far_from_end_does_not_span_to_end() {
+        let src = format!("[a]{}]", "x".repeat(300));
+        assert_eq!(
+            first_bracket_spans(&src, TextRange::up_to(TextSize::of(src.as_str()))),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn first_bracket_is_unknown_without_bracket_or_far_from_start() {
+        let at = |len: u32| {
+            (
+                format!("{}[a]", "x".repeat(len as usize)),
+                range(len, len + 3),
+            )
+        };
+        for (src, bracket) in [("a".to_owned(), range(0, 1)), at(255), at(300)] {
+            assert_eq!(first_bracket_spans(&src, bracket), None, "{src:?}");
+        }
     }
 
     #[test]

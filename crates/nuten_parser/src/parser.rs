@@ -37,22 +37,36 @@ impl Brackets {
         bytes.first() == Some(&self.open) && bytes.last() == Some(&self.close)
     }
 
-    fn enclose(&self, src: &str, range: TextRange) -> bool {
+    fn enclose(&self, src: &str, token: Token, range: TextRange) -> bool {
         if !self.wrap(&src[range]) {
             return false;
         }
         if !self.always_nested {
             return true;
         }
-        // Without the last byte, the only error is the first bracket left unclosed.
-        let (open, _, close) = bracket_parts(range);
-        let lexed = lexer::lex(
-            src,
-            TextRange::new(range.start(), close.start()),
-            Mode::Block,
-        );
-        matches!(lexed.errors.as_slice(), [error] if error.range == open)
+        match token.first_bracket_spans(range) {
+            Some(spans) => {
+                debug_assert_eq!(
+                    spans,
+                    first_bracket_closes_last(src, range),
+                    "the lexer records the first bracket block mode closes"
+                );
+                spans
+            },
+            None => first_bracket_closes_last(src, range),
+        }
     }
+}
+
+fn first_bracket_closes_last(src: &str, range: TextRange) -> bool {
+    // Without the last byte, the only error is the first bracket left unclosed.
+    let (open, _, close) = bracket_parts(range);
+    let lexed = lexer::lex(
+        src,
+        TextRange::new(range.start(), close.start()),
+        Mode::Block,
+    );
+    matches!(lexed.errors.as_slice(), [error] if error.range == open)
 }
 
 #[derive(Clone, Copy)]
@@ -337,7 +351,7 @@ impl<'a> Parser<'a> {
             return None;
         }
         let range = affix.brackets_within(token.range);
-        if !brackets.enclose(self.src, range) {
+        if !brackets.enclose(self.src, token, range) {
             return None;
         }
         Some(Enclosed {
@@ -442,10 +456,7 @@ impl<'a> Parser<'a> {
             .iter()
             .map(|&piece| match piece {
                 Piece::Lexed(range) => self.lexed_item(range),
-                Piece::Token(kind, range) => Some(Token {
-                    kind,
-                    range,
-                }),
+                Piece::Token(kind, range) => Some(Token::new(kind, range)),
             })
             .collect::<Option<Vec<_>>>()?;
         let starts =
@@ -694,10 +705,7 @@ impl<'a> Parser<'a> {
     }
 
     fn push_token(&mut self, kind: SyntaxKind, range: TextRange) {
-        self.events.push(Event::Token(Token {
-            kind,
-            range,
-        }));
+        self.events.push(Event::Token(Token::new(kind, range)));
     }
 
     fn push_error(&mut self, error: ParseError) {
@@ -744,6 +752,20 @@ mod tests {
         let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
         let names = Names::of(src, &lexed.tokens);
         Parser::new(src, lexed, Mode::Block.skips_newline(), names, 0)
+    }
+
+    #[test]
+    fn enclose_without_recorded_bracket_lexes_word_again() {
+        for (src, expected) in [
+            ("[a]", true),
+            ("[[a]]", true),
+            ("[a]b]", false),
+            ("[a][b]", false),
+        ] {
+            let range = TextRange::up_to(TextSize::of(src));
+            let token = Token::new(SyntaxKind::Word, range);
+            assert_eq!(SQUARE.enclose(src, token, range), expected, "{src:?}");
+        }
     }
 
     #[test]
@@ -886,14 +908,8 @@ mod tests {
         assert_eq!(
             p.events,
             [
-                Event::Token(Token {
-                    kind: SyntaxKind::Newline,
-                    range: range(0, 1),
-                }),
-                Event::Token(Token {
-                    kind: SyntaxKind::Word,
-                    range: range(1, 2),
-                }),
+                Event::Token(Token::new(SyntaxKind::Newline, range(0, 1))),
+                Event::Token(Token::new(SyntaxKind::Word, range(1, 2))),
             ]
         );
     }
@@ -941,14 +957,14 @@ mod tests {
         assert_eq!(
             p.events,
             [
-                Event::Token(Token {
-                    kind: SyntaxKind::Whitespace,
-                    range: TextRange::up_to(TextSize::new(1)),
-                }),
-                Event::Token(Token {
-                    kind: SyntaxKind::Word,
-                    range: TextRange::new(TextSize::new(1), TextSize::new(4)),
-                }),
+                Event::Token(Token::new(
+                    SyntaxKind::Whitespace,
+                    TextRange::up_to(TextSize::new(1))
+                )),
+                Event::Token(Token::new(
+                    SyntaxKind::Word,
+                    TextRange::new(TextSize::new(1), TextSize::new(4))
+                )),
             ]
         );
         assert_eq!(p.errors, 0);
@@ -963,10 +979,10 @@ mod tests {
             p.bump_bracketed(SyntaxKind::List, bracketed, |_| {});
             assert_eq!(
                 p.events,
-                [Event::Token(Token {
-                    kind: SyntaxKind::Word,
-                    range: TextRange::up_to(TextSize::of(src)),
-                })],
+                [Event::Token(Token::new(
+                    SyntaxKind::Word,
+                    TextRange::up_to(TextSize::of(src))
+                ))],
                 "{src:?}"
             );
         }
