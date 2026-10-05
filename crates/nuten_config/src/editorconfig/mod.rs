@@ -10,7 +10,9 @@ use std::{
 
 use self::glob::Glob;
 use crate::{
-    IndentStyle, LineEnding, LookupError, find::holds_vcs_dir, lookup::read_regular_file,
+    IndentStyle, LineEnding, LookupError,
+    find::{holds_vcs_dir, join_into},
+    lookup::read_regular_file,
     settings::FormatChange,
 };
 
@@ -206,22 +208,25 @@ impl Properties {
 pub(crate) fn find_each<'a>(
     dirs: impl IntoIterator<Item = &'a Path>,
 ) -> HashMap<&'a Path, Result<EditorconfigFiles, LookupError>> {
+    // One buffer, since the search probes several names in every ancestor and each path allocates.
+    let mut path = PathBuf::new();
     let mut found = HashMap::new();
     for dir in dirs {
-        let searched = search(dir, &found);
+        let searched = search(&mut path, dir, &found);
         found.extend(searched);
     }
     found
 }
 
 fn search<'a>(
+    path: &mut PathBuf,
     dir: &'a Path,
     found: &HashMap<&Path, Result<EditorconfigFiles, LookupError>>,
 ) -> Vec<(&'a Path, Result<EditorconfigFiles, LookupError>)> {
     let Climb {
         dirs,
         above,
-    } = climb(dir, found);
+    } = climb(path, dir, found);
     match above {
         Ok(above) => dirs
             .into_iter()
@@ -247,6 +252,7 @@ struct Climb<'a> {
 }
 
 fn climb<'a>(
+    path: &mut PathBuf,
     dir: &'a Path,
     found: &HashMap<&Path, Result<EditorconfigFiles, LookupError>>,
 ) -> Climb<'a> {
@@ -259,7 +265,7 @@ fn climb<'a>(
         if let Some(known) = found.get(ancestor) {
             break known.clone();
         }
-        let own = match read_in(ancestor) {
+        let own = match read_in(path, ancestor) {
             Ok(own) => own,
             Err(error) => {
                 dirs.push((ancestor, None));
@@ -272,7 +278,7 @@ fn climb<'a>(
             break Ok(EditorconfigFiles::default());
         }
         // A file above the root would format the repository by where it is cloned.
-        match holds_vcs_dir(ancestor) {
+        match holds_vcs_dir(path, ancestor) {
             Ok(false) => {},
             Ok(true) => break Ok(EditorconfigFiles::default()),
             Err(error) => break Err(error.into()),
@@ -284,15 +290,15 @@ fn climb<'a>(
     }
 }
 
-fn read_in(dir: &Path) -> Result<Option<DirEditorconfig>, LookupError> {
-    let path = dir.join(FILE_NAME);
-    match read_regular_file(&path) {
+fn read_in(path: &mut PathBuf, dir: &Path) -> Result<Option<DirEditorconfig>, LookupError> {
+    join_into(path, dir, FILE_NAME);
+    match read_regular_file(path) {
         Ok(text) => Ok(Some(DirEditorconfig {
             dir: dir.to_path_buf(),
             editorconfig: Arc::new(Editorconfig::parse(&text)),
         })),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(LookupError::new(&path, error)),
+        Err(error) => Err(LookupError::new(path, error)),
     }
 }
 

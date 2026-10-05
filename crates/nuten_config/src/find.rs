@@ -93,17 +93,13 @@ fn step(path: &mut PathBuf, dir: &Path) -> Result<Step, FindError> {
         }
     }
     // A config file above the root would format the repository by where it is cloned.
-    if holds_vcs_dir_in(path, dir)? {
+    if holds_vcs_dir(path, dir)? {
         return Ok(Step::Ends(None));
     }
     Ok(Step::GoesOn)
 }
 
-pub(crate) fn holds_vcs_dir(dir: &Path) -> Result<bool, FindError> {
-    holds_vcs_dir_in(&mut PathBuf::new(), dir)
-}
-
-fn holds_vcs_dir_in(path: &mut PathBuf, dir: &Path) -> Result<bool, FindError> {
+pub(crate) fn holds_vcs_dir(path: &mut PathBuf, dir: &Path) -> Result<bool, FindError> {
     for name in VCS_DIRS {
         if exists(path, dir, name)? {
             return Ok(true);
@@ -112,10 +108,14 @@ fn holds_vcs_dir_in(path: &mut PathBuf, dir: &Path) -> Result<bool, FindError> {
     Ok(false)
 }
 
-fn exists(path: &mut PathBuf, dir: &Path, name: &str) -> Result<bool, FindError> {
+pub(crate) fn join_into(path: &mut PathBuf, dir: &Path, name: &str) {
     path.as_mut_os_string().clear();
     path.push(dir);
     path.push(name);
+}
+
+fn exists(path: &mut PathBuf, dir: &Path, name: &str) -> Result<bool, FindError> {
+    join_into(path, dir, name);
     match fs::symlink_metadata(&path) {
         Ok(_) => Ok(true),
         Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(false),
@@ -133,7 +133,7 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use super::{FILE_NAMES, FindError, exists, find, find_each};
+    use super::{FILE_NAMES, FindError, find, find_each, join_into};
     use crate::{Format, LookupError};
 
     #[test]
@@ -170,11 +170,11 @@ mod tests {
     }
 
     #[test]
-    fn exists_leaves_path_as_relative_dir_joined_with_name_after_earlier_probe() {
+    fn join_into_leaves_path_as_relative_dir_joined_with_name_after_earlier_join() {
         let mut path = PathBuf::new();
-        exists(&mut path, Path::new("missing/a"), "b").unwrap();
-        exists(&mut path, Path::new("missing/c"), "d").unwrap();
-        assert_eq!(path, Path::new("missing/c/d"));
+        join_into(&mut path, Path::new("a"), "b");
+        join_into(&mut path, Path::new("c"), "d");
+        assert_eq!(path, Path::new("c/d"));
     }
 
     #[test]
