@@ -1,14 +1,3 @@
-use std::{fs, io, path::Path};
-
-/// Not `fs::read_to_string` alone, which waits forever on a FIFO.
-pub fn read_regular_file(path: &Path) -> io::Result<String> {
-    if fs::metadata(path)?.is_file() {
-        fs::read_to_string(path)
-    } else {
-        Err(io::Error::other("not a regular file"))
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct LineColumn {
     pub line: usize,
@@ -20,7 +9,7 @@ pub fn located<T>(src: &str, items: impl IntoIterator<Item = (usize, T)>) -> Vec
     line_columns(src, &offsets).into_iter().zip(items).collect()
 }
 
-/// No offset is counted from the start of `src` or of its line, as a line can hold many errors.
+/// No offset is counted from the start of `src` or of its line, as a line can hold many offsets.
 fn line_columns(src: &str, offsets: &[usize]) -> Vec<LineColumn> {
     let places = places(src, offsets);
     offsets

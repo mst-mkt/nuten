@@ -3,7 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use nuten_config::{LineColumn, LookupError};
+use nuten_config::LookupError;
+use nuten_line_index::LineColumn;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Problem {
@@ -81,7 +82,8 @@ impl fmt::Display for Problem {
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use nuten_config::{LineColumn, LookupError};
+    use nuten_config::LookupError;
+    use nuten_line_index::LineColumn;
 
     use super::{Position, Problem};
 

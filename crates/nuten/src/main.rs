@@ -9,6 +9,7 @@ mod view;
 
 use std::{
     collections::{HashMap, HashSet},
+    fs,
     hash::Hash,
     io::{self, Write},
     panic::{self, UnwindSafe},
@@ -16,11 +17,9 @@ use std::{
     process::ExitCode,
 };
 
-use nuten_config::{
-    Config, FormatConfig, Lookup, LookupError,
-    file::{located, read_regular_file},
-};
+use nuten_config::{Config, FormatConfig, Lookup, LookupError};
 use nuten_format::format;
+use nuten_line_index::located;
 use nuten_lsp::Exit;
 use usage::{Args, Cli, Subcommands, ValueEnum};
 
@@ -540,6 +539,15 @@ fn format_file(
         path: path.to_path_buf(),
         view,
     }))
+}
+
+/// Not `fs::read_to_string` alone, which waits forever on a FIFO.
+fn read_regular_file(path: &Path) -> io::Result<String> {
+    if fs::metadata(path)?.is_file() {
+        fs::read_to_string(path)
+    } else {
+        Err(io::Error::other("not a regular file"))
+    }
 }
 
 fn overwrite_problem(path: &Path, failure: &Failure) -> Problem {

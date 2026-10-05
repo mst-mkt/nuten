@@ -1,5 +1,4 @@
 mod escape;
-pub mod file;
 mod find;
 mod json;
 mod lookup;
@@ -23,7 +22,6 @@ use nuten_parser::ParseErrorKind;
 use nuten_syntax::TextRange;
 
 pub use crate::{
-    file::LineColumn,
     find::{FILE_NAMES, FindError, VCS_DIRS, find},
     lookup::{Lookup, LookupError, canonical, load_given, of_dirs, of_files, of_text, resolved},
     patterns::{PatternProblem, Patterns},

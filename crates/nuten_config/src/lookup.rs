@@ -1,14 +1,12 @@
 use std::{
     collections::{HashMap, HashSet},
-    error, fmt, fs,
+    error, fmt, fs, io,
     path::{Component, Path, PathBuf},
 };
 
-use crate::{
-    Config, Format,
-    file::{LineColumn, located, read_regular_file},
-    find::find_each,
-};
+use nuten_line_index::{LineColumn, located};
+
+use crate::{Config, Format, find::find_each};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LookupError {
@@ -273,12 +271,22 @@ fn load_file(path: &Path) -> Result<Config, Vec<LookupError>> {
     })
 }
 
+/// Not `fs::read_to_string` alone, which waits forever on a FIFO.
+fn read_regular_file(path: &Path) -> io::Result<String> {
+    if fs::metadata(path)?.is_file() {
+        fs::read_to_string(path)
+    } else {
+        Err(io::Error::other("not a regular file"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{env, fs, path::PathBuf, process};
 
+    use nuten_line_index::LineColumn;
+
     use super::{LookupError, load_given};
-    use crate::file::LineColumn;
 
     #[test]
     fn lookup_error_reads_as_path_line_column_and_message() {

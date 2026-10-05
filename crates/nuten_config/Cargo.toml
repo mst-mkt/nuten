@@ -10,6 +10,7 @@ repository.workspace = true
 globset = { workspace = true }
 jsonc-parser = { workspace = true }
 nuten-format = { workspace = true }
+nuten-line-index = { workspace = true }
 nuten-parser = { workspace = true }
 nuten-syntax = { workspace = true }
 serde = { workspace = true }
