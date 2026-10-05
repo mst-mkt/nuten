@@ -1,4 +1,4 @@
-use std::{fs, iter, process::Output};
+use std::{fs, iter, path::Path, process::Output};
 
 use serde_json::{Value, json};
 
@@ -62,6 +62,20 @@ fn lsp_formatting(id: i32, uri: &str) -> Value {
     lsp_request(id, "textDocument/formatting", &params)
 }
 
+#[cfg(unix)]
+fn file_uri(path: &Path) -> String {
+    format!("file://{}", path.display())
+}
+
+#[cfg(windows)]
+fn file_uri(path: &Path) -> String {
+    let path = path.display().to_string();
+    format!(
+        "file:///{}",
+        path.trim_start_matches(r"\\?\").replace('\\', "/")
+    )
+}
+
 fn lsp_block_edits(indent: &str) -> Value {
     let range = json!({
         "start": { "line": 1, "character": 0 },
@@ -74,7 +88,7 @@ fn lsp_block_edits(indent: &str) -> Value {
 fn lsp_formats_open_document_with_config_file_nearest_its_file() {
     let dir = TempDir::new();
     dir.file("nuten.json", r#"{ "indent_width": 2 }"#);
-    let uri = format!("file://{}", dir.path("sub/a.nu").display());
+    let uri = file_uri(&dir.path("sub/a.nu"));
     let messages: Vec<_> = lsp_initialization()
         .into_iter()
         .chain([
