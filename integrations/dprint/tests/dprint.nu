@@ -10,7 +10,7 @@ def setup []: nothing -> record {
     let plugin = $env.NUTEN_DPRINT | path expand
     { nuten: {}, plugins: [$plugin] } | save ($dir | path join dprint.json)
 
-    { dir: $dir }
+    { dir: $dir, plugin: $plugin }
 }
 
 @after-each
@@ -65,11 +65,49 @@ def "dprint reports parse error at its line and column" [] {
 }
 
 @test
-def "dprint resolves empty nuten section to empty object" [] {
+def "dprint resolves empty nuten section to defaults of nuten" [] {
     let context = $in
 
     let actual = run-dprint $context.dir output-resolved-config
 
     assert equal $actual.exit_code 0 $actual.stderr
-    assert equal ($actual.stdout | from json) { nuten: {} }
+    let expected = {
+        lineWidth: 100
+        useTabs: false
+        indentWidth: 4
+        newLineKind: auto
+        commas: inline
+    }
+    assert equal ($actual.stdout | from json) { nuten: $expected }
+}
+
+@test
+def "dprint formats with global settings under nuten section" [] {
+    let context = $in
+    let settings = {
+        lineWidth: 20
+        indentWidth: 8
+        nuten: { indentWidth: 2, commas: always }
+        plugins: [$context.plugin]
+    }
+    $settings | save --force ($context.dir | path join dprint.json)
+    let file = put $context.dir a.nu "[alpha bravo charlie]\n"
+
+    let actual = run-dprint $context.dir fmt a.nu
+
+    assert equal $actual.exit_code 0 $actual.stderr
+    assert equal (open --raw $file) "[\n  alpha,\n  bravo,\n  charlie\n]\n"
+}
+
+@test
+def "dprint reports invalid nuten setting" [] {
+    let context = $in
+    let settings = { nuten: { commas: x }, plugins: [$context.plugin] }
+    $settings | save --force ($context.dir | path join dprint.json)
+    put $context.dir a.nu "ls\n" | ignore
+
+    let actual = run-dprint $context.dir check a.nu
+
+    assert not equal $actual.exit_code 0
+    assert str contains $actual.stderr "(commas)"
 }
