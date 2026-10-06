@@ -1,5 +1,5 @@
 packages:
-  - editors/*
+  - integrations/*
 
 savePrefix: ""
 

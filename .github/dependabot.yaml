@@ -2,7 +2,7 @@ version: 2
 
 updates:
   - package-ecosystem: cargo
-    directories: [/, /editors/zed, /tasks/fuzz]
+    directories: [/, /integrations/zed, /tasks/fuzz]
     schedule:
       interval: weekly
     cooldown:

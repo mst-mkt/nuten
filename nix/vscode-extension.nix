@@ -7,7 +7,7 @@
   pnpm,
 }:
 let
-  manifest = lib.importJSON ../editors/vscode/package.json;
+  manifest = lib.importJSON ../integrations/vscode/package.json;
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
@@ -16,10 +16,10 @@ let
       ../pnpm-workspace.yaml
       ../LICENSE
       ../assets/logo.png
-      ../editors/vscode/package.json
-      ../editors/vscode/icon.png
-      ../editors/vscode/LICENSE
-      (lib.fileset.difference ../editors/vscode/src ../editors/vscode/src/test)
+      ../integrations/vscode/package.json
+      ../integrations/vscode/icon.png
+      ../integrations/vscode/LICENSE
+      (lib.fileset.difference ../integrations/vscode/src ../integrations/vscode/src/test)
     ];
   };
 in
@@ -56,7 +56,7 @@ vscode-utils.buildVscodeExtension (finalAttrs: {
 
   buildPhase = ''
     runHook preBuild
-    cd editors/vscode
+    cd integrations/vscode
     esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --minify --outfile=${manifest.main}
     runHook postBuild
   '';

@@ -12,7 +12,7 @@ importers:
         specifier: 1.0.0-rc.0
         version: 1.0.0-rc.0(@vitest/ui@5.0.1(vitest@5.0.1))
 
-  editors/vscode:
+  integrations/vscode:
     dependencies:
       vscode-languageclient:
         specifier: 10.1.2

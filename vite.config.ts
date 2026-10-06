@@ -16,9 +16,9 @@ export default defineConfig({
         command: [
           "cargo clippy --workspace --all-targets -- --deny warnings",
           "RUSTDOCFLAGS='--deny warnings' cargo doc --workspace --no-deps",
-          "cargo clippy --manifest-path editors/zed/Cargo.toml --target wasm32-wasip2 --all-targets -- --deny warnings",
+          "cargo clippy --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --all-targets -- --deny warnings",
         ],
-        input: [{ auto: true }, "!target/**", "!editors/zed/target/**"],
+        input: [{ auto: true }, "!target/**", "!integrations/zed/target/**"],
         env: ["PATH"],
         untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],
@@ -43,8 +43,8 @@ export default defineConfig({
         output: [],
       },
       "test:zed": {
-        command: "cargo test --manifest-path editors/zed/Cargo.toml",
-        input: [{ auto: true }, "!editors/zed/target/**"],
+        command: "cargo test --manifest-path integrations/zed/Cargo.toml",
+        input: [{ auto: true }, "!integrations/zed/target/**"],
         env: ["PATH"],
         untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],

@@ -107,7 +107,7 @@ jobs:
       - if: ${{ !cancelled() }}
         run: cargo oracle format tasks/oracle/test_data "$NUTEN_CORPUS"
 
-  test-editors:
+  test-integrations:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
