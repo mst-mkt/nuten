@@ -834,7 +834,7 @@ fn hidden_words<'a>(src: &'a str, file_tokens: &[Token]) -> Option<Box<[&'a str]
 const HIDDEN_TRIM: [char; 6] = ['"', '\'', '`', '[', ']', ','];
 
 /// The lexer splits them, so that strings, comments, and line breaks read as nu reads them.
-/// Only brackets that hold `word` are lexed again, which spares most files any lexing.
+/// Only tokens and brackets that hold `word` are lexed again, which spares most files any lexing.
 /// Each level lexes the levels inside it again, so the depth bounds the time.
 fn statements_holding<'a>(
     src: &'a str,
@@ -863,6 +863,7 @@ fn statements_holding<'a>(
         pending.extend(
             tokens
                 .iter()
+                .filter(|token| src[token.range].contains(word))
                 .flat_map(|token| insides(src, token, mode))
                 .map(|(range, mode)| (range, mode, depth + 1)),
         );
@@ -1864,6 +1865,20 @@ mod tests {
         assert_eq!(*alias_heads("print $'x((alias c = ^c))'"), ["c"]);
         assert!(alias_heads("print $\"(ls\nalias d = ^d)\"").is_empty());
         assert!(alias_heads("print $'(ls\nalias e = ^e)'").is_empty());
+    }
+
+    #[test]
+    fn hidden_words_come_from_parentheses_in_interpolations() {
+        assert_eq!(
+            hidden_words("print $\"(hide a)\"").as_deref(),
+            Some(&["a"][..])
+        );
+    }
+
+    #[test]
+    fn alias_heads_come_from_brackets_after_brackets_without_alias() {
+        assert_eq!(*alias_heads("ls (pwd) (alias a = ^a)"), ["a"]);
+        assert_eq!(*alias_heads("print $\"(pwd)\" $\"(alias b = ^b)\""), ["b"]);
     }
 
     #[test]
