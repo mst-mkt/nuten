@@ -12,6 +12,7 @@ nuten-config = { workspace = true }
 nuten-format = { workspace = true }
 nuten-line-index = { workspace = true }
 nuten-lsp = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 usage = { workspace = true }
 

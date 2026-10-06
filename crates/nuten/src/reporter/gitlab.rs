@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde_json::json;
+use serde::Serialize;
 
 use super::absolute_as_written;
 use crate::{diff::Difference, problem::Problem};
@@ -28,17 +28,21 @@ pub(crate) fn file_issue(path: &Path, difference: &Difference<'_>) -> String {
     let path = path_in_project(path, project_dir().as_deref());
     let path_text = path_text(&path);
     issue(&Issue {
-        check: FORMAT_CHECK,
         description: "Would be reformatted",
-        severity: "minor",
+        check_name: FORMAT_CHECK,
         fingerprint: fingerprint(&[
             FORMAT_CHECK.as_bytes(),
             &path_bytes(&path),
             old_text.as_bytes(),
         ]),
-        path: &path_text,
-        begin: *lines.start(),
-        end: *lines.end(),
+        severity: "minor",
+        location: Location {
+            path: &path_text,
+            lines: Lines {
+                begin: *lines.start(),
+                end: *lines.end(),
+            },
+        },
     })
 }
 
@@ -52,9 +56,8 @@ pub(crate) fn problem_issue(problem: &Problem) -> Option<String> {
         .and_then(|position| position.column)
         .map_or(String::new(), |column| column.to_string());
     Some(issue(&Issue {
-        check: PROBLEM_CHECK,
         description: &problem.message,
-        severity: "major",
+        check_name: PROBLEM_CHECK,
         // With the position, since a problem holds no text of its own to follow as lines move.
         fingerprint: fingerprint(&[
             PROBLEM_CHECK.as_bytes(),
@@ -63,34 +66,40 @@ pub(crate) fn problem_issue(problem: &Problem) -> Option<String> {
             column.as_bytes(),
             problem.message.as_bytes(),
         ]),
-        path: &path_text,
-        begin: line,
-        end: line,
+        severity: "major",
+        location: Location {
+            path: &path_text,
+            lines: Lines {
+                begin: line,
+                end: line,
+            },
+        },
     }))
 }
 
+#[derive(Serialize)]
 struct Issue<'a> {
-    check: &'a str,
     description: &'a str,
-    severity: &'a str,
+    check_name: &'a str,
     fingerprint: String,
+    severity: &'a str,
+    location: Location<'a>,
+}
+
+#[derive(Serialize)]
+struct Location<'a> {
     path: &'a str,
+    lines: Lines,
+}
+
+#[derive(Serialize)]
+struct Lines {
     begin: usize,
     end: usize,
 }
 
 fn issue(issue: &Issue<'_>) -> String {
-    json!({
-        "description": issue.description,
-        "check_name": issue.check,
-        "fingerprint": issue.fingerprint,
-        "severity": issue.severity,
-        "location": {
-            "path": issue.path,
-            "lines": { "begin": issue.begin, "end": issue.end },
-        },
-    })
-    .to_string()
+    serde_json::to_string(issue).expect("an issue holds only strings and numbers")
 }
 
 /// The directory GitLab CI cloned the repository into, as other formatters read it.
@@ -168,13 +177,6 @@ mod tests {
     }
 
     #[test]
-    fn problem_issue_describes_problem_by_its_message() {
-        let issue = problem_issue(&Problem::in_file(Path::new("a.nu"), "e")).unwrap();
-        let issue: Value = serde_json::from_str(&issue).unwrap();
-        assert_eq!(issue["description"], "e");
-    }
-
-    #[test]
     fn problem_issue_fingerprint_tells_apart_path_position_and_message() {
         let position = |line, column| Position {
             line,
@@ -210,6 +212,21 @@ mod tests {
         assert_eq!(
             lines(&Problem::in_file(path, "e")),
             json!({ "begin": 1, "end": 1 })
+        );
+    }
+
+    #[test]
+    fn problem_issue_writes_keys_in_order_of_gitlab_documentation() {
+        let issue = problem_issue(&Problem::in_file(Path::new("a.nu"), "e")).unwrap();
+        assert!(
+            issue.starts_with(r#"{"description":"e","check_name":"nuten/problem","fingerprint":"#),
+            "{issue}"
+        );
+        assert!(
+            issue.ends_with(
+                r#","severity":"major","location":{"path":"a.nu","lines":{"begin":1,"end":1}}}"#
+            ),
+            "{issue}"
         );
     }
 
