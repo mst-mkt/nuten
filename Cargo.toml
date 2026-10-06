@@ -39,6 +39,7 @@ usage = { package = "usage-rs", version = "6.9.1", default-features = false, fea
 [profile.release]
 lto = "fat"
 codegen-units = 1
+strip = true
 
 [profile.dev]
 debug = "line-tables-only"
