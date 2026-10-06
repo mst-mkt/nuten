@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "tasks/*"]
+members = ["crates/*", "integrations/dprint", "tasks/*"]
 exclude = ["tasks/benchmark", "tasks/fuzz"]
 
 [workspace.package]
@@ -19,6 +19,7 @@ nuten-lsp = { path = "crates/nuten_lsp" }
 nuten-parser = { path = "crates/nuten_parser" }
 nuten-syntax = { path = "crates/nuten_syntax" }
 
+dprint-core = { version = "0.70.0", default-features = false }
 globset = "0.4.20"
 ignore = "0.4.33"
 insta = { version = "1.48.0", features = ["glob"] }

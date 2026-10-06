@@ -1,0 +1,21 @@
+[package]
+name = "nuten-dprint"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dprint-core = { workspace = true, features = ["wasm"] }
+nuten-format = { workspace = true }
+nuten-line-index = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

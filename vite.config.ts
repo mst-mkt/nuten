@@ -16,7 +16,7 @@ export default defineConfig({
         command: [
           "cargo clippy --workspace --all-targets -- --deny warnings",
           "RUSTDOCFLAGS='--deny warnings' cargo doc --workspace --no-deps",
-          "cargo clippy --package nuten-format --target wasm32-unknown-unknown -- --deny warnings",
+          "cargo clippy --package nuten-format --package nuten-dprint --target wasm32-unknown-unknown -- --deny warnings",
           "cargo clippy --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --all-targets -- --deny warnings",
         ],
         input: [{ auto: true }, "!target/**", "!integrations/zed/target/**"],
@@ -30,7 +30,15 @@ export default defineConfig({
 
       "test:rust": {
         command: "cargo nextest run --workspace",
-        input: ["Cargo.toml", "Cargo.lock", ".cargo/**", "crates/**", "tasks/oracle/**"],
+        input: [
+          "Cargo.toml",
+          "Cargo.lock",
+          ".cargo/**",
+          "crates/**",
+          "integrations/dprint/**",
+          "LICENSE",
+          "tasks/oracle/**",
+        ],
         env: ["PATH", "NUTEN_CORPUS"],
         untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],

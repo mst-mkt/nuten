@@ -2,6 +2,7 @@
 let
   members = [
     ../crates
+    ../integrations/dprint
     ../tasks/oracle
   ];
   src = lib.fileset.toSource {
