@@ -31,6 +31,7 @@ let
     "lsp"
     "vscode"
     "zed"
+    "dprint"
     "assets"
   ];
   convcoConfig = (pkgs.formats.yaml { }).generate "convco.yaml" {
