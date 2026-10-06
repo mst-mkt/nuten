@@ -27,6 +27,7 @@ in
       toolchain.vite-plus
       pkgs.cargo-insta
       pkgs.cargo-nextest
+      pkgs.dprint
       treefmt.config.build.wrapper
       nuten
 

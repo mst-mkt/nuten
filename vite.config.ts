@@ -58,6 +58,13 @@ export default defineConfig({
         untrackedEnv: ["NIX_*", "SDKROOT"],
         output: [],
       },
+      "test:dprint": {
+        command: "nu integrations/dprint/test.nu",
+        input: [{ auto: true }, "!target/**"],
+        env: ["PATH", "NU_LIB_DIRS"],
+        untrackedEnv: ["NIX_*", "SDKROOT"],
+        output: [],
+      },
       "test:nu": {
         command: "nu scripts/test-nu.nu",
         input: [{ auto: true }, "!target/**"],

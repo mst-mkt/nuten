@@ -123,6 +123,9 @@ jobs:
       - name: vp run test:zed
         if: ${{ !cancelled() }}
         run: nix develop --no-update-lock-file ./nix/dev --command vp run test:zed
+      - name: vp run test:dprint
+        if: ${{ !cancelled() }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run test:dprint
       - name: vp run test:vscode
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: nix develop --no-update-lock-file ./nix/dev --command vp run test:vscode
