@@ -22,6 +22,7 @@ in
       "rust-analyzer"
     ])
     fenixPackages.targets.wasm32-wasip2.stable.rust-std # For Zed extensions
+    fenixPackages.targets.wasm32-unknown-unknown.stable.rust-std # For wasm hosts of the formatter
     fenixPackages.latest.rustfmt # For unstable rustfmt options
   ];
   nightlyRust = fenixPackages.latest.withComponents [

@@ -16,6 +16,7 @@ export default defineConfig({
         command: [
           "cargo clippy --workspace --all-targets -- --deny warnings",
           "RUSTDOCFLAGS='--deny warnings' cargo doc --workspace --no-deps",
+          "cargo clippy --package nuten-format --target wasm32-unknown-unknown -- --deny warnings",
           "cargo clippy --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --all-targets -- --deny warnings",
         ],
         input: [{ auto: true }, "!target/**", "!integrations/zed/target/**"],
