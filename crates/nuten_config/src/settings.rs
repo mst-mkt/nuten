@@ -53,8 +53,8 @@ pub(crate) static SETTINGS: [Setting; 10] = [
         key: "line_width",
         description: "Columns a line may take before it breaks where it can.",
         scope: Scope::File(Kind::Integer {
-            min: 1,
-            max: u32::MAX as i64,
+            min: *FormatConfig::LINE_WIDTHS.start() as i64,
+            max: *FormatConfig::LINE_WIDTHS.end() as i64,
             change: |width| {
                 FormatChange::LineWidth(u32::try_from(width).expect("the width is from min to max"))
             },
@@ -78,8 +78,8 @@ pub(crate) static SETTINGS: [Setting; 10] = [
         key: "indent_width",
         description: "Columns per indent level, and per tab when indenting with tabs.",
         scope: Scope::File(Kind::Integer {
-            min: 1,
-            max: u8::MAX as i64,
+            min: *FormatConfig::INDENT_WIDTHS.start() as i64,
+            max: *FormatConfig::INDENT_WIDTHS.end() as i64,
             change: |width| {
                 FormatChange::IndentWidth(
                     u8::try_from(width).expect("the width is from min to max"),
@@ -114,19 +114,19 @@ pub(crate) static SETTINGS: [Setting; 10] = [
                       after the last item when they break over lines.",
         scope: Scope::File(Kind::Choice(&[
             Choice {
-                name: "none",
+                name: Commas::None.name(),
                 change: FormatChange::Commas(Commas::None),
             },
             Choice {
-                name: "inline",
+                name: Commas::Inline.name(),
                 change: FormatChange::Commas(Commas::Inline),
             },
             Choice {
-                name: "always",
+                name: Commas::Always.name(),
                 change: FormatChange::Commas(Commas::Always),
             },
             Choice {
-                name: "trailing",
+                name: Commas::Trailing.name(),
                 change: FormatChange::Commas(Commas::Trailing),
             },
         ])),

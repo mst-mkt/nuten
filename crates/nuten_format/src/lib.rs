@@ -1,6 +1,8 @@
 pub mod invariants;
 mod rules;
 
+use std::ops::RangeInclusive;
+
 pub use nuten_doc::IndentStyle;
 use nuten_doc::PrinterOptions;
 use nuten_parser::Parsed;
@@ -14,6 +16,11 @@ pub struct Config {
     pub indent_width: u8,
     pub line_ending: LineEnding,
     pub commas: Commas,
+}
+
+impl Config {
+    pub const INDENT_WIDTHS: RangeInclusive<u8> = 1..=u8::MAX;
+    pub const LINE_WIDTHS: RangeInclusive<u32> = 1..=u32::MAX;
 }
 
 impl Default for Config {
@@ -34,6 +41,28 @@ pub enum Commas {
     Inline,
     Always,
     Trailing,
+}
+
+impl Commas {
+    pub const ALL: [Commas; 4] = [
+        Commas::None,
+        Commas::Inline,
+        Commas::Always,
+        Commas::Trailing,
+    ];
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Commas::None => "none",
+            Commas::Inline => "inline",
+            Commas::Always => "always",
+            Commas::Trailing => "trailing",
+        }
+    }
+
+    pub fn of_name(name: &str) -> Option<Commas> {
+        Commas::ALL.into_iter().find(|commas| commas.name() == name)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +126,30 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
 
 #[cfg(test)]
 mod tests {
-    use super::{Config, LineEnding, ParseErrorKind, format, invariants};
+    use super::{Commas, Config, LineEnding, ParseErrorKind, format, invariants};
+
+    #[test]
+    fn commas_all_holds_each_commas_once_in_fixed_order() {
+        let position = |commas| match commas {
+            Commas::None => 0,
+            Commas::Inline => 1,
+            Commas::Always => 2,
+            Commas::Trailing => 3,
+        };
+        assert_eq!(Commas::ALL.map(position), [0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn commas_of_name_gives_back_each_commas_by_its_name() {
+        for commas in Commas::ALL {
+            assert_eq!(Commas::of_name(commas.name()), Some(commas));
+        }
+    }
+
+    #[test]
+    fn commas_of_name_takes_names_in_lowercase_only() {
+        assert_eq!(Commas::of_name("Inline"), None);
+    }
 
     #[test]
     fn file_with_syntax_errors_is_rejected() {
