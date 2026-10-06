@@ -112,7 +112,8 @@ struct Operators {
 /// It counts a `..` only where the `(` before it are as many as the `)`, those in strings too.
 /// It takes a `..<` only as the first one in `text`.
 fn operators(text: &str) -> Option<Operators> {
-    if text.starts_with("...") {
+    // Most words hold no `.`, and searching one for `..` sets up a searcher each time.
+    if !text.contains('.') || text.starts_with("...") {
         return None;
     }
     let mut dotdots = balanced_dotdots(text);
@@ -263,6 +264,8 @@ mod tests {
     fn non_range_has_no_operators() {
         for text in [
             "1",
+            "1.5",
+            "$a.b",
             "...3",
             "1..2..3..4",
             "1..<2..3",
