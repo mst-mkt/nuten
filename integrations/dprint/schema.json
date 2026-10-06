@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "nuten",
+  "description": "Settings of nuten, a formatter for Nushell, as a dprint plugin.",
+  "type": "object",
+  "properties": {
+    "locked": {
+      "description": "Whether the configuration is not allowed to be overridden or extended.",
+      "type": "boolean"
+    },
+    "associations": {
+      "description": "Glob patterns of more files to format with nuten, besides those it claims by extension; a pattern starting with `!` leaves a file out.",
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "lineWidth": {
+      "description": "Columns a line may take before it breaks where it can.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647,
+      "default": 100
+    },
+    "useTabs": {
+      "description": "Whether to indent with tabs instead of spaces.",
+      "type": "boolean",
+      "default": false
+    },
+    "indentWidth": {
+      "description": "Columns per indent level, and per tab when indenting with tabs.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255,
+      "default": 4
+    },
+    "newLineKind": {
+      "description": "What ends each line; line breaks inside a string, a bare word, or an `@example` block stay as written.",
+      "type": "string",
+      "default": "auto",
+      "oneOf": [
+        {
+          "const": "auto",
+          "description": "Follows the first line break outside a string, a bare word, or an `@example` block."
+        },
+        {
+          "const": "lf",
+          "description": "Uses line feed."
+        },
+        {
+          "const": "crlf",
+          "description": "Uses carriage return and line feed."
+        }
+      ]
+    },
+    "commas": {
+      "description": "Where a `,` goes among the items of lists, records, tables, parameters, and type parameters.",
+      "type": "string",
+      "default": "inline",
+      "oneOf": [
+        {
+          "const": "none",
+          "description": "Nowhere."
+        },
+        {
+          "const": "inline",
+          "description": "Between items on one line."
+        },
+        {
+          "const": "always",
+          "description": "Between items."
+        },
+        {
+          "const": "trailing",
+          "description": "Between items, and also after the last item when they break over lines."
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

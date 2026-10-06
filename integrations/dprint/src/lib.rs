@@ -279,7 +279,7 @@ fn format_text(src: &str, config: &nuten_format::Config) -> Result<String, Strin
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{collections::BTreeSet, path::Path};
 
     use dprint_core::{
         configuration::{ConfigKeyMap, ConfigKeyValue, GlobalConfiguration, NewLineKind},
@@ -334,6 +334,20 @@ mod tests {
             Value::Object(fields) => fields,
             value => panic!("not an object: {value}"),
         }
+    }
+
+    fn schema_properties() -> Map<String, Value> {
+        let schema: Value = serde_json::from_str(include_str!("../schema.json")).unwrap();
+        schema["properties"].as_object().unwrap().clone()
+    }
+
+    fn schema_choices(key: &str) -> Vec<String> {
+        schema_properties()[key]["oneOf"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|choice| choice["const"].as_str().unwrap().to_string())
+            .collect()
     }
 
     fn format_with(config: &Configuration, bytes: &[u8], range: FormatRange) -> FormatResult {
@@ -677,6 +691,70 @@ mod tests {
                 "commas": "trailing",
             })
         );
+    }
+
+    #[test]
+    fn schema_lists_dprint_keys_and_every_setting_plugin_resolves() {
+        let resolved_keys = serialized(ConfigKeyMap::new())
+            .into_iter()
+            .map(|(key, _)| key);
+        let dprint_keys = ["locked", "associations"].map(str::to_string);
+        let expected: BTreeSet<_> = resolved_keys.chain(dprint_keys).collect();
+        let keys: BTreeSet<_> = schema_properties()
+            .into_iter()
+            .map(|(key, _)| key)
+            .collect();
+        assert_eq!(keys, expected);
+    }
+
+    #[test]
+    fn schema_defaults_are_resolved_defaults() {
+        let properties = schema_properties();
+        for (key, value) in serialized(ConfigKeyMap::new()) {
+            assert_eq!(properties[&key]["default"], value, "{key}");
+        }
+    }
+
+    #[test]
+    fn schema_limits_widths_to_what_dprint_reads_as_number_and_plugin_accepts() {
+        let properties = schema_properties();
+        let limits = |key: &str| {
+            [
+                properties[key]["minimum"].as_i64().unwrap(),
+                properties[key]["maximum"].as_i64().unwrap(),
+            ]
+        };
+        let line_widths = nuten_format::Config::LINE_WIDTHS;
+        let indent_widths = nuten_format::Config::INDENT_WIDTHS;
+        assert_eq!(
+            limits("lineWidth"),
+            [
+                i64::from(*line_widths.start()),
+                i64::from(*line_widths.end()).min(i64::from(i32::MAX)),
+            ]
+        );
+        assert_eq!(
+            limits("indentWidth"),
+            [
+                i64::from(*indent_widths.start()),
+                i64::from(*indent_widths.end()),
+            ]
+        );
+    }
+
+    #[test]
+    fn schema_offers_each_choice_plugin_takes() {
+        let commas: Vec<_> = Commas::ALL.iter().map(|commas| commas.name()).collect();
+        assert_eq!(schema_choices("commas"), commas);
+        let new_line_kinds: Vec<_> = [
+            NewLineKind::Auto,
+            NewLineKind::LineFeed,
+            NewLineKind::CarriageReturnLineFeed,
+        ]
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+        assert_eq!(schema_choices("newLineKind"), new_line_kinds);
     }
 
     #[test]
