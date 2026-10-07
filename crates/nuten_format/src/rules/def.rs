@@ -41,7 +41,7 @@ impl<'a> Formatter<'a> {
                     .chain(self.one_line_items(inside, |_| true))
                     .chain(iter::once(self.token(&close)))
                     .collect();
-                flat(&elements).unwrap_or_else(|| self.source(syntax.text_range()))
+                flat(&self.document, &elements).unwrap_or_else(|| self.source(syntax.text_range()))
             },
             Some((open, inside, close)) => {
                 let head = vec![self.token(&open)];

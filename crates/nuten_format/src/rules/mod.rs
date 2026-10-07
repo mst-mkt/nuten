@@ -18,8 +18,7 @@ mod subexpression;
 use std::{iter, mem};
 
 use nuten_doc::{
-    Element, GroupIds, empty_line, empty_lines, exact_text, hard_line_break, line_suffix, space,
-    text,
+    Document, Element, GroupIds, empty_line, empty_lines, exact_text, hard_line_break, space, text,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange, WalkEvent,
@@ -95,10 +94,15 @@ fn without_separators(children: impl Iterator<Item = Child>) -> impl Iterator<It
 }
 
 /// `root` is the tree of `src`, with no `Error` element.
-pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode, commas: Commas) -> Vec<Element<'a>> {
+pub(crate) fn file<'a>(
+    src: &'a str,
+    root: &SyntaxNode,
+    commas: Commas,
+) -> (Document<'a>, Vec<Element<'a>>) {
     let mut formatter = Formatter {
         src,
         root: root.clone(),
+        document: Document::default(),
         groups: GroupIds::default(),
         kept: Kept::of(src, root),
         commas,
@@ -106,7 +110,8 @@ pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode, commas: Commas) -> Vec<E
     let statements: Vec<_> = children(root.children_with_tokens(), &formatter.kept).collect();
     let mut out = formatter.statements(&statements, true);
     out.push(hard_line_break());
-    out
+    // Memory peaks while printing, so the unused room in the document is freed before that.
+    (formatter.document.finish(), out)
 }
 
 impl Commas {
@@ -119,6 +124,7 @@ struct Formatter<'a> {
     src: &'a str,
     /// The tree of `src`.
     root: SyntaxNode,
+    document: Document<'a>,
     groups: GroupIds,
     kept: Kept,
     commas: Commas,
@@ -301,14 +307,19 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn comment(&self, comment: &SyntaxToken, newlines: u32, at_start: bool) -> Vec<Element<'a>> {
+    fn comment(
+        &mut self,
+        comment: &SyntaxToken,
+        newlines: u32,
+        at_start: bool,
+    ) -> Vec<Element<'a>> {
         if newlines > 0 || at_start {
             // The container may have pushed a line break already.
             // The printer keeps the longer of the two.
             vec![hard_line_break(), self.token(comment)]
         } else {
             // A line suffix, so that it does not count toward the width of the line.
-            vec![line_suffix([space(), self.token(comment)])]
+            vec![self.document.line_suffix([space(), self.token(comment)])]
         }
     }
 

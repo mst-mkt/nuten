@@ -1,6 +1,8 @@
 use unicode_width::UnicodeWidthStr;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use crate::Children;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Element<'a> {
     /// `width` is `TextWidth::of(text)`.
     Text {
@@ -15,26 +17,26 @@ pub enum Element<'a> {
     Space,
     Line(LineMode),
     ExpandParent,
-    LineSuffix(Box<[Element<'a>]>),
+    LineSuffix(Children),
     LineSuffixBoundary,
     IfBreak {
-        broken: Box<[Element<'a>]>,
-        flat: Box<[Element<'a>]>,
+        broken: Children,
+        flat: Children,
     },
     Group {
         id: Option<GroupId>,
-        elements: Box<[Element<'a>]>,
+        elements: Children,
     },
     /// `group` must name one around the indent, or one printed before it.
     Indent {
         group: Option<GroupId>,
-        elements: Box<[Element<'a>]>,
+        elements: Children,
     },
     /// `group` must name one around the alignment, or one printed before it.
     Align {
         columns: u32,
         group: Option<GroupId>,
-        elements: Box<[Element<'a>]>,
+        elements: Children,
     },
 }
 

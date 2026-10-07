@@ -1,8 +1,8 @@
 use std::iter;
 
 use nuten_doc::{
-    Element, empty_line, expand_parent, group, if_break, indent, soft_line_break,
-    soft_line_break_or_space, space, text,
+    Document, Element, empty_line, expand_parent, soft_line_break, soft_line_break_or_space, space,
+    text,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken,
@@ -111,13 +111,13 @@ impl<'a> Formatter<'a> {
             out.push(self.token(close));
             return out;
         }
-        out.push(indent(inner));
+        out.push(self.document.indent(inner));
         out.push(before_close());
         out.push(self.token(close));
         if expand {
             out.push(expand_parent());
         }
-        vec![group(out)]
+        vec![self.document.group(out)]
     }
 
     fn item(&mut self, index: usize, item: &Child, before_first: SoftLine) -> Vec<Element<'a>> {
@@ -146,14 +146,19 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn comma_after(&self, items: &[Child], index: usize, commas: Commas) -> Option<Element<'a>> {
+    fn comma_after(
+        &mut self,
+        items: &[Child],
+        index: usize,
+        commas: Commas,
+    ) -> Option<Element<'a>> {
         let item = &items[index];
         if item.is_comment() || self.keeps_comma(item) {
             None
         } else if items[index + 1..].iter().any(|next| !next.is_comment()) {
-            commas.between()
+            commas.between(&mut self.document)
         } else {
-            commas.after_last()
+            commas.after_last(&mut self.document)
         }
     }
 
@@ -208,15 +213,15 @@ fn is_operand(part: &SyntaxElement) -> bool {
 }
 
 impl Commas {
-    fn between(self) -> Option<Element<'static>> {
+    fn between<'a>(self, document: &mut Document<'a>) -> Option<Element<'a>> {
         match self {
             Commas::None => None,
-            Commas::Inline => Some(if_break([], [text(",")])),
+            Commas::Inline => Some(document.if_break([], [text(",")])),
             Commas::Always | Commas::Trailing => Some(text(",")),
         }
     }
 
-    fn after_last(self) -> Option<Element<'static>> {
-        (self == Commas::Trailing).then(|| if_break([text(",")], []))
+    fn after_last<'a>(self, document: &mut Document<'a>) -> Option<Element<'a>> {
+        (self == Commas::Trailing).then(|| document.if_break([text(",")], []))
     }
 }

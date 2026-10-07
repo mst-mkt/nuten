@@ -2,7 +2,7 @@
 
 use std::iter;
 
-use nuten_doc::{Element, group, indent, soft_line_break_or_space, space};
+use nuten_doc::{Element, soft_line_break_or_space, space};
 use nuten_parser::operator_precedence;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
 
@@ -37,7 +37,7 @@ impl<'a> Formatter<'a> {
                 line_break_or_space(item)
             })
         });
-        vec![group(expression)]
+        vec![self.document.group(expression)]
     }
 
     fn operation(&mut self, items: &[Child], levels: usize) -> Vec<Element<'a>> {
@@ -65,8 +65,8 @@ impl<'a> Formatter<'a> {
                     .collect::<Vec<_>>()
             })
             .collect();
-        let rest = (0..levels).fold(rest, |rest, _| vec![indent(rest)]);
-        vec![group(head.into_iter().chain(rest))]
+        let rest = (0..levels).fold(rest, |rest, _| vec![self.document.indent(rest)]);
+        vec![self.document.group(head.into_iter().chain(rest))]
     }
 
     pub(super) fn holds_expression_breaking_at_operators(&self, element: &SyntaxNode) -> bool {

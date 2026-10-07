@@ -1,8 +1,8 @@
 use std::iter;
 
 use nuten_doc::{
-    Element, GroupId, align, align_if_group_breaks, empty_line, expand_parent, group_with_id,
-    hard_line_break, indent_if_group_breaks, soft_line_break_or_space, space,
+    Document, Element, GroupId, empty_line, expand_parent, hard_line_break,
+    soft_line_break_or_space, space,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
@@ -35,7 +35,7 @@ impl<'a> Formatter<'a> {
         // Its first line break then ends the measure instead of breaking the group.
         let tail = tail.map_or_else(Vec::new, |tail| self.segment(&tail, id));
         let assigned = self.assigned(pipeline.syntax());
-        let group = (!head.is_empty()).then(|| group_with_id(id, head));
+        let group = (!head.is_empty()).then(|| self.document.group_with_id(id, head));
         group.into_iter().chain(tail).chain(assigned).collect()
     }
 
@@ -76,11 +76,18 @@ impl<'a> Formatter<'a> {
             .flat_map(|(index, part)| self.part(segment.prev_of(index), part))
             .collect();
         let aligned = match segment.align {
-            Some(Alignment::Always) => vec![align(2, aligned)],
-            Some(Alignment::IfGroupBreaks) => vec![align_if_group_breaks(id, 2, aligned)],
+            Some(Alignment::Always) => vec![self.document.align(2, aligned)],
+            Some(Alignment::IfGroupBreaks) => {
+                vec![self.document.align_if_group_breaks(id, 2, aligned)]
+            },
             None => aligned,
         };
         let leading = pipe.into_iter().flatten().chain(aligned).collect();
+        let level = segment
+            .pipe
+            .or(segment.items.first())
+            .map_or(0, |part| part.level);
+        let leading = indent_levels_if_group_breaks(&mut self.document, id, level, leading);
         // From the first comment on, each part may start a line of its own.
         // So each takes its own indent, rather than that of the segment.
         let rest = segment.items[end..]
@@ -88,16 +95,9 @@ impl<'a> Formatter<'a> {
             .enumerate()
             .flat_map(|(index, part)| {
                 let elements = self.part(segment.prev_of(end + index), part).collect();
-                indent_levels_if_group_breaks(id, part.level, elements)
+                indent_levels_if_group_breaks(&mut self.document, id, part.level, elements)
             });
-        let level = segment
-            .pipe
-            .or(segment.items.first())
-            .map_or(0, |part| part.level);
-        indent_levels_if_group_breaks(id, level, leading)
-            .into_iter()
-            .chain(rest)
-            .collect()
+        leading.into_iter().chain(rest).collect()
     }
 
     fn part(
@@ -134,13 +134,14 @@ impl<'a> Formatter<'a> {
     }
 }
 
-fn indent_levels_if_group_breaks(
+fn indent_levels_if_group_breaks<'a>(
+    document: &mut Document<'a>,
     id: GroupId,
     level: u32,
-    elements: Vec<Element<'_>>,
-) -> Vec<Element<'_>> {
+    elements: Vec<Element<'a>>,
+) -> Vec<Element<'a>> {
     (0..level).fold(elements, |elements, _| {
-        vec![indent_if_group_breaks(id, elements)]
+        vec![document.indent_if_group_breaks(id, elements)]
     })
 }
 

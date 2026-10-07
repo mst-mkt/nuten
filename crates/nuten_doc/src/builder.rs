@@ -1,4 +1,4 @@
-use crate::{Element, GroupId, LineMode, TextWidth};
+use crate::{Document, Element, GroupId, LineMode, TextWidth};
 
 pub fn text(text: &str) -> Element<'_> {
     Element::Text {
@@ -44,82 +44,92 @@ pub fn expand_parent() -> Element<'static> {
     Element::ExpandParent
 }
 
-pub fn line_suffix<'a>(elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
-    Element::LineSuffix(elements.into_iter().collect())
-}
-
 pub fn line_suffix_boundary() -> Element<'static> {
     Element::LineSuffixBoundary
 }
 
-pub fn if_break<'a>(
-    broken: impl IntoIterator<Item = Element<'a>>,
-    flat: impl IntoIterator<Item = Element<'a>>,
-) -> Element<'a> {
-    Element::IfBreak {
-        broken: broken.into_iter().collect(),
-        flat: flat.into_iter().collect(),
+impl<'a> Document<'a> {
+    pub fn line_suffix(&mut self, elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
+        Element::LineSuffix(self.push_children(elements))
     }
-}
 
-pub fn group<'a>(elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
-    Element::Group {
-        id: None,
-        elements: elements.into_iter().collect(),
+    pub fn if_break(
+        &mut self,
+        broken: impl IntoIterator<Item = Element<'a>>,
+        flat: impl IntoIterator<Item = Element<'a>>,
+    ) -> Element<'a> {
+        Element::IfBreak {
+            broken: self.push_children(broken),
+            flat: self.push_children(flat),
+        }
     }
-}
 
-pub fn group_with_id<'a>(
-    id: GroupId,
-    elements: impl IntoIterator<Item = Element<'a>>,
-) -> Element<'a> {
-    Element::Group {
-        id: Some(id),
-        elements: elements.into_iter().collect(),
+    pub fn group(&mut self, elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
+        Element::Group {
+            id: None,
+            elements: self.push_children(elements),
+        }
     }
-}
 
-pub fn indent<'a>(elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
-    Element::Indent {
-        group: None,
-        elements: elements.into_iter().collect(),
+    pub fn group_with_id(
+        &mut self,
+        id: GroupId,
+        elements: impl IntoIterator<Item = Element<'a>>,
+    ) -> Element<'a> {
+        Element::Group {
+            id: Some(id),
+            elements: self.push_children(elements),
+        }
     }
-}
 
-pub fn indent_if_group_breaks<'a>(
-    group: GroupId,
-    elements: impl IntoIterator<Item = Element<'a>>,
-) -> Element<'a> {
-    Element::Indent {
-        group: Some(group),
-        elements: elements.into_iter().collect(),
+    pub fn indent(&mut self, elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
+        Element::Indent {
+            group: None,
+            elements: self.push_children(elements),
+        }
     }
-}
 
-pub fn align<'a>(columns: u32, elements: impl IntoIterator<Item = Element<'a>>) -> Element<'a> {
-    Element::Align {
-        columns,
-        group: None,
-        elements: elements.into_iter().collect(),
+    pub fn indent_if_group_breaks(
+        &mut self,
+        group: GroupId,
+        elements: impl IntoIterator<Item = Element<'a>>,
+    ) -> Element<'a> {
+        Element::Indent {
+            group: Some(group),
+            elements: self.push_children(elements),
+        }
     }
-}
 
-pub fn align_if_group_breaks<'a>(
-    group: GroupId,
-    columns: u32,
-    elements: impl IntoIterator<Item = Element<'a>>,
-) -> Element<'a> {
-    Element::Align {
-        columns,
-        group: Some(group),
-        elements: elements.into_iter().collect(),
+    pub fn align(
+        &mut self,
+        columns: u32,
+        elements: impl IntoIterator<Item = Element<'a>>,
+    ) -> Element<'a> {
+        Element::Align {
+            columns,
+            group: None,
+            elements: self.push_children(elements),
+        }
+    }
+
+    pub fn align_if_group_breaks(
+        &mut self,
+        group: GroupId,
+        columns: u32,
+        elements: impl IntoIterator<Item = Element<'a>>,
+    ) -> Element<'a> {
+        Element::Align {
+            columns,
+            group: Some(group),
+            elements: self.push_children(elements),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{group, indent, soft_line_break_or_space, space, text};
-    use crate::{Element, LineMode, TextWidth};
+    use super::{soft_line_break_or_space, space, text};
+    use crate::{Document, Element, LineMode, TextWidth};
 
     #[test]
     fn text_carries_its_width() {
@@ -135,24 +145,27 @@ mod tests {
     #[test]
     fn containers_nest_borrowed_and_static_elements() {
         let src = String::from("a");
-        let doc = group(vec![
-            space(),
-            text(&src),
-            indent(src.split(',').map(text).chain([soft_line_break_or_space()])),
-        ]);
+        let mut doc = Document::default();
+        let indent = doc.indent(src.split(',').map(text).chain([soft_line_break_or_space()]));
+        let group = doc.group(vec![space(), text(&src), indent]);
+        let Element::Group {
+            id: None,
+            elements,
+        } = group
+        else {
+            panic!("{group:?} is no group");
+        };
+        assert_eq!(doc.children(elements), [Element::Space, text("a"), indent]);
+        let Element::Indent {
+            group: None,
+            elements,
+        } = indent
+        else {
+            panic!("{indent:?} is no indent");
+        };
         assert_eq!(
-            doc,
-            Element::Group {
-                id: None,
-                elements: Box::new([
-                    Element::Space,
-                    text("a"),
-                    Element::Indent {
-                        group: None,
-                        elements: Box::new([text("a"), Element::Line(LineMode::SoftOrSpace)]),
-                    },
-                ]),
-            }
+            doc.children(elements),
+            [text("a"), Element::Line(LineMode::SoftOrSpace)]
         );
     }
 }

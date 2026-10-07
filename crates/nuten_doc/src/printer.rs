@@ -1,6 +1,6 @@
 use std::{collections::HashMap, iter, mem, slice};
 
-use crate::{Element, GroupId, LineMode, TextWidth, element::columns};
+use crate::{Document, Element, GroupId, LineMode, TextWidth, element::columns};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrinterOptions {
@@ -53,9 +53,14 @@ enum TextBreaks {
     AsWritten,
 }
 
-pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
+pub fn print(
+    document: &Document<'_>,
+    elements: &[Element<'_>],
+    options: &PrinterOptions,
+) -> String {
     let mut printer = Printer {
         options,
+        document,
         stack: elements
             .iter()
             .rev()
@@ -77,6 +82,7 @@ pub fn print(elements: &[Element<'_>], options: &PrinterOptions) -> String {
 
 struct Printer<'a> {
     options: &'a PrinterOptions,
+    document: &'a Document<'a>,
     stack: Vec<Frame<'a>>,
     line_suffixes: Vec<Suffix<'a>>,
     out: String,
@@ -188,7 +194,7 @@ impl<'a> Printer<'a> {
                 Element::LineSuffix(elements) => self.line_suffixes.push(Suffix {
                     indent,
                     mode,
-                    elements,
+                    elements: self.document.children(*elements),
                 }),
                 Element::Indent {
                     group,
@@ -199,7 +205,7 @@ impl<'a> Printer<'a> {
                     } else {
                         indent
                     };
-                    self.push_elements(indent, mode, elements);
+                    self.push_elements(indent, mode, self.document.children(*elements));
                 },
                 Element::Align {
                     columns,
@@ -211,7 +217,7 @@ impl<'a> Printer<'a> {
                     } else {
                         indent
                     };
-                    self.push_elements(indent, mode, elements);
+                    self.push_elements(indent, mode, self.document.children(*elements));
                 },
                 Element::IfBreak {
                     broken,
@@ -221,12 +227,13 @@ impl<'a> Printer<'a> {
                         Mode::Flat => flat,
                         Mode::Break => broken,
                     };
-                    self.push_elements(indent, mode, elements);
+                    self.push_elements(indent, mode, self.document.children(*elements));
                 },
                 Element::Group {
                     id,
                     elements,
                 } => {
+                    let elements = self.document.children(*elements);
                     let mode = if mode == Mode::Flat || self.fits(elements) {
                         Mode::Flat
                     } else {
@@ -242,7 +249,7 @@ impl<'a> Printer<'a> {
     }
 
     /// Never fitting a forced break replaces a separate pass that marks the groups around it.
-    fn fits(&self, elements: &[Element<'_>]) -> bool {
+    fn fits(&self, elements: &'a [Element<'a>]) -> bool {
         let Some(mut remaining) = self.options.line_width.checked_sub(self.column) else {
             return false;
         };
@@ -292,7 +299,7 @@ impl<'a> Printer<'a> {
                     },
                     _,
                 ) => {
-                    nested.push((measure, elements.iter()));
+                    nested.push((measure, self.document.children(*elements).iter()));
                     0
                 },
                 (
@@ -301,7 +308,7 @@ impl<'a> Printer<'a> {
                     },
                     Measure::Break,
                 ) => {
-                    nested.push((measure, broken.iter()));
+                    nested.push((measure, self.document.children(*broken).iter()));
                     0
                 },
                 (
@@ -310,13 +317,13 @@ impl<'a> Printer<'a> {
                     },
                     Measure::Flat | Measure::InSuffix,
                 ) => {
-                    nested.push((measure, flat.iter()));
+                    nested.push((measure, self.document.children(*flat).iter()));
                     0
                 },
                 (Element::LineSuffix(elements), _) => {
                     has_line_suffix = true;
                     if measure != Measure::Break {
-                        nested.push((Measure::InSuffix, elements.iter()));
+                        nested.push((Measure::InSuffix, self.document.children(*elements).iter()));
                     }
                     0
                 },
@@ -512,10 +519,9 @@ fn next_nested<'a>(
 mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
     use crate::{
-        Element, GroupId, align, align_if_group_breaks, empty_line, empty_lines, exact_text,
-        expand_parent, group, group_with_id, hard_line_break, if_break, indent,
-        indent_if_group_breaks, line_suffix, line_suffix_boundary, soft_line_break,
-        soft_line_break_or_space, space, text,
+        Document, Element, GroupId, empty_line, empty_lines, exact_text, expand_parent,
+        hard_line_break, line_suffix_boundary, soft_line_break, soft_line_break_or_space, space,
+        text,
     };
 
     const WIDE: PrinterOptions = PrinterOptions {
@@ -542,50 +548,51 @@ mod tests {
         }
     }
 
-    fn comment() -> Element<'static> {
-        line_suffix(vec![space(), text("# c")])
+    fn comment(doc: &mut Document<'static>) -> Element<'static> {
+        doc.line_suffix([space(), text("# c")])
+    }
+
+    /// For elements that hold no children.
+    fn print_leaves(elements: &[Element<'_>], options: &PrinterOptions) -> String {
+        print(&Document::default(), elements, options)
     }
 
     #[test]
     fn text_and_space_print_verbatim() {
-        let doc = vec![text("echo"), space(), text("a")];
-        assert_eq!(print(&doc, &WIDE), "echo a");
+        let elements = [text("echo"), space(), text("a")];
+        assert_eq!(print_leaves(&elements, &WIDE), "echo a");
     }
 
     #[test]
     fn hard_line_break_indents_next_text() {
-        let doc = vec![
-            text("a"),
-            indent(vec![
-                hard_line_break(),
-                text("b"),
-                indent(vec![hard_line_break(), text("c")]),
-            ]),
-            hard_line_break(),
-            text("d"),
-        ];
-        assert_eq!(print(&doc, &WIDE), "a\n  b\n    c\nd");
-        assert_eq!(print(&doc, &TABS), "a\n\tb\n\t\tc\nd");
+        let mut doc = Document::default();
+        let inner = doc.indent([hard_line_break(), text("c")]);
+        let outer = doc.indent([hard_line_break(), text("b"), inner]);
+        let elements = [text("a"), outer, hard_line_break(), text("d")];
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n  b\n    c\nd");
+        assert_eq!(print(&doc, &elements, &TABS), "a\n\tb\n\t\tc\nd");
     }
 
     #[test]
     fn indent_without_line_break_prints_nothing() {
-        let doc = vec![indent(vec![text("a")])];
-        assert_eq!(print(&doc, &WIDE), "a");
+        let mut doc = Document::default();
+        let elements = [doc.indent([text("a")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a");
     }
 
     #[test]
     fn line_start_space_comes_after_indent() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let elements = [
             text("a"),
-            indent(vec![hard_line_break(), space(), text("b")]),
+            doc.indent([hard_line_break(), space(), text("b")]),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\n   b");
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n   b");
     }
 
     #[test]
     fn trailing_spaces_and_tabs_are_trimmed() {
-        let doc = vec![
+        let elements = [
             text("a "),
             space(),
             hard_line_break(),
@@ -593,12 +600,12 @@ mod tests {
             empty_line(),
             text("c"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\nb\n\nc");
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb\n\nc");
     }
 
     #[test]
     fn consecutive_line_breaks_collapse() {
-        let doc = vec![
+        let elements = [
             text("a"),
             hard_line_break(),
             hard_line_break(),
@@ -613,12 +620,12 @@ mod tests {
             empty_line(),
             text("e"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\nb\n\nc\n\nd\n\ne");
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb\n\nc\n\nd\n\ne");
     }
 
     #[test]
     fn consecutive_line_breaks_collapse_with_crlf() {
-        let doc = vec![
+        let elements = [
             text("a "),
             hard_line_break(),
             hard_line_break(),
@@ -627,12 +634,12 @@ mod tests {
             empty_line(),
             text("c"),
         ];
-        assert_eq!(print(&doc, &CRLF), "a\r\nb\r\n\r\nc");
+        assert_eq!(print_leaves(&elements, &CRLF), "a\r\nb\r\n\r\nc");
     }
 
     #[test]
     fn consecutive_empty_lines_never_add_up() {
-        let doc = vec![
+        let elements = [
             text("a"),
             empty_lines(2),
             empty_lines(2),
@@ -641,391 +648,366 @@ mod tests {
             empty_lines(2),
             text("c"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\n\n\nb\n\n\nc");
+        assert_eq!(print_leaves(&elements, &WIDE), "a\n\n\nb\n\n\nc");
     }
 
     #[test]
     fn only_last_line_of_text_is_trimmed() {
-        let doc = vec![text("a \nb "), hard_line_break(), text("c")];
-        assert_eq!(print(&doc, &WIDE), "a \nb\nc");
+        let elements = [text("a \nb "), hard_line_break(), text("c")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a \nb\nc");
     }
 
     #[test]
     fn only_lf_trims_cr_before_hard_line_break() {
-        let doc = vec![text("a \r\r"), hard_line_break(), text("b\r \r")];
-        assert_eq!(print(&doc, &WIDE), "a\nb\r \r");
-        assert_eq!(print(&doc, &CRLF), "a \r\r\r\nb\r \r");
+        let elements = [text("a \r\r"), hard_line_break(), text("b\r \r")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb\r \r");
+        assert_eq!(print_leaves(&elements, &CRLF), "a \r\r\r\nb\r \r");
     }
 
     #[test]
     fn only_lf_trims_cr_before_line_break_in_text() {
-        let doc = vec![text("a\r\r\nb \r\nc")];
-        assert_eq!(print(&doc, &WIDE), "a\nb \nc");
-        assert_eq!(print(&doc, &CRLF), "a\r\r\nb \r\nc");
-        let doc = vec![text("a"), indent(vec![hard_line_break(), text("\r\r\nb")])];
-        assert_eq!(print(&doc, &WIDE), "a\n\nb");
-        assert_eq!(print(&doc, &CRLF), "a\r\n  \r\r\nb");
+        let elements = [text("a\r\r\nb \r\nc")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb \nc");
+        assert_eq!(print_leaves(&elements, &CRLF), "a\r\r\nb \r\nc");
+        let mut doc = Document::default();
+        let elements = [text("a"), doc.indent([hard_line_break(), text("\r\r\nb")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n\nb");
+        assert_eq!(print(&doc, &elements, &CRLF), "a\r\n  \r\r\nb");
     }
 
     #[test]
     fn only_untrimmed_cr_takes_width() {
-        let doc = vec![
-            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
+        let mut doc = Document::default();
+        let elements = [
+            doc.group([text("a"), soft_line_break_or_space(), text("b")]),
             text("x\r\r\ny"),
         ];
-        assert_eq!(print(&doc, &narrow(4)), "a bx\ny");
+        assert_eq!(print(&doc, &elements, &narrow(4)), "a bx\ny");
         let crlf = PrinterOptions {
             line_ending: LineEnding::CrLf,
             ..narrow(4)
         };
-        assert_eq!(print(&doc, &crlf), "a\r\nbx\r\r\ny");
+        assert_eq!(print(&doc, &elements, &crlf), "a\r\nbx\r\r\ny");
     }
 
     #[test]
     fn line_of_only_spaces_disappears() {
-        let doc = vec![
+        let elements = [
             text("a"),
             hard_line_break(),
             space(),
             hard_line_break(),
             text("b"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\nb");
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb");
     }
 
     #[test]
     fn output_never_starts_with_line_break() {
-        let doc = vec![hard_line_break(), empty_line(), text("a")];
-        assert_eq!(print(&doc, &WIDE), "a");
-        let doc = vec![space(), hard_line_break(), text("a")];
-        assert_eq!(print(&doc, &WIDE), "a");
-        let doc = vec![indent(vec![hard_line_break(), text("a")])];
-        assert_eq!(print(&doc, &WIDE), "  a");
+        let elements = [hard_line_break(), empty_line(), text("a")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a");
+        let elements = [space(), hard_line_break(), text("a")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a");
+        let mut doc = Document::default();
+        let elements = [doc.indent([hard_line_break(), text("a")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "  a");
     }
 
     #[test]
     fn empty_lines_carry_no_indent() {
-        let doc = vec![text("a"), indent(vec![empty_line(), text("b")])];
-        assert_eq!(print(&doc, &WIDE), "a\n\n  b");
+        let mut doc = Document::default();
+        let elements = [text("a"), doc.indent([empty_line(), text("b")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n\n  b");
     }
 
     #[test]
     fn final_line_break_leaves_no_indent_behind() {
-        let doc = vec![indent(vec![text("a"), hard_line_break()])];
-        assert_eq!(print(&doc, &WIDE), "a\n");
+        let mut doc = Document::default();
+        let elements = [doc.indent([text("a"), hard_line_break()])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n");
     }
 
     #[test]
     fn line_ending_sets_line_break_characters() {
-        let doc = vec![text("a"), indent(vec![hard_line_break(), text("b")])];
-        assert_eq!(print(&doc, &CRLF), "a\r\n  b");
+        let mut doc = Document::default();
+        let elements = [text("a"), doc.indent([hard_line_break(), text("b")])];
+        assert_eq!(print(&doc, &elements, &CRLF), "a\r\n  b");
     }
 
     #[test]
     fn indent_width_sets_spaces_per_level() {
-        let doc = vec![text("a"), indent(vec![hard_line_break(), text("b")])];
+        let mut doc = Document::default();
+        let elements = [text("a"), doc.indent([hard_line_break(), text("b")])];
         let four_column_indent = PrinterOptions {
             indent_width: 4,
             ..WIDE
         };
-        assert_eq!(print(&doc, &four_column_indent), "a\n    b");
+        assert_eq!(print(&doc, &elements, &four_column_indent), "a\n    b");
     }
 
     #[test]
     fn group_stays_flat_up_to_line_width() {
-        let doc = vec![group(vec![
+        let mut doc = Document::default();
+        let elements = [doc.group([
             text("aa"),
             soft_line_break_or_space(),
             text("bb"),
             soft_line_break(),
             text("cc"),
         ])];
-        assert_eq!(print(&doc, &narrow(7)), "aa bbcc");
-        assert_eq!(print(&doc, &narrow(6)), "aa\nbb\ncc");
+        assert_eq!(print(&doc, &elements, &narrow(7)), "aa bbcc");
+        assert_eq!(print(&doc, &elements, &narrow(6)), "aa\nbb\ncc");
     }
 
     #[test]
     fn if_break_prints_side_of_mode_around_it() {
-        let doc = vec![group(vec![
-            text("a"),
-            if_break(vec![text("!")], vec![text("?")]),
-            soft_line_break_or_space(),
-            text("b"),
-        ])];
-        assert_eq!(print(&doc, &WIDE), "a? b");
-        assert_eq!(print(&doc, &narrow(3)), "a!\nb");
-        let outside_group = vec![if_break(vec![text("!")], vec![text("?")])];
-        assert_eq!(print(&outside_group, &WIDE), "!");
+        let mut doc = Document::default();
+        let if_break = doc.if_break([text("!")], [text("?")]);
+        let elements = [doc.group([text("a"), if_break, soft_line_break_or_space(), text("b")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a? b");
+        assert_eq!(print(&doc, &elements, &narrow(3)), "a!\nb");
+        let outside_group = [if_break];
+        assert_eq!(print(&doc, &outside_group, &WIDE), "!");
     }
 
     #[test]
     fn group_measures_flat_side_of_if_break() {
-        let doc = vec![group(vec![
-            text("a"),
-            if_break(Vec::new(), vec![text("bbb")]),
-            soft_line_break(),
-            text("c"),
-        ])];
-        assert_eq!(print(&doc, &narrow(5)), "abbbc");
-        assert_eq!(print(&doc, &narrow(4)), "a\nc");
+        let mut doc = Document::default();
+        let if_break = doc.if_break([], [text("bbb")]);
+        let elements = [doc.group([text("a"), if_break, soft_line_break(), text("c")])];
+        assert_eq!(print(&doc, &elements, &narrow(5)), "abbbc");
+        assert_eq!(print(&doc, &elements, &narrow(4)), "a\nc");
     }
 
     #[test]
     fn rest_of_line_measures_broken_side_of_if_break() {
-        let doc = vec![
-            group(vec![text("a"), soft_line_break(), text("b")]),
-            if_break(vec![text("ccc")], Vec::new()),
+        let mut doc = Document::default();
+        let elements = [
+            doc.group([text("a"), soft_line_break(), text("b")]),
+            doc.if_break([text("ccc")], []),
         ];
-        assert_eq!(print(&doc, &narrow(5)), "abccc");
-        assert_eq!(print(&doc, &narrow(4)), "a\nbccc");
+        assert_eq!(print(&doc, &elements, &narrow(5)), "abccc");
+        assert_eq!(print(&doc, &elements, &narrow(4)), "a\nbccc");
     }
 
     #[test]
     fn line_suffix_measures_flat_side_of_if_break() {
-        let breaks_when_broken = vec![group(vec![
-            text("a"),
-            line_suffix(vec![if_break(vec![hard_line_break()], vec![text("!")])]),
-            soft_line_break(),
-            text("c"),
-        ])];
-        assert_eq!(print(&breaks_when_broken, &WIDE), "ac!");
-        let breaks_when_flat = vec![group(vec![
-            text("a"),
-            line_suffix(vec![if_break(vec![text("!")], vec![hard_line_break()])]),
-            soft_line_break(),
-            text("c"),
-        ])];
-        assert_eq!(print(&breaks_when_flat, &WIDE), "a!\nc");
+        let mut doc = Document::default();
+        let if_break = doc.if_break([hard_line_break()], [text("!")]);
+        let suffix = doc.line_suffix([if_break]);
+        let breaks_when_broken = [doc.group([text("a"), suffix, soft_line_break(), text("c")])];
+        assert_eq!(print(&doc, &breaks_when_broken, &WIDE), "ac!");
+        let if_break = doc.if_break([text("!")], [hard_line_break()]);
+        let suffix = doc.line_suffix([if_break]);
+        let breaks_when_flat = [doc.group([text("a"), suffix, soft_line_break(), text("c")])];
+        assert_eq!(print(&doc, &breaks_when_flat, &WIDE), "a!\nc");
     }
 
     #[test]
     fn group_starting_past_line_width_breaks() {
-        let doc = vec![text("aaaa"), group(vec![soft_line_break(), text("b")])];
-        assert_eq!(print(&doc, &narrow(3)), "aaaa\nb");
+        let mut doc = Document::default();
+        let elements = [text("aaaa"), doc.group([soft_line_break(), text("b")])];
+        assert_eq!(print(&doc, &elements, &narrow(3)), "aaaa\nb");
     }
 
     #[test]
     fn soft_lines_outside_group_break() {
-        let doc = vec![text("a"), soft_line_break_or_space(), text("b")];
-        assert_eq!(print(&doc, &WIDE), "a\nb");
+        let elements = [text("a"), soft_line_break_or_space(), text("b")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb");
     }
 
     #[test]
     fn group_inside_flat_group_stays_flat() {
-        let doc = vec![group(vec![
-            text("a"),
-            soft_line_break_or_space(),
-            group(vec![text("b"), soft_line_break(), text("c")]),
-        ])];
-        assert_eq!(print(&doc, &WIDE), "a bc");
+        let mut doc = Document::default();
+        let inner = doc.group([text("b"), soft_line_break(), text("c")]);
+        let elements = [doc.group([text("a"), soft_line_break_or_space(), inner])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a bc");
     }
 
     #[test]
     fn forced_break_breaks_enclosing_groups() {
-        let hard = vec![group(vec![
+        let mut doc = Document::default();
+        let flat = doc.group([text("b"), soft_line_break_or_space(), text("c")]);
+        let broken = doc.group([text("d"), hard_line_break(), text("e")]);
+        let hard = [doc.group([
             text("a"),
             soft_line_break_or_space(),
-            group(vec![text("b"), soft_line_break_or_space(), text("c")]),
+            flat,
             soft_line_break_or_space(),
-            group(vec![text("d"), hard_line_break(), text("e")]),
+            broken,
         ])];
-        assert_eq!(print(&hard, &WIDE), "a\nb c\nd\ne");
-        let empty = vec![group(vec![text("a"), empty_line(), text("b")])];
-        assert_eq!(print(&empty, &WIDE), "a\n\nb");
-        let expand = vec![group(vec![
-            text("a"),
+        assert_eq!(print(&doc, &hard, &WIDE), "a\nb c\nd\ne");
+        let empty = [doc.group([text("a"), empty_line(), text("b")])];
+        assert_eq!(print(&doc, &empty, &WIDE), "a\n\nb");
+        let expanded = doc.group([text("b"), expand_parent(), text("c")]);
+        let expand = [doc.group([text("a"), soft_line_break_or_space(), expanded])];
+        assert_eq!(print(&doc, &expand, &WIDE), "a\nbc");
+        let multiline = [doc.group([text("a\nb"), soft_line_break_or_space(), text("c")])];
+        assert_eq!(print(&doc, &multiline, &WIDE), "a\nb\nc");
+        let indented = doc.indent([
             soft_line_break_or_space(),
-            group(vec![text("b"), expand_parent(), text("c")]),
-        ])];
-        assert_eq!(print(&expand, &WIDE), "a\nbc");
-        let multiline = vec![group(vec![
-            text("a\nb"),
-            soft_line_break_or_space(),
+            text("b"),
+            hard_line_break(),
             text("c"),
-        ])];
-        assert_eq!(print(&multiline, &WIDE), "a\nb\nc");
-        let in_indent = vec![group(vec![
-            text("a"),
-            indent(vec![
-                soft_line_break_or_space(),
-                text("b"),
-                hard_line_break(),
-                text("c"),
-            ]),
-        ])];
-        assert_eq!(print(&in_indent, &WIDE), "a\n  b\n  c");
+        ]);
+        let in_indent = [doc.group([text("a"), indented])];
+        assert_eq!(print(&doc, &in_indent, &WIDE), "a\n  b\n  c");
     }
 
     #[test]
     fn forced_break_in_line_suffix_breaks_enclosing_group() {
+        let mut doc = Document::default();
+        let in_group = doc.group([hard_line_break()]);
+        let in_suffix = doc.line_suffix([hard_line_break()]);
         let forced_breaks = [
-            vec![expand_parent()],
-            vec![hard_line_break()],
-            vec![text("\n")],
-            vec![exact_text("\n")],
-            vec![indent(vec![group(vec![hard_line_break()])])],
-            vec![line_suffix(vec![hard_line_break()])],
+            expand_parent(),
+            hard_line_break(),
+            text("\n"),
+            exact_text("\n"),
+            doc.indent([in_group]),
+            in_suffix,
         ];
         for forced_break in forced_breaks {
-            let doc = vec![group(vec![
-                text("a"),
-                line_suffix(forced_break.clone()),
-                soft_line_break_or_space(),
-                text("b"),
-            ])];
-            assert_eq!(print(&doc, &WIDE), "a\nb", "{forced_break:?}");
+            let suffix = doc.line_suffix([forced_break]);
+            let elements = [doc.group([text("a"), suffix, soft_line_break_or_space(), text("b")])];
+            assert_eq!(print(&doc, &elements, &WIDE), "a\nb", "{forced_break:?}");
         }
     }
 
     #[test]
     fn boundary_in_line_suffix_never_ends_measurement() {
-        let doc = vec![group(vec![
-            text("a"),
-            line_suffix(vec![line_suffix_boundary(), hard_line_break()]),
-            soft_line_break_or_space(),
-            text("b"),
-        ])];
-        assert_eq!(print(&doc, &WIDE), "a\nb");
+        let mut doc = Document::default();
+        let suffix = doc.line_suffix([line_suffix_boundary(), hard_line_break()]);
+        let elements = [doc.group([text("a"), suffix, soft_line_break_or_space(), text("b")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a\nb");
     }
 
     #[test]
     fn group_ignores_forced_break_in_following_line_suffix() {
-        let doc = vec![
-            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
-            line_suffix(vec![hard_line_break(), text("# c")]),
+        let mut doc = Document::default();
+        let elements = [
+            doc.group([text("a"), soft_line_break_or_space(), text("b")]),
+            doc.line_suffix([hard_line_break(), text("# c")]),
         ];
-        assert_eq!(print(&doc, &WIDE), "a b\n# c");
+        assert_eq!(print(&doc, &elements, &WIDE), "a b\n# c");
     }
 
     #[test]
     fn groups_inside_broken_group_fit_independently() {
-        let doc = vec![group(vec![
+        let mut doc = Document::default();
+        let first = doc.group([text("a"), soft_line_break_or_space(), text("b")]);
+        let second = doc.group([text("c"), soft_line_break_or_space(), text("d")]);
+        let elements = [doc.group([
             text("call"),
             soft_line_break_or_space(),
-            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
+            first,
             soft_line_break_or_space(),
-            group(vec![text("c"), soft_line_break_or_space(), text("d")]),
+            second,
         ])];
-        assert_eq!(print(&doc, &narrow(6)), "call\na b\nc d");
+        assert_eq!(print(&doc, &elements, &narrow(6)), "call\na b\nc d");
     }
 
     #[test]
     fn rest_of_line_counts_toward_group_fit() {
-        let group_then = |rest: Vec<Element<'static>>| {
-            let mut doc = vec![group(vec![
-                text("a"),
-                soft_line_break_or_space(),
-                text("b"),
-            ])];
-            doc.extend(rest);
-            doc
-        };
-        assert_eq!(print(&group_then(vec![text(";")]), &narrow(4)), "a b;");
-        assert_eq!(print(&group_then(vec![text(";;")]), &narrow(4)), "a\nb;;");
-        let then_line = vec![hard_line_break(), text("long line")];
-        assert_eq!(print(&group_then(then_line), &narrow(4)), "a b\nlong line");
-        let then_text = vec![text("x\r\ny")];
-        assert_eq!(print(&group_then(then_text), &narrow(4)), "a bx\ny");
-        let then_suffix = vec![line_suffix(vec![text("# a comment")])];
-        assert_eq!(
-            print(&group_then(then_suffix), &narrow(4)),
-            "a b# a comment"
-        );
+        let mut doc = Document::default();
+        let group = doc.group([text("a"), soft_line_break_or_space(), text("b")]);
+        let then_semicolon = [group, text(";")];
+        assert_eq!(print(&doc, &then_semicolon, &narrow(4)), "a b;");
+        let then_semicolons = [group, text(";;")];
+        assert_eq!(print(&doc, &then_semicolons, &narrow(4)), "a\nb;;");
+        let then_line = [group, hard_line_break(), text("long line")];
+        assert_eq!(print(&doc, &then_line, &narrow(4)), "a b\nlong line");
+        let then_text = [group, text("x\r\ny")];
+        assert_eq!(print(&doc, &then_text, &narrow(4)), "a bx\ny");
+        let then_suffix = [group, doc.line_suffix([text("# a comment")])];
+        assert_eq!(print(&doc, &then_suffix, &narrow(4)), "a b# a comment");
     }
 
     #[test]
     fn indent_takes_columns() {
-        let doc = vec![
-            text("a"),
-            indent(vec![
-                hard_line_break(),
-                group(vec![text("aa"), soft_line_break_or_space(), text("bb")]),
-            ]),
-        ];
-        assert_eq!(print(&doc, &narrow(7)), "a\n  aa bb");
-        assert_eq!(print(&doc, &narrow(6)), "a\n  aa\n  bb");
+        let mut doc = Document::default();
+        let group = doc.group([text("aa"), soft_line_break_or_space(), text("bb")]);
+        let elements = [text("a"), doc.indent([hard_line_break(), group])];
+        assert_eq!(print(&doc, &elements, &narrow(7)), "a\n  aa bb");
+        assert_eq!(print(&doc, &elements, &narrow(6)), "a\n  aa\n  bb");
         let narrow_tabs = PrinterOptions {
             indent_style: IndentStyle::Tab,
             ..narrow(6)
         };
-        assert_eq!(print(&doc, &narrow_tabs), "a\n\taa\n\tbb");
+        assert_eq!(print(&doc, &elements, &narrow_tabs), "a\n\taa\n\tbb");
     }
 
     #[test]
     fn line_breaks_in_text_become_line_ending() {
-        let doc = vec![text("a\r\nb\nc\rd"), hard_line_break(), text("e")];
-        assert_eq!(print(&doc, &WIDE), "a\nb\nc\rd\ne");
-        assert_eq!(print(&doc, &CRLF), "a\r\nb\r\nc\rd\r\ne");
+        let elements = [text("a\r\nb\nc\rd"), hard_line_break(), text("e")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb\nc\rd\ne");
+        assert_eq!(print_leaves(&elements, &CRLF), "a\r\nb\r\nc\rd\r\ne");
     }
 
     #[test]
     fn exact_text_keeps_its_line_breaks() {
-        let doc = vec![exact_text("a\r\nb\nc\r\r\nd"), hard_line_break(), text("e")];
-        assert_eq!(print(&doc, &WIDE), "a\r\nb\nc\r\r\nd\ne");
-        assert_eq!(print(&doc, &CRLF), "a\r\nb\nc\r\r\nd\r\ne");
+        let elements = [exact_text("a\r\nb\nc\r\r\nd"), hard_line_break(), text("e")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a\r\nb\nc\r\r\nd\ne");
+        assert_eq!(print_leaves(&elements, &CRLF), "a\r\nb\nc\r\r\nd\r\ne");
     }
 
     #[test]
     fn cr_before_line_break_in_exact_text_takes_no_width() {
-        let doc = vec![
-            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
-            exact_text("x\r\ny"),
-        ];
-        assert_eq!(print(&doc, &narrow(4)), "a bx\r\ny");
-        let doc = vec![
-            group(vec![text("a"), soft_line_break_or_space(), text("b")]),
-            exact_text("x\r\r\ny"),
-        ];
-        assert_eq!(print(&doc, &narrow(4)), "a\nbx\r\r\ny");
+        let mut doc = Document::default();
+        let group = doc.group([text("a"), soft_line_break_or_space(), text("b")]);
+        let elements = [group, exact_text("x\r\ny")];
+        assert_eq!(print(&doc, &elements, &narrow(4)), "a bx\r\ny");
+        let elements = [group, exact_text("x\r\r\ny")];
+        assert_eq!(print(&doc, &elements, &narrow(4)), "a\nbx\r\r\ny");
     }
 
     #[test]
     fn exact_text_over_lines_breaks_enclosing_group() {
-        let doc = vec![group(vec![
-            text("a"),
-            soft_line_break_or_space(),
-            exact_text("b\nc"),
-        ])];
-        assert_eq!(print(&doc, &WIDE), "a\nb\nc");
+        let mut doc = Document::default();
+        let elements = [doc.group([text("a"), soft_line_break_or_space(), exact_text("b\nc")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a\nb\nc");
     }
 
     #[test]
     fn exact_text_resets_column_after_its_last_line_break() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let elements = [
             exact_text("a\r\nbb"),
-            group(vec![text("c"), soft_line_break_or_space(), text("d")]),
+            doc.group([text("c"), soft_line_break_or_space(), text("d")]),
         ];
-        assert_eq!(print(&doc, &narrow(5)), "a\r\nbbc d");
-        assert_eq!(print(&doc, &narrow(4)), "a\r\nbbc\nd");
+        assert_eq!(print(&doc, &elements, &narrow(5)), "a\r\nbbc d");
+        assert_eq!(print(&doc, &elements, &narrow(4)), "a\r\nbbc\nd");
     }
 
     #[test]
     fn line_break_ending_text_collapses_with_hard_line_break() {
-        let doc = vec![text("a\n"), hard_line_break(), text("b")];
-        assert_eq!(print(&doc, &WIDE), "a\nb");
-        assert_eq!(print(&doc, &CRLF), "a\r\nb");
+        let elements = [text("a\n"), hard_line_break(), text("b")];
+        assert_eq!(print_leaves(&elements, &WIDE), "a\nb");
+        assert_eq!(print_leaves(&elements, &CRLF), "a\r\nb");
     }
 
     #[test]
     fn only_first_line_of_text_is_indented() {
-        let doc = vec![text("a"), indent(vec![hard_line_break(), text("b\nc")])];
-        assert_eq!(print(&doc, &WIDE), "a\n  b\nc");
+        let mut doc = Document::default();
+        let elements = [text("a"), doc.indent([hard_line_break(), text("b\nc")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n  b\nc");
     }
 
     #[test]
     fn empty_first_line_of_text_carries_no_indent() {
+        let mut doc = Document::default();
         for multiline in ["\nb", "\r\nb"] {
-            let doc = vec![text("a"), indent(vec![hard_line_break(), text(multiline)])];
-            assert_eq!(print(&doc, &WIDE), "a\n\nb", "{multiline:?}");
-            assert_eq!(print(&doc, &TABS), "a\n\nb", "{multiline:?}");
+            let elements = [text("a"), doc.indent([hard_line_break(), text(multiline)])];
+            assert_eq!(print(&doc, &elements, &WIDE), "a\n\nb", "{multiline:?}");
+            assert_eq!(print(&doc, &elements, &TABS), "a\n\nb", "{multiline:?}");
         }
         for multiline in ["\nb", "\r\nb"] {
-            let doc = vec![
+            let elements = [
                 text("a"),
-                indent(vec![hard_line_break(), exact_text(multiline)]),
+                doc.indent([hard_line_break(), exact_text(multiline)]),
             ];
             assert_eq!(
-                print(&doc, &WIDE),
+                print(&doc, &elements, &WIDE),
                 format!("a\n{multiline}"),
                 "{multiline:?}"
             );
@@ -1034,316 +1016,280 @@ mod tests {
 
     #[test]
     fn empty_text_leaves_indent_to_next_text() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let elements = [
             text("a"),
-            indent(vec![hard_line_break(), text(""), text("b")]),
+            doc.indent([hard_line_break(), text(""), text("b")]),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\n  b");
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n  b");
     }
 
     #[test]
     fn multiline_text_resets_column() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let elements = [
             text("a\nbb"),
-            group(vec![text("c"), soft_line_break_or_space(), text("d")]),
+            doc.group([text("c"), soft_line_break_or_space(), text("d")]),
         ];
-        assert_eq!(print(&doc, &narrow(5)), "a\nbbc d");
+        assert_eq!(print(&doc, &elements, &narrow(5)), "a\nbbc d");
     }
 
     #[test]
     fn line_suffix_keeps_written_indent_and_mode() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let suffix = doc.line_suffix([hard_line_break(), text("# c")]);
+        let elements = [
             text("a"),
-            indent(vec![line_suffix(vec![hard_line_break(), text("# c")])]),
+            doc.indent([suffix]),
             hard_line_break(),
             text("b"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\n  # c\nb");
-        let doc = vec![
-            group(vec![
-                text("a"),
-                line_suffix(vec![space(), text("# c"), soft_line_break(), text("!")]),
-                space(),
-                text("b"),
-            ]),
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n  # c\nb");
+        let suffix = doc.line_suffix([space(), text("# c"), soft_line_break(), text("!")]);
+        let elements = [
+            doc.group([text("a"), suffix, space(), text("b")]),
             hard_line_break(),
             text("d"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a b # c!\nd");
+        assert_eq!(print(&doc, &elements, &WIDE), "a b # c!\nd");
     }
 
     #[test]
     fn boundary_in_flat_group_keeps_line_suffix_group_flat() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let group = doc.group([text(" #"), soft_line_break_or_space(), text("c")]);
+        let elements = [
             text("a"),
-            line_suffix(vec![group(vec![
-                text(" #"),
-                soft_line_break_or_space(),
-                text("c"),
-            ])]),
-            group(vec![line_suffix_boundary(), text("b")]),
+            doc.line_suffix([group]),
+            doc.group([line_suffix_boundary(), text("b")]),
         ];
-        assert_eq!(print(&doc, &WIDE), "a # c\nb");
+        assert_eq!(print(&doc, &elements, &WIDE), "a # c\nb");
     }
 
     #[test]
     fn line_suffix_waits_for_next_line_break() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let elements = [
             text("a"),
-            comment(),
+            comment(&mut doc),
             space(),
             text("b"),
             hard_line_break(),
             text("c"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a b # c\nc");
-        let doc = vec![text("a"), comment(), empty_line(), text("b")];
-        assert_eq!(print(&doc, &WIDE), "a # c\n\nb");
-        let doc = vec![group(vec![
-            text("a"),
-            comment(),
-            soft_line_break_or_space(),
-            text("b"),
-        ])];
-        assert_eq!(print(&doc, &WIDE), "a b # c");
-        assert_eq!(print(&doc, &narrow(2)), "a # c\nb");
+        assert_eq!(print(&doc, &elements, &WIDE), "a b # c\nc");
+        let elements = [text("a"), comment(&mut doc), empty_line(), text("b")];
+        assert_eq!(print(&doc, &elements, &WIDE), "a # c\n\nb");
+        let suffix = comment(&mut doc);
+        let elements = [doc.group([text("a"), suffix, soft_line_break_or_space(), text("b")])];
+        assert_eq!(print(&doc, &elements, &WIDE), "a b # c");
+        assert_eq!(print(&doc, &elements, &narrow(2)), "a # c\nb");
     }
 
     #[test]
     fn line_suffixes_keep_their_order() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let elements = [
             text("a"),
-            line_suffix(vec![text(" x")]),
-            line_suffix(vec![text(" y")]),
+            doc.line_suffix([text(" x")]),
+            doc.line_suffix([text(" y")]),
             hard_line_break(),
             text("b"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a x y\nb");
+        assert_eq!(print(&doc, &elements, &WIDE), "a x y\nb");
     }
 
     #[test]
     fn line_suffix_at_end_still_prints() {
-        let doc = vec![text("a"), comment()];
-        assert_eq!(print(&doc, &WIDE), "a # c");
+        let mut doc = Document::default();
+        let elements = [text("a"), comment(&mut doc)];
+        assert_eq!(print(&doc, &elements, &WIDE), "a # c");
     }
 
     #[test]
     fn boundary_breaks_line_only_after_line_suffix() {
-        let doc = vec![text("a"), comment(), line_suffix_boundary(), text("b")];
-        assert_eq!(print(&doc, &WIDE), "a # c\nb");
-        let doc = vec![text("a"), line_suffix_boundary(), text("b")];
-        assert_eq!(print(&doc, &WIDE), "ab");
+        let mut doc = Document::default();
+        let elements = [
+            text("a"),
+            comment(&mut doc),
+            line_suffix_boundary(),
+            text("b"),
+        ];
+        assert_eq!(print(&doc, &elements, &WIDE), "a # c\nb");
+        let elements = [text("a"), line_suffix_boundary(), text("b")];
+        assert_eq!(print_leaves(&elements, &WIDE), "ab");
     }
 
     #[test]
     fn line_suffix_takes_no_width() {
-        let doc = vec![group(vec![
-            text("aa"),
-            line_suffix(vec![text(" # a long comment")]),
-            soft_line_break_or_space(),
-            text("bb"),
-        ])];
-        assert_eq!(print(&doc, &narrow(5)), "aa bb # a long comment");
+        let mut doc = Document::default();
+        let suffix = doc.line_suffix([text(" # a long comment")]);
+        let elements = [doc.group([text("aa"), suffix, soft_line_break_or_space(), text("bb")])];
+        assert_eq!(print(&doc, &elements, &narrow(5)), "aa bb # a long comment");
     }
 
     #[test]
     fn boundary_after_line_suffix_ends_measurement() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let elements = [
             text("aaa"),
-            comment(),
-            group(vec![
+            comment(&mut doc),
+            doc.group([
                 line_suffix_boundary(),
                 text("bbb"),
                 soft_line_break_or_space(),
                 text("ccc"),
             ]),
         ];
-        assert_eq!(print(&doc, &narrow(7)), "aaa # c\nbbb ccc");
+        assert_eq!(print(&doc, &elements, &narrow(7)), "aaa # c\nbbb ccc");
     }
 
     #[test]
     fn alignment_adds_its_columns_to_indent() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let indented = doc.indent([hard_line_break(), text("c")]);
+        let aligned = doc.align(1, [hard_line_break(), text("d")]);
+        let elements = [
             text("a"),
-            align(
-                2,
-                vec![
-                    hard_line_break(),
-                    text("b"),
-                    indent(vec![hard_line_break(), text("c")]),
-                ],
-            ),
-            indent(vec![align(1, vec![hard_line_break(), text("d")])]),
+            doc.align(2, [hard_line_break(), text("b"), indented]),
+            doc.indent([aligned]),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\n  b\n    c\n   d");
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n  b\n    c\n   d");
     }
 
     #[test]
     fn alignment_before_indent_level_becomes_tab() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let aligned = doc.align(1, [hard_line_break(), text("d")]);
+        let indented = doc.indent([hard_line_break(), text("c"), aligned]);
+        let elements = [
             text("a"),
-            align(
-                2,
-                vec![
-                    hard_line_break(),
-                    text("b"),
-                    indent(vec![
-                        hard_line_break(),
-                        text("c"),
-                        align(1, vec![hard_line_break(), text("d")]),
-                    ]),
-                ],
-            ),
+            doc.align(2, [hard_line_break(), text("b"), indented]),
         ];
-        assert_eq!(print(&doc, &TABS), "a\n  b\n\t\tc\n\t\t d");
+        assert_eq!(print(&doc, &elements, &TABS), "a\n  b\n\t\tc\n\t\t d");
     }
 
     #[test]
     fn alignment_on_group_follows_whether_it_broke() {
-        let doc = vec![
-            group_with_id(
+        let mut doc = Document::default();
+        let elements = [
+            doc.group_with_id(
                 GroupId(0),
-                vec![text("aaa"), soft_line_break_or_space(), text("|")],
+                [text("aaa"), soft_line_break_or_space(), text("|")],
             ),
-            align_if_group_breaks(
+            doc.align_if_group_breaks(
                 GroupId(0),
                 2,
-                vec![space(), text("b"), hard_line_break(), text("c")],
+                [space(), text("b"), hard_line_break(), text("c")],
             ),
         ];
-        assert_eq!(print(&doc, &WIDE), "aaa | b\nc");
-        assert_eq!(print(&doc, &narrow(4)), "aaa\n| b\n  c");
+        assert_eq!(print(&doc, &elements, &WIDE), "aaa | b\nc");
+        assert_eq!(print(&doc, &elements, &narrow(4)), "aaa\n| b\n  c");
     }
 
     #[test]
     fn indent_on_group_follows_whether_it_broke() {
-        let doc = vec![
-            group_with_id(
-                GroupId(0),
-                vec![
-                    text("aaa"),
-                    indent_if_group_breaks(
-                        GroupId(0),
-                        vec![soft_line_break_or_space(), text("| b")],
-                    ),
-                ],
-            ),
-            indent_if_group_breaks(GroupId(0), vec![hard_line_break(), text("c")]),
+        let mut doc = Document::default();
+        let indented =
+            doc.indent_if_group_breaks(GroupId(0), [soft_line_break_or_space(), text("| b")]);
+        let elements = [
+            doc.group_with_id(GroupId(0), [text("aaa"), indented]),
+            doc.indent_if_group_breaks(GroupId(0), [hard_line_break(), text("c")]),
         ];
-        assert_eq!(print(&doc, &WIDE), "aaa | b\nc");
-        assert_eq!(print(&doc, &narrow(4)), "aaa\n  | b\n  c");
+        assert_eq!(print(&doc, &elements, &WIDE), "aaa | b\nc");
+        assert_eq!(print(&doc, &elements, &narrow(4)), "aaa\n  | b\n  c");
     }
 
     #[test]
     fn indent_on_group_needs_it_already_broken() {
-        let in_flat_parent = vec![
-            group(vec![group_with_id(
-                GroupId(3),
-                vec![text("x"), soft_line_break(), text("y")],
-            )]),
-            indent_if_group_breaks(GroupId(3), vec![hard_line_break(), text("b")]),
+        let mut doc = Document::default();
+        let inner = doc.group_with_id(GroupId(3), [text("x"), soft_line_break(), text("y")]);
+        let in_flat_parent = [
+            doc.group([inner]),
+            doc.indent_if_group_breaks(GroupId(3), [hard_line_break(), text("b")]),
         ];
-        assert_eq!(print(&in_flat_parent, &WIDE), "xy\nb");
-        let unprinted = vec![
-            indent_if_group_breaks(GroupId(1), vec![text("a"), hard_line_break(), text("b")]),
-            group_with_id(GroupId(1), vec![text("c"), hard_line_break(), text("d")]),
+        assert_eq!(print(&doc, &in_flat_parent, &WIDE), "xy\nb");
+        let unprinted = [
+            doc.indent_if_group_breaks(GroupId(1), [text("a"), hard_line_break(), text("b")]),
+            doc.group_with_id(GroupId(1), [text("c"), hard_line_break(), text("d")]),
         ];
-        assert_eq!(print(&unprinted, &WIDE), "a\nbc\nd");
+        assert_eq!(print(&doc, &unprinted, &WIDE), "a\nbc\nd");
     }
 
     #[test]
     fn alignment_takes_columns() {
-        let doc = vec![
-            text("a"),
-            align(
-                3,
-                vec![
-                    hard_line_break(),
-                    group(vec![text("aa"), soft_line_break_or_space(), text("bb")]),
-                ],
-            ),
-        ];
-        assert_eq!(print(&doc, &narrow(8)), "a\n   aa bb");
-        assert_eq!(print(&doc, &narrow(7)), "a\n   aa\n   bb");
+        let mut doc = Document::default();
+        let group = doc.group([text("aa"), soft_line_break_or_space(), text("bb")]);
+        let elements = [text("a"), doc.align(3, [hard_line_break(), group])];
+        assert_eq!(print(&doc, &elements, &narrow(8)), "a\n   aa bb");
+        assert_eq!(print(&doc, &elements, &narrow(7)), "a\n   aa\n   bb");
     }
 
     #[test]
     fn alignment_takes_columns_after_tabs_too() {
-        let doc = vec![
-            text("a"),
-            indent(vec![align(
-                2,
-                vec![
-                    hard_line_break(),
-                    group(vec![text("bb"), soft_line_break_or_space(), text("cc")]),
-                ],
-            )]),
-        ];
+        let mut doc = Document::default();
+        let group = doc.group([text("bb"), soft_line_break_or_space(), text("cc")]);
+        let aligned = doc.align(2, [hard_line_break(), group]);
+        let elements = [text("a"), doc.indent([aligned])];
         let four_column_tabs = |line_width| PrinterOptions {
             line_width,
             indent_width: 4,
             ..TABS
         };
-        assert_eq!(print(&doc, &four_column_tabs(11)), "a\n\t  bb cc");
-        assert_eq!(print(&doc, &four_column_tabs(10)), "a\n\t  bb\n\t  cc");
+        assert_eq!(
+            print(&doc, &elements, &four_column_tabs(11)),
+            "a\n\t  bb cc"
+        );
+        assert_eq!(
+            print(&doc, &elements, &four_column_tabs(10)),
+            "a\n\t  bb\n\t  cc"
+        );
     }
 
     #[test]
     fn zero_columns_are_no_alignment() {
-        let doc = vec![
-            text("a"),
-            align(0, vec![indent(vec![hard_line_break(), text("b")])]),
-        ];
-        assert_eq!(print(&doc, &TABS), "a\n\tb");
+        let mut doc = Document::default();
+        let indented = doc.indent([hard_line_break(), text("b")]);
+        let elements = [text("a"), doc.align(0, [indented])];
+        assert_eq!(print(&doc, &elements, &TABS), "a\n\tb");
     }
 
     #[test]
     fn alignment_on_group_needs_it_already_broken() {
-        let flat = vec![group(vec![
-            group_with_id(GroupId(0), vec![text("a")]),
-            align_if_group_breaks(GroupId(0), 2, vec![hard_line_break(), text("b")]),
-        ])];
-        assert_eq!(print(&flat, &WIDE), "a\nb");
-        let in_flat_parent = vec![
-            group(vec![group_with_id(
-                GroupId(3),
-                vec![text("x"), soft_line_break(), text("y")],
-            )]),
-            align_if_group_breaks(GroupId(3), 2, vec![hard_line_break(), text("b")]),
+        let mut doc = Document::default();
+        let inner = doc.group_with_id(GroupId(0), [text("a")]);
+        let aligned = doc.align_if_group_breaks(GroupId(0), 2, [hard_line_break(), text("b")]);
+        let flat = [doc.group([inner, aligned])];
+        assert_eq!(print(&doc, &flat, &WIDE), "a\nb");
+        let inner = doc.group_with_id(GroupId(3), [text("x"), soft_line_break(), text("y")]);
+        let in_flat_parent = [
+            doc.group([inner]),
+            doc.align_if_group_breaks(GroupId(3), 2, [hard_line_break(), text("b")]),
         ];
-        assert_eq!(print(&in_flat_parent, &WIDE), "xy\nb");
-        let unprinted = vec![
-            align_if_group_breaks(GroupId(1), 2, vec![text("a"), hard_line_break(), text("b")]),
-            group_with_id(GroupId(1), vec![text("c"), hard_line_break(), text("d")]),
+        assert_eq!(print(&doc, &in_flat_parent, &WIDE), "xy\nb");
+        let unprinted = [
+            doc.align_if_group_breaks(GroupId(1), 2, [text("a"), hard_line_break(), text("b")]),
+            doc.group_with_id(GroupId(1), [text("c"), hard_line_break(), text("d")]),
         ];
-        assert_eq!(print(&unprinted, &WIDE), "a\nbc\nd");
-        let inside_own = vec![group_with_id(
+        assert_eq!(print(&doc, &unprinted, &WIDE), "a\nbc\nd");
+        let aligned = doc.align_if_group_breaks(GroupId(2), 2, [hard_line_break(), text("z")]);
+        let inside_own = [doc.group_with_id(
             GroupId(2),
-            vec![
-                text("xx"),
-                soft_line_break_or_space(),
-                text("yy"),
-                align_if_group_breaks(GroupId(2), 2, vec![hard_line_break(), text("z")]),
-            ],
+            [text("xx"), soft_line_break_or_space(), text("yy"), aligned],
         )];
-        assert_eq!(print(&inside_own, &WIDE), "xx\nyy\n  z");
+        assert_eq!(print(&doc, &inside_own, &WIDE), "xx\nyy\n  z");
     }
 
     #[test]
     fn alignment_spares_empty_lines_not_line_suffixes() {
-        let doc = vec![
+        let mut doc = Document::default();
+        let suffix = doc.line_suffix([hard_line_break(), text("# c")]);
+        let elements = [
             text("a"),
-            align(
-                2,
-                vec![
-                    empty_line(),
-                    text("b"),
-                    line_suffix(vec![hard_line_break(), text("# c")]),
-                ],
-            ),
+            doc.align(2, [empty_line(), text("b"), suffix]),
             hard_line_break(),
             text("d"),
         ];
-        assert_eq!(print(&doc, &WIDE), "a\n\n  b\n  # c\nd");
+        assert_eq!(print(&doc, &elements, &WIDE), "a\n\n  b\n  # c\nd");
     }
 }

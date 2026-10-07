@@ -1,4 +1,4 @@
-use nuten_doc::{Element, expand_parent, group};
+use nuten_doc::{Element, expand_parent};
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
     ast::{self, Block, Node},
@@ -25,7 +25,8 @@ impl<'a> Formatter<'a> {
                 _ => this.element(element),
             },
         );
-        vec![group(out.into_iter().chain(expand.then(expand_parent)))]
+        let elements = out.into_iter().chain(expand.then(expand_parent));
+        vec![self.document.group(elements)]
     }
 }
 

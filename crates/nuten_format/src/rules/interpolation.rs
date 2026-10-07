@@ -30,6 +30,6 @@ impl<'a> Formatter<'a> {
         {
             return elements;
         }
-        flat(&elements).unwrap_or_else(|| self.source(syntax.text_range()))
+        flat(&self.document, &elements).unwrap_or_else(|| self.source(syntax.text_range()))
     }
 }

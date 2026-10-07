@@ -1,4 +1,4 @@
-use nuten_doc::{Element, empty_line, hard_line_break, indent, space};
+use nuten_doc::{Element, empty_line, hard_line_break, space};
 use nuten_syntax::{
     SyntaxKind,
     ast::{AstNode, Binary, Bracketed},
@@ -41,7 +41,7 @@ impl<'a> Formatter<'a> {
             // A break before a comment on the `[` line would move it to a line of its own.
             let leading_break = !items[0].is_comment() || items[0].newlines > 0;
             let lines = leading_break.then(hard_line_break).into_iter().chain(inner);
-            vec![indent(lines), hard_line_break()]
+            vec![self.document.indent(lines), hard_line_break()]
         };
         [self.token(&binary.prefix()), self.token(&binary.open())]
             .into_iter()

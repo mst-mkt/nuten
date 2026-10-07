@@ -1,5 +1,5 @@
 use nuten_doc::{
-    Element, empty_line, expand_parent, group, indent, soft_line_break_or_space, space, text,
+    Document, Element, empty_line, expand_parent, soft_line_break_or_space, space, text,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind,
@@ -18,15 +18,18 @@ pub(super) struct BlockLayout<'a> {
 }
 
 impl<'a> BlockLayout<'a> {
-    fn grouped(self) -> Vec<Element<'a>> {
+    fn grouped(self, document: &mut Document<'a>) -> Vec<Element<'a>> {
         let rest = self.rest.into_iter().chain(self.expand.then(expand_parent));
-        self.head.into_iter().chain([group(rest)]).collect()
+        self.head
+            .into_iter()
+            .chain([document.group(rest)])
+            .collect()
     }
 }
 
 impl<'a> Formatter<'a> {
     pub(super) fn block(&mut self, block: &Block) -> Vec<Element<'a>> {
-        self.block_layout(block).grouped()
+        self.block_layout(block).grouped(&mut self.document)
     }
 
     pub(super) fn element_or_body(
@@ -42,7 +45,7 @@ impl<'a> Formatter<'a> {
                     expand: true,
                     ..self.block_layout(block)
                 }
-                .grouped()
+                .grouped(&mut self.document)
             },
             element => self.element(element),
         }
@@ -84,7 +87,11 @@ impl<'a> Formatter<'a> {
         let inner = lead.into_iter().chain(self.statements(&body, false));
         BlockLayout {
             head,
-            rest: vec![indent(inner), soft_line_break_or_space(), close],
+            rest: vec![
+                self.document.indent(inner),
+                soft_line_break_or_space(),
+                close,
+            ],
             expand,
         }
     }

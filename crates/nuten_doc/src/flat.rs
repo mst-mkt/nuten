@@ -1,12 +1,12 @@
-use crate::{Element, LineMode, TextWidth};
+use crate::{Document, Element, LineMode, TextWidth};
 
-pub fn flat<'a>(elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
-    flat_onto(Vec::with_capacity(elements.len()), elements)
+pub fn flat<'a>(document: &Document<'a>, elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
+    flat_onto(document, Vec::with_capacity(elements.len()), elements)
 }
 
 /// A forced break inside a `LineSuffix` counts too, since `fits` measures the suffix with the line.
 /// One on the broken side of an `IfBreak` does not, since that side prints only after a break.
-pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
+pub fn breaks_groups(document: &Document<'_>, elements: &[Element<'_>]) -> bool {
     elements.iter().any(|element| {
         element.forces_break()
             || match element {
@@ -22,20 +22,26 @@ pub fn breaks_groups(elements: &[Element<'_>]) -> bool {
                 | Element::IfBreak {
                     flat: elements, ..
                 }
-                | Element::LineSuffix(elements) => breaks_groups(elements),
+                | Element::LineSuffix(elements) => {
+                    breaks_groups(document, document.children(*elements))
+                },
                 _ => false,
             }
     })
 }
 
 fn flat_onto<'a>(
+    document: &Document<'a>,
     flattened: Vec<Element<'a>>,
     elements: &[Element<'a>],
 ) -> Option<Vec<Element<'a>>> {
-    elements.iter().try_fold(flattened, flat_element_onto)
+    elements.iter().try_fold(flattened, |flattened, element| {
+        flat_element_onto(document, flattened, element)
+    })
 }
 
 fn flat_element_onto<'a>(
+    document: &Document<'a>,
     flattened: Vec<Element<'a>>,
     element: &Element<'a>,
 ) -> Option<Vec<Element<'a>>> {
@@ -59,7 +65,7 @@ fn flat_element_onto<'a>(
             ..
         }
         | Element::Space
-        | Element::LineSuffixBoundary => Some(pushed(flattened, element.clone())),
+        | Element::LineSuffixBoundary => Some(pushed(flattened, *element)),
         Element::Line(LineMode::Soft) | Element::ExpandParent => Some(flattened),
         Element::Line(LineMode::SoftOrSpace) => Some(pushed(flattened, Element::Space)),
         Element::Group {
@@ -73,7 +79,7 @@ fn flat_element_onto<'a>(
         }
         | Element::IfBreak {
             flat: elements, ..
-        } => flat_onto(flattened, elements),
+        } => flat_onto(document, flattened, document.children(*elements)),
     }
 }
 
@@ -86,31 +92,28 @@ fn pushed<'a>(mut elements: Vec<Element<'a>>, element: Element<'a>) -> Vec<Eleme
 mod tests {
     use super::{breaks_groups, flat};
     use crate::{
-        align, exact_text, expand_parent, group, hard_line_break, if_break, indent, line_suffix,
-        line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
+        Document, exact_text, expand_parent, hard_line_break, line_suffix_boundary,
+        soft_line_break, soft_line_break_or_space, space, text,
     };
 
     #[test]
     fn every_group_comes_out_flat() {
-        let doc = [
+        let mut doc = Document::default();
+        let indented = doc.indent([
+            soft_line_break(),
+            text("a"),
+            soft_line_break_or_space(),
+            text("b"),
+        ]);
+        let elements = [
             text("("),
-            group([
-                indent([
-                    soft_line_break(),
-                    text("a"),
-                    soft_line_break_or_space(),
-                    text("b"),
-                ]),
-                soft_line_break(),
-                text(")"),
-                expand_parent(),
-            ]),
-            align(2, [space(), line_suffix_boundary()]),
+            doc.group([indented, soft_line_break(), text(")"), expand_parent()]),
+            doc.align(2, [space(), line_suffix_boundary()]),
             exact_text("'a'"),
-            if_break([hard_line_break()], [text(",")]),
+            doc.if_break([hard_line_break()], [text(",")]),
         ];
         assert_eq!(
-            flat(&doc),
+            flat(&doc, &elements),
             Some(vec![
                 text("("),
                 text("a"),
@@ -127,35 +130,38 @@ mod tests {
 
     #[test]
     fn hard_line_breaks_and_line_suffixes_prevent_flat() {
-        for doc in [
-            vec![group([text("a"), hard_line_break()])],
-            vec![text("a\nb")],
-            vec![exact_text("a\nb")],
-            vec![indent([line_suffix([text("# c")])])],
+        let mut doc = Document::default();
+        let suffix = doc.line_suffix([text("# c")]);
+        for element in [
+            doc.group([text("a"), hard_line_break()]),
+            text("a\nb"),
+            exact_text("a\nb"),
+            doc.indent([suffix]),
         ] {
-            assert_eq!(flat(&doc), None, "{doc:?}");
+            assert_eq!(flat(&doc, &[element]), None, "{element:?}");
         }
     }
 
     #[test]
     fn only_forced_break_at_any_depth_breaks_groups() {
-        for doc in [
-            vec![group([text("a"), hard_line_break()])],
-            vec![indent([expand_parent()])],
-            vec![align(2, [text("a\nb")])],
-            vec![line_suffix([text("a\nb")])],
-            vec![text("a\nb")],
-            vec![exact_text("a\nb")],
-            vec![if_break([], [hard_line_break()])],
+        let mut doc = Document::default();
+        for element in [
+            doc.group([text("a"), hard_line_break()]),
+            doc.indent([expand_parent()]),
+            doc.align(2, [text("a\nb")]),
+            doc.line_suffix([text("a\nb")]),
+            text("a\nb"),
+            exact_text("a\nb"),
+            doc.if_break([], [hard_line_break()]),
         ] {
-            assert!(breaks_groups(&doc), "{doc:?}");
+            assert!(breaks_groups(&doc, &[element]), "{element:?}");
         }
-        for doc in [
-            vec![group([text("a"), soft_line_break_or_space(), text("b")])],
-            vec![line_suffix([text("# c")])],
-            vec![if_break([hard_line_break()], [])],
+        for element in [
+            doc.group([text("a"), soft_line_break_or_space(), text("b")]),
+            doc.line_suffix([text("# c")]),
+            doc.if_break([hard_line_break()], []),
         ] {
-            assert!(!breaks_groups(&doc), "{doc:?}");
+            assert!(!breaks_groups(&doc, &[element]), "{element:?}");
         }
     }
 }

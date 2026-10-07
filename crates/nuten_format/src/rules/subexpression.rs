@@ -1,4 +1,4 @@
-use nuten_doc::{Element, expand_parent, group, indent, soft_line_break};
+use nuten_doc::{Element, expand_parent, soft_line_break};
 use nuten_syntax::ast::{Bracketed, Subexpression};
 
 use super::{Child, Formatter, children};
@@ -19,10 +19,9 @@ impl<'a> Formatter<'a> {
             .then(soft_line_break)
             .into_iter()
             .chain(self.statements(&statements, false));
-        let body = [indent(inner), soft_line_break(), close];
-        vec![
-            open,
-            group(body.into_iter().chain(expand.then(expand_parent))),
-        ]
+        let body = [self.document.indent(inner), soft_line_break(), close]
+            .into_iter()
+            .chain(expand.then(expand_parent));
+        vec![open, self.document.group(body)]
     }
 }

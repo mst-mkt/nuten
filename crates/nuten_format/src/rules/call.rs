@@ -1,4 +1,4 @@
-use nuten_doc::{Element, group, indent, soft_line_break_or_space, space};
+use nuten_doc::{Element, soft_line_break_or_space, space};
 use nuten_parser::is_command;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
 
@@ -18,7 +18,8 @@ impl<'a> Formatter<'a> {
                 soft_line_break_or_space()
             })
         });
-        vec![group([indent(arguments)])]
+        let indented = self.document.indent(arguments);
+        vec![self.document.group([indented])]
     }
 
     pub(super) fn holds_call_breaking_at_arguments(&self, element: &SyntaxNode) -> bool {
