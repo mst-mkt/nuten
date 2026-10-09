@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [lex, parse]
+        target: [lex, parse, format]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
