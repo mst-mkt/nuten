@@ -21,21 +21,8 @@ pub(super) enum Member {
 impl Kept {
     /// `root` is the tree of `src`.
     pub(super) fn of(src: &str, root: &SyntaxNode) -> Kept {
-        // Most files hold no such comment, and the text tells that sooner than the tree.
-        if !src.contains(IGNORE) {
-            return Kept::default();
-        }
-        let runs = root
-            .descendants_with_tokens()
-            .filter_map(SyntaxElement::into_token)
-            .filter(|token| token.kind() == SyntaxKind::Comment && ignores(token.text()))
-            .filter_map(|comment| {
-                if stands_on_own_line(&comment) {
-                    run_after(&comment)
-                } else {
-                    run_before(&comment)
-                }
-            })
+        let runs = ignored_runs(src, root)
+            .chain(top_level_statements_hiding_line_ends(src, root))
             .collect();
         let members = outermost(runs)
             .into_iter()
@@ -61,6 +48,34 @@ impl Kept {
     pub(super) fn keeps(&self, element: &SyntaxElement) -> bool {
         self.member(element).is_some()
     }
+}
+
+fn ignored_runs(src: &str, root: &SyntaxNode) -> impl Iterator<Item = Vec<SyntaxElement>> {
+    // Most files hold no such comment, and the text tells that sooner than the tree.
+    src.contains(IGNORE)
+        .then(|| root.descendants_with_tokens())
+        .into_iter()
+        .flatten()
+        .filter_map(SyntaxElement::into_token)
+        .filter(|token| token.kind() == SyntaxKind::Comment && ignores(token.text()))
+        .filter_map(|comment| {
+            if stands_on_own_line(&comment) {
+                run_after(&comment)
+            } else {
+                run_before(&comment)
+            }
+        })
+}
+
+/// A line break moved inside any bracket around the token changes where nu closes it.
+fn top_level_statements_hiding_line_ends<'a>(
+    src: &'a str,
+    root: &SyntaxNode,
+) -> impl Iterator<Item = Vec<SyntaxElement>> + 'a {
+    nuten_parser::tokens_hiding_line_end(src, root)
+        .map(|token| outermost_from(token, TextSize::new(0)))
+        .filter(is_keepable)
+        .map(|statement| vec![statement])
 }
 
 /// Any whitespace counts after the name, since a comment in a CRLF file ends with its `\r`.
@@ -99,23 +114,23 @@ fn run_before(comment: &SyntaxToken) -> Option<Vec<SyntaxElement>> {
     let last = before
         .iter()
         .find(|token| token.kind() != SyntaxKind::Whitespace && !token.kind().is_separator())
-        .map(|token| outermost_on_line(token.clone(), line_start))
+        .map(|token| outermost_from(token.clone(), line_start))
         .filter(is_keepable)?;
     let first = before
         .into_iter()
         .rev()
-        .map(|token| outermost_on_line(token, line_start))
+        .map(|token| outermost_from(token, line_start))
         .find(|top| is_keepable(top) && top.parent() == last.parent())?;
     Some(siblings_between(&first, &last))
 }
 
-/// The file itself starts on the first line too, but is no child to keep.
-fn outermost_on_line(token: SyntaxToken, line_start: TextSize) -> SyntaxElement {
+/// The file itself starts at `start` when that is 0, but is no child to keep.
+fn outermost_from(token: SyntaxToken, start: TextSize) -> SyntaxElement {
     iter::successors(Some(SyntaxElement::from(token)), |element| {
         element
             .parent()
             .filter(|parent| {
-                parent.kind() != SyntaxKind::Root && parent.text_range().start() >= line_start
+                parent.kind() != SyntaxKind::Root && parent.text_range().start() >= start
             })
             .map(SyntaxElement::from)
     })

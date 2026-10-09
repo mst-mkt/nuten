@@ -8,7 +8,7 @@ mod tree;
 
 use std::fmt;
 
-use nuten_syntax::SyntaxNode;
+use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
 use rowan::{GreenNode, TextRange, TextSize};
 
 use crate::lexer::{LexError, Mode};
@@ -142,6 +142,44 @@ impl From<LexError> for ParseError {
 pub fn parse(src: &str) -> Parsed {
     let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
     tree::build(src, parser::parse(src, lexed))
+}
+
+/// Nu starts a comment at a `#` inside a word too, after a byte that is whitespace in Latin-1.
+/// In any bracket around the word, that comment runs on to the end of the line.
+/// `root` is the tree of `src`.
+pub fn tokens_hiding_line_end<'a>(
+    src: &'a str,
+    root: &SyntaxNode,
+) -> impl Iterator<Item = SyntaxToken> + 'a {
+    // Most files hold no such `#`, and the text tells that sooner than the tree.
+    (0..src.len())
+        .any(|at| lexer::opens_comment_in_word(src.as_bytes(), at))
+        .then(|| root.descendants_with_tokens())
+        .into_iter()
+        .flatten()
+        .filter_map(SyntaxElement::into_token)
+        .filter(|token| hides_line_end(src, token))
+}
+
+/// Strings and comments hold no comment of their own.
+/// A comment that ends at a line break inside the token hides nothing after it.
+fn hides_line_end(src: &str, token: &SyntaxToken) -> bool {
+    if matches!(
+        token.kind(),
+        SyntaxKind::Comment
+            | SyntaxKind::String
+            | SyntaxKind::RawString
+            | SyntaxKind::InterpString
+            | SyntaxKind::InterpText
+    ) {
+        return false;
+    }
+    let start = usize::from(token.text_range().start());
+    let text = token.text();
+    text.match_indices('#').any(|(at, _)| {
+        lexer::opens_comment_in_word(src.as_bytes(), start + at)
+            && !text[at..].contains(['\n', '\r'])
+    })
 }
 
 #[cfg(test)]

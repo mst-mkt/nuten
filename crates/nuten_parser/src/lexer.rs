@@ -470,6 +470,15 @@ pub(crate) fn starts_comment_after(prev: Option<u8>) -> bool {
     prev.is_none_or(|byte| char::from(byte).is_whitespace())
 }
 
+/// After a space, a tab, or a line break, the `#` starts a comment token of its own.
+pub(crate) fn opens_comment_in_word(src: &[u8], hash: usize) -> bool {
+    src[hash] == b'#'
+        && hash.checked_sub(1).is_some_and(|before| {
+            !matches!(src[before], b' ' | b'\t' | b'\n' | b'\r')
+                && starts_comment_after(Some(src[before]))
+        })
+}
+
 fn operator_kind(text: &[u8]) -> Option<SyntaxKind> {
     let kind = match text {
         b"=" | b"+=" | b"++=" | b"-=" | b"*=" | b"/=" => SyntaxKind::Assign,
@@ -519,7 +528,7 @@ mod tests {
     use super::{
         LexError,
         LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
-        Lexed, Mode, item_brackets, lex, rejected_operator_kind,
+        Lexed, Mode, item_brackets, lex, opens_comment_in_word, rejected_operator_kind,
     };
     use crate::{invariants::OPERATORS, test_support::range};
 
@@ -816,6 +825,22 @@ mod tests {
     fn hash_after_latin1_whitespace_byte_starts_comment() {
         assert_eq!(split(r#"à#"b c"#), [r#"à#"b"#, "c"]);
         assert_eq!(split(r#"a#"b c""#), [r#"a#"b c""#]);
+    }
+
+    #[test]
+    fn hash_after_latin1_whitespace_that_splits_no_word_opens_comment_in_word() {
+        for src in ["a\u{b}#", "a\u{c}#", "a\u{145}#", "aà#"] {
+            assert!(
+                opens_comment_in_word(src.as_bytes(), src.len() - 1),
+                "{src:?}"
+            );
+        }
+        for src in ["a #", "a\t#", "a\n#", "a\r#", "a#", "#", "àa"] {
+            assert!(
+                !opens_comment_in_word(src.as_bytes(), src.len() - 1),
+                "{src:?}"
+            );
+        }
     }
 
     #[test]
