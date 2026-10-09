@@ -209,7 +209,7 @@ impl Node {
     fn inside_flaw(&self) -> Option<&'static str> {
         match self {
             Node::Block(block) => {
-                let params = block.params()?;
+                let params: ClosureParams = support::child(block.syntax())?;
                 block
                     .inside()
                     .take_while(|element| element.as_node() != Some(params.syntax()))
@@ -265,8 +265,9 @@ fn is_line_trivia(kind: SyntaxKind) -> bool {
 }
 
 impl Block {
+    /// The parameters come before any other node, as `inside_flaw` checks.
     pub fn params(&self) -> Option<ClosureParams> {
-        support::child(self.syntax())
+        self.syntax().first_child().and_then(ClosureParams::cast)
     }
 
     pub fn statements(&self) -> Inside {
@@ -677,6 +678,18 @@ mod tests {
                     vec![
                         token(SyntaxKind::LBrace, "{"),
                         token(SyntaxKind::Word, "a"),
+                        params(),
+                        token(SyntaxKind::RBrace, "}"),
+                    ],
+                ),
+                Some("does not hold its parameters right after its brace"),
+            ),
+            (
+                node(
+                    SyntaxKind::Block,
+                    vec![
+                        token(SyntaxKind::LBrace, "{"),
+                        node(SyntaxKind::Pipeline, vec![token(SyntaxKind::Word, "a")]),
                         params(),
                         token(SyntaxKind::RBrace, "}"),
                     ],
