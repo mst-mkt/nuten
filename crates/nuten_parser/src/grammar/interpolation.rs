@@ -21,7 +21,14 @@ pub(super) fn interpolation(p: &mut Parser<'_>) {
         .split_token(SyntaxKind::InterpString, &pieces)
         .expect("pieces that cover the string ahead");
     p.bump_relexed(SyntaxKind::Interpolation, split, |p| {
-        while p.peek().is_some() {
+        while let Some(range) = p.peek_range() {
+            // Nu lexes the `( )` again as a cell path.
+            if p.peek() == Some(SyntaxKind::Word)
+                && let Some(error) = p.lex_error(range, Mode::CellPath)
+            {
+                p.bump_error_to(range.end(), error.into());
+                continue;
+            }
             match p.bracketed(&PAREN, Mode::Paren) {
                 Some(bracketed) => p.bump_bracketed(SyntaxKind::Subexpression, bracketed, file),
                 None => p.bump(),

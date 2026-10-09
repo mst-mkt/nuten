@@ -1,0 +1,54 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/interpolation/hash_before_closing_paren.nu
+---
+Root@0..48
+  Pipeline@0..14
+    PipelineElement@0..14
+      Call@0..14
+        Word@0..5 "print"
+        Whitespace@5..6 " "
+        Interpolation@6..14
+          InterpText@6..8 "$\""
+          Subexpression@8..13
+            LParen@8..9 "("
+            Pipeline@9..12
+              PipelineElement@9..12
+                Call@9..12
+                  Word@9..12 "1#c"
+            RParen@12..13 ")"
+          InterpText@13..14 "\""
+  Newline@14..15 "\n"
+  Pipeline@15..29
+    PipelineElement@15..29
+      Call@15..29
+        Word@15..20 "print"
+        Whitespace@20..21 " "
+        Interpolation@21..29
+          InterpText@21..23 "$\""
+          Subexpression@23..28
+            LParen@23..24 "("
+            Pipeline@24..27
+              PipelineElement@24..27
+                String@24..27 "'#'"
+            RParen@27..28 ")"
+          InterpText@28..29 "\""
+  Newline@29..30 "\n"
+  Pipeline@30..47
+    PipelineElement@30..47
+      Call@30..47
+        Word@30..35 "print"
+        Whitespace@35..36 " "
+        Interpolation@36..47
+          InterpText@36..38 "$\""
+          Subexpression@38..46
+            LParen@38..39 "("
+            Pipeline@39..40
+              PipelineElement@39..40
+                Word@39..40 "1"
+            Whitespace@40..41 " "
+            Comment@41..44 "# c"
+            Newline@44..45 "\n"
+            RParen@45..46 ")"
+          InterpText@46..47 "\""
+  Newline@47..48 "\n"
