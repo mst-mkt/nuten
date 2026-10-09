@@ -17,3 +17,11 @@
   background-color: color-mix(in oklch, var(--octc-color-bg) 55%, transparent);
   backdrop-filter: blur(8px);
 }
+
+.header-title {
+  gap: 0.5rem;
+}
+
+.header-logo {
+  margin-right: 0;
+}
