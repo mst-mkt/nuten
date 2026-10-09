@@ -11,3 +11,4 @@ overrides:
 allowBuilds:
   "@vscode/vsce-sign": false
   puppeteer: false
+  workerd: false

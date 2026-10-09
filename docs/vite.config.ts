@@ -1,10 +1,14 @@
+import { getWorkerAssetsDir } from "@cloudflare/build-output-utils";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { defaultTheme, defineTheme, oxContent } from "@ox-content/vite-plugin";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   plugins: [
+    cloudflare(),
     oxContent({
       srcDir: "content",
+      outDir: getWorkerAssetsDir(import.meta.dirname),
       highlight: true,
       docs: false,
       i18n: {
@@ -43,6 +47,11 @@ export default defineConfig({
       },
       build: {
         command: "vp build",
+        input: [{ auto: true }, "!.cloudflare/**"],
+      },
+      deploy: {
+        command: "cf deploy",
+        cache: false,
       },
     },
   },
