@@ -8,6 +8,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
+nuten-format = { path = "../../crates/nuten_format" }
 nuten-parser = { path = "../../crates/nuten_parser" }
 
 libfuzzer-sys = "0.4"
@@ -22,6 +23,13 @@ bench = false
 [[bin]]
 name = "parse"
 path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "format"
+path = "fuzz_targets/format.rs"
 test = false
 doc = false
 bench = false

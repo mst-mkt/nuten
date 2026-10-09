@@ -76,6 +76,7 @@ export default defineConfig({
         command: [
           "nix develop ./nix/dev#fuzz --command cargo fuzz run --fuzz-dir tasks/fuzz lex -- -max_total_time=60",
           "nix develop ./nix/dev#fuzz --command cargo fuzz run --fuzz-dir tasks/fuzz parse -- -max_total_time=60",
+          "nix develop ./nix/dev#fuzz --command cargo fuzz run --fuzz-dir tasks/fuzz format -- -max_total_time=60",
         ],
         cache: false,
       },

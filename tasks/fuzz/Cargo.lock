@@ -97,10 +97,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "nuten-doc"
+version = "0.0.0"
+dependencies = [
+ "unicode-width",
+]
+
+[[package]]
+name = "nuten-format"
+version = "0.0.0"
+dependencies = [
+ "nuten-doc",
+ "nuten-parser",
+ "nuten-syntax",
+]
+
+[[package]]
 name = "nuten-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
+ "nuten-format",
  "nuten-parser",
 ]
 
@@ -155,3 +172,9 @@ name = "text-size"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f18aa187839b2bdb1ad2fa35ead8c4c2976b64e4363c386d45ac0f7ee85c9233"
+
+[[package]]
+name = "unicode-width"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254"
