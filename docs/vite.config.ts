@@ -7,8 +7,18 @@ export default defineConfig({
       srcDir: "content",
       highlight: true,
       docs: false,
+      i18n: {
+        enabled: true,
+        defaultLocale: "en",
+        locales: [
+          { code: "en", name: "English" },
+          { code: "ja", name: "日本語" },
+        ],
+        check: false,
+      },
       ssg: {
         siteName: "Nuten",
+        localeSwitcher: true,
       },
     }),
   ],
