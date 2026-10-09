@@ -1,0 +1,14 @@
+:root {
+  --nuten-bg: light-dark(oklch(0.982 0.004 165), oklch(0.186 0.007 165));
+  --nuten-text: light-dark(oklch(0.21 0.013 165), oklch(0.938 0.008 165));
+  --nuten-primary: light-dark(oklch(0.515 0.096 170), oklch(0.78 0.115 170));
+  --nuten-primary-hover: color-mix(in oklch, var(--nuten-primary) 80%, var(--nuten-text));
+  --nuten-bg-alt: color-mix(in oklch, var(--nuten-text) 4%, var(--nuten-bg));
+  --nuten-text-muted: color-mix(in oklch, var(--nuten-text) 65%, var(--nuten-bg));
+  --nuten-border: color-mix(in oklch, var(--nuten-text) 12%, var(--nuten-bg));
+  --nuten-syntax-punctuation: color-mix(in oklch, var(--nuten-text) 75%, var(--nuten-bg));
+  --nuten-syntax-keyword: oklch(from var(--nuten-primary) l c 300);
+  --nuten-syntax-function: oklch(from var(--nuten-primary) l c 250);
+  --nuten-syntax-constant: oklch(from var(--nuten-primary) l c 85);
+  --nuten-syntax-parameter: oklch(from var(--nuten-primary) l c 45);
+}
