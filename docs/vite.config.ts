@@ -1,4 +1,4 @@
-import { oxContent } from "@ox-content/vite-plugin";
+import { defaultTheme, defineTheme, oxContent } from "@ox-content/vite-plugin";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
@@ -18,7 +18,14 @@ export default defineConfig({
       },
       ssg: {
         siteName: "Nuten",
+        siteUrl: "https://nuten.keito.dev",
         localeSwitcher: true,
+        theme: defineTheme({
+          extends: defaultTheme,
+          socialLinks: {
+            github: "https://github.com/mst-mkt/nuten",
+          },
+        }),
       },
     }),
   ],
