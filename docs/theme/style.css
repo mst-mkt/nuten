@@ -12,3 +12,8 @@
   --nuten-syntax-constant: oklch(from var(--nuten-primary) l c 85);
   --nuten-syntax-parameter: oklch(from var(--nuten-primary) l c 45);
 }
+
+.header {
+  background-color: color-mix(in oklch, var(--octc-color-bg) 55%, transparent);
+  backdrop-filter: blur(8px);
+}
