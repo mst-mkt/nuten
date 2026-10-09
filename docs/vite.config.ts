@@ -22,6 +22,12 @@ export default defineConfig({
         localeSwitcher: true,
         theme: defineTheme({
           extends: defaultTheme,
+          header: {
+            logo: "logo.svg",
+          },
+          embed: {
+            head: '<link rel="icon" href="/logo.svg" type="image/svg+xml">',
+          },
           socialLinks: {
             github: "https://github.com/mst-mkt/nuten",
           },
