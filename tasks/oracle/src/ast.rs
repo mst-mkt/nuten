@@ -73,10 +73,11 @@ fn without_positions(value: JsonValue<'_>) -> JsonValue<'_> {
                 .into_iter()
                 .map(|(key, value)| {
                     let value = without_positions(value);
-                    let value = if key == "LabeledError" {
-                        without_excerpt(value)
-                    } else {
-                        value
+                    let value = match key.as_ref() {
+                        "LabeledError" => without_excerpt(value),
+                        "VariableNotFound" => without_suggestion(value, 0),
+                        "ExpectedWithDidYouMean" => without_suggestion(value, 1),
+                        _ => value,
                     };
                     (key, value)
                 })
@@ -110,6 +111,20 @@ fn without_excerpt(error: JsonValue<'_>) -> JsonValue<'_> {
             .collect();
         items[0] = JsonValue::String(lines.join("\n").into());
     }
+    JsonValue::Array(items.into())
+}
+
+/// Nu picks the suggestion in the order of a `HashSet`.
+fn without_suggestion(error: JsonValue<'_>, at: usize) -> JsonValue<'_> {
+    let JsonValue::Array(items) = error else {
+        return error;
+    };
+    let items: Vec<_> = items
+        .take_inner()
+        .into_iter()
+        .enumerate()
+        .map(|(index, item)| if index == at { JsonValue::Null } else { item })
+        .collect();
     JsonValue::Array(items.into())
 }
 
@@ -323,6 +338,20 @@ mod tests {
             value(r#"{"LabeledError": ["Error: x\n\n  x Not found\n  help: y", "z", {}]}"#)
         );
         assert_eq!(difference(&error(1), &error(3)), Ok(None));
+    }
+
+    #[test]
+    fn variable_suggestion_is_dropped() {
+        let span = r#"{"start": 1, "end": 6}"#;
+        let not_found = |name: &str| format!(r#"{{"VariableNotFound": ["{name}", {span}]}}"#);
+        let did_you_mean = |name: &str| {
+            format!(r#"{{"ExpectedWithDidYouMean": ["valid variable name", "{name}", {span}]}}"#)
+        };
+        assert_eq!(difference(&not_found("$in"), &not_found("$it")), Ok(None));
+        assert_eq!(
+            difference(&did_you_mean("$in"), &did_you_mean("$it")),
+            Ok(None)
+        );
     }
 
     #[test]
