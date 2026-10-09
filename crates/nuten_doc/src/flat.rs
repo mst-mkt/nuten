@@ -22,11 +22,12 @@ pub fn breaks_groups(document: &Document<'_>, elements: &[Element<'_>]) -> bool 
                 | Element::Align {
                     elements, ..
                 }
-                | Element::IfBreak {
-                    flat: elements, ..
-                }
                 | Element::LineSuffix(elements) => {
                     breaks_groups(document, document.children(*elements))
+                },
+                Element::IfBreak(sides) => {
+                    let (_, flat) = document.sides(*sides);
+                    breaks_groups(document, flat)
                 },
                 _ => false,
             }
@@ -79,10 +80,11 @@ fn flat_element_onto<'a>(
         }
         | Element::Align {
             elements, ..
-        }
-        | Element::IfBreak {
-            flat: elements, ..
         } => flat_onto(document, flattened, document.children(*elements)),
+        Element::IfBreak(sides) => {
+            let (_, flat) = document.sides(*sides);
+            flat_onto(document, flattened, flat)
+        },
     }
 }
 

@@ -158,12 +158,15 @@ pub trait Build<'a>: Sized {
 
     /// An empty side is kept, unlike an empty container, since it is what prints in that mode.
     fn if_break(&mut self, when_broken: impl FnOnce(&mut Self), when_flat: impl FnOnce(&mut Self)) {
-        let broken = children_written_by(self, when_broken);
-        let flat = children_written_by(self, when_flat);
-        self.push(Element::IfBreak {
-            broken,
-            flat,
-        });
+        let start = self.builder().written.len();
+        when_broken(self);
+        let broken_len = self.builder().written.len() - start;
+        when_flat(self);
+        let builder = self.builder();
+        let sides = builder
+            .document
+            .push_sides(builder.written.drain(start..), broken_len);
+        builder.written.push(Element::IfBreak(sides));
     }
 
     fn flat_or(&mut self, write: impl FnOnce(&mut Self), otherwise: impl FnOnce(&mut Self)) {
@@ -215,19 +218,10 @@ fn wrap_levels<'a, B: Build<'a>>(
     }
 }
 
-fn children_written_by<'a, B: Build<'a>>(this: &mut B, write: impl FnOnce(&mut B)) -> Children {
-    let start = this.builder().written.len();
-    write(this);
-    let builder = this.builder();
-    builder
-        .document
-        .push_children(builder.written.drain(start..))
-}
-
 #[cfg(test)]
 mod tests {
     use super::{Build, Builder, hard_line_break, soft_line_break_or_space, space, text};
-    use crate::{Element, GroupId, LineMode, TextWidth};
+    use crate::{Columns, Element, GroupIds, LineMode, TextWidth};
 
     #[test]
     fn text_carries_its_width() {
@@ -235,7 +229,7 @@ mod tests {
             text("echo"),
             Element::Text {
                 text: "echo",
-                width: TextWidth::Width(4),
+                width: TextWidth::Width(Columns::new(4)),
             }
         );
     }
@@ -278,11 +272,12 @@ mod tests {
 
     #[test]
     fn empty_containers_are_left_out() {
+        let id = GroupIds::default().fresh();
         let doc = Builder::build(|b| {
             b.push(text("a"));
             b.group(|b| b.indent(|_| {}));
-            b.group_with_id(GroupId(0), |_| {});
-            b.indent_levels_if_group_breaks(GroupId(0), 2, |_| {});
+            b.group_with_id(id, |_| {});
+            b.indent_levels_if_group_breaks(id, 2, |_| {});
         });
         assert_eq!(doc.root(), [text("a")]);
     }
@@ -320,17 +315,25 @@ mod tests {
     #[test]
     fn if_break_keeps_both_sides_even_when_empty() {
         let doc = Builder::build(|b| b.if_break(|_| {}, |_| {}));
-        let [
-            Element::IfBreak {
-                broken,
-                flat,
-            },
-        ] = doc.root()
-        else {
+        let [Element::IfBreak(sides)] = doc.root() else {
             panic!("{:?} is no if_break", doc.root());
         };
-        assert_eq!(doc.children(*broken), []);
-        assert_eq!(doc.children(*flat), []);
+        let (broken, flat) = doc.sides(*sides);
+        assert_eq!(broken, []);
+        assert_eq!(flat, []);
+    }
+
+    #[test]
+    fn if_break_keeps_its_sides_apart() {
+        let doc = Builder::build(|b| {
+            b.if_break(|b| b.push(text("a")), |b| b.extend([text("b"), text("c")]));
+        });
+        let [Element::IfBreak(sides)] = doc.root() else {
+            panic!("{:?} is no if_break", doc.root());
+        };
+        let (broken, flat) = doc.sides(*sides);
+        assert_eq!(broken, [text("a")]);
+        assert_eq!(flat, [text("b"), text("c")]);
     }
 
     #[test]

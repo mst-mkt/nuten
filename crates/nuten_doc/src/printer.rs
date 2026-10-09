@@ -1,6 +1,6 @@
 use std::{collections::HashMap, iter, mem, slice};
 
-use crate::{Document, Element, GroupId, LineMode, TextWidth, element::columns};
+use crate::{Columns, Document, Element, GroupId, LineMode, TextWidth, element::columns};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrinterOptions {
@@ -115,6 +115,8 @@ const HARD_LINE_BREAK: Element<'static> = Element::Line(LineMode::Hard {
     blank_lines: 0,
 });
 
+const SPACE_WIDTH: TextWidth = TextWidth::Width(Columns::new(1));
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
     Flat,
@@ -176,7 +178,7 @@ impl<'a> Printer<'a> {
                     }
                 },
                 Element::Space | Element::Line(LineMode::SoftOrSpace) => {
-                    self.push_text(" ", TextWidth::Width(1), TextBreaks::AsLineEnding);
+                    self.push_text(" ", SPACE_WIDTH, TextBreaks::AsLineEnding);
                 },
                 Element::LineSuffixBoundary if !self.line_suffixes.is_empty() => {
                     // In break mode, so that the suffixes measure it as the end of the line.
@@ -216,15 +218,13 @@ impl<'a> Printer<'a> {
                     };
                     self.push_elements(indent, mode, self.document.children(*elements));
                 },
-                Element::IfBreak {
-                    broken,
-                    flat,
-                } => {
-                    let elements = match mode {
+                Element::IfBreak(sides) => {
+                    let (broken, flat) = self.document.sides(*sides);
+                    let side = match mode {
                         Mode::Flat => flat,
                         Mode::Break => broken,
                     };
-                    self.push_elements(indent, mode, self.document.children(*elements));
+                    self.push_elements(indent, mode, side);
                 },
                 Element::Group {
                     id,
@@ -299,22 +299,13 @@ impl<'a> Printer<'a> {
                     nested.push((measure, self.document.children(*elements).iter()));
                     0
                 },
-                (
-                    Element::IfBreak {
-                        broken, ..
-                    },
-                    Measure::Break,
-                ) => {
-                    nested.push((measure, self.document.children(*broken).iter()));
-                    0
-                },
-                (
-                    Element::IfBreak {
-                        flat, ..
-                    },
-                    Measure::Flat | Measure::InSuffix,
-                ) => {
-                    nested.push((measure, self.document.children(*flat).iter()));
+                (Element::IfBreak(sides), _) => {
+                    let (broken, flat) = self.document.sides(*sides);
+                    let side = match measure {
+                        Measure::Break => broken,
+                        Measure::Flat | Measure::InSuffix => flat,
+                    };
+                    nested.push((measure, side.iter()));
                     0
                 },
                 (Element::LineSuffix(elements), _) => {
@@ -350,7 +341,7 @@ impl<'a> Printer<'a> {
                         ..
                     },
                     _,
-                ) => *width,
+                ) => width.get(),
                 (Element::Space | Element::Line(LineMode::SoftOrSpace), _) => 1,
                 (Element::LineSuffixBoundary, _) if has_line_suffix => return true,
                 (
@@ -433,7 +424,7 @@ impl<'a> Printer<'a> {
         match width {
             TextWidth::Width(width) => {
                 self.out.push_str(text);
-                self.column = self.column.saturating_add(width);
+                self.column = self.column.saturating_add(width.get());
             },
             TextWidth::Multiline => {
                 let (before_last, last) = text
@@ -516,7 +507,7 @@ fn next_nested<'a>(
 mod tests {
     use super::{IndentStyle, LineEnding, PrinterOptions, print};
     use crate::{
-        Build, Builder, GroupId, empty_line, empty_lines, exact_text, expand_parent,
+        Build, Builder, GroupIds, empty_line, empty_lines, exact_text, expand_parent,
         hard_line_break, line_suffix_boundary, soft_line_break, soft_line_break_or_space, space,
         text,
     };
@@ -553,6 +544,16 @@ mod tests {
     fn text_and_space_print_verbatim() {
         let doc = Builder::build(|b| b.extend([text("echo"), space(), text("a")]));
         assert_eq!(print(&doc, &WIDE), "echo a");
+    }
+
+    #[test]
+    fn text_and_space_take_their_columns() {
+        let doc = Builder::build(|b| {
+            b.extend([text("a"), space()]);
+            b.group(|b| b.extend([text("b"), soft_line_break(), text("c")]));
+        });
+        assert_eq!(print(&doc, &narrow(4)), "a bc");
+        assert_eq!(print(&doc, &narrow(3)), "a b\nc");
     }
 
     #[test]
@@ -797,22 +798,38 @@ mod tests {
         let doc = Builder::build(|b| {
             b.group(|b| {
                 b.push(text("a"));
-                b.if_break(|_| {}, |b| b.push(text("bbb")));
+                b.if_break(|b| b.push(text("xxxx")), |b| b.push(text("bbb")));
                 b.extend([soft_line_break(), text("c")]);
             });
         });
         assert_eq!(print(&doc, &narrow(5)), "abbbc");
-        assert_eq!(print(&doc, &narrow(4)), "a\nc");
+        assert_eq!(print(&doc, &narrow(4)), "axxxx\nc");
     }
 
     #[test]
     fn rest_of_line_measures_broken_side_of_if_break() {
         let doc = Builder::build(|b| {
             b.group(|b| b.extend([text("a"), soft_line_break(), text("b")]));
-            b.if_break(|b| b.push(text("ccc")), |_| {});
+            b.if_break(|b| b.push(text("ccc")), |b| b.push(text("dddd")));
         });
         assert_eq!(print(&doc, &narrow(5)), "abccc");
         assert_eq!(print(&doc, &narrow(4)), "a\nbccc");
+    }
+
+    #[test]
+    fn if_break_prints_containers_inside_its_sides() {
+        let doc = Builder::build(|b| {
+            b.group(|b| {
+                b.push(text("x"));
+                b.if_break(
+                    |b| b.indent(|b| b.extend([hard_line_break(), text("a")])),
+                    |b| b.group(|b| b.extend([soft_line_break(), text("b")])),
+                );
+                b.extend([soft_line_break(), text("y")]);
+            });
+        });
+        assert_eq!(print(&doc, &WIDE), "xby");
+        assert_eq!(print(&doc, &narrow(2)), "x\n  a\ny");
     }
 
     #[test]
@@ -1256,11 +1273,12 @@ mod tests {
 
     #[test]
     fn alignment_on_group_follows_whether_it_broke() {
+        let id = GroupIds::default().fresh();
         let doc = Builder::build(|b| {
-            b.group_with_id(GroupId(0), |b| {
+            b.group_with_id(id, |b| {
                 b.extend([text("aaa"), soft_line_break_or_space(), text("|")]);
             });
-            b.align_if_group_breaks(GroupId(0), 2, |b| {
+            b.align_if_group_breaks(id, 2, |b| {
                 b.extend([space(), text("b"), hard_line_break(), text("c")]);
             });
         });
@@ -1270,14 +1288,15 @@ mod tests {
 
     #[test]
     fn indent_on_group_follows_whether_it_broke() {
+        let id = GroupIds::default().fresh();
         let doc = Builder::build(|b| {
-            b.group_with_id(GroupId(0), |b| {
+            b.group_with_id(id, |b| {
                 b.push(text("aaa"));
-                b.indent_if_group_breaks(GroupId(0), |b| {
+                b.indent_if_group_breaks(id, |b| {
                     b.extend([soft_line_break_or_space(), text("| b")]);
                 });
             });
-            b.indent_if_group_breaks(GroupId(0), |b| {
+            b.indent_if_group_breaks(id, |b| {
                 b.extend([hard_line_break(), text("c")]);
             });
         });
@@ -1287,11 +1306,12 @@ mod tests {
 
     #[test]
     fn indent_levels_on_group_take_one_indent_per_level() {
+        let id = GroupIds::default().fresh();
         let doc = Builder::build(|b| {
-            b.group_with_id(GroupId(0), |b| {
+            b.group_with_id(id, |b| {
                 b.extend([text("a"), soft_line_break(), text("b")]);
             });
-            b.indent_levels_if_group_breaks(GroupId(0), 2, |b| {
+            b.indent_levels_if_group_breaks(id, 2, |b| {
                 b.extend([hard_line_break(), text("c")]);
             });
         });
@@ -1301,22 +1321,23 @@ mod tests {
 
     #[test]
     fn indent_on_group_needs_it_already_broken() {
+        let id = GroupIds::default().fresh();
         let in_flat_parent = Builder::build(|b| {
             b.group(|b| {
-                b.group_with_id(GroupId(3), |b| {
+                b.group_with_id(id, |b| {
                     b.extend([text("x"), soft_line_break(), text("y")]);
                 });
             });
-            b.indent_if_group_breaks(GroupId(3), |b| {
+            b.indent_if_group_breaks(id, |b| {
                 b.extend([hard_line_break(), text("b")]);
             });
         });
         assert_eq!(print(&in_flat_parent, &WIDE), "xy\nb");
         let unprinted = Builder::build(|b| {
-            b.indent_if_group_breaks(GroupId(1), |b| {
+            b.indent_if_group_breaks(id, |b| {
                 b.extend([text("a"), hard_line_break(), text("b")]);
             });
-            b.group_with_id(GroupId(1), |b| {
+            b.group_with_id(id, |b| {
                 b.extend([text("c"), hard_line_break(), text("d")]);
             });
         });
@@ -1369,10 +1390,11 @@ mod tests {
 
     #[test]
     fn alignment_on_group_needs_it_already_broken() {
+        let id = GroupIds::default().fresh();
         let flat = Builder::build(|b| {
             b.group(|b| {
-                b.group_with_id(GroupId(0), |b| b.push(text("a")));
-                b.align_if_group_breaks(GroupId(0), 2, |b| {
+                b.group_with_id(id, |b| b.push(text("a")));
+                b.align_if_group_breaks(id, 2, |b| {
                     b.extend([hard_line_break(), text("b")]);
                 });
             });
@@ -1380,28 +1402,28 @@ mod tests {
         assert_eq!(print(&flat, &WIDE), "a\nb");
         let in_flat_parent = Builder::build(|b| {
             b.group(|b| {
-                b.group_with_id(GroupId(3), |b| {
+                b.group_with_id(id, |b| {
                     b.extend([text("x"), soft_line_break(), text("y")]);
                 });
             });
-            b.align_if_group_breaks(GroupId(3), 2, |b| {
+            b.align_if_group_breaks(id, 2, |b| {
                 b.extend([hard_line_break(), text("b")]);
             });
         });
         assert_eq!(print(&in_flat_parent, &WIDE), "xy\nb");
         let unprinted = Builder::build(|b| {
-            b.align_if_group_breaks(GroupId(1), 2, |b| {
+            b.align_if_group_breaks(id, 2, |b| {
                 b.extend([text("a"), hard_line_break(), text("b")]);
             });
-            b.group_with_id(GroupId(1), |b| {
+            b.group_with_id(id, |b| {
                 b.extend([text("c"), hard_line_break(), text("d")]);
             });
         });
         assert_eq!(print(&unprinted, &WIDE), "a\nbc\nd");
         let inside_own = Builder::build(|b| {
-            b.group_with_id(GroupId(2), |b| {
+            b.group_with_id(id, |b| {
                 b.extend([text("xx"), soft_line_break_or_space(), text("yy")]);
-                b.align_if_group_breaks(GroupId(2), 2, |b| {
+                b.align_if_group_breaks(id, 2, |b| {
                     b.extend([hard_line_break(), text("z")]);
                 });
             });

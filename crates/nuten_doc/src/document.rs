@@ -17,6 +17,13 @@ pub struct Children {
     len: u32,
 }
 
+/// Only the document that made it can resolve it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Sides {
+    children: Children,
+    broken_len: u32,
+}
+
 // Starting small keeps a small document from reserving more than it uses.
 // The cap keeps a large one from reserving a chunk it fills only in part.
 const FIRST_CHUNK_CAPACITY: usize = 64;
@@ -27,6 +34,17 @@ impl<'a> Document<'a> {
         Document {
             chunks: Vec::new(),
             root: Vec::new(),
+        }
+    }
+
+    pub(crate) fn push_sides(
+        &mut self,
+        elements: impl IntoIterator<Item = Element<'a>>,
+        broken_len: usize,
+    ) -> Sides {
+        Sides {
+            children: self.push_children(elements),
+            broken_len: to_u32(broken_len),
         }
     }
 
@@ -78,6 +96,11 @@ impl<'a> Document<'a> {
 
     pub(crate) fn root(&self) -> &[Element<'a>] {
         &self.root
+    }
+
+    pub(crate) fn sides(&self, sides: Sides) -> (&[Element<'a>], &[Element<'a>]) {
+        self.children(sides.children)
+            .split_at(sides.broken_len as usize)
     }
 
     pub(crate) fn children(&self, children: Children) -> &[Element<'a>] {
