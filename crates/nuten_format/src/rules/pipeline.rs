@@ -1,8 +1,7 @@
 use std::iter;
 
 use nuten_doc::{
-    Document, Element, GroupId, empty_line, expand_parent, hard_line_break,
-    soft_line_break_or_space, space,
+    Build, GroupId, empty_line, expand_parent, hard_line_break, soft_line_break_or_space, space,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
@@ -11,8 +10,8 @@ use nuten_syntax::{
 
 use super::{Child, Formatter, children, headed_by_attribute, kept::Kept, separator};
 
-impl<'a> Formatter<'a> {
-    pub(super) fn pipeline(&mut self, pipeline: &Pipeline) -> Vec<Element<'a>> {
+impl Formatter<'_> {
+    pub(super) fn pipeline(&mut self, pipeline: &Pipeline) {
         let id = self.groups.fresh();
         let parts = parts(pipeline.syntax(), &self.kept);
         let expand = parts.iter().any(|part| part.child.newlines > 0);
@@ -22,98 +21,96 @@ impl<'a> Formatter<'a> {
                     || self.holds_call_breaking_at_arguments(node.syntax())
             })
         });
-        let head: Vec<_> = expand
-            .then(expand_parent)
-            .into_iter()
-            .chain(
-                segments
-                    .iter()
-                    .flat_map(|segment| self.segment(segment, id)),
-            )
-            .collect();
+        self.group_with_id(id, |this| {
+            if expand {
+                this.push(expand_parent());
+            }
+            for segment in &segments {
+                this.segment(segment, id);
+            }
+        });
         // The tail is measured in break mode.
         // Its first line break then ends the measure instead of breaking the group.
-        let tail = tail.map_or_else(Vec::new, |tail| self.segment(&tail, id));
-        let assigned = self.assigned(pipeline.syntax());
-        let group = (!head.is_empty()).then(|| self.document.group_with_id(id, head));
-        group.into_iter().chain(tail).chain(assigned).collect()
+        if let Some(tail) = tail {
+            self.segment(&tail, id);
+        }
+        self.assigned(pipeline.syntax());
     }
 
-    fn assigned(&mut self, pipeline: &SyntaxNode) -> Vec<Element<'a>> {
+    fn assigned(&mut self, pipeline: &SyntaxNode) {
         let assigned = assignment_of(pipeline, &self.kept)
             .map(|assignment| assigned_children(&assignment, &self.kept));
         let Some((items, Some(first))) = assigned else {
-            return Vec::new();
+            return;
         };
-        items
-            .iter()
-            .enumerate()
-            .skip(first + 1)
-            .flat_map(|(index, item)| self.statement(&items[..index], item, false))
-            .collect()
+        for index in first + 1..items.len() {
+            self.statement(&items[..index], &items[index], false);
+        }
     }
 
-    fn segment(&mut self, segment: &Segment<'_>, id: GroupId) -> Vec<Element<'a>> {
-        let pipe = segment.pipe.map(|pipe| {
-            let gap = if pipe.keeps_blank_line_after_attribute() {
-                // Not through `separator`, which leaves only a line break after a comment.
-                Some(empty_line())
-            } else {
-                // A pipe before an attribute stays, since nu reads one only after a line break.
-                let plain = if segment.keeps_pipe_at_line_end() {
-                    space()
-                } else {
-                    soft_line_break_or_space()
-                };
-                separator(segment.prev, Some(plain))
-            };
-            gap.into_iter().chain(self.element(&pipe.child.element))
-        });
+    fn segment(&mut self, segment: &Segment<'_>, id: GroupId) {
         let end = segment.aligned_end();
-        let aligned = segment.items[..end]
-            .iter()
-            .enumerate()
-            .flat_map(|(index, part)| self.part(segment.prev_of(index), part))
-            .collect();
-        let aligned = match segment.align {
-            Some(Alignment::Always) => vec![self.document.align(2, aligned)],
-            Some(Alignment::IfGroupBreaks) => {
-                vec![self.document.align_if_group_breaks(id, 2, aligned)]
-            },
-            None => aligned,
-        };
-        let leading = pipe.into_iter().flatten().chain(aligned).collect();
         let level = segment
             .pipe
             .or(segment.items.first())
             .map_or(0, |part| part.level);
-        let leading = indent_levels_if_group_breaks(&mut self.document, id, level, leading);
+        self.indent_levels_if_group_breaks(id, level, |this| {
+            this.pipe(segment);
+            this.aligned(segment.align, id, |this| {
+                for (index, part) in segment.items[..end].iter().enumerate() {
+                    this.part(segment.prev_of(index), part);
+                }
+            });
+        });
         // From the first comment on, each part may start a line of its own.
         // So each takes its own indent, rather than that of the segment.
-        let rest = segment.items[end..]
-            .iter()
-            .enumerate()
-            .flat_map(|(index, part)| {
-                let elements = self.part(segment.prev_of(end + index), part).collect();
-                indent_levels_if_group_breaks(&mut self.document, id, part.level, elements)
+        for (index, part) in segment.items[end..].iter().enumerate() {
+            self.indent_levels_if_group_breaks(id, part.level, |this| {
+                this.part(segment.prev_of(end + index), part);
             });
-        leading.into_iter().chain(rest).collect()
+        }
     }
 
-    fn part(
-        &mut self,
-        prev: Option<SyntaxKind>,
-        part: &Part,
-    ) -> impl Iterator<Item = Element<'a>> + use<'a> {
+    fn aligned(&mut self, align: Option<Alignment>, id: GroupId, write: impl FnOnce(&mut Self)) {
+        match align {
+            Some(Alignment::Always) => self.align(2, write),
+            Some(Alignment::IfGroupBreaks) => self.align_if_group_breaks(id, 2, write),
+            None => write(self),
+        }
+    }
+
+    fn pipe(&mut self, segment: &Segment<'_>) {
+        let Some(pipe) = segment.pipe else {
+            return;
+        };
+        let gap = if pipe.keeps_blank_line_after_attribute() {
+            // Not through `separator`, which leaves only a line break after a comment.
+            Some(empty_line())
+        } else {
+            // A pipe before an attribute stays, since nu reads one only after a line break.
+            let plain = if segment.keeps_pipe_at_line_end() {
+                space()
+            } else {
+                soft_line_break_or_space()
+            };
+            separator(segment.prev, Some(plain))
+        };
+        self.extend(gap);
+        self.element(&pipe.child.element);
+    }
+
+    fn part(&mut self, prev: Option<SyntaxKind>, part: &Part) {
         let Child {
             element,
             newlines,
         } = &part.child;
-        let (lead, elements) = match element {
-            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => (
-                part.keeps_blank_line_after_attribute().then(empty_line),
-                self.comment(comment, *newlines, prev.is_none()),
-            ),
+        match element {
+            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => {
+                if part.keeps_blank_line_after_attribute() {
+                    self.push(empty_line());
+                }
+                self.comment(comment, *newlines, prev.is_none());
+            },
             // Nu rejects `e>|` and `o+e>|` starting a line, except right after an attribute.
             // So they stay after their element, which the parser puts right before them.
             // After an attribute, one on the same line would be in the attribute instead.
@@ -126,23 +123,12 @@ impl<'a> Formatter<'a> {
                 } else {
                     space()
                 };
-                (separator(prev, Some(plain)), self.element(element))
+                self.extend(separator(prev, Some(plain)));
+                self.element(element);
             },
             _ => unreachable!("{:?} is not a child of Pipeline", part.kind()),
-        };
-        lead.into_iter().chain(elements)
+        }
     }
-}
-
-fn indent_levels_if_group_breaks<'a>(
-    document: &mut Document<'a>,
-    id: GroupId,
-    level: u32,
-    elements: Vec<Element<'a>>,
-) -> Vec<Element<'a>> {
-    (0..level).fold(elements, |elements, _| {
-        vec![document.indent_if_group_breaks(id, elements)]
-    })
 }
 
 fn follows_semicolon(node: &SyntaxNode) -> bool {

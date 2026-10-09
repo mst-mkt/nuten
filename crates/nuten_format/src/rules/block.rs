@@ -1,6 +1,4 @@
-use nuten_doc::{
-    Document, Element, empty_line, expand_parent, soft_line_break_or_space, space, text,
-};
+use nuten_doc::{Build, empty_line, expand_parent, soft_line_break_or_space, space, text};
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind,
     ast::{self, AstNode, Block, Bracketed, ClosureParams, Node},
@@ -8,71 +6,58 @@ use nuten_syntax::{
 
 use super::{Child, Formatter, children, kept::Kept, without_separators};
 
-pub(super) struct BlockLayout<'a> {
-    /// Out of the group, so that parameters over lines leave the rest to fit after their last line.
-    pub(super) head: Vec<Element<'a>>,
-    pub(super) rest: Vec<Element<'a>>,
-    /// A comment the `}` follows on its line ends at a lone `\r`.
-    /// As a line suffix it would move past the `}`.
-    expand: bool,
-}
-
-impl<'a> BlockLayout<'a> {
-    fn grouped(self, document: &mut Document<'a>) -> Vec<Element<'a>> {
-        let rest = self.rest.into_iter().chain(self.expand.then(expand_parent));
-        self.head
-            .into_iter()
-            .chain([document.group(rest)])
-            .collect()
-    }
-}
-
-impl<'a> Formatter<'a> {
-    pub(super) fn block(&mut self, block: &Block) -> Vec<Element<'a>> {
-        self.block_layout(block).grouped(&mut self.document)
+impl Formatter<'_> {
+    pub(super) fn block(&mut self, block: &Block) {
+        self.grouped_block(block, false);
     }
 
-    pub(super) fn element_or_body(
-        &mut self,
-        element: &ast::Element,
-        body: Option<&Block>,
-    ) -> Vec<Element<'a>> {
+    pub(super) fn element_or_body(&mut self, element: &ast::Element, body: Option<&Block>) {
         match element {
             NodeOrToken::Node(Node::Block(block))
                 if Some(block) == body && !self.kept.keeps(&ast::untyped(element)) =>
             {
-                BlockLayout {
-                    expand: true,
-                    ..self.block_layout(block)
-                }
-                .grouped(&mut self.document)
+                self.grouped_block(block, true);
             },
             element => self.element(element),
         }
     }
 
-    pub(super) fn block_layout(&mut self, block: &Block) -> BlockLayout<'a> {
-        let mut head = vec![self.token(&block.open())];
-        let params = block.params();
-        if let Some(params) = &params {
-            head.extend(self.closure_params(params));
-        }
-        let close = self.token(&block.close());
+    /// The head stays out of the group.
+    /// Parameters over lines then leave the rest to fit after their last line.
+    fn grouped_block(&mut self, block: &Block, always_breaks: bool) {
         let body: Vec<_> = children(block.statements(), &self.kept).collect();
+        let breaks = always_breaks || breaks_lines(block, &body);
+        self.block_head(block);
+        self.group(|this| {
+            this.block_body(block, &body);
+            if breaks {
+                this.push(expand_parent());
+            }
+        });
+    }
+
+    pub(super) fn ungrouped_block(&mut self, block: &Block) {
+        let body: Vec<_> = children(block.statements(), &self.kept).collect();
+        self.block_head(block);
+        self.block_body(block, &body);
+    }
+
+    fn block_head(&mut self, block: &Block) {
+        self.push(self.token(&block.open()));
+        if let Some(params) = block.params() {
+            self.closure_params(&params);
+        }
+    }
+
+    fn block_body(&mut self, block: &Block, body: &[Child]) {
+        let close = self.token(&block.close());
         let Some(first) = body.first() else {
-            return BlockLayout {
-                head,
-                rest: vec![close],
-                expand: false,
-            };
+            self.push(close);
+            return;
         };
-        let expand = body.iter().any(Child::is_comment)
-            || block
-                .statements()
-                .any(|element| element.kind() == SyntaxKind::Newline);
         let lead = if first.is_comment() && first.newlines == 0 {
             None
-        } else if params.is_none()
+        } else if block.params().is_none()
             && first
                 .element
                 .as_node()
@@ -84,43 +69,47 @@ impl<'a> Formatter<'a> {
         } else {
             Some(soft_line_break_or_space())
         };
-        let inner = lead.into_iter().chain(self.statements(&body, false));
-        BlockLayout {
-            head,
-            rest: vec![
-                self.document.indent(inner),
-                soft_line_break_or_space(),
-                close,
-            ],
-            expand,
-        }
+        self.indent(|this| {
+            this.extend(lead);
+            this.statements(body, false);
+        });
+        self.extend([soft_line_break_or_space(), close]);
     }
 
     /// A space stays between two `|` with nothing between them, since `||` is lexed as one token.
-    fn closure_params(&mut self, params: &ClosureParams) -> Vec<Element<'a>> {
+    fn closure_params(&mut self, params: &ClosureParams) {
         let syntax = params.syntax();
         if closure_params_stay_as_is(params, &self.kept) {
-            return self.source(syntax.text_range());
+            self.source(syntax.text_range());
+            return;
         }
         let items: Vec<_> =
             without_separators(children(syntax.children_with_tokens(), &self.kept)).collect();
-        items
-            .iter()
-            .enumerate()
-            .flat_map(|(index, item)| {
-                let prev = index.checked_sub(1).map(|prev| items[prev].kind());
-                let separator = match (prev, item.kind()) {
-                    (Some(SyntaxKind::Param), SyntaxKind::Param) if self.commas.on_one_line() => {
-                        vec![text(","), space()]
-                    },
-                    (Some(SyntaxKind::Param), SyntaxKind::Param)
-                    | (Some(SyntaxKind::Pipe), SyntaxKind::Pipe) => vec![space()],
-                    _ => Vec::new(),
-                };
-                separator.into_iter().chain(self.element(&item.element))
-            })
-            .collect()
+        for (index, item) in items.iter().enumerate() {
+            let prev = index.checked_sub(1).map(|prev| items[prev].kind());
+            match (prev, item.kind()) {
+                (Some(SyntaxKind::Param), SyntaxKind::Param) => {
+                    if self.commas.on_one_line() {
+                        self.push(text(","));
+                    }
+                    self.push(space());
+                },
+                (Some(SyntaxKind::Pipe), SyntaxKind::Pipe) => self.push(space()),
+                _ => {},
+            }
+            self.element(&item.element);
+        }
     }
+}
+
+fn breaks_lines(block: &Block, body: &[Child]) -> bool {
+    // A comment the `}` follows on its line ends at a lone `\r`.
+    // As a line suffix it would move past the `}`.
+    let holds_comment = body.iter().any(Child::is_comment);
+    let over_lines = block
+        .statements()
+        .any(|element| element.kind() == SyntaxKind::Newline);
+    holds_comment || (!body.is_empty() && over_lines)
 }
 
 pub(super) fn holds_at_most_one_statement(block: &Block, kept: &Kept) -> bool {

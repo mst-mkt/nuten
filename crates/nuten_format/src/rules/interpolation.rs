@@ -1,4 +1,4 @@
-use nuten_doc::{Element, flat};
+use nuten_doc::Build;
 use nuten_syntax::{
     NodeOrToken, SyntaxKind,
     ast::{self, AstNode, Interpolation, Node, Subexpression},
@@ -6,30 +6,31 @@ use nuten_syntax::{
 
 use super::Formatter;
 
-impl<'a> Formatter<'a> {
-    pub(super) fn interpolation(&mut self, interpolation: &Interpolation) -> Vec<Element<'a>> {
-        interpolation
-            .syntax()
-            .children_with_tokens()
-            .flat_map(|piece| match (self.kept.keeps(&piece), ast::typed(piece)) {
+impl Formatter<'_> {
+    pub(super) fn interpolation(&mut self, interpolation: &Interpolation) {
+        for piece in interpolation.syntax().children_with_tokens() {
+            match (self.kept.keeps(&piece), ast::typed(piece)) {
                 (false, NodeOrToken::Node(Node::Subexpression(subexpression))) => {
-                    self.embedded(&subexpression)
+                    self.embedded(&subexpression);
                 },
                 (_, piece) => self.element(&piece),
-            })
-            .collect()
+            }
+        }
     }
 
     /// A line break here also splits the string, so only the source may place one.
-    fn embedded(&mut self, subexpression: &Subexpression) -> Vec<Element<'a>> {
+    fn embedded(&mut self, subexpression: &Subexpression) {
         let syntax = subexpression.syntax();
-        let elements = self.subexpression(subexpression);
         if syntax
             .descendants_with_tokens()
             .any(|element| element.kind() == SyntaxKind::Newline)
         {
-            return elements;
+            self.subexpression(subexpression);
+        } else {
+            self.flat_or(
+                |this| this.subexpression(subexpression),
+                |this| this.source(syntax.text_range()),
+            );
         }
-        flat(&self.document, &elements).unwrap_or_else(|| self.source(syntax.text_range()))
     }
 }

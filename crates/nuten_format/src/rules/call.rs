@@ -1,25 +1,28 @@
-use nuten_doc::{Element, soft_line_break_or_space, space};
+use nuten_doc::{Build, soft_line_break_or_space, space};
 use nuten_parser::is_command;
 use nuten_syntax::{SyntaxKind, SyntaxNode};
 
 use super::{Child, Formatter, breaks_by_width, children};
 
-impl<'a> Formatter<'a> {
-    pub(super) fn call(&mut self, call: &SyntaxNode) -> Vec<Element<'a>> {
+impl Formatter<'_> {
+    pub(super) fn call(&mut self, call: &SyntaxNode) {
         let items: Vec<_> = children(call.children_with_tokens(), &self.kept).collect();
         if !breaks_at_arguments(call, &items) {
-            return self.spaced(call);
+            self.spaced(call);
+            return;
         }
         let name_len = name_len(call, &items);
-        let arguments = self.spaced_children(&items, |index, _| {
-            Some(if index < name_len || stays_after_flag(&items, index) {
-                space()
-            } else {
-                soft_line_break_or_space()
-            })
+        self.group(|this| {
+            this.indent(|this| {
+                this.spaced_children(&items, |index, _| {
+                    Some(if index < name_len || stays_after_flag(&items, index) {
+                        space()
+                    } else {
+                        soft_line_break_or_space()
+                    })
+                });
+            });
         });
-        let indented = self.document.indent(arguments);
-        vec![self.document.group([indented])]
     }
 
     pub(super) fn holds_call_breaking_at_arguments(&self, element: &SyntaxNode) -> bool {

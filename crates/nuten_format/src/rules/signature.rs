@@ -1,6 +1,4 @@
-use std::iter;
-
-use nuten_doc::{Element, space};
+use nuten_doc::{Build, space};
 use nuten_syntax::{
     SyntaxKind,
     ast::{AstNode, Bracketed, Param, Type, TypeField},
@@ -8,8 +6,8 @@ use nuten_syntax::{
 
 use super::{Formatter, children, without_separators};
 
-impl<'a> Formatter<'a> {
-    pub(super) fn param(&mut self, param: &Param) -> Vec<Element<'a>> {
+impl Formatter<'_> {
+    pub(super) fn param(&mut self, param: &Param) {
         let items: Vec<_> =
             without_separators(children(param.syntax().children_with_tokens(), &self.kept))
                 .collect();
@@ -27,16 +25,15 @@ impl<'a> Formatter<'a> {
             // Joined to a type or a default value, it would become part of that.
             SyntaxKind::ShortFlag if index == 1 && name_is_long_flag => None,
             _ => Some(space()),
-        })
+        });
     }
 
     /// No comment comes inside, since the parser keeps a type holding one as one token.
-    pub(super) fn type_(&mut self, type_: &Type) -> Vec<Element<'a>> {
-        let head = [self.token(&type_.name()), self.token(&type_.open())];
-        let close = self.token(&type_.close());
+    pub(super) fn type_(&mut self, type_: &Type) {
+        self.extend([self.token(&type_.name()), self.token(&type_.open())]);
         let takes_commas = self.commas.on_one_line();
         // Without the `,`, nu would read the `:` as that of a key before it.
-        let params = self.one_line_items(type_.inside(), |param| {
+        self.one_line_items(type_.inside(), |param| {
             takes_commas
                 || param
                     .element
@@ -44,18 +41,15 @@ impl<'a> Formatter<'a> {
                     .and_then(|param| param.syntax().first_token())
                     .is_some_and(|first| first.kind() == SyntaxKind::Colon)
         });
-        head.into_iter()
-            .chain(params)
-            .chain(iter::once(close))
-            .collect()
+        self.push(self.token(&type_.close()));
     }
 
     /// A `,` here is the type nu takes for the key, so it stays, unlike one among the fields.
-    pub(super) fn type_field(&mut self, field: &TypeField) -> Vec<Element<'a>> {
+    pub(super) fn type_field(&mut self, field: &TypeField) {
         let items: Vec<_> = children(field.syntax().children_with_tokens(), &self.kept).collect();
         self.spaced_children(&items, |_, item| {
             (item.kind() != SyntaxKind::Colon).then(space)
-        })
+        });
     }
 }
 

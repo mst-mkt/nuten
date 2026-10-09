@@ -1,11 +1,12 @@
 use crate::Element;
 
-/// Holds the children of the elements built with it.
-/// So dropping it frees a few chunks, not one list per container.
+/// Holds the children of every container in a few chunks.
+/// So dropping it frees those, not one list per container.
 /// One growing list instead would copy itself as it grows, and leave up to half of itself unused.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Document<'a> {
     chunks: Vec<Vec<Element<'a>>>,
+    root: Vec<Element<'a>>,
 }
 
 /// Only the document that made it can resolve it.
@@ -22,6 +23,13 @@ const FIRST_CHUNK_CAPACITY: usize = 64;
 const LARGEST_CHUNK_CAPACITY: usize = 4096;
 
 impl<'a> Document<'a> {
+    pub(crate) fn new() -> Self {
+        Document {
+            chunks: Vec::new(),
+            root: Vec::new(),
+        }
+    }
+
     pub(crate) fn push_children(
         &mut self,
         elements: impl IntoIterator<Item = Element<'a>>,
@@ -56,14 +64,20 @@ impl<'a> Document<'a> {
         self.chunks.len() - 1
     }
 
+    /// Memory peaks while printing, so the room left in the root and the last chunk is freed first.
     /// Earlier chunks were left only for children too long for their room.
     /// So the room they keep is rarely worth a copy, unlike that of the last one.
-    #[must_use]
-    pub fn finish(mut self) -> Self {
+    pub(crate) fn finish(mut self, mut root: Vec<Element<'a>>) -> Self {
+        root.shrink_to_fit();
+        self.root = root;
         if let Some(last) = self.chunks.last_mut() {
             last.shrink_to_fit();
         }
         self
+    }
+
+    pub(crate) fn root(&self) -> &[Element<'a>] {
+        &self.root
     }
 
     pub(crate) fn children(&self, children: Children) -> &[Element<'a>] {
@@ -85,7 +99,7 @@ mod tests {
 
     #[test]
     fn children_past_room_of_chunk_go_to_next_chunk() {
-        let mut doc = Document::default();
+        let mut doc = Document::new();
         let first = doc.push_children([space()]);
         let filler = doc.push_children(iter::repeat_n(expand_parent(), FIRST_CHUNK_CAPACITY));
         let last = doc.push_children([line_suffix_boundary()]);
@@ -100,7 +114,7 @@ mod tests {
 
     #[test]
     fn children_filling_room_of_chunk_stay_in_chunk() {
-        let mut doc = Document::default();
+        let mut doc = Document::new();
         let first = doc.push_children([space()]);
         let rest = doc.push_children(iter::repeat_n(expand_parent(), FIRST_CHUNK_CAPACITY - 1));
         assert_eq!(doc.chunks.len(), 1);
@@ -113,7 +127,7 @@ mod tests {
 
     #[test]
     fn children_past_size_hint_grow_chunk() {
-        let mut doc = Document::default();
+        let mut doc = Document::new();
         let first = doc.push_children([space()]);
         let mut left = FIRST_CHUNK_CAPACITY;
         let unhinted = doc.push_children(iter::from_fn(|| {

@@ -1,4 +1,4 @@
-use nuten_doc::{Element, expand_parent};
+use nuten_doc::{Build, expand_parent};
 use nuten_syntax::{
     NodeOrToken, SyntaxKind, SyntaxNode,
     ast::{self, Block, Node},
@@ -6,27 +6,29 @@ use nuten_syntax::{
 
 use super::{Child, Formatter, block::holds_at_most_one_statement, children, line_break_or_space};
 
-impl<'a> Formatter<'a> {
-    pub(super) fn bodies(&mut self, keyword: &SyntaxNode) -> Vec<Element<'a>> {
+impl Formatter<'_> {
+    pub(super) fn bodies(&mut self, keyword: &SyntaxNode) {
         let items: Vec<_> = children(keyword.children_with_tokens(), &self.kept).collect();
         let expand = !matches!(keyword.kind(), SyntaxKind::If | SyntaxKind::Try)
             || is_statement(keyword)
             || (0..items.len())
                 .filter_map(|index| body_at(&items, index))
                 .any(|body| !holds_at_most_one_statement(body, &self.kept));
-        let out = self.spaced_children_by(
-            &items,
-            |_, item| Some(line_break_or_space(item)),
-            |this, index, element| match body_at(&items, index) {
-                Some(body) if !this.kept.keeps(&ast::untyped(element)) => {
-                    let layout = this.block_layout(body);
-                    layout.head.into_iter().chain(layout.rest).collect()
+        self.group(|this| {
+            this.spaced_children_by(
+                &items,
+                |_, item| Some(line_break_or_space(item)),
+                |this, index, element| match body_at(&items, index) {
+                    Some(body) if !this.kept.keeps(&ast::untyped(element)) => {
+                        this.ungrouped_block(body);
+                    },
+                    _ => this.element(element),
                 },
-                _ => this.element(element),
-            },
-        );
-        let elements = out.into_iter().chain(expand.then(expand_parent));
-        vec![self.document.group(elements)]
+            );
+            if expand {
+                this.push(expand_parent());
+            }
+        });
     }
 }
 

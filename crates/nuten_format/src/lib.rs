@@ -120,12 +120,8 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
         });
     }
     let root = parsed.syntax();
-    let (document, elements) = rules::file(src, &root, config.commas);
-    Ok(nuten_doc::print(
-        &document,
-        &elements,
-        &printer_options(config, &root),
-    ))
+    let document = rules::file(src, &root, config.commas);
+    Ok(nuten_doc::print(&document, &printer_options(config, &root)))
 }
 
 #[cfg(test)]

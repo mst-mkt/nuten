@@ -1,7 +1,5 @@
-use std::iter;
-
 use nuten_doc::{
-    Document, Element, empty_line, expand_parent, soft_line_break, soft_line_break_or_space, space,
+    Build, Element, empty_line, expand_parent, soft_line_break, soft_line_break_or_space, space,
     text,
 };
 use nuten_syntax::{
@@ -22,20 +20,19 @@ pub(super) struct ItemsLayout {
     pub(super) commas: Commas,
 }
 
-impl<'a> Formatter<'a> {
-    pub(super) fn container(&mut self, container: &dyn Bracketed) -> Vec<Element<'a>> {
+impl Formatter<'_> {
+    pub(super) fn container(&mut self, container: &dyn Bracketed) {
         let kind = container.syntax().kind();
         let line = if matches!(kind, SyntaxKind::Record | SyntaxKind::RecordPattern) {
             soft_line_break_or_space
         } else {
             soft_line_break
         };
-        let head = vec![self.token(&container.open())];
         let is_arms = kind == SyntaxKind::MatchArms;
         // Arms are not the items of a value, which the setting is about.
         let commas = if is_arms { Commas::None } else { self.commas };
         self.items(
-            head,
+            |this| this.push(this.token(&container.open())),
             container.inside(),
             &container.close(),
             ItemsLayout {
@@ -44,25 +41,27 @@ impl<'a> Formatter<'a> {
                 before_close: line,
                 commas,
             },
-        )
+        );
     }
 
-    pub(super) fn table(&mut self, table: &Table) -> Vec<Element<'a>> {
+    pub(super) fn table(&mut self, table: &Table) {
         let (columns, semicolon) = table.header();
         // As the head, a run kept from the columns through the `;` would join the `[`.
         // Formatted again, it would then take in the whole table.
         if self.kept.is_rest(&semicolon.clone().into()) {
-            return self.container(table);
+            self.container(table);
+            return;
         }
         let expand = children(table.inside(), &self.kept)
             .next()
             .is_some_and(|columns| columns.newlines > 0);
-        let mut head = vec![self.token(&table.open())];
-        head.extend(self.element(&columns));
-        head.push(self.token(&semicolon));
         self.items(
-            head,
-            table.following(&semicolon.into()),
+            |this| {
+                this.push(this.token(&table.open()));
+                this.element(&columns);
+                this.push(this.token(&semicolon));
+            },
+            table.following(&semicolon.clone().into()),
             &table.close(),
             ItemsLayout {
                 expand,
@@ -70,16 +69,16 @@ impl<'a> Formatter<'a> {
                 before_close: soft_line_break,
                 commas: self.commas,
             },
-        )
+        );
     }
 
     pub(super) fn items(
         &mut self,
-        head: Vec<Element<'a>>,
+        head: impl FnOnce(&mut Self),
         elements: impl Iterator<Item = SyntaxElement>,
         close: &SyntaxToken,
         layout: ItemsLayout,
-    ) -> Vec<Element<'a>> {
+    ) {
         let ItemsLayout {
             expand,
             before_first,
@@ -96,42 +95,39 @@ impl<'a> Formatter<'a> {
         } else {
             Commas::None
         };
-        let inner: Vec<_> = items
-            .iter()
-            .enumerate()
-            .flat_map(|(index, item)| {
-                let comma = self.comma_after(&items, index, commas);
-                self.item(index, item, before_first)
-                    .into_iter()
-                    .chain(comma)
-            })
-            .collect();
-        let mut out = head;
-        if inner.is_empty() {
-            out.push(self.token(close));
-            return out;
+        if items.is_empty() {
+            head(self);
+            self.push(self.token(close));
+            return;
         }
-        out.push(self.document.indent(inner));
-        out.push(before_close());
-        out.push(self.token(close));
-        if expand {
-            out.push(expand_parent());
-        }
-        vec![self.document.group(out)]
+        self.group(|this| {
+            head(this);
+            this.indent(|this| {
+                for (index, item) in items.iter().enumerate() {
+                    this.item(index, item, before_first);
+                    this.comma_after(&items, index, commas);
+                }
+            });
+            this.extend([before_close(), this.token(close)]);
+            if expand {
+                this.push(expand_parent());
+            }
+        });
     }
 
-    fn item(&mut self, index: usize, item: &Child, before_first: SoftLine) -> Vec<Element<'a>> {
+    fn item(&mut self, index: usize, item: &Child, before_first: SoftLine) {
         let Child {
             element,
             newlines,
         } = item;
         let blank_line = index > 0 && *newlines > 1;
         match element {
-            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => blank_line
-                .then(empty_line)
-                .into_iter()
-                .chain(self.comment(comment, *newlines, false))
-                .collect(),
+            NodeOrToken::Token(comment) if comment.kind() == SyntaxKind::Comment => {
+                if blank_line {
+                    self.push(empty_line());
+                }
+                self.comment(comment, *newlines, false);
+            },
             _ => {
                 let separator = if index == 0 {
                     before_first()
@@ -141,24 +137,23 @@ impl<'a> Formatter<'a> {
                     // After a comment, the container is expanded, so the line break comes anyway.
                     soft_line_break_or_space()
                 };
-                iter::once(separator).chain(self.element(element)).collect()
+                self.push(separator);
+                self.element(element);
             },
         }
     }
 
-    fn comma_after(
-        &mut self,
-        items: &[Child],
-        index: usize,
-        commas: Commas,
-    ) -> Option<Element<'a>> {
+    fn comma_after(&mut self, items: &[Child], index: usize, commas: Commas) {
         let item = &items[index];
         if item.is_comment() || self.keeps_comma(item) {
-            None
-        } else if items[index + 1..].iter().any(|next| !next.is_comment()) {
-            commas.between(&mut self.document)
-        } else {
-            commas.after_last(&mut self.document)
+            return;
+        }
+        let is_last = items[index + 1..].iter().all(Child::is_comment);
+        match (commas, is_last) {
+            (Commas::Inline, false) => self.if_break(|_broken| {}, |flat| flat.push(text(","))),
+            (Commas::Always | Commas::Trailing, false) => self.push(text(",")),
+            (Commas::Trailing, true) => self.if_break(|broken| broken.push(text(",")), |_flat| {}),
+            (Commas::None, _) | (Commas::Inline | Commas::Always, true) => {},
         }
     }
 
@@ -170,7 +165,7 @@ impl<'a> Formatter<'a> {
         )
     }
 
-    pub(super) fn field(&mut self, field: &RecordField) -> Vec<Element<'a>> {
+    pub(super) fn field(&mut self, field: &RecordField) {
         let items: Vec<_> =
             without_separators(children(field.syntax().children_with_tokens(), &self.kept))
                 .collect();
@@ -181,7 +176,7 @@ impl<'a> Formatter<'a> {
             .nth(1)
             .filter(|(_, item)| item.kind() == SyntaxKind::Colon)
             .map(|(index, _)| index);
-        self.spaced_children(&items, |index, _| (Some(index) != colon).then(space))
+        self.spaced_children(&items, |index, _| (Some(index) != colon).then(space));
     }
 }
 
@@ -210,18 +205,4 @@ fn parts(node: &SyntaxNode) -> Vec<SyntaxElement> {
 
 fn is_operand(part: &SyntaxElement) -> bool {
     part.as_token().is_none_or(|token| token.kind().is_item())
-}
-
-impl Commas {
-    fn between<'a>(self, document: &mut Document<'a>) -> Option<Element<'a>> {
-        match self {
-            Commas::None => None,
-            Commas::Inline => Some(document.if_break([], [text(",")])),
-            Commas::Always | Commas::Trailing => Some(text(",")),
-        }
-    }
-
-    fn after_last<'a>(self, document: &mut Document<'a>) -> Option<Element<'a>> {
-        (self == Commas::Trailing).then(|| document.if_break([text(",")], []))
-    }
 }

@@ -1,6 +1,9 @@
 use crate::{Document, Element, LineMode, TextWidth};
 
-pub fn flat<'a>(document: &Document<'a>, elements: &[Element<'a>]) -> Option<Vec<Element<'a>>> {
+pub(crate) fn flat<'a>(
+    document: &Document<'a>,
+    elements: &[Element<'a>],
+) -> Option<Vec<Element<'a>>> {
     flat_onto(document, Vec::with_capacity(elements.len()), elements)
 }
 
@@ -92,28 +95,35 @@ fn pushed<'a>(mut elements: Vec<Element<'a>>, element: Element<'a>) -> Vec<Eleme
 mod tests {
     use super::{breaks_groups, flat};
     use crate::{
-        Document, exact_text, expand_parent, hard_line_break, line_suffix_boundary,
-        soft_line_break, soft_line_break_or_space, space, text,
+        Build, Builder, Document, Element, exact_text, expand_parent, hard_line_break,
+        line_suffix_boundary, soft_line_break, soft_line_break_or_space, space, text,
     };
+
+    fn flat_root<'a>(doc: &Document<'a>) -> Option<Vec<Element<'a>>> {
+        flat(doc, doc.root())
+    }
 
     #[test]
     fn every_group_comes_out_flat() {
-        let mut doc = Document::default();
-        let indented = doc.indent([
-            soft_line_break(),
-            text("a"),
-            soft_line_break_or_space(),
-            text("b"),
-        ]);
-        let elements = [
-            text("("),
-            doc.group([indented, soft_line_break(), text(")"), expand_parent()]),
-            doc.align(2, [space(), line_suffix_boundary()]),
-            exact_text("'a'"),
-            doc.if_break([hard_line_break()], [text(",")]),
-        ];
+        let doc = Builder::build(|b| {
+            b.push(text("("));
+            b.group(|b| {
+                b.indent(|b| {
+                    b.extend([
+                        soft_line_break(),
+                        text("a"),
+                        soft_line_break_or_space(),
+                        text("b"),
+                    ]);
+                });
+                b.extend([soft_line_break(), text(")"), expand_parent()]);
+            });
+            b.align(2, |b| b.extend([space(), line_suffix_boundary()]));
+            b.push(exact_text("'a'"));
+            b.if_break(|b| b.push(hard_line_break()), |b| b.push(text(",")));
+        });
         assert_eq!(
-            flat(&doc, &elements),
+            flat_root(&doc),
             Some(vec![
                 text("("),
                 text("a"),
@@ -130,38 +140,40 @@ mod tests {
 
     #[test]
     fn hard_line_breaks_and_line_suffixes_prevent_flat() {
-        let mut doc = Document::default();
-        let suffix = doc.line_suffix([text("# c")]);
-        for element in [
-            doc.group([text("a"), hard_line_break()]),
-            text("a\nb"),
-            exact_text("a\nb"),
-            doc.indent([suffix]),
-        ] {
-            assert_eq!(flat(&doc, &[element]), None, "{element:?}");
+        let docs = [
+            Builder::build(|b| b.group(|b| b.extend([text("a"), hard_line_break()]))),
+            Builder::build(|b| b.push(text("a\nb"))),
+            Builder::build(|b| b.push(exact_text("a\nb"))),
+            Builder::build(|b| b.indent(|b| b.line_suffix(|b| b.push(text("# c"))))),
+        ];
+        for doc in docs {
+            assert_eq!(flat_root(&doc), None, "{doc:?}");
         }
     }
 
     #[test]
     fn only_forced_break_at_any_depth_breaks_groups() {
-        let mut doc = Document::default();
-        for element in [
-            doc.group([text("a"), hard_line_break()]),
-            doc.indent([expand_parent()]),
-            doc.align(2, [text("a\nb")]),
-            doc.line_suffix([text("a\nb")]),
-            text("a\nb"),
-            exact_text("a\nb"),
-            doc.if_break([], [hard_line_break()]),
-        ] {
-            assert!(breaks_groups(&doc, &[element]), "{element:?}");
+        let breaking = [
+            Builder::build(|b| b.group(|b| b.extend([text("a"), hard_line_break()]))),
+            Builder::build(|b| b.indent(|b| b.push(expand_parent()))),
+            Builder::build(|b| b.align(2, |b| b.push(text("a\nb")))),
+            Builder::build(|b| b.line_suffix(|b| b.push(text("a\nb")))),
+            Builder::build(|b| b.push(text("a\nb"))),
+            Builder::build(|b| b.push(exact_text("a\nb"))),
+            Builder::build(|b| b.if_break(|_| {}, |b| b.push(hard_line_break()))),
+        ];
+        for doc in breaking {
+            assert!(breaks_groups(&doc, doc.root()), "{doc:?}");
         }
-        for element in [
-            doc.group([text("a"), soft_line_break_or_space(), text("b")]),
-            doc.line_suffix([text("# c")]),
-            doc.if_break([hard_line_break()], []),
-        ] {
-            assert!(!breaks_groups(&doc, &[element]), "{element:?}");
+        let not_breaking = [
+            Builder::build(|b| {
+                b.group(|b| b.extend([text("a"), soft_line_break_or_space(), text("b")]));
+            }),
+            Builder::build(|b| b.line_suffix(|b| b.push(text("# c")))),
+            Builder::build(|b| b.if_break(|b| b.push(hard_line_break()), |_| {})),
+        ];
+        for doc in not_breaking {
+            assert!(!breaks_groups(&doc, doc.root()), "{doc:?}");
         }
     }
 }

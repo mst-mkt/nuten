@@ -18,7 +18,8 @@ mod subexpression;
 use std::{iter, mem};
 
 use nuten_doc::{
-    Document, Element, GroupIds, empty_line, empty_lines, exact_text, hard_line_break, space, text,
+    Build, Builder, Document, Element, GroupIds, empty_line, empty_lines, exact_text,
+    hard_line_break, space, text,
 };
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken, TextRange, WalkEvent,
@@ -94,24 +95,19 @@ fn without_separators(children: impl Iterator<Item = Child>) -> impl Iterator<It
 }
 
 /// `root` is the tree of `src`, with no `Error` element.
-pub(crate) fn file<'a>(
-    src: &'a str,
-    root: &SyntaxNode,
-    commas: Commas,
-) -> (Document<'a>, Vec<Element<'a>>) {
+pub(crate) fn file<'a>(src: &'a str, root: &SyntaxNode, commas: Commas) -> Document<'a> {
     let mut formatter = Formatter {
         src,
         root: root.clone(),
-        document: Document::default(),
+        builder: Builder::default(),
         groups: GroupIds::default(),
         kept: Kept::of(src, root),
         commas,
     };
     let statements: Vec<_> = children(root.children_with_tokens(), &formatter.kept).collect();
-    let mut out = formatter.statements(&statements, true);
-    out.push(hard_line_break());
-    // Memory peaks while printing, so the unused room in the document is freed before that.
-    (formatter.document.finish(), out)
+    formatter.statements(&statements, true);
+    formatter.push(hard_line_break());
+    formatter.builder.finish()
 }
 
 impl Commas {
@@ -124,29 +120,28 @@ struct Formatter<'a> {
     src: &'a str,
     /// The tree of `src`.
     root: SyntaxNode,
-    document: Document<'a>,
+    builder: Builder<'a>,
     groups: GroupIds,
     kept: Kept,
     commas: Commas,
 }
 
+impl<'a> Build<'a> for Formatter<'a> {
+    fn builder(&mut self) -> &mut Builder<'a> {
+        &mut self.builder
+    }
+}
+
 impl<'a> Formatter<'a> {
     /// Line breaks before the first statement are left to the container.
-    fn statements(&mut self, items: &[Child], at_start: bool) -> Vec<Element<'a>> {
-        items
-            .iter()
-            .enumerate()
-            .flat_map(|(index, item)| self.statement(&items[..index], item, at_start))
-            .collect()
+    fn statements(&mut self, items: &[Child], at_start: bool) {
+        for (index, item) in items.iter().enumerate() {
+            self.statement(&items[..index], item, at_start);
+        }
     }
 
     /// `before` is every child that comes before it.
-    fn statement(
-        &mut self,
-        before: &[Child],
-        item: &Child,
-        at_start: bool,
-    ) -> impl Iterator<Item = Element<'a>> + use<'a> {
+    fn statement(&mut self, before: &[Child], item: &Child, at_start: bool) {
         let Child {
             element,
             newlines,
@@ -161,22 +156,22 @@ impl<'a> Formatter<'a> {
             (_, 3..) if reaches_past_blank_line(&ast::untyped(element)) => Some(empty_lines(2)),
             _ => Some(empty_line()),
         };
-        let elements = match element {
+        self.extend(separator);
+        match element {
             NodeOrToken::Node(_) => self.element(element),
             NodeOrToken::Token(child) => match child.kind() {
-                SyntaxKind::Semicolon => vec![self.token(child)],
+                SyntaxKind::Semicolon => self.push(self.token(child)),
                 SyntaxKind::Comment => self.comment(child, *newlines, at_start && prev.is_none()),
                 kind => unreachable!("{kind:?} is not among statements"),
             },
-        };
-        separator.into_iter().chain(elements)
+        }
     }
 
-    fn node(&mut self, node: &Node) -> Vec<Element<'a>> {
+    fn node(&mut self, node: &Node) {
         match node {
             Node::Pipeline(pipeline) => self.pipeline(pipeline),
             Node::MathExpression(_) if breaks_by_width(node.syntax()) => {
-                self.parenthesized_expression(node.syntax())
+                self.parenthesized_expression(node.syntax());
             },
             Node::Call(_) | Node::ExternalCall(_) => self.call(node.syntax()),
             Node::PipelineElement(_)
@@ -191,7 +186,7 @@ impl<'a> Formatter<'a> {
             Node::CellPath(_) | Node::Range(_) | Node::Spread(_) => self.touching(node.syntax()),
             Node::Interpolation(interpolation) => self.interpolation(interpolation),
             Node::If(_) | Node::For(_) | Node::While(_) | Node::Loop(_) | Node::Try(_) => {
-                self.bodies(node.syntax())
+                self.bodies(node.syntax());
             },
             Node::MatchArms(arms) => self.container(arms),
             Node::MatchArm(arm) => self.arm(arm),
@@ -223,52 +218,47 @@ impl<'a> Formatter<'a> {
     }
 
     /// Nu lexes a line break inside `( )` as whitespace, so one can fall among these children.
-    fn spaced(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
+    fn spaced(&mut self, parent: &SyntaxNode) {
         let items: Vec<_> = children(parent.children_with_tokens(), &self.kept).collect();
         self.spaced_children(&items, |_, item| {
             (item.kind() != SyntaxKind::Semicolon).then(|| line_break_or_space(item))
-        })
+        });
     }
 
-    fn touching(&mut self, parent: &SyntaxNode) -> Vec<Element<'a>> {
-        parent
-            .children_with_tokens()
-            .flat_map(|child| self.element(&ast::typed(child)))
-            .collect()
+    fn touching(&mut self, parent: &SyntaxNode) {
+        for child in parent.children_with_tokens() {
+            self.element(&ast::typed(child));
+        }
     }
 
     fn spaced_children(
         &mut self,
         items: &[Child],
         plain: impl Fn(usize, &Child) -> Option<Element<'static>>,
-    ) -> Vec<Element<'a>> {
-        self.spaced_children_by(items, plain, |this, _, element| this.element(element))
+    ) {
+        self.spaced_children_by(items, plain, |this, _, element| this.element(element));
     }
 
     fn spaced_children_by(
         &mut self,
         items: &[Child],
         plain: impl Fn(usize, &Child) -> Option<Element<'static>>,
-        mut element: impl FnMut(&mut Self, usize, &ast::Element) -> Vec<Element<'a>>,
-    ) -> Vec<Element<'a>> {
-        items
-            .iter()
-            .enumerate()
-            .flat_map(|(index, item)| {
-                let prev = items[..index].last().map(Child::kind);
-                let (lead, elements) = match item.as_comment() {
-                    Some(comment) => (None, self.comment(comment, item.newlines, false)),
-                    None if starts_kept_line(&self.kept, &items[index..]) => {
-                        (Some(hard_line_break()), element(self, index, &item.element))
-                    },
-                    None => (
-                        separator(prev, plain(index, item)),
-                        element(self, index, &item.element),
-                    ),
-                };
-                lead.into_iter().chain(elements)
-            })
-            .collect()
+        mut element: impl FnMut(&mut Self, usize, &ast::Element),
+    ) {
+        for (index, item) in items.iter().enumerate() {
+            if let Some(comment) = item.as_comment() {
+                self.comment(comment, item.newlines, false);
+                continue;
+            }
+            let prev = items[..index].last().map(Child::kind);
+            let lead = if starts_kept_line(&self.kept, &items[index..]) {
+                Some(hard_line_break())
+            } else {
+                separator(prev, plain(index, item))
+            };
+            self.extend(lead);
+            element(self, index, &item.element);
+        }
     }
 
     fn kept_up_to(&self, node: &SyntaxNode, element: &SyntaxNode) -> bool {
@@ -282,44 +272,36 @@ impl<'a> Formatter<'a> {
         &mut self,
         elements: impl Iterator<Item = SyntaxElement>,
         comma_before: impl Fn(&Child) -> bool,
-    ) -> Vec<Element<'a>> {
+    ) {
         let items: Vec<_> = without_separators(children(elements, &self.kept)).collect();
-        items
-            .iter()
-            .enumerate()
-            .flat_map(|(index, item)| {
-                let separator = match index {
-                    0 => Vec::new(),
-                    _ if comma_before(item) => vec![text(","), space()],
-                    _ => vec![space()],
-                };
-                separator.into_iter().chain(self.element(&item.element))
-            })
-            .collect()
-    }
-
-    fn element(&mut self, element: &ast::Element) -> Vec<Element<'a>> {
-        match (self.kept.member(&ast::untyped(element)), element) {
-            (Some(Member::First(run)), _) => self.source(run),
-            (Some(Member::Rest), _) => Vec::new(),
-            (None, NodeOrToken::Node(node)) => self.node(node),
-            (None, NodeOrToken::Token(token)) => vec![self.token(token)],
+        for (index, item) in items.iter().enumerate() {
+            if index > 0 {
+                if comma_before(item) {
+                    self.push(text(","));
+                }
+                self.push(space());
+            }
+            self.element(&item.element);
         }
     }
 
-    fn comment(
-        &mut self,
-        comment: &SyntaxToken,
-        newlines: u32,
-        at_start: bool,
-    ) -> Vec<Element<'a>> {
+    fn element(&mut self, element: &ast::Element) {
+        match (self.kept.member(&ast::untyped(element)), element) {
+            (Some(Member::First(run)), _) => self.source(run),
+            (Some(Member::Rest), _) => {},
+            (None, NodeOrToken::Node(node)) => self.node(node),
+            (None, NodeOrToken::Token(token)) => self.push(self.token(token)),
+        }
+    }
+
+    fn comment(&mut self, comment: &SyntaxToken, newlines: u32, at_start: bool) {
         if newlines > 0 || at_start {
             // The container may have pushed a line break already.
             // The printer keeps the longer of the two.
-            vec![hard_line_break(), self.token(comment)]
+            self.extend([hard_line_break(), self.token(comment)]);
         } else {
             // A line suffix, so that it does not count toward the width of the line.
-            vec![self.document.line_suffix([space(), self.token(comment)])]
+            self.line_suffix(|this| this.extend([space(), this.token(comment)]));
         }
     }
 
@@ -332,7 +314,8 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn source(&self, range: TextRange) -> Vec<Element<'a>> {
+    fn source(&mut self, range: TextRange) {
+        let src = self.src;
         let exact = exact_ranges(&self.root, range);
         let gaps = iter::once(range.start())
             .chain(exact.iter().map(|exact| exact.end()))
@@ -345,14 +328,12 @@ impl<'a> Formatter<'a> {
             .map(|(start, end)| TextRange::new(start, end));
         let exact_texts = exact
             .iter()
-            .map(|&exact| Some(exact_text(&self.src[exact])))
+            .map(|&exact| Some(exact_text(&src[exact])))
             .chain(iter::once(None));
-        gaps.zip(exact_texts)
-            .flat_map(|(gap, exact_text)| {
-                let gap = (!gap.is_empty()).then(|| text(&self.src[gap]));
-                gap.into_iter().chain(exact_text)
-            })
-            .collect()
+        self.extend(gaps.zip(exact_texts).flat_map(|(gap, exact_text)| {
+            let gap = (!gap.is_empty()).then(|| text(&src[gap]));
+            gap.into_iter().chain(exact_text)
+        }));
     }
 }
 
