@@ -33,6 +33,7 @@ let
     "zed"
     "dprint"
     "assets"
+    "docs"
   ];
   convcoConfig = (pkgs.formats.yaml { }).generate "convco.yaml" {
     types = map (type: {
