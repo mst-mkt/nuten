@@ -101,9 +101,20 @@ impl fmt::Display for LexErrorKind {
     }
 }
 
-/// Each mode is one of the ways nu calls `lex`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Mode {
+macro_rules! modes {
+    ($($(#[$meta:meta])* $mode:ident,)*) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub(crate) enum Mode {
+            $($(#[$meta])* $mode,)*
+        }
+
+        impl Mode {
+            pub(crate) const ALL: &[Mode] = &[$(Mode::$mode,)*];
+        }
+    };
+}
+
+modes! {
     Block,
     /// Nu lexes a line break as whitespace there, so no statement ends at one.
     Paren,
@@ -128,24 +139,6 @@ pub(crate) enum Mode {
 }
 
 impl Mode {
-    pub(crate) const ALL: &[Mode] = &[
-        Mode::Block,
-        Mode::Paren,
-        Mode::List,
-        Mode::Record,
-        Mode::RecordValue,
-        Mode::Brace,
-        Mode::VarType,
-        Mode::Signature,
-        Mode::IoTypes,
-        Mode::TypeParams,
-        Mode::MatchArms,
-        Mode::CellPath,
-        Mode::RangeFrom,
-        Mode::Binary,
-        Mode::RecordPattern,
-    ];
-
     /// All ASCII, and none of the bytes `next` handles before `item`.
     #[expect(
         clippy::match_same_arms,
