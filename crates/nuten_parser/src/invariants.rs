@@ -8,7 +8,7 @@ use rowan::{TextRange, TextSize};
 
 use crate::{
     ParseError, Parsed,
-    lexer::{self, LexError, LexErrorKind, Lexed, Mode, Token},
+    lexer::{self, ClosedBrackets, LexError, LexErrorKind, Lexed, Mode, Token},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -97,7 +97,12 @@ pub fn lexer_violations(src: &str) -> Vec<Violation> {
     Mode::ALL
         .iter()
         .flat_map(|&mode| {
-            let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), mode);
+            let lexed = lexer::lex(
+                src,
+                ClosedBrackets::NONE,
+                TextRange::up_to(TextSize::of(src)),
+                mode,
+            );
             lexed_violations(src, &lexed, mode)
                 .into_iter()
                 .map(move |violation| violation.in_mode(mode))
@@ -365,7 +370,12 @@ fn parse_error_placement(tree: &SyntaxNode, errors: &[ParseError]) -> Option<Vio
 }
 
 fn lex_errors_reported(src: &str, errors: &[ParseError]) -> Option<Violation> {
-    let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
+    let lexed = lexer::lex(
+        src,
+        ClosedBrackets::NONE,
+        TextRange::up_to(TextSize::of(src)),
+        Mode::Block,
+    );
     let missing = lexed
         .errors
         .into_iter()

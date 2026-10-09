@@ -6,7 +6,7 @@ use rowan::{TextRange, TextSize};
 use crate::{
     ParseError, ParseErrorKind,
     grammar::{self, Callee, Names, Param},
-    lexer::{self, LexError, Lexed, Mode, Token},
+    lexer::{self, ClosedBrackets, LexError, Lexed, Mode, Token},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,7 +37,7 @@ impl Brackets {
         bytes.first() == Some(&self.open) && bytes.last() == Some(&self.close)
     }
 
-    fn enclose(&self, src: &str, token: Token, range: TextRange) -> bool {
+    fn enclose(&self, src: &str, closed: &ClosedBrackets, token: Token, range: TextRange) -> bool {
         if !self.wrap(&src[range]) {
             return false;
         }
@@ -48,21 +48,22 @@ impl Brackets {
             Some(spans) => {
                 debug_assert_eq!(
                     spans,
-                    first_bracket_closes_last(src, range),
+                    first_bracket_closes_last(src, closed, range),
                     "the lexer records the first bracket block mode closes"
                 );
                 spans
             },
-            None => first_bracket_closes_last(src, range),
+            None => first_bracket_closes_last(src, closed, range),
         }
     }
 }
 
-fn first_bracket_closes_last(src: &str, range: TextRange) -> bool {
+fn first_bracket_closes_last(src: &str, closed: &ClosedBrackets, range: TextRange) -> bool {
     // Without the last byte, the only error is the first bracket left unclosed.
     let (open, _, close) = bracket_parts(range);
     let lexed = lexer::lex(
         src,
+        closed,
         TextRange::new(range.start(), close.start()),
         Mode::Block,
     );
@@ -106,6 +107,7 @@ impl<'a> Bracketed<'a> {
 /// The first tokens inside decide the mode to lex it all in.
 pub(crate) struct Enclosed<'a> {
     src: &'a str,
+    closed: &'a ClosedBrackets,
     names: Names<'a>,
     depth: usize,
     token: Token,
@@ -118,13 +120,13 @@ impl<'a> Enclosed<'a> {
     pub(crate) fn tokens_in(&self, mode: Mode) -> impl Iterator<Item = (Token, &'a str)> {
         let src = self.src;
         let (_, inside, _) = bracket_parts(self.range);
-        lexer::tokens(src, inside, mode).map(move |token| (token, &src[token.range]))
+        lexer::tokens(src, self.closed, inside, mode).map(move |token| (token, &src[token.range]))
     }
 
     pub(crate) fn lexed_in(self, mode: Mode) -> Bracketed<'a> {
         let (_, inside, _) = bracket_parts(self.range);
         Bracketed {
-            inner: Parser::lexed(self.src, inside, mode, self.names, self.depth),
+            inner: Parser::lexed(self.src, self.closed, inside, mode, self.names, self.depth),
             token: self.token,
             range: self.range,
             brackets: self.brackets,
@@ -150,9 +152,9 @@ impl<'a> Relexed<'a> {
     }
 }
 
-pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
-    let names = Names::of(src, &lexed.tokens);
-    let mut parser = Parser::new(src, lexed, Mode::Block.skips_newline(), names, 0);
+pub(crate) fn parse(src: &str, closed: &ClosedBrackets, lexed: Lexed) -> Vec<Event> {
+    let names = Names::of(src, closed, &lexed.tokens);
+    let mut parser = Parser::new(src, closed, lexed, Mode::Block.skips_newline(), names, 0);
     // Not `start`: that would put leading trivia outside Root.
     parser.events.push(Event::Start(SyntaxKind::Root));
     grammar::file(&mut parser);
@@ -165,6 +167,7 @@ pub(crate) fn parse(src: &str, lexed: Lexed) -> Vec<Event> {
 /// So no node but Root starts or ends with them.
 pub(crate) struct Parser<'a> {
     src: &'a str,
+    closed: &'a ClosedBrackets,
     tokens: Vec<Token>,
     lex_errors: vec::IntoIter<LexError>,
     pos: usize,
@@ -180,6 +183,7 @@ pub(crate) struct Parser<'a> {
 impl<'a> Parser<'a> {
     fn new(
         src: &'a str,
+        closed: &'a ClosedBrackets,
         lexed: Lexed,
         skips_newline: bool,
         names: Names<'a>,
@@ -187,6 +191,7 @@ impl<'a> Parser<'a> {
     ) -> Parser<'a> {
         Parser {
             src,
+            closed,
             tokens: lexed.tokens,
             lex_errors: lexed.errors.into_iter(),
             pos: 0,
@@ -298,11 +303,14 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn lex_first(&self, start: TextSize, mode: Mode) -> Option<Token> {
         let end = self.tokens.last()?.range.end();
-        lexer::tokens(self.src, TextRange::new(start, end), mode).next()
+        lexer::tokens(self.src, self.closed, TextRange::new(start, end), mode).next()
     }
 
     pub(crate) fn lex_error(&self, range: TextRange, mode: Mode) -> Option<LexError> {
-        lexer::lex(self.src, range, mode).errors.into_iter().next()
+        lexer::lex(self.src, self.closed, range, mode)
+            .errors
+            .into_iter()
+            .next()
     }
 
     /// The next `count` tokens must touch one another.
@@ -351,11 +359,12 @@ impl<'a> Parser<'a> {
             return None;
         }
         let range = affix.brackets_within(token.range);
-        if !brackets.enclose(self.src, token, range) {
+        if !brackets.enclose(self.src, self.closed, token, range) {
             return None;
         }
         Some(Enclosed {
             src: self.src,
+            closed: self.closed,
             names: self.names.clone(),
             depth: self.depth + 1,
             token,
@@ -481,7 +490,7 @@ impl<'a> Parser<'a> {
     }
 
     fn lexed_item(&self, range: TextRange) -> Option<Token> {
-        match lexer::lex(self.src, range, Mode::Block).tokens[..] {
+        match lexer::lex(self.src, self.closed, range, Mode::Block).tokens[..] {
             [item] if item.kind.is_item() && item.kind != SyntaxKind::Error => Some(item),
             _ => None,
         }
@@ -529,13 +538,21 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn lexed_range(&self, range: TextRange, mode: Mode) -> Parser<'a> {
-        Parser::lexed(self.src, range, mode, self.names.clone(), self.depth)
+        Parser::lexed(
+            self.src,
+            self.closed,
+            range,
+            mode,
+            self.names.clone(),
+            self.depth,
+        )
     }
 
     pub(crate) fn bump_bounded(&mut self, end: TextSize, items: impl FnOnce(&mut Parser<'a>)) {
         let taken = self.take_to(end);
         let mut inner = Parser::new(
             self.src,
+            self.closed,
             taken,
             self.skips_newline,
             self.names.clone(),
@@ -570,13 +587,14 @@ impl<'a> Parser<'a> {
 
     fn lexed(
         src: &'a str,
+        closed: &'a ClosedBrackets,
         range: TextRange,
         mode: Mode,
         names: Names<'a>,
         depth: usize,
     ) -> Parser<'a> {
-        let lexed = lexer::lex(src, range, mode);
-        Parser::new(src, lexed, mode.skips_newline(), names, depth)
+        let lexed = lexer::lex(src, closed, range, mode);
+        Parser::new(src, closed, lexed, mode.skips_newline(), names, depth)
     }
 
     /// `tokens` must be pieces of the tokens here with no lexing error.
@@ -587,6 +605,7 @@ impl<'a> Parser<'a> {
         };
         Parser::new(
             self.src,
+            self.closed,
             lexed,
             Mode::Block.skips_newline(),
             self.names.clone(),
@@ -744,14 +763,26 @@ mod tests {
     use crate::{
         ParseErrorKind,
         grammar::{Names, SQUARE},
-        lexer::{self, Mode, Token},
+        lexer::{self, ClosedBrackets, Mode, Token},
         test_support::range,
     };
 
     fn parser(src: &str) -> Parser<'_> {
-        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-        let names = Names::of(src, &lexed.tokens);
-        Parser::new(src, lexed, Mode::Block.skips_newline(), names, 0)
+        let lexed = lexer::lex(
+            src,
+            ClosedBrackets::NONE,
+            TextRange::up_to(TextSize::of(src)),
+            Mode::Block,
+        );
+        let names = Names::of(src, ClosedBrackets::NONE, &lexed.tokens);
+        Parser::new(
+            src,
+            ClosedBrackets::NONE,
+            lexed,
+            Mode::Block.skips_newline(),
+            names,
+            0,
+        )
     }
 
     #[test]
@@ -764,7 +795,11 @@ mod tests {
         ] {
             let range = TextRange::up_to(TextSize::of(src));
             let token = Token::new(SyntaxKind::Word, range);
-            assert_eq!(SQUARE.enclose(src, token, range), expected, "{src:?}");
+            assert_eq!(
+                SQUARE.enclose(src, ClosedBrackets::NONE, token, range),
+                expected,
+                "{src:?}"
+            );
         }
     }
 
@@ -901,9 +936,10 @@ mod tests {
     fn bump_relexed_to_keeps_skipped_tokens() {
         let src = "\na";
         let whole = TextRange::up_to(TextSize::of(src));
-        let names = Names::of(src, &lexer::lex(src, whole, Mode::Block).tokens);
-        let lexed = lexer::lex(src, whole, Mode::Paren);
-        let mut p = Parser::new(src, lexed, Mode::Paren.skips_newline(), names, 0);
+        let (file, closed) = lexer::lex_file(src);
+        let names = Names::of(src, &closed, &file.tokens);
+        let lexed = lexer::lex(src, &closed, whole, Mode::Paren);
+        let mut p = Parser::new(src, &closed, lexed, Mode::Paren.skips_newline(), names, 0);
         p.bump_relexed_to(TextSize::of(src), Mode::VarType, Parser::bump_rest);
         assert_eq!(
             p.events,

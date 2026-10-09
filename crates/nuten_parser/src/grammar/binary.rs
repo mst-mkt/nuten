@@ -4,7 +4,7 @@ use rowan::{TextRange, TextSize};
 use super::{SQUARE, Shape, is_file_redirection};
 use crate::{
     ParseErrorKind,
-    lexer::{self, Mode, Token},
+    lexer::{self, ClosedBrackets, Mode, Token},
     parser::{Affix, Bracketed, Parser},
 };
 
@@ -64,7 +64,7 @@ pub(super) fn is_binary_like(text: &str) -> bool {
     };
     let start = TextSize::of(text) - TextSize::of(inside) - TextSize::of("]");
     let range = TextRange::at(start, TextSize::of(inside));
-    lexer::lex(text, range, Mode::Binary)
+    lexer::lex(text, ClosedBrackets::NONE, range, Mode::Binary)
         .tokens
         .iter()
         .all(|&token| !ends_item(token.kind, &text[token.range]))

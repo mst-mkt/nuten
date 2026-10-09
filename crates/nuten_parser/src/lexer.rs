@@ -69,6 +69,30 @@ pub(crate) struct Lexed {
     pub(crate) errors: Vec<LexError>,
 }
 
+/// Each bracket that closes when a file is lexed whole in block mode, from opener to closer.
+/// Inside a bracket only whether `<` nests depends on the mode, so lexing a part again can skip it.
+#[derive(Debug)]
+pub(crate) struct ClosedBrackets {
+    /// Sorted by start, so that `end_of` can bisect them.
+    brackets: Vec<TextRange>,
+}
+
+impl ClosedBrackets {
+    /// For text that is not a file, or lexing where skipping gains nothing.
+    /// Brackets are then read through.
+    pub(crate) const NONE: &ClosedBrackets = &ClosedBrackets {
+        brackets: Vec::new(),
+    };
+
+    fn end_of(&self, opener: usize) -> Option<usize> {
+        let nth = self
+            .brackets
+            .binary_search_by_key(&opener, |bracket| usize::from(bracket.start()))
+            .ok()?;
+        Some(self.brackets[nth].end().into())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct LexError {
     pub(crate) kind: LexErrorKind,
@@ -200,35 +224,69 @@ impl Mode {
     }
 }
 
+/// Lexes all of `src` in block mode, and keeps where its brackets close for lexing parts again.
+pub(crate) fn lex_file(src: &str) -> (Lexed, ClosedBrackets) {
+    let mut lexer = Lexer::new(
+        src,
+        ClosedBrackets::NONE,
+        TextRange::up_to(TextSize::of(src)),
+        Mode::Block,
+    );
+    lexer.found = Some(Vec::new());
+    let tokens = lexer.by_ref().collect();
+    let mut brackets = lexer.found.unwrap_or_default();
+    brackets.sort_unstable_by_key(|bracket| bracket.start());
+    let lexed = Lexed {
+        tokens,
+        errors: lexer.errors,
+    };
+    let closed = ClosedBrackets {
+        brackets,
+    };
+    (lexed, closed)
+}
+
 /// Lexes `range` of `src` without looking at the bytes around it.
-/// All ranges are absolute in `src`.
-pub(crate) fn lex(src: &str, range: TextRange, mode: Mode) -> Lexed {
-    let mut lexer = Lexer::new(src, range, mode);
+/// All ranges are absolute in `src`, and `closed` must be what `lex_file` found in `src`, or none.
+pub(crate) fn lex(src: &str, closed: &ClosedBrackets, range: TextRange, mode: Mode) -> Lexed {
+    let mut lexer = Lexer::new(src, closed, range, mode);
     Lexed {
         tokens: lexer.by_ref().collect(),
         errors: lexer.errors,
     }
 }
 
-pub(crate) fn item_brackets(src: &str, range: TextRange, mode: Mode) -> Vec<TextRange> {
-    let mut lexer = Lexer::new(src, range, mode);
-    lexer.brackets = Some(Vec::new());
+pub(crate) fn item_brackets(
+    src: &str,
+    closed: &ClosedBrackets,
+    range: TextRange,
+    mode: Mode,
+) -> Vec<TextRange> {
+    let mut lexer = Lexer::new(src, closed, range, mode);
+    lexer.outermost_brackets = Some(Vec::new());
     // An item with an error still gives the brackets it closed before it.
     let _ = lexer.item();
-    lexer.brackets.unwrap_or_default()
+    lexer.outermost_brackets.unwrap_or_default()
 }
 
 /// An `Error` token comes without its error.
-pub(crate) fn tokens(src: &str, range: TextRange, mode: Mode) -> impl Iterator<Item = Token> {
-    Lexer::new(src, range, mode)
+pub(crate) fn tokens<'a>(
+    src: &'a str,
+    closed: &'a ClosedBrackets,
+    range: TextRange,
+    mode: Mode,
+) -> impl Iterator<Item = Token> {
+    Lexer::new(src, closed, range, mode)
 }
 
 struct Lexer<'a> {
     src: &'a str,
+    closed: &'a ClosedBrackets,
     pos: usize,
     mode: Mode,
     errors: Vec<LexError>,
-    brackets: Option<Vec<TextRange>>,
+    outermost_brackets: Option<Vec<TextRange>>,
+    found: Option<Vec<TextRange>>,
 }
 
 impl Iterator for Lexer<'_> {
@@ -261,7 +319,7 @@ impl Iterator for Lexer<'_> {
 }
 
 impl<'a> Lexer<'a> {
-    fn new(src: &'a str, range: TextRange, mode: Mode) -> Lexer<'a> {
+    fn new(src: &'a str, closed: &'a ClosedBrackets, range: TextRange, mode: Mode) -> Lexer<'a> {
         assert!(range.end() <= TextSize::of(src), "range is outside src");
         assert!(
             src.is_char_boundary(range.start().into()) && src.is_char_boundary(range.end().into()),
@@ -269,10 +327,12 @@ impl<'a> Lexer<'a> {
         );
         Lexer {
             src: &src[..usize::from(range.end())],
+            closed,
             pos: usize::from(range.start()),
             mode,
             errors: Vec::new(),
-            brackets: None,
+            outermost_brackets: None,
+            found: None,
         }
     }
 
@@ -346,6 +406,10 @@ impl<'a> Lexer<'a> {
                         leading_string = Some((SyntaxKind::RawString, self.pos));
                     }
                 },
+                b'[' | b'{' | b'(' if let Some(end) = self.skippable_end(at) => {
+                    self.pos = end;
+                    self.close_bracket(at..end, closers.is_empty(), &mut first_bracket);
+                },
                 b'[' => closers.push((b']', at)),
                 b'{' => closers.push((b'}', at)),
                 b'(' => closers.push((b')', at)),
@@ -353,13 +417,8 @@ impl<'a> Lexer<'a> {
                 b']' | b'}' | b')' | b'>'
                     if closers.last().is_some_and(|&(closer, _)| closer == byte) =>
                 {
-                    if let Some((_, opened)) = closers.pop()
-                        && closers.is_empty()
-                    {
-                        first_bracket.get_or_insert(opened..at + 1);
-                        if let Some(brackets) = &mut self.brackets {
-                            brackets.push(text_range(opened..at + 1));
-                        }
+                    if let Some((_, opened)) = closers.pop() {
+                        self.close_bracket(opened..at + 1, closers.is_empty(), &mut first_bracket);
                     }
                 },
                 // Nu keeps a `]` with nothing open in the word, unlike `}` and `)`.
@@ -385,6 +444,52 @@ impl<'a> Lexer<'a> {
             FirstBracket::of(start..self.pos, bracket)
         });
         Ok((kind, first_bracket))
+    }
+
+    fn skippable_end(&self, opener: usize) -> Option<usize> {
+        if self.mode.nests_angles() {
+            return None;
+        }
+        // A part lexed again may stop inside the bracket, where reading through finds it unclosed.
+        let end = self
+            .closed
+            .end_of(opener)
+            .filter(|&end| end <= self.src.len())?;
+        debug_assert_eq!(
+            item_brackets(
+                self.src,
+                ClosedBrackets::NONE,
+                text_range(opener..self.src.len()),
+                self.mode
+            )
+            .first()
+            .map(|bracket| usize::from(bracket.end())),
+            Some(end),
+            "reading the bracket through finds the closer `lex_file` found"
+        );
+        Some(end)
+    }
+
+    #[expect(
+        clippy::inline_always,
+        reason = "the compiler leaves it a call, which slows the loop over every byte of an item"
+    )]
+    #[inline(always)]
+    fn close_bracket(
+        &mut self,
+        bracket: Range<usize>,
+        at_top_level: bool,
+        first_bracket: &mut Option<Range<usize>>,
+    ) {
+        if let Some(found) = &mut self.found {
+            found.push(text_range(bracket.clone()));
+        }
+        if at_top_level {
+            if let Some(brackets) = &mut self.outermost_brackets {
+                brackets.push(text_range(bracket.clone()));
+            }
+            first_bracket.get_or_insert(bracket);
+        }
     }
 
     fn comment_in_item(&mut self, top_level: bool) {
@@ -526,9 +631,10 @@ mod tests {
     use rowan::{TextRange, TextSize};
 
     use super::{
-        LexError,
+        ClosedBrackets, FirstBracket, LexError,
         LexErrorKind::{self, MissingRawQuote, Unclosed, UnmatchedCloser},
-        Lexed, Mode, item_brackets, lex, opens_comment_in_word, rejected_operator_kind,
+        Lexed, Lexer, Mode, item_brackets, lex, lex_file, opens_comment_in_word,
+        rejected_operator_kind,
     };
     use crate::{invariants::OPERATORS, test_support::range};
 
@@ -537,7 +643,12 @@ mod tests {
     }
 
     fn lex_all_in(src: &str, mode: Mode) -> Lexed {
-        lex(src, TextRange::up_to(TextSize::of(src)), mode)
+        lex(
+            src,
+            ClosedBrackets::NONE,
+            TextRange::up_to(TextSize::of(src)),
+            mode,
+        )
     }
 
     fn lexed(src: &str) -> Vec<(SyntaxKind, &str)> {
@@ -552,8 +663,24 @@ mod tests {
             .collect()
     }
 
+    /// The first bracket counts too, which `Token`'s equality leaves out.
+    fn tokens_and_errors(
+        src: &str,
+        closed: &ClosedBrackets,
+        range: TextRange,
+        mode: Mode,
+    ) -> (Vec<(SyntaxKind, TextRange, FirstBracket)>, Vec<LexError>) {
+        let lexed = lex(src, closed, range, mode);
+        let tokens = lexed
+            .tokens
+            .iter()
+            .map(|token| (token.kind, token.range, token.first_bracket))
+            .collect();
+        (tokens, lexed.errors)
+    }
+
     fn lexed_ranges(src: &str, range: TextRange) -> Vec<(SyntaxKind, TextRange)> {
-        lex(src, range, Mode::Block)
+        lex(src, ClosedBrackets::NONE, range, Mode::Block)
             .tokens
             .iter()
             .map(|token| (token.kind, token.range))
@@ -772,12 +899,74 @@ mod tests {
             (r#"a:(b{c})"(x)"[d]r#'{'#"#, &["(b{c})", "[d]"][..]),
             ("a{b # }\n}", &["{b # }\n}"]),
         ] {
-            let brackets: Vec<_> =
-                item_brackets(src, TextRange::up_to(TextSize::of(src)), Mode::Block)
-                    .into_iter()
-                    .map(|range| &src[range])
-                    .collect();
+            let brackets: Vec<_> = item_brackets(
+                src,
+                ClosedBrackets::NONE,
+                TextRange::up_to(TextSize::of(src)),
+                Mode::Block,
+            )
+            .into_iter()
+            .map(|range| &src[range])
+            .collect();
             assert_eq!(brackets, expected, "{src:?}");
+        }
+    }
+
+    #[test]
+    fn lex_file_records_brackets_at_every_depth_outside_strings_and_comments() {
+        let (_, closed) = lex_file("a [b (c) {d}] '(e)' # (f)");
+        assert_eq!(closed.brackets, [range(2, 13), range(5, 8), range(9, 12)]);
+    }
+
+    #[test]
+    fn lexing_part_with_closed_brackets_gives_tokens_of_reading_through() {
+        for (src, start, end, mode) in [
+            ("[a, (b [c]) {d: e}, f(g)[h]]", 1, 27, Mode::List),
+            ("{x: (a) y: [b]}", 1, 14, Mode::Record),
+            ("[a,#(b)\n]", 1, 8, Mode::List),
+            // A type nests `<`.
+            ("[x: record<a: (int)>, y: (a<b)]", 1, 30, Mode::Signature),
+            // The part stops inside a bracket that closes after it.
+            ("(a (b c))", 1, 5, Mode::Paren),
+            // An opener the file never closes comes before brackets it does.
+            ("(a [b] (c)", 0, 10, Mode::Block),
+        ] {
+            let (_, closed) = lex_file(src);
+            let part = range(start, end);
+            assert_eq!(
+                tokens_and_errors(src, &closed, part, mode),
+                tokens_and_errors(src, ClosedBrackets::NONE, part, mode),
+                "{src:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn closed_bracket_is_skipped_unless_mode_nests_angles_or_part_stops_inside() {
+        let src = "[(a) (b<c)]";
+        let (_, closed) = lex_file(src);
+        let skippable_end =
+            |part_end, mode| Lexer::new(src, &closed, range(1, part_end), mode).skippable_end(1);
+        assert_eq!(skippable_end(10, Mode::List), Some(4));
+        assert_eq!(skippable_end(4, Mode::List), Some(4));
+        assert_eq!(skippable_end(10, Mode::Signature), None);
+        assert_eq!(skippable_end(3, Mode::List), None);
+    }
+
+    #[test]
+    fn item_brackets_with_closed_brackets_are_those_of_reading_through() {
+        for (src, start, end, mode) in [
+            ("[a, f(g [h])[i]]", 4, 15, Mode::List),
+            // `(c` closes after the part, so it is read through and `(d)` inside it is skipped.
+            ("a(b)(c (d) e)", 0, 11, Mode::Block),
+        ] {
+            let (_, closed) = lex_file(src);
+            let part = range(start, end);
+            assert_eq!(
+                item_brackets(src, &closed, part, mode),
+                item_brackets(src, ClosedBrackets::NONE, part, mode),
+                "{src:?}"
+            );
         }
     }
 
@@ -1504,7 +1693,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            lex(r#"$"a"#, range(1, 3), Mode::Block).errors,
+            lex(r#"$"a"#, ClosedBrackets::NONE, range(1, 3), Mode::Block).errors,
             [LexError {
                 kind: Unclosed,
                 range: range(1, 2),
@@ -1515,13 +1704,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "range splits a char")]
     fn range_off_char_boundary_panics() {
-        lex("日", range(0, 1), Mode::Block);
+        lex("日", ClosedBrackets::NONE, range(0, 1), Mode::Block);
     }
 
     #[test]
     #[should_panic(expected = "range is outside src")]
     fn range_outside_src_panics() {
-        lex("ab", range(1, 3), Mode::Block);
+        lex("ab", ClosedBrackets::NONE, range(1, 3), Mode::Block);
     }
 
     mod nu_differences {

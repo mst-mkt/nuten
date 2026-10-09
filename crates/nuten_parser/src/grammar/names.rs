@@ -8,7 +8,7 @@ use super::{
     parameters::{Declared, Item, Param},
 };
 use crate::{
-    lexer::{self, Mode, Token},
+    lexer::{self, ClosedBrackets, Mode, Token},
     parser::MAX_DEPTH,
 };
 
@@ -37,12 +37,12 @@ pub(crate) enum Callee {
 }
 
 impl<'a> Names<'a> {
-    /// `tokens` must be all of `src` lexed in block mode.
-    pub(crate) fn of(src: &'a str, tokens: &[Token]) -> Names<'a> {
+    /// `tokens` must be what `lex_file` gave for `src`, and `closed` that or none.
+    pub(crate) fn of(src: &'a str, closed: &ClosedBrackets, tokens: &[Token]) -> Names<'a> {
         Names {
             file: Rc::new(FileNames {
-                alias_heads: alias_heads(src, tokens),
-                hidden: hidden_words(src, tokens),
+                alias_heads: alias_heads(src, closed, tokens),
+                hidden: hidden_words(src, closed, tokens),
             }),
             scope: None,
         }
@@ -594,7 +594,7 @@ fn module<'a>(src: &'a str, statement: &[Lexeme<'a>]) -> Option<Module<'a>> {
 
 /// `inside` is where the text inside its braces stands in `src`.
 fn exports<'a>(src: &'a str, inside: TextRange, module: &str) -> Option<Exports<'a>> {
-    let lexed = lexer::lex(src, inside, Mode::Block);
+    let lexed = lexer::lex(src, ClosedBrackets::NONE, inside, Mode::Block);
     if !lexed.errors.is_empty() {
         return None;
     }
@@ -744,7 +744,7 @@ fn bracketed_tokens(
 ) -> Option<Vec<Token>> {
     let inside = text.strip_prefix(open)?.strip_suffix(close)?;
     let range = TextRange::at(start + TextSize::of(open), TextSize::of(inside));
-    let lexed = lexer::lex(src, range, mode);
+    let lexed = lexer::lex(src, ClosedBrackets::NONE, range, mode);
     lexed.errors.is_empty().then(|| {
         lexed
             .tokens
@@ -790,8 +790,8 @@ fn unexported<'a>(mut words: impl Iterator<Item = &'a str>) -> Option<&'a str> {
 /// One in brackets too deep for the parser is left out: it counts only there, kept as written.
 /// A call of an alias named in several words starts with its first word.
 /// Taking in a call of another command with that word only leaves it read as it was written.
-fn alias_heads<'a>(src: &'a str, file_tokens: &[Token]) -> Box<[&'a str]> {
-    let mut heads: Vec<_> = statements_holding(src, file_tokens, "alias")
+fn alias_heads<'a>(src: &'a str, closed: &ClosedBrackets, file_tokens: &[Token]) -> Box<[&'a str]> {
+    let mut heads: Vec<_> = statements_holding(src, closed, file_tokens, "alias")
         .0
         .iter()
         .map(Vec::as_slice)
@@ -806,8 +806,12 @@ fn alias_heads<'a>(src: &'a str, file_tokens: &[Token]) -> Box<[&'a str]> {
 /// A `hide` may follow an assignment operator, so one anywhere in a statement counts.
 /// Nu hides a name even outside the block of the `hide`.
 /// Taking in more words than it hides only leaves a call read as it was written.
-fn hidden_words<'a>(src: &'a str, file_tokens: &[Token]) -> Option<Box<[&'a str]>> {
-    let (statements, too_deep) = statements_holding(src, file_tokens, "hide");
+fn hidden_words<'a>(
+    src: &'a str,
+    closed: &ClosedBrackets,
+    file_tokens: &[Token],
+) -> Option<Box<[&'a str]>> {
+    let (statements, too_deep) = statements_holding(src, closed, file_tokens, "hide");
     if too_deep
         || statements
             .iter()
@@ -835,9 +839,9 @@ const HIDDEN_TRIM: [char; 6] = ['"', '\'', '`', '[', ']', ','];
 
 /// The lexer splits them, so that strings, comments, and line breaks read as nu reads them.
 /// Only tokens and brackets that hold `word` are lexed again, which spares most files any lexing.
-/// Each level lexes the levels inside it again, so the depth bounds the time.
 fn statements_holding<'a>(
     src: &'a str,
+    closed: &ClosedBrackets,
     file_tokens: &[Token],
     word: &str,
 ) -> (Vec<Vec<&'a str>>, bool) {
@@ -855,7 +859,7 @@ fn statements_holding<'a>(
         let tokens = if depth == 0 {
             significant_tokens(file_tokens.iter().copied(), mode)
         } else {
-            significant_tokens(lexer::tokens(src, range, mode), mode)
+            significant_tokens(lexer::tokens(src, closed, range, mode), mode)
         };
         statements.extend(
             statements_of(src, &tokens, mode).filter(|statement| statement.contains(&word)),
@@ -864,7 +868,7 @@ fn statements_holding<'a>(
             tokens
                 .iter()
                 .filter(|token| src[token.range].contains(word))
-                .flat_map(|token| insides(src, token, mode))
+                .flat_map(|token| insides(src, closed, token, mode))
                 .map(|(range, mode)| (range, mode, depth + 1)),
         );
     }
@@ -905,7 +909,12 @@ fn statements_of<'a, 't>(
 
 /// `mode` is the one `token` was lexed in.
 /// The parser splits a word such as `a:{|| ls }` or `--flag=(ls)` before it reads its brackets.
-fn insides(src: &str, token: &Token, mode: Mode) -> Vec<(TextRange, Mode)> {
+fn insides(
+    src: &str,
+    closed: &ClosedBrackets,
+    token: &Token,
+    mode: Mode,
+) -> Vec<(TextRange, Mode)> {
     // Every bracket is one byte.
     let inside = |range: TextRange| {
         TextRange::new(
@@ -914,7 +923,7 @@ fn insides(src: &str, token: &Token, mode: Mode) -> Vec<(TextRange, Mode)> {
         )
     };
     match token.kind {
-        SyntaxKind::Word => lexer::item_brackets(src, token.range, mode)
+        SyntaxKind::Word => lexer::item_brackets(src, closed, token.range, mode)
             .into_iter()
             .filter_map(|brackets| {
                 let inner = match src.as_bytes()[usize::from(brackets.start())] {
@@ -959,19 +968,22 @@ mod tests {
     use super::{Callee, MAX_DEPTH, Names};
     use crate::{
         grammar::parameters::Takes,
-        lexer::{self, Mode, Token},
+        lexer::{self, ClosedBrackets, Mode},
     };
 
-    fn file_tokens(src: &str) -> Vec<Token> {
-        lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block).tokens
+    fn names_of(src: &str) -> Names<'_> {
+        let (lexed, closed) = lexer::lex_file(src);
+        Names::of(src, &closed, &lexed.tokens)
     }
 
     fn alias_heads(src: &str) -> Box<[&str]> {
-        super::alias_heads(src, &file_tokens(src))
+        let (lexed, closed) = lexer::lex_file(src);
+        super::alias_heads(src, &closed, &lexed.tokens)
     }
 
     fn hidden_words(src: &str) -> Option<Box<[&str]>> {
-        super::hidden_words(src, &file_tokens(src))
+        let (lexed, closed) = lexer::lex_file(src);
+        super::hidden_words(src, &closed, &lexed.tokens)
     }
 
     fn defined_takes(src: &str) -> Option<Vec<Option<Takes>>> {
@@ -979,10 +991,10 @@ mod tests {
     }
 
     fn defined_takes_on(src: &str, line: usize) -> Option<Vec<Option<Takes>>> {
-        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
+        let (lexed, closed) = lexer::lex_file(src);
         let start: usize = src.lines().take(line).map(|text| text.len() + 1).sum();
         let words: Vec<_> = src.lines().nth(line)?.split_whitespace().collect();
-        let params = Names::of(src, &lexed.tokens)
+        let params = Names::of(src, &closed, &lexed.tokens)
             .within(src, &lexed.tokens, false)
             .defined_parameters(TextSize::try_from(start).unwrap(), &words)?;
         Some(
@@ -1117,10 +1129,15 @@ mod tests {
     }
 
     fn callee_lexed_in(src: &str, line: usize, mode: Mode) -> Callee {
-        let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), mode);
+        let lexed = lexer::lex(
+            src,
+            ClosedBrackets::NONE,
+            TextRange::up_to(TextSize::of(src)),
+            mode,
+        );
         let start: usize = src.lines().take(line).map(|text| text.len() + 1).sum();
         let words: Vec<_> = src.lines().nth(line).unwrap().split_whitespace().collect();
-        Names::of(src, &file_tokens(src))
+        names_of(src)
             .within(src, &lexed.tokens, mode.skips_newline())
             .callee(TextSize::try_from(start).unwrap(), |nth| {
                 words.get(nth).copied()
@@ -1151,15 +1168,16 @@ mod tests {
         read: impl Fn(&Names<'_>, TextSize, &[&str]) -> T,
     ) -> T {
         let src = format!("{outer}\n{inner}");
-        let lex = |range| lexer::lex(&src, range, Mode::Block).tokens;
+        let lex = |range| lexer::lex(&src, ClosedBrackets::NONE, range, Mode::Block).tokens;
         let inner_start = TextSize::of(outer) + TextSize::of("\n");
         let outer_tokens = lex(TextRange::up_to(TextSize::of(outer)));
         let inner_tokens = lex(TextRange::new(inner_start, TextSize::of(src.as_str())));
         let last_line_start = src.rfind('\n').unwrap() + 1;
         let words: Vec<_> = src[last_line_start..].split_whitespace().collect();
-        let names = Names::of(&src, &file_tokens(&src))
-            .within(&src, &outer_tokens, false)
-            .within(&src, &inner_tokens, false);
+        let names =
+            names_of(&src)
+                .within(&src, &outer_tokens, false)
+                .within(&src, &inner_tokens, false);
         read(&names, TextSize::try_from(last_line_start).unwrap(), &words)
     }
 

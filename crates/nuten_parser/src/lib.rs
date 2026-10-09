@@ -9,9 +9,9 @@ mod tree;
 use std::fmt;
 
 use nuten_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, SyntaxToken};
-use rowan::{GreenNode, TextRange, TextSize};
+use rowan::{GreenNode, TextRange};
 
-use crate::lexer::{LexError, Mode};
+use crate::lexer::LexError;
 pub use crate::{
     grammar::{is_command, operator_precedence},
     lexer::LexErrorKind,
@@ -140,8 +140,8 @@ impl From<LexError> for ParseError {
 }
 
 pub fn parse(src: &str) -> Parsed {
-    let lexed = lexer::lex(src, TextRange::up_to(TextSize::of(src)), Mode::Block);
-    tree::build(src, parser::parse(src, lexed))
+    let (lexed, closed) = lexer::lex_file(src);
+    tree::build(src, parser::parse(src, &closed, lexed))
 }
 
 /// Nu starts a comment at a `#` inside a word too, after a byte that is whitespace in Latin-1.

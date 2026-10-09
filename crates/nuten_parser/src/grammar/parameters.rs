@@ -16,7 +16,7 @@ use super::{
     spread::{Target, is_spread},
 };
 use crate::{
-    lexer::{self, Mode},
+    lexer::{self, ClosedBrackets, Mode},
     parser::MAX_DEPTH,
 };
 
@@ -482,10 +482,15 @@ fn is_known_type(name: &str, depth: usize) -> bool {
 
 /// Lexes the inside of a `< >` as nu's `parse_type_params` and `parse_named_type_params` do.
 fn type_param_tokens(text: &str) -> Vec<(SyntaxKind, &str)> {
-    lexer::tokens(text, TextRange::up_to(TextSize::of(text)), Mode::TypeParams)
-        .filter(|token| !token.kind.is_trivia())
-        .map(|token| (token.kind, &text[token.range]))
-        .collect()
+    lexer::tokens(
+        text,
+        ClosedBrackets::NONE,
+        TextRange::up_to(TextSize::of(text)),
+        Mode::TypeParams,
+    )
+    .filter(|token| !token.kind.is_trivia())
+    .map(|token| (token.kind, &text[token.range]))
+    .collect()
 }
 
 fn without_commas<'a>(tokens: &[(SyntaxKind, &'a str)]) -> Vec<&'a str> {
