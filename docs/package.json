@@ -1,0 +1,8 @@
+{
+  "name": "nuten-docs",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@ox-content/vite-plugin": "3.2.13"
+  }
+}

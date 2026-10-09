@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["esnext", "dom"],
+    "module": "preserve",
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  }
+}

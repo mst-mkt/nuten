@@ -1,7 +1,9 @@
 packages:
+  - docs
   - integrations/*
 
 savePrefix: ""
 
 allowBuilds:
   "@vscode/vsce-sign": false
+  puppeteer: false
