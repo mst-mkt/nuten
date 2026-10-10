@@ -78,13 +78,3 @@ When the content belongs to a known file, pass its path with `--stdin-filepath`.
 ```nushell
 $buffer | nuten format --stdin-filepath src/a.nu -
 ```
-
-## Exit codes
-
-| code | Condition                                                            |
-| ---- | -------------------------------------------------------------------- |
-| 0    | Success                                                              |
-| 1    | Some file would change (`--check`, `--list-different`, `--reporter`) |
-| 2    | A syntax error, a read or write error, or a wrong config or argument |
-
-A file with a syntax error is not formatted. The error goes to stderr as `error: path:line:column: message`, and the other files are still processed.

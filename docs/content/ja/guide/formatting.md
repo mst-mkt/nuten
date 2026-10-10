@@ -78,13 +78,3 @@ open --raw a.nu | nuten format -
 ```nushell
 $buffer | nuten format --stdin-filepath src/a.nu -
 ```
-
-## exit code
-
-| code | 条件                                                   |
-| ---- | ------------------------------------------------------ |
-| 0    | 正常終了                                               |
-| 1    | 差分あり (`--check`, `--list-different`, `--reporter`) |
-| 2    | 構文エラー, 読み書きの失敗, 設定や引数の誤り           |
-
-構文エラーのあるファイルは整形せず、`error: path:line:column: message` の形で stderr に出します。他のファイルはそのまま処理します。
