@@ -72,7 +72,6 @@ const sidebar = [
     items: [
       { text: "CLI", link: "/reference/cli" },
       { text: { en: "Settings", ja: "設定項目" }, link: "/reference/settings" },
-      { text: { en: "Style", ja: "スタイル" }, link: "/reference/style" },
     ],
   },
 ];
