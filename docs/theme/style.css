@@ -260,6 +260,41 @@ body {
 }
 
 .content pre.ox-code-block {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  & > code {
+    flex: 1;
+    min-height: 0;
+    margin-inline: calc(-1 * var(--octc-code-pad-inline));
+    margin-bottom: calc(-1 * var(--octc-code-pad-block));
+    padding-bottom: var(--octc-code-pad-block);
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--octc-color-border);
+      border-radius: 3px;
+    }
+
+    @supports not selector(::-webkit-scrollbar) {
+      scrollbar-width: thin;
+      scrollbar-color: var(--octc-color-border) transparent;
+    }
+  }
+
+  & .line {
+    margin-inline: 0;
+  }
+
   & .line:empty:not(:last-child) {
     min-height: 1lh;
   }
