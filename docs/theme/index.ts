@@ -116,4 +116,8 @@ export const theme = defineTheme({
   sidebar,
   aside: true,
   css: readFileSync(new URL("style.css", import.meta.url), "utf8"),
+  js: `
+    const lang = document.documentElement.lang;
+    if (lang !== "en") document.querySelector(".header-title").href = "/" + lang + "/index.html";
+  `,
 });
