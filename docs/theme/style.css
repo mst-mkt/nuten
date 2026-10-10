@@ -450,6 +450,37 @@ body::before {
   }
 }
 
+.toc {
+  border-left: 0;
+
+  & .toc-title {
+    color: var(--octc-color-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  & .toc-link {
+    padding-inline: 0;
+    border-left: 0;
+    color: color-mix(in oklch, var(--octc-color-text) 75%, var(--octc-color-primary));
+    font-size: 0.875rem;
+  }
+
+  & .toc-link--depth-3 {
+    padding-left: 1rem;
+  }
+
+  & .toc-link:hover {
+    color: var(--octc-color-primary);
+  }
+
+  & .toc-item:has(> .toc-link--depth-1) {
+    display: none;
+  }
+}
+
 .site-footer {
   margin-top: 0;
   padding-block: 0 2rem;

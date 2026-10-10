@@ -102,6 +102,7 @@ export const theme = defineTheme({
     github: "https://github.com/mst-mkt/nuten",
   },
   sidebar,
+  aside: true,
   footer: {
     message: "© 2026 mst-mkt. Released under the MIT License.",
   },
