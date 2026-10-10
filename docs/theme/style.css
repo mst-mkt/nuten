@@ -14,9 +14,14 @@
   --nuten-logo-blue: oklch(0.725 0.162 238);
   --nuten-logo-green: oklch(0.778 0.224 148);
   --nuten-bg-glass: color-mix(in oklch, var(--nuten-bg) 70%, transparent);
-  --nuten-bg-alt-glass: color-mix(in oklch, var(--nuten-bg-alt) 70%, transparent);
+  --nuten-code-bg: color-mix(in oklch, var(--nuten-bg-alt) 35%, transparent);
+  --nuten-rule: color-mix(in oklch, var(--nuten-bg-alt) 55%, transparent);
+  --nuten-tint: color-mix(in oklch, var(--nuten-text) 2%, transparent);
   --nuten-radius: 12px;
+  --nuten-radius-block: 8px;
   --nuten-radius-pill: 999px;
+  --octc-code-pad-block: 0.75rem;
+  --octc-code-pad-inline: 1rem;
 }
 
 body {
@@ -326,6 +331,15 @@ body::before {
   background: none;
 }
 
+.content pre {
+  border-width: 2px;
+  border-radius: var(--nuten-radius-block);
+
+  & code {
+    font-size: 0.875rem;
+  }
+}
+
 .content pre.ox-code-block {
   display: flex;
   flex-direction: column;
@@ -375,8 +389,8 @@ body::before {
   white-space: pre;
   color: var(--octc-color-code-text);
   background: var(--octc-color-code-bg);
-  border: 1px solid var(--octc-color-code-frame-border);
-  border-radius: var(--nuten-radius);
+  border: 2px solid var(--octc-color-code-frame-border);
+  border-radius: var(--nuten-radius-block);
 
   & code {
     padding: 0;
@@ -417,7 +431,26 @@ body::before {
 
   & > pre {
     margin: 0;
-    border-radius: var(--nuten-radius);
+  }
+}
+
+.content table {
+  display: table;
+  width: 100%;
+  background: var(--nuten-code-bg);
+  border: 0;
+  border-radius: var(--nuten-radius-block);
+  overflow: hidden;
+
+  & :is(th, td) {
+    border-inline-end: 0;
+    border-block-end: 2px solid var(--nuten-rule);
+  }
+
+  & th {
+    color: var(--octc-color-text-muted);
+    font-size: 0.75rem;
+    background: var(--nuten-tint);
   }
 }
 

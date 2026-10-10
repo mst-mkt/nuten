@@ -9,16 +9,16 @@ const colors = {
   text: "var(--nuten-text)",
   textMuted: "var(--nuten-text-muted)",
   border: "var(--nuten-border)",
-  codeBackground: "var(--nuten-bg-alt-glass)",
-  codeBackgroundTop: "var(--nuten-bg-alt-glass)",
+  codeBackground: "var(--nuten-code-bg)",
+  codeBackgroundTop: "var(--nuten-code-bg)",
   codeText: "var(--nuten-text)",
 };
 
 const tokens = {
-  "color-code-frame-border": "var(--octc-color-border)",
-  "color-code-title-bg": "var(--nuten-bg-alt-glass)",
+  "color-code-frame-border": "var(--nuten-rule)",
+  "color-code-title-bg": "var(--nuten-tint)",
   "color-code-title-text": "var(--octc-color-text-muted)",
-  "color-code-title-border": "var(--octc-color-border)",
+  "color-code-title-border": "var(--nuten-rule)",
   "syntax-foreground": "var(--octc-color-code-text)",
   "syntax-background": "var(--octc-color-code-bg)",
   "syntax-token-comment": "var(--octc-color-text-muted)",
