@@ -108,11 +108,15 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at 10% 70%, var(--nuten-logo-blue), transparent 45%),
-    radial-gradient(circle at 92% 8%, var(--nuten-logo-green), transparent 45%);
+    radial-gradient(circle at -10% 80%, var(--nuten-logo-blue), transparent 40%),
+    radial-gradient(circle at 110% 0%, var(--nuten-logo-green), transparent 40%);
   background-size: 100% 100%;
   opacity: 0.22;
   filter: blur(80px);
+
+  @media (max-width: 768px) {
+    opacity: 0.12;
+  }
 
   @supports (animation-timeline: scroll()) {
     @media (prefers-reduced-motion: no-preference) {
@@ -120,6 +124,13 @@ body::before {
       animation-timeline: scroll(root);
     }
   }
+}
+
+body.entry-page::before {
+  background:
+    radial-gradient(circle at 10% 70%, var(--nuten-logo-blue), transparent 45%),
+    radial-gradient(circle at 92% 8%, var(--nuten-logo-green), transparent 45%);
+  background-size: 100% 100%;
 }
 
 @keyframes nuten-drift {
