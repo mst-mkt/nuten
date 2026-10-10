@@ -464,6 +464,26 @@ body.entry-page::before {
   }
 }
 
+.content blockquote.ox-callout {
+  padding: 0.75rem 1rem;
+  background-color: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--nuten-bg-alt) 92%, var(--octc-callout-accent) 8%) 40%,
+    transparent
+  );
+  background-image: none;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 2px solid color-mix(in oklab, var(--octc-callout-accent) 5%, transparent);
+  border-radius: var(--nuten-radius-block);
+}
+
+.content .ox-callout-title {
+  font-size: 0.875rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .content table {
   display: table;
   width: 100%;
