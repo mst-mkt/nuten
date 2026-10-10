@@ -25,10 +25,15 @@ body {
 }
 
 .header,
+.sidebar,
 .mobile-footer {
   background-color: color-mix(in oklch, var(--octc-color-bg) 55%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+}
+
+:root:root .sidebar {
+  background: color-mix(in oklch, var(--octc-color-bg) 55%, transparent);
 }
 
 .feature-card,
@@ -92,26 +97,22 @@ body {
   }
 }
 
-.entry-page .main {
-  isolation: isolate;
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 10% 70%, var(--nuten-logo-blue), transparent 45%),
+    radial-gradient(circle at 92% 8%, var(--nuten-logo-green), transparent 45%);
+  background-size: 100% 100%;
+  opacity: 0.22;
+  filter: blur(80px);
 
-  &::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(circle at 10% 70%, var(--nuten-logo-blue), transparent 45%),
-      radial-gradient(circle at 92% 8%, var(--nuten-logo-green), transparent 45%);
-    background-size: 100% 100%;
-    opacity: 0.22;
-    filter: blur(80px);
-
-    @supports (animation-timeline: scroll()) {
-      @media (prefers-reduced-motion: no-preference) {
-        animation: nuten-drift linear both;
-        animation-timeline: scroll(root);
-      }
+  @supports (animation-timeline: scroll()) {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: nuten-drift linear both;
+      animation-timeline: scroll(root);
     }
   }
 }
