@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { getWorkerAssetsDir } from "@cloudflare/build-output-utils";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { oxContent } from "@ox-content/vite-plugin";
@@ -5,8 +6,19 @@ import { defineConfig } from "vite-plus";
 import { theme } from "./theme";
 import { ansi } from "./theme/ansi";
 
+const themeCss = join(import.meta.dirname, "theme/style.css");
+
 export default defineConfig({
   plugins: [
+    {
+      name: "restart-on-theme-css-change",
+      configureServer: (server) => {
+        server.watcher.on("all", (event, file) => {
+          if (file !== themeCss || (event !== "change" && event !== "add")) return;
+          void server.restart().then(() => server.ws.send({ type: "full-reload", path: "*" }));
+        });
+      },
+    },
     cloudflare(),
     oxContent({
       srcDir: "content",
