@@ -97,14 +97,23 @@ export const theme = defineTheme({
   },
   embed: {
     head: '<link rel="icon" href="/logo.svg" type="image/svg+xml">',
+    footer: `
+      <footer class="site-footer">
+        <div class="footer-row">
+          <span class="footer-brand"><img src="/logo.svg" alt="">Nuten</span>
+          <nav class="footer-links">
+            <a href="https://github.com/mst-mkt/nuten">Repository</a>
+            <a href="https://github.com/mst-mkt/nuten/releases">Releases</a>
+          </nav>
+        </div>
+        <p class="footer-copyright">© 2026 <a href="https://github.com/mst-mkt">mst-mkt</a> · MIT License</p>
+      </footer>
+    `,
   },
   socialLinks: {
     github: "https://github.com/mst-mkt/nuten",
   },
   sidebar,
   aside: true,
-  footer: {
-    message: "© 2026 mst-mkt. Released under the MIT License.",
-  },
   css: readFileSync(new URL("style.css", import.meta.url), "utf8"),
 });

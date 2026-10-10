@@ -447,6 +447,7 @@ body::before {
 
   & > .site-footer {
     width: 100%;
+    max-width: var(--octc-max-content-width);
   }
 }
 
@@ -483,12 +484,51 @@ body::before {
 
 .site-footer {
   margin-top: 0;
-  padding-block: 0 2rem;
+  padding: 1.5rem;
+  background: light-dark(
+    color-mix(in oklch, white 60%, transparent),
+    color-mix(in oklch, black 20%, transparent)
+  );
   border-top: 0;
+  border-radius: var(--nuten-radius);
+  text-align: left;
 
-  & .footer-message {
-    margin: 0;
-    padding-top: 2rem;
-    border-top: 1px solid var(--octc-color-border);
+  & a {
+    color: var(--octc-color-text);
+  }
+
+  & a:hover {
+    color: var(--octc-color-primary);
+    text-decoration: none;
+  }
+
+  & .footer-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  & .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+
+    & img {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  & .footer-links {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  & .footer-copyright {
+    margin: 1rem 0 0;
   }
 }
