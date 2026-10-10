@@ -49,7 +49,6 @@ const sidebar = [
       { text: { en: "Formatting", ja: "整形" }, link: "/guide/formatting" },
       { text: { en: "Configuration", ja: "設定" }, link: "/guide/configuration" },
       { text: { en: "Ignoring code", ja: "無効化" }, link: "/guide/ignoring-code" },
-      { text: { en: "Language server", ja: "言語サーバー" }, link: "/guide/language-server" },
       {
         text: { en: "Integrations", ja: "連携" },
         link: "/guide/integrations",
