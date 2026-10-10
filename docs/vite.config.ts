@@ -12,6 +12,9 @@ export default defineConfig({
       outDir: getWorkerAssetsDir(import.meta.dirname),
       highlight: true,
       docs: false,
+      icons: {
+        include: ["content/**/*.md"],
+      },
       i18n: {
         enabled: true,
         defaultLocale: "en",

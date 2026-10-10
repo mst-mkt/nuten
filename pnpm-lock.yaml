@@ -27,6 +27,9 @@ importers:
       '@fontsource-variable/onest':
         specifier: 5.3.1
         version: 5.3.1
+      '@iconify-json/lucide':
+        specifier: 1.2.141
+        version: 1.2.141
       '@ox-content/vite-plugin':
         specifier: 3.2.13
         version: 3.2.13(@voidzero-dev/vite-plus-core@1.0.0-rc.0(@types/node@20.19.43)(terser@5.51.2)(typescript@7.0.2)(yaml@2.9.1))(katex@0.16.47)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss@4.3.3)(yauzl@3.4.0)
@@ -546,6 +549,9 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       tailwindcss: ^3.0 || ^4.0
+
+  '@iconify-json/lucide@1.2.141':
+    resolution: {integrity: sha512-V9IC4cc7giA8PtoSeNc5GbASh4Sc5sRILu3jdGO9TMRWC+4YUeU3I3prNnoAZ5QiRZpfrjBhmXkqIdwfS//PGw==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -4673,6 +4679,10 @@ snapshots:
   '@headlessui/tailwindcss@0.2.2(tailwindcss@4.3.3)':
     dependencies:
       tailwindcss: 4.3.3
+
+  '@iconify-json/lucide@1.2.141':
+    dependencies:
+      '@iconify/types': 2.0.0
 
   '@iconify/types@2.0.0': {}
 
