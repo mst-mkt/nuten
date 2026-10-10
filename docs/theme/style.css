@@ -335,6 +335,40 @@ body::before {
   }
 }
 
+.content .ansi {
+  margin: 1.25rem 0;
+  padding: var(--octc-code-pad-block) var(--octc-code-pad-inline);
+  overflow-x: auto;
+  line-height: 1.25;
+  white-space: pre;
+  color: var(--octc-color-code-text);
+  background: var(--octc-color-code-bg);
+  border: 1px solid var(--octc-color-code-frame-border);
+  border-radius: var(--nuten-radius);
+
+  & code {
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+
+  & .ansi-bold {
+    font-weight: 600;
+  }
+
+  & .ansi-dim {
+    color: var(--octc-color-text-muted);
+  }
+
+  & .ansi-red {
+    color: var(--nuten-syntax-parameter);
+  }
+
+  & .ansi-green {
+    color: var(--octc-color-primary);
+  }
+}
+
 .content :is(.ox-container--compare, .ox-container--tools) {
   margin-top: 0;
   padding: 0;

@@ -3,6 +3,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { oxContent } from "@ox-content/vite-plugin";
 import { defineConfig } from "vite-plus";
 import { theme } from "./theme";
+import { ansi } from "./theme/ansi";
 
 export default defineConfig({
   plugins: [
@@ -26,6 +27,7 @@ export default defineConfig({
           tools: {},
         },
       },
+      transformers: [ansi],
       i18n: {
         enabled: true,
         defaultLocale: "en",
