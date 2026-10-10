@@ -13,6 +13,8 @@
   --nuten-syntax-parameter: oklch(from var(--nuten-primary) l c 45);
   --nuten-logo-blue: oklch(0.725 0.162 238);
   --nuten-logo-green: oklch(0.778 0.224 148);
+  --nuten-bg-glass: color-mix(in oklch, var(--nuten-bg) 70%, transparent);
+  --nuten-bg-alt-glass: color-mix(in oklch, var(--nuten-bg-alt) 70%, transparent);
   --nuten-radius: 12px;
   --nuten-radius-pill: 999px;
 }
@@ -22,9 +24,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.header {
+.header,
+.mobile-footer {
   background-color: color-mix(in oklch, var(--octc-color-bg) 55%, transparent);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+}
+
+.feature-card,
+.content :is(.ox-card, .ox-tabs, pre.ox-code-block, .ox-container--tools li) {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .header-title {
@@ -217,7 +227,7 @@ body {
 .feature-card,
 .content .ox-card {
   padding: 1.5rem;
-  background: var(--octc-color-bg);
+  background: var(--nuten-bg-glass);
   border: 1px solid var(--octc-color-border);
   border-radius: var(--nuten-radius);
 }
@@ -240,7 +250,7 @@ body {
   display: block;
 
   &:hover {
-    background: var(--octc-color-bg);
+    background: var(--nuten-bg-glass);
     border-color: color-mix(in oklch, var(--octc-color-primary) 45%, var(--octc-color-border));
   }
 }
@@ -335,6 +345,7 @@ body {
 }
 
 .content .ox-tabs {
+  background: var(--nuten-bg-glass);
   border-radius: var(--nuten-radius);
 
   & .ox-tabs-header {
@@ -364,7 +375,7 @@ body {
     padding: 0.625rem 1.125rem;
     font-size: 0.9375rem;
     font-weight: 500;
-    background: var(--octc-color-bg);
+    background: var(--nuten-bg-glass);
     border: 1px solid var(--octc-color-border);
     border-radius: var(--nuten-radius-pill);
   }

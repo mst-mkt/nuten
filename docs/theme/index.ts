@@ -9,15 +9,14 @@ const colors = {
   text: "var(--nuten-text)",
   textMuted: "var(--nuten-text-muted)",
   border: "var(--nuten-border)",
-  codeBackground: "var(--nuten-bg-alt)",
-  codeBackgroundTop: "var(--nuten-bg-alt)",
+  codeBackground: "var(--nuten-bg-alt-glass)",
+  codeBackgroundTop: "var(--nuten-bg-alt-glass)",
   codeText: "var(--nuten-text)",
 };
 
 const tokens = {
-  "surface-glass": "var(--octc-color-bg-alt)",
   "color-code-frame-border": "var(--octc-color-border)",
-  "color-code-title-bg": "var(--octc-color-bg-alt)",
+  "color-code-title-bg": "var(--nuten-bg-alt-glass)",
   "color-code-title-text": "var(--octc-color-text-muted)",
   "color-code-title-border": "var(--octc-color-border)",
   "syntax-foreground": "var(--octc-color-code-text)",
