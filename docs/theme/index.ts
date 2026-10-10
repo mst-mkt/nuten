@@ -32,6 +32,64 @@ const tokens = {
   "syntax-token-link": "var(--octc-color-primary)",
 };
 
+const sidebar = [
+  {
+    text: { en: "Introduction", ja: "はじめに" },
+    items: [
+      { text: { en: "Overview", ja: "概要" }, link: "/introduction/overview" },
+      { text: { en: "Correctness", ja: "正しさ" }, link: "/introduction/correctness" },
+      { text: { en: "Performance", ja: "性能" }, link: "/introduction/performance" },
+    ],
+  },
+  {
+    text: { en: "Guide", ja: "ガイド" },
+    items: [
+      { text: { en: "Installation", ja: "インストール" }, link: "/guide/installation" },
+      { text: { en: "Getting started", ja: "はじめる" }, link: "/guide/getting-started" },
+      {
+        text: { en: "Usage", ja: "使い方" },
+        link: "/guide/usage",
+        items: [
+          { text: { en: "Formatting", ja: "整形" }, link: "/guide/usage/formatting" },
+          { text: { en: "Configuration", ja: "設定" }, link: "/guide/usage/configuration" },
+          {
+            text: { en: "Ignoring code", ja: "整形しないコード" },
+            link: "/guide/usage/ignoring-code",
+          },
+          {
+            text: { en: "Language server", ja: "言語サーバー" },
+            link: "/guide/usage/language-server",
+          },
+        ],
+      },
+      {
+        text: { en: "Integrations", ja: "連携" },
+        link: "/guide/integrations",
+        collapsed: true,
+        items: [
+          { text: "VS Code", link: "/guide/integrations/vscode" },
+          { text: "Zed", link: "/guide/integrations/zed" },
+          { text: "Vim", link: "/guide/integrations/vim" },
+          { text: "Neovim", link: "/guide/integrations/neovim" },
+          { text: "Helix", link: "/guide/integrations/helix" },
+          { text: "Emacs", link: "/guide/integrations/emacs" },
+          { text: "dprint", link: "/guide/integrations/dprint" },
+          { text: "treefmt", link: "/guide/integrations/treefmt" },
+          { text: "CI", link: "/guide/integrations/ci" },
+        ],
+      },
+    ],
+  },
+  {
+    text: { en: "Reference", ja: "リファレンス" },
+    items: [
+      { text: "CLI", link: "/reference/cli" },
+      { text: { en: "Settings", ja: "設定項目" }, link: "/reference/settings" },
+      { text: { en: "Style", ja: "スタイル" }, link: "/reference/style" },
+    ],
+  },
+];
+
 export const theme = defineTheme({
   extends: defaultTheme,
   fonts: {
@@ -56,6 +114,7 @@ export const theme = defineTheme({
   socialLinks: {
     github: "https://github.com/mst-mkt/nuten",
   },
+  sidebar,
   footer: {
     message: "© 2026 mst-mkt. Released under the MIT License.",
   },
