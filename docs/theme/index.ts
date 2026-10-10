@@ -53,7 +53,7 @@ const sidebar = [
           { text: { en: "Formatting", ja: "整形" }, link: "/guide/usage/formatting" },
           { text: { en: "Configuration", ja: "設定" }, link: "/guide/usage/configuration" },
           {
-            text: { en: "Ignoring code", ja: "整形しないコード" },
+            text: { en: "Ignoring code", ja: "無効化" },
             link: "/guide/usage/ignoring-code",
           },
           {
