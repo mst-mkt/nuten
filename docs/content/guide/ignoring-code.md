@@ -6,7 +6,7 @@ title: Ignoring code
 
 A comment turns formatting off for a piece of code. Use it to keep things like a hand-aligned table as they are.
 
-To leave whole files alone, use [`exclude`](/guide/usage/configuration) in the configuration.
+To leave whole files alone, use [`exclude`](/guide/configuration) in the configuration.
 
 ## `# nuten-ignore`
 

@@ -18,7 +18,7 @@ Given a directory, these are left out.
 - Files under VCS directories such as `.git`
 - Symbolic links, which are not followed
 
-A file given directly is formatted whatever its extension. `include`, `exclude`, and `respect_gitignore` in the [configuration](/guide/usage/configuration) change which files are picked.
+A file given directly is formatted whatever its extension. `include`, `exclude`, and `respect_gitignore` in the [configuration](/guide/configuration) change which files are picked.
 
 ## Writing files
 

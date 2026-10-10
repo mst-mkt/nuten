@@ -18,7 +18,7 @@ nuten format a.nu b.nu  # 指定したファイル
 - `.git` などの VCS のディレクトリにあるファイル
 - シンボリックリンクの先 (リンクはたどらない)
 
-ファイルを直接渡した場合は、拡張子に関わらず整形します。対象の選び方は [設定](/ja/guide/usage/configuration) の `include`, `exclude`, `respect_gitignore` で変えられます。
+ファイルを直接渡した場合は、拡張子に関わらず整形します。対象の選び方は [設定](/ja/guide/configuration) の `include`, `exclude`, `respect_gitignore` で変えられます。
 
 ## 書き換え
 

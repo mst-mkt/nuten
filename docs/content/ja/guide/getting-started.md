@@ -47,6 +47,6 @@ nuten format --check
 
 ## 次のステップ
 
-- [設定](/ja/guide/usage/configuration)
+- [設定](/ja/guide/configuration)
 - [エディタなどの連携](/ja/guide/integrations)
 - [CLI リファレンス](/ja/reference/cli)

@@ -46,22 +46,10 @@ const sidebar = [
     items: [
       { text: { en: "Installation", ja: "インストール" }, link: "/guide/installation" },
       { text: { en: "Getting started", ja: "はじめる" }, link: "/guide/getting-started" },
-      {
-        text: { en: "Usage", ja: "使い方" },
-        link: "/guide/usage",
-        items: [
-          { text: { en: "Formatting", ja: "整形" }, link: "/guide/usage/formatting" },
-          { text: { en: "Configuration", ja: "設定" }, link: "/guide/usage/configuration" },
-          {
-            text: { en: "Ignoring code", ja: "無効化" },
-            link: "/guide/usage/ignoring-code",
-          },
-          {
-            text: { en: "Language server", ja: "言語サーバー" },
-            link: "/guide/usage/language-server",
-          },
-        ],
-      },
+      { text: { en: "Formatting", ja: "整形" }, link: "/guide/formatting" },
+      { text: { en: "Configuration", ja: "設定" }, link: "/guide/configuration" },
+      { text: { en: "Ignoring code", ja: "無効化" }, link: "/guide/ignoring-code" },
+      { text: { en: "Language server", ja: "言語サーバー" }, link: "/guide/language-server" },
       {
         text: { en: "Integrations", ja: "連携" },
         link: "/guide/integrations",

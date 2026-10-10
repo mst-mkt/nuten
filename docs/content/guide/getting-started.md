@@ -47,6 +47,6 @@ Files that would change are shown like this.
 
 ## Next steps
 
-- [Configuration](/guide/usage/configuration)
+- [Configuration](/guide/configuration)
 - [Integrations](/guide/integrations)
 - [CLI reference](/reference/cli)

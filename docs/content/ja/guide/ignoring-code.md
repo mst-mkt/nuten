@@ -6,7 +6,7 @@ title: 無効化
 
 コメントで一部の整形を無効化できます。手で揃えた表などをそのまま残したい場合に便利です。
 
-ファイル単位で整形しない場合は、設定の [`exclude`](/ja/guide/usage/configuration) を使います。
+ファイル単位で整形しない場合は、設定の [`exclude`](/ja/guide/configuration) を使います。
 
 ## `# nuten-ignore`
 
