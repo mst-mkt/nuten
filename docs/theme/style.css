@@ -429,7 +429,7 @@ body::before {
 .content .ox-container--compare {
   --nuten-grid-columns: 2;
 
-  & > pre {
+  & > .ox-code {
     margin: 0;
   }
 }
