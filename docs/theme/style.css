@@ -73,21 +73,35 @@ body {
 }
 
 .entry-page .main {
-  position: relative;
   isolation: isolate;
 
   &::before {
     content: "";
-    position: absolute;
-    inset: 0 0 auto;
+    position: fixed;
+    inset: 0;
     z-index: -1;
-    height: 45rem;
     background:
       radial-gradient(circle at 10% 70%, var(--nuten-logo-blue), transparent 45%),
       radial-gradient(circle at 92% 8%, var(--nuten-logo-green), transparent 45%);
+    background-size: 100% 100%;
     opacity: 0.22;
     filter: blur(80px);
-    mask-image: linear-gradient(black 55%, transparent);
+
+    @supports (animation-timeline: scroll()) {
+      @media (prefers-reduced-motion: no-preference) {
+        animation: nuten-drift linear both;
+        animation-timeline: scroll(root);
+      }
+    }
+  }
+}
+
+@keyframes nuten-drift {
+  to {
+    background-position:
+      100% 0%,
+      0% 100%;
+    background-size: 160% 160%;
   }
 }
 
