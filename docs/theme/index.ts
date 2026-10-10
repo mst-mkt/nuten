@@ -17,6 +17,9 @@ const colors = {
 const tokens = {
   "surface-glass": "var(--octc-color-bg-alt)",
   "color-code-frame-border": "var(--octc-color-border)",
+  "color-code-title-bg": "var(--octc-color-bg-alt)",
+  "color-code-title-text": "var(--octc-color-text-muted)",
+  "color-code-title-border": "var(--octc-color-border)",
   "syntax-foreground": "var(--octc-color-code-text)",
   "syntax-background": "var(--octc-color-code-bg)",
   "syntax-token-comment": "var(--octc-color-text-muted)",

@@ -12,8 +12,19 @@ export default defineConfig({
       outDir: getWorkerAssetsDir(import.meta.dirname),
       highlight: true,
       docs: false,
+      codeAnnotations: {
+        notation: "vitepress",
+      },
+      codeGroups: true,
+      cards: true,
       icons: {
         include: ["content/**/*.md"],
+      },
+      containers: {
+        types: {
+          compare: {},
+          tools: {},
+        },
       },
       i18n: {
         enabled: true,
