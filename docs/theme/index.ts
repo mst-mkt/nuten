@@ -57,5 +57,8 @@ export const theme = defineTheme({
   socialLinks: {
     github: "https://github.com/mst-mkt/nuten",
   },
+  footer: {
+    message: "© 2026 mst-mkt. Released under the MIT License.",
+  },
   css: readFileSync(new URL("style.css", import.meta.url), "utf8"),
 });
