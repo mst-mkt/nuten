@@ -252,7 +252,7 @@ body.entry-page::before {
 }
 
 .feature-card,
-.content .ox-card {
+.content :is(.ox-card, .ox-link-card) {
   padding: 1.5rem;
   background: var(--nuten-bg-glass);
   border: 1px solid var(--octc-color-border);
@@ -260,17 +260,30 @@ body.entry-page::before {
 }
 
 .feature-title,
-.content .ox-card h3 {
+.content .ox-card h3,
+.content .ox-link-card-title {
   margin-bottom: 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
+  color: var(--octc-color-text);
 }
 
 .feature-details,
-.content .ox-card p {
+.content .ox-card p,
+.content .ox-link-card-description {
   font-size: 1rem;
   line-height: 1.6;
   color: var(--octc-color-text-muted);
+}
+
+.content .ox-card-grid > p {
+  margin: 0;
+}
+
+.content .ox-link-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .feature-card {
@@ -278,6 +291,12 @@ body.entry-page::before {
 
   &:hover {
     background: var(--nuten-bg-glass);
+  }
+}
+
+.feature-card,
+.content .ox-link-card {
+  &:hover {
     border-color: color-mix(in oklch, var(--octc-color-primary) 45%, var(--octc-color-border));
   }
 }
