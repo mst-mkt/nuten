@@ -21,7 +21,7 @@ ALE, vim-lsp, yegappan/lsp
 :::
 
 ::: link-card {/ja/guide/integrations/neovim} Neovim
-vim.lsp, conform.nvim
+vim.lsp, conform.nvim など
 :::
 
 ::: link-card {/ja/guide/integrations/helix} Helix
