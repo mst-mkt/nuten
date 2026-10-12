@@ -1,5 +1,7 @@
 ---
 title: Integrations
+prev: false
+next: false
 ---
 
 # Integrations

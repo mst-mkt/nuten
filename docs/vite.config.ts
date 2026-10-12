@@ -51,6 +51,7 @@ export default defineConfig({
       },
       ssg: {
         readerChrome: { copy: true, externalLinks: false, backToTop: false },
+        pagination: true,
         siteName: "Nuten",
         siteUrl: "https://nuten.keito.dev",
         localeSwitcher: true,

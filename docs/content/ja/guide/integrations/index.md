@@ -1,5 +1,7 @@
 ---
 title: 連携
+prev: false
+next: false
 ---
 
 # 連携

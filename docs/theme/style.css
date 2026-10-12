@@ -42,6 +42,7 @@ body {
 }
 
 .feature-card,
+.pager-link,
 .content :is(.ox-card, .ox-tabs, pre.ox-code-block, .ox-container--tools li) {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
@@ -67,6 +68,7 @@ body {
 
 .hero-action,
 .feature-card,
+.pager-link,
 .feature-title,
 .nav-link,
 .toc-link,
@@ -252,6 +254,7 @@ body.entry-page::before {
 }
 
 .feature-card,
+.pager-link,
 .content :is(.ox-card, .ox-link-card) {
   padding: 1.5rem;
   background: var(--nuten-bg-glass);
@@ -295,6 +298,7 @@ body.entry-page::before {
 }
 
 .feature-card,
+.pager-link,
 .content .ox-link-card {
   &:hover {
     border-color: color-mix(in oklch, var(--octc-color-primary) 45%, var(--octc-color-border));
@@ -558,6 +562,38 @@ body.entry-page::before {
     flex: 1;
     width: 100%;
     padding-block: 1.5rem 4rem;
+  }
+
+  & > .pager {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+    margin-block: 0 4rem;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  & .pager-link {
+    gap: 0.5rem;
+    text-decoration: none;
+
+    &:hover .pager-title {
+      color: var(--octc-color-text);
+    }
+  }
+
+  & .pager-link--next {
+    grid-column: 2;
+    margin-left: 0;
+  }
+
+  & .pager-label {
+    font-size: 0.875rem;
+  }
+
+  & .pager-title {
+    font-size: 1.125rem;
   }
 
   & > .site-footer {
