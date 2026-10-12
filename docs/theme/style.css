@@ -41,6 +41,11 @@ body {
   background: color-mix(in oklch, var(--octc-color-bg) 55%, transparent);
 }
 
+.nav-title {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .feature-card,
 .pager-link,
 .content :is(.ox-card, .ox-tabs, pre.ox-code-block, .ox-container--tools li) {

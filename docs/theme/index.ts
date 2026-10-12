@@ -34,11 +34,11 @@ const tokens = {
 
 const sidebar = [
   {
-    text: { en: "Introduction", ja: "はじめに" },
+    text: { en: "About", ja: "Nuten について" },
     items: [
-      { text: { en: "Overview", ja: "概要" }, link: "/introduction/overview" },
-      { text: { en: "Correctness", ja: "正しさ" }, link: "/introduction/correctness" },
-      { text: { en: "Performance", ja: "性能" }, link: "/introduction/performance" },
+      { text: { en: "Overview", ja: "概要" }, link: "/about/overview" },
+      { text: { en: "Correctness", ja: "正しさ" }, link: "/about/correctness" },
+      { text: { en: "Performance", ja: "性能" }, link: "/about/performance" },
     ],
   },
   {
