@@ -17,7 +17,7 @@ title: 連携
 :::
 
 ::: link-card {/ja/guide/integrations/vim} Vim
-ALE, vim-lsp, yegappan/lsp
+ALE, vim-lsp など
 :::
 
 ::: link-card {/ja/guide/integrations/neovim} Neovim

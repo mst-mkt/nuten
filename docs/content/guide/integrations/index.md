@@ -17,7 +17,7 @@ Extension
 :::
 
 ::: link-card {/guide/integrations/vim} Vim
-ALE, vim-lsp, yegappan/lsp
+ALE, vim-lsp, and more
 :::
 
 ::: link-card {/guide/integrations/neovim} Neovim
