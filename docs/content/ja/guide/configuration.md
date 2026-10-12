@@ -35,7 +35,7 @@ nuten format --config ./ci/nuten.nuon
 
 `--config` で指定した場合は探索せず、その設定を使います。
 
-[treefmt](/ja/guide/integrations/treefmt) や [dprint](/ja/guide/integrations/dprint) から使う場合は、それぞれの設定で指定することもできます。
+[treefmt-nix](/ja/guide/integrations/treefmt#treefmt-nix) から使う場合は、モジュールの `settings` に書くこともできます。[dprint](/ja/guide/integrations/dprint) から使う場合は、設定ファイルではなく `dprint.json` に書きます。
 
 ## 対象のファイル
 

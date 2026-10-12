@@ -35,7 +35,7 @@ nuten format --config ./ci/nuten.nuon
 
 With `--config`, there is no lookup and that file is used.
 
-From [treefmt](/guide/integrations/treefmt) or [dprint](/guide/integrations/dprint), the settings can also go in their own config.
+From [treefmt-nix](/guide/integrations/treefmt#treefmt-nix), the settings can also go in the module's `settings`. From [dprint](/guide/integrations/dprint), they go in `dprint.json` instead of the config file.
 
 ## Which files
 
