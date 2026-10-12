@@ -36,7 +36,7 @@ const sidebar = [
   {
     text: { en: "About", ja: "Nuten について" },
     items: [
-      { text: { en: "Overview", ja: "概要" }, link: "/about/overview" },
+      { text: { en: "What is Nuten?", ja: "Nuten とは" }, link: "/about/what-is-nuten" },
       { text: { en: "Correctness", ja: "正しさ" }, link: "/about/correctness" },
       { text: { en: "Performance", ja: "性能" }, link: "/about/performance" },
     ],
