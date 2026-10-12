@@ -29,7 +29,7 @@ languages.toml
 :::
 
 ::: link-card {/guide/integrations/emacs} Emacs
-Eglot, lsp-mode
+Eglot, lsp-mode, and more
 :::
 
 :::
