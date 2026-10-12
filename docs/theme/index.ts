@@ -45,7 +45,6 @@ const sidebar = [
     text: { en: "Guide", ja: "ガイド" },
     items: [
       { text: { en: "Installation", ja: "インストール" }, link: "/guide/installation" },
-      { text: { en: "Getting started", ja: "はじめる" }, link: "/guide/getting-started" },
       { text: { en: "Formatting", ja: "整形" }, link: "/guide/formatting" },
       { text: { en: "Configuration", ja: "設定" }, link: "/guide/configuration" },
       { text: { en: "Ignoring code", ja: "無効化" }, link: "/guide/ignoring-code" },
