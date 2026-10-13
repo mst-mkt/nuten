@@ -55,6 +55,37 @@ body {
   backdrop-filter: blur(12px);
 }
 
+.mobile-footer {
+  --nuten-mobile-footer-space: 0.5rem;
+  border: 1px solid var(--octc-color-border);
+  border-bottom: 0;
+  border-radius: var(--nuten-radius) var(--nuten-radius) 0 0;
+  align-items: stretch;
+  column-gap: var(--nuten-mobile-footer-space);
+  padding: var(--nuten-mobile-footer-space);
+  padding-inline: max(var(--nuten-mobile-footer-space), env(safe-area-inset-left, 0px))
+    max(var(--nuten-mobile-footer-space), env(safe-area-inset-right, 0px));
+  padding-bottom: calc(var(--nuten-mobile-footer-space) + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-footer-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0;
+  border-radius: var(--nuten-radius-block);
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    background: color-mix(in oklch, var(--nuten-text) 6%, transparent);
+  }
+
+  @media (any-hover: hover) and (any-pointer: fine) {
+    &:hover {
+      background: color-mix(in oklch, var(--nuten-text) 6%, transparent);
+    }
+  }
+}
+
 .mobile-footer-label {
   position: absolute;
   width: 1px;
