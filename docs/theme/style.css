@@ -233,6 +233,21 @@ body.entry-page::before {
   }
 }
 
+body.entry-page .header {
+  @supports (animation-timeline: scroll()) {
+    animation: nuten-header-reveal linear both;
+    animation-timeline: scroll(root);
+    animation-range: 50svh calc(50svh + 4rem);
+  }
+}
+
+@keyframes nuten-header-reveal {
+  from {
+    visibility: hidden;
+    opacity: 0;
+  }
+}
+
 .hero {
   display: grid;
   grid-template: "content image" / 1fr auto;
