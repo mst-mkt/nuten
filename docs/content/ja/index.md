@@ -1,5 +1,6 @@
 ---
 layout: entry
+lastUpdated: false
 title: Nuten
 description: A formatter for Nushell. Robust, fast, and lightweight.
 hero:

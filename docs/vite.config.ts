@@ -54,6 +54,7 @@ export default defineConfig({
         readerChrome: { copy: true, externalLinks: false, backToTop: false },
         pagination: true,
         lastUpdated: true,
+        pageChrome: true,
         siteName: "Nuten",
         siteUrl: "https://nuten.keito.dev",
         ogImage: "https://nuten.keito.dev/og-image.png",
