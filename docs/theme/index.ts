@@ -118,5 +118,6 @@ export const theme = defineTheme({
   js: `
     const lang = document.documentElement.lang;
     if (lang !== "en") document.querySelector(".header-title").href = "/" + lang + "/index.html";
+    for (const details of document.querySelectorAll(".nav-details:has(.nav-link.active)")) details.open = true;
   `,
 });
