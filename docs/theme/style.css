@@ -524,6 +524,7 @@ body.entry-page::before {
   border-radius: var(--nuten-radius-block);
 
   & code {
+    display: block;
     padding: 0;
     background: transparent;
     border: 0;
