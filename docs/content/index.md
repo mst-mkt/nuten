@@ -21,12 +21,15 @@ hero:
 features:
   - icon: "lucide:zap"
     title: Fast and lightweight
-    details: Written in Rust, faster than nufmt, and lighter on memory and disk.
+    link: /about/performance
+    details: Faster than nufmt and lighter on memory and disk, written in Rust.
   - icon: "lucide:shield-check"
     title: Never break
-    details: Keeps every token and comment, and skips a file it cannot parse.
-  - icon: "lucide:scan-eye"
+    link: /about/correctness
+    details: Keeps every token and comment, and skips any file with syntax errors.
+  - icon: "lucide:scan-text"
     title: Read correctly
+    link: /about/correctness#oracle
     details: Parses code the way nu does, and is checked against nu itself.
 ---
 
@@ -95,45 +98,32 @@ nix profile install github:mst-mkt/nuten
 
 ## How Nuten stays correct
 
-Every change has to pass several layers of tests.
-
 ::: card-grid
-::: card
 
-### Parser snapshots
-
-Parses over 560 hand-written inputs and pins the result. No parser change goes unnoticed.
+::: link-card {/about/correctness#parsing-and-formatting} Lossless CST
+Parses code into a tree that keeps everything, including whitespace and comments.
 :::
-::: card
 
-### Formatter fixtures
-
-Formats over 600 inputs and compares them with the expected output. The style stays as decided.
+::: link-card {/about/correctness#snapshots} Parser snapshots
+Catches unexpected changes in parsing results.
 :::
-::: card
 
-### Real-world corpus
-
-Formats nearly 1,800 real scripts. No token or comment is lost.
+::: link-card {/about/correctness#fixtures} Formatter fixtures
+Compares formatted output with the expected output, so the style never drifts.
 :::
-::: card
 
-### nu as oracle
-
-Asks nu to parse each script before and after formatting. The meaning never changes.
+::: link-card {/about/correctness#corpus} Real-world corpus
+Formats real-world scripts and makes sure no token or comment is lost.
 :::
-::: card
 
-### Fuzzing
-
-Feeds random input to the lexer, parser, and formatter. Nothing crashes, nothing is lost.
+::: link-card {/about/correctness#oracle} nu as oracle
+Asks nu whether it parses code the same way before and after formatting.
 :::
-::: card
 
-### CLI integration
-
-Runs the built binary on files, stdin, and configs. Exit codes and file handling behave as intended.
+::: link-card {/about/correctness#fuzzing} Fuzzing
+Throws random input at Nuten to make sure it never crashes or loses code.
 :::
+
 :::
 
 ## Editors and tools
@@ -142,12 +132,12 @@ The same formatter, from the CLI to the tools you already use.
 
 ::: tools
 
-- <span class="icon-[simple-icons--visualstudiocode]"></span> VS Code
-- <span class="icon-[simple-icons--zedindustries]"></span> Zed
-- LSP
-- dprint
-- treefmt
-- <span class="icon-[simple-icons--githubactions]"></span> GitHub Actions
-- <span class="icon-[simple-icons--gitlab]"></span> GitLab CI
+- [<span class="icon-[simple-icons--visualstudiocode]"></span> VS Code](/guide/integrations/vscode)
+- [<span class="icon-[simple-icons--zedindustries]"></span> Zed](/guide/integrations/zed)
+- [LSP](/reference/cli#nuten-lsp)
+- [dprint](/guide/integrations/dprint)
+- [treefmt](/guide/integrations/treefmt)
+- [<span class="icon-[simple-icons--githubactions]"></span> GitHub Actions](/guide/integrations/ci#github-actions)
+- [<span class="icon-[simple-icons--gitlab]"></span> GitLab CI](/guide/integrations/ci#gitlab-ci)
 
 :::
