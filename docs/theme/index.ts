@@ -95,7 +95,10 @@ export const theme = defineTheme({
     logo: "logo.svg",
   },
   embed: {
-    head: '<link rel="icon" href="/logo.svg" type="image/svg+xml">',
+    head: `
+      <link rel="icon" href="/logo.svg" type="image/svg+xml">
+      <meta name="theme-color" content="#3da485">
+    `,
     footer: `
       <footer class="site-footer">
         <div class="footer-row">
