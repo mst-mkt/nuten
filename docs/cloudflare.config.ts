@@ -5,5 +5,8 @@ export default defineConfig({
     name: "nuten-docs",
     compatibilityDate: "2026-10-10",
     domains: ["nuten.keito.dev"],
+    assets: {
+      notFoundHandling: "404-page",
+    },
   },
 });

@@ -54,6 +54,7 @@ export default defineConfig({
       ssg: {
         readerChrome: { copy: true, externalLinks: false, backToTop: false },
         pagination: true,
+        notFound: true,
         lastUpdated: true,
         pageChrome: true,
         siteName: "Nuten",
