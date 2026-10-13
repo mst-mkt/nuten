@@ -55,6 +55,7 @@ export default defineConfig({
         readerChrome: { copy: true, externalLinks: false, backToTop: false },
         pagination: true,
         notFound: true,
+        markdownSource: true,
         lastUpdated: true,
         pageChrome: true,
         siteName: "Nuten",
