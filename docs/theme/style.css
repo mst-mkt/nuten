@@ -592,13 +592,18 @@ body.entry-page::before {
   text-transform: none;
 }
 
+.content .table-scroll {
+  margin-block: 1rem;
+  background: var(--nuten-code-bg);
+  border-radius: var(--nuten-radius-block);
+  overflow-x: auto;
+}
+
 .content table {
   display: table;
   width: 100%;
-  background: var(--nuten-code-bg);
+  margin: 0;
   border: 0;
-  border-radius: var(--nuten-radius-block);
-  overflow: hidden;
 
   & :is(th, td) {
     border-inline-end: 0;
