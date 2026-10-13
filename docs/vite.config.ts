@@ -41,6 +41,7 @@ export default defineConfig({
         },
       },
       transformers: [ansi, table],
+      siteMaps: true,
       i18n: {
         enabled: true,
         defaultLocale: "en",
