@@ -55,6 +55,7 @@ export default defineConfig({
         lastUpdated: true,
         siteName: "Nuten",
         siteUrl: "https://nuten.keito.dev",
+        ogImage: "https://nuten.keito.dev/og-image.png",
         localeSwitcher: true,
         theme,
       },
