@@ -48,6 +48,51 @@ body {
   text-transform: none;
 }
 
+:root:root .sidebar {
+  --nuten-nav-hover-bg: color-mix(in oklch, var(--nuten-text) 4%, transparent);
+  --nuten-nav-active-bg: color-mix(in oklch, var(--nuten-text) 6%, transparent);
+
+  & .nav-link {
+    border-radius: var(--nuten-radius-block);
+
+    @media (any-hover: hover) and (any-pointer: fine) {
+      &:hover {
+        background: var(--nuten-nav-hover-bg);
+      }
+    }
+
+    &.active {
+      background: var(--nuten-nav-active-bg);
+    }
+  }
+
+  & .nav-details > .nav-summary {
+    align-items: center;
+    border-radius: var(--nuten-radius-block);
+
+    &::before {
+      order: 1;
+      margin-block: 0;
+      margin-inline: 0 1rem;
+    }
+
+    & > .nav-link {
+      padding-inline-start: 0.625rem;
+      background: none;
+    }
+
+    @media (any-hover: hover) and (any-pointer: fine) {
+      &:hover {
+        background: var(--nuten-nav-hover-bg);
+      }
+    }
+
+    &:has(> .nav-link.active) {
+      background: var(--nuten-nav-active-bg);
+    }
+  }
+}
+
 .feature-card,
 .pager-link,
 .content :is(.ox-card, .ox-link-card, .ox-tabs, pre.ox-code-block, .ox-container--tools li) {
