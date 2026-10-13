@@ -84,6 +84,7 @@ export const theme = defineTheme({
       weights: [400, 500, 600],
       selfHost: true,
       preload: [400],
+      fallbacks: ['"Hiragino Kaku Gothic ProN"', '"Hiragino Sans"', '"Noto Sans JP"', "sans-serif"],
     },
   },
   colors,
