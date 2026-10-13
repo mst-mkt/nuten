@@ -613,15 +613,33 @@ body.entry-page::before {
 }
 
 .content .ox-tabs {
-  background: var(--nuten-bg-glass);
-  border-radius: var(--nuten-radius);
+  position: relative;
+  background: var(--octc-color-code-bg);
+  border: 2px solid var(--octc-color-code-frame-border);
+  border-radius: var(--nuten-radius-block);
 
   & .ox-tabs-header {
-    padding-inline: var(--octc-code-pad-inline);
+    padding-inline: var(--octc-code-pad-inline) calc(var(--octc-code-pad-inline) + 2rem);
+    background: transparent;
+    border-bottom: 1px solid var(--octc-color-code-title-border);
   }
 
-  & pre.ox-code-block[data-code-title]::before {
-    content: none;
+  & .ox-tab-panel {
+    --octc-color-code-bg: transparent;
+  }
+
+  & .ox-code {
+    position: static;
+  }
+
+  & pre.ox-code-block {
+    padding-inline-end: var(--octc-code-pad-inline);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+
+    &[data-code-title]::before {
+      content: none;
+    }
   }
 }
 
