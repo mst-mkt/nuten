@@ -15,7 +15,7 @@
   --nuten-logo-green: oklch(0.778 0.224 148);
   --nuten-bg-glass: color-mix(in oklch, var(--nuten-bg) 70%, transparent);
   --nuten-code-bg: color-mix(in oklch, var(--nuten-bg-alt) 35%, transparent);
-  --nuten-rule: color-mix(in oklch, var(--nuten-bg-alt) 55%, transparent);
+  --nuten-rule: color-mix(in oklch, var(--nuten-bg-alt) 80%, transparent);
   --nuten-tint: color-mix(in oklch, var(--nuten-text) 2%, transparent);
   --nuten-radius: 12px;
   --nuten-radius-block: 8px;
