@@ -359,6 +359,14 @@ body.entry-page::before {
   }
 }
 
+.content li > p ~ :is(ul, ol) {
+  margin-bottom: 1rem;
+
+  @media (max-width: 768px) {
+    margin-bottom: 0.875rem;
+  }
+}
+
 .content :not(pre) > code {
   padding: 0.15em 0.35em;
   border: 0;
