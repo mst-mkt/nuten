@@ -20,6 +20,8 @@
   --nuten-radius: 12px;
   --nuten-radius-block: 8px;
   --nuten-radius-pill: 999px;
+  --nuten-page-width: 72rem;
+  --nuten-page-gutter: 1.5rem;
   --octc-code-pad-block: 0.75rem;
   --octc-code-pad-inline: 1rem;
 }
@@ -93,9 +95,14 @@ body {
 .features,
 .entry-content,
 .site-footer {
-  max-width: 72rem;
+  max-width: var(--nuten-page-width);
   margin-inline: auto;
-  padding-inline: 1.5rem;
+  padding-inline: var(--nuten-page-gutter);
+}
+
+body.entry-page .site-footer {
+  width: calc(100% - 2 * var(--nuten-page-gutter));
+  max-width: calc(var(--nuten-page-width) - 2 * var(--nuten-page-gutter));
 }
 
 .features-grid,
