@@ -25,6 +25,7 @@ in
       toolchain.nodejs
       toolchain.pnpm
       toolchain.vite-plus
+      toolchain.wasm-bindgen-cli
       pkgs.cargo-insta
       pkgs.cargo-nextest
       pkgs.dprint

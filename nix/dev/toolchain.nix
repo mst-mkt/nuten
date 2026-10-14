@@ -38,4 +38,5 @@ in
       vp.version == vite-plus-local-version
     ) "vite-plus differs between nix/dev/flake.lock and package.json";
     vp;
+  wasm-bindgen-cli = pkgs.wasm-bindgen-cli_0_2_127;
 }
