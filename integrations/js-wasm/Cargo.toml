@@ -1,0 +1,19 @@
+[package]
+name = "nuten-js-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+nuten-format = { workspace = true }
+nuten-line-index = { workspace = true }
+wasm-bindgen = { workspace = true }
+
+[lints]
+workspace = true

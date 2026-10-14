@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "integrations/dprint", "tasks/*"]
+members = ["crates/*", "integrations/dprint", "integrations/js-wasm", "tasks/*"]
 exclude = ["tasks/benchmark", "tasks/fuzz"]
 
 [workspace.package]
@@ -35,6 +35,7 @@ usage = { package = "usage-rs", version = "6.9.1", default-features = false, fea
   "diagnostics",
   "completions",
 ] }
+wasm-bindgen = { version = "=0.2.127", default-features = false }
 
 # Not `panic = "abort"`, since the language server catches a panic of the formatter.
 [profile.release]
