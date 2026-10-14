@@ -65,11 +65,11 @@ pub(crate) static SETTINGS: [Setting; 10] = [
         description: "Whether to indent with spaces or with tabs.",
         scope: Scope::File(Kind::Choice(&[
             Choice {
-                name: "space",
+                name: IndentStyle::Space.name(),
                 change: FormatChange::IndentStyle(IndentStyle::Space),
             },
             Choice {
-                name: "tab",
+                name: IndentStyle::Tab.name(),
                 change: FormatChange::IndentStyle(IndentStyle::Tab),
             },
         ])),
@@ -94,15 +94,15 @@ pub(crate) static SETTINGS: [Setting; 10] = [
                       as written.",
         scope: Scope::File(Kind::Choice(&[
             Choice {
-                name: "lf",
+                name: LineEnding::Lf.name(),
                 change: FormatChange::LineEnding(LineEnding::Lf),
             },
             Choice {
-                name: "crlf",
+                name: LineEnding::CrLf.name(),
                 change: FormatChange::LineEnding(LineEnding::CrLf),
             },
             Choice {
-                name: "auto",
+                name: LineEnding::Auto.name(),
                 change: FormatChange::LineEnding(LineEnding::Auto),
             },
         ])),

@@ -3,7 +3,6 @@ mod rules;
 
 use std::ops::RangeInclusive;
 
-pub use nuten_doc::IndentStyle;
 use nuten_doc::PrinterOptions;
 use nuten_parser::Parsed;
 pub use nuten_parser::{ParseError, ParseErrorKind};
@@ -66,13 +65,46 @@ impl Commas {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndentStyle {
+    Space,
+    Tab,
+}
+
+impl IndentStyle {
+    pub const ALL: [IndentStyle; 2] = [IndentStyle::Space, IndentStyle::Tab];
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            IndentStyle::Space => "space",
+            IndentStyle::Tab => "tab",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineEnding {
     Lf,
     CrLf,
     Auto,
 }
 
+impl LineEnding {
+    pub const ALL: [LineEnding; 3] = [LineEnding::Lf, LineEnding::CrLf, LineEnding::Auto];
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            LineEnding::Lf => "lf",
+            LineEnding::CrLf => "crlf",
+            LineEnding::Auto => "auto",
+        }
+    }
+}
+
 fn printer_options(config: &Config, root: &SyntaxNode) -> PrinterOptions {
+    let indent_style = match config.indent_style {
+        IndentStyle::Space => nuten_doc::IndentStyle::Space,
+        IndentStyle::Tab => nuten_doc::IndentStyle::Tab,
+    };
     let line_ending = match config.line_ending {
         LineEnding::Lf => nuten_doc::LineEnding::Lf,
         LineEnding::CrLf => nuten_doc::LineEnding::CrLf,
@@ -80,7 +112,7 @@ fn printer_options(config: &Config, root: &SyntaxNode) -> PrinterOptions {
     };
     PrinterOptions {
         line_width: config.line_width,
-        indent_style: config.indent_style,
+        indent_style,
         indent_width: config.indent_width,
         line_ending,
     }
@@ -126,7 +158,7 @@ fn format_parsed(src: &str, parsed: &Parsed, config: &Config) -> Result<String, 
 
 #[cfg(test)]
 mod tests {
-    use super::{Commas, Config, LineEnding, ParseErrorKind, format, invariants};
+    use super::{Commas, Config, IndentStyle, LineEnding, ParseErrorKind, format, invariants};
 
     #[test]
     fn commas_all_holds_each_commas_once_in_fixed_order() {
@@ -149,6 +181,25 @@ mod tests {
     #[test]
     fn commas_of_name_takes_names_in_lowercase_only() {
         assert_eq!(Commas::of_name("Inline"), None);
+    }
+
+    #[test]
+    fn indent_style_all_holds_each_indent_style_once_in_fixed_order() {
+        let position = |indent_style| match indent_style {
+            IndentStyle::Space => 0,
+            IndentStyle::Tab => 1,
+        };
+        assert_eq!(IndentStyle::ALL.map(position), [0, 1]);
+    }
+
+    #[test]
+    fn line_ending_all_holds_each_line_ending_once_in_fixed_order() {
+        let position = |line_ending| match line_ending {
+            LineEnding::Lf => 0,
+            LineEnding::CrLf => 1,
+            LineEnding::Auto => 2,
+        };
+        assert_eq!(LineEnding::ALL.map(position), [0, 1, 2]);
     }
 
     #[test]
