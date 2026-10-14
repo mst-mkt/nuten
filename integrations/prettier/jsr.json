@@ -1,0 +1,15 @@
+{
+  "name": "@nuten/prettier-plugin",
+  "version": "0.0.0",
+  "imports": {
+    "@nuten/wasm": "jsr:@nuten/wasm@0.0.0",
+    "prettier": "npm:prettier@^3.0.0"
+  },
+  "publish": {
+    "include": ["jsr.json", "src/", "LICENSE", "README.md"],
+    "exclude": ["src/**/*.test.ts"]
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
