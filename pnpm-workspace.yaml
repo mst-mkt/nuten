@@ -10,5 +10,6 @@ overrides:
 
 allowBuilds:
   "@vscode/vsce-sign": false
+  keytar: false
   puppeteer: false
   workerd: false
