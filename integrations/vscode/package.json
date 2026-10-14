@@ -3,7 +3,7 @@
   "displayName": "Nuten",
   "version": "0.0.0",
   "private": true,
-  "description": "A formatter for Nushell. Robust, fast, and tiny.",
+  "description": "A formatter for Nushell. Robust, fast, and lightweight.",
   "categories": [
     "Formatters"
   ],

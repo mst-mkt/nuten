@@ -1,6 +1,6 @@
 id = "nuten-lsp"
 name = "Nuten"
-description = "A formatter for Nushell. Robust, fast, and tiny."
+description = "A formatter for Nushell. Robust, fast, and lightweight."
 version = "0.0.0"
 schema_version = 1
 authors = ["mst-mkt"]
