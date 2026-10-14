@@ -32,6 +32,7 @@ let
     "vscode"
     "zed"
     "dprint"
+    "js-wasm"
     "assets"
     "docs"
   ];
