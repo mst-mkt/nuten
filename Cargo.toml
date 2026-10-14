@@ -37,11 +37,14 @@ usage = { package = "usage-rs", version = "6.9.1", default-features = false, fea
 ] }
 wasm-bindgen = { version = "=0.2.127", default-features = false }
 
-# Not `panic = "abort"`, since the language server catches a panic of the formatter.
 [profile.release]
 lto = "fat"
 codegen-units = 1
 strip = true
+
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
 
 [profile.dev]
 debug = "line-tables-only"

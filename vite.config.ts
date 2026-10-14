@@ -85,6 +85,9 @@ export default defineConfig({
       "test:vscode": {
         command: "vp run nuten-vscode#test",
       },
+      "test:ts": {
+        command: "vp run --filter '!nuten-vscode' test",
+      },
     },
   },
 });

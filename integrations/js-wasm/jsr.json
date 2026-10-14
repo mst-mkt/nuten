@@ -1,0 +1,11 @@
+{
+  "name": "@nuten/wasm",
+  "version": "0.0.0",
+  "publish": {
+    "include": ["jsr.json", "ts/", "LICENSE", "README.md"],
+    "exclude": ["!ts/gen/", "ts/**/*.test.ts", "ts/workerd/"]
+  },
+  "exports": {
+    ".": "./ts/default.ts"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "@nuten/wasm",
+  "version": "0.0.0",
+  "description": "A formatter for Nushell. Robust, fast, and lightweight.",
+  "keywords": [
+    "code-formatter",
+    "formatter",
+    "nu",
+    "nushell",
+    "wasm"
+  ],
+  "homepage": "https://nuten.keito.dev",
+  "bugs": {
+    "url": "https://github.com/mst-mkt/nuten/issues"
+  },
+  "license": "MIT",
+  "author": "mst-mkt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mst-mkt/nuten.git",
+    "directory": "integrations/js-wasm"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/default.d.ts",
+      "workerd": "./dist/workerd.js",
+      "node": "./dist/node.js",
+      "default": "./dist/default.js"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "workerd": "1.20261006.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
