@@ -129,6 +129,9 @@ jobs:
       - name: vp run test:vscode
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: nix develop --no-update-lock-file ./nix/dev --command vp run test:vscode
+      - name: vp run test:ts
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: nix develop --no-update-lock-file ./nix/dev --command vp run test:ts
 
   lock:
     runs-on: ubuntu-24.04
