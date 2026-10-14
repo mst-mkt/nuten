@@ -1,12 +1,19 @@
-import { format as formatInWasm } from "./gen/nuten.js";
+import {
+  type Commas,
+  type IndentStyle,
+  type LineEnding,
+  format as formatInWasm,
+} from "./gen/nuten.js";
 
-export type Options = {
-  lineWidth?: number | undefined;
-  indentStyle?: "space" | "tab" | undefined;
-  indentWidth?: number | undefined;
-  lineEnding?: "lf" | "crlf" | "auto" | undefined;
-  commas?: "none" | "inline" | "always" | "trailing" | undefined;
+export type RequiredOptions = {
+  lineWidth: number;
+  indentStyle: IndentStyle;
+  indentWidth: number;
+  lineEnding: LineEnding;
+  commas: Commas;
 };
+
+export type Options = { [Key in keyof RequiredOptions]?: RequiredOptions[Key] | undefined };
 
 export type ParseError = {
   line: number;

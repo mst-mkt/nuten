@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { FormatError, format } from "./node";
+import { FormatError, defaultOptions, format } from "./node";
 
 const block = "def f [] { [1 2 3] }";
 
@@ -110,6 +110,28 @@ describe("options", () => {
     expect(() => format(block, options)).toThrow(
       new TypeError("`indentStyle` takes one of `space`, `tab`"),
     );
+  });
+});
+
+describe("default options", () => {
+  test("default_options_are_defaults_of_nuten", () => {
+    expect(defaultOptions).toEqual({
+      lineWidth: 100,
+      indentStyle: "space",
+      indentWidth: 4,
+      lineEnding: "auto",
+      commas: "inline",
+    });
+  });
+
+  test("default_options_format_as_options_left_out", () => {
+    const source = `def f [] {\r\n[1 2]\r\n[\n1\n2\n]\r\n[${"item ".repeat(30)}]\r\n}`;
+
+    expect(format(source, defaultOptions)).toBe(format(source));
+  });
+
+  test("default_options_are_frozen", () => {
+    expect(Object.isFrozen(defaultOptions)).toBe(true);
   });
 });
 

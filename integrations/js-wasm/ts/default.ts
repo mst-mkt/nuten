@@ -1,3 +1,5 @@
+import { readDefaultOptions } from "./defaults";
+import type { RequiredOptions } from "./format";
 import init from "./gen/nuten.js";
 
 const wasm = new URL("./gen/nuten_bg.wasm", import.meta.url);
@@ -9,4 +11,5 @@ await init({
       : wasm,
 });
 
+export const defaultOptions: Readonly<RequiredOptions> = readDefaultOptions();
 export * from "./format";

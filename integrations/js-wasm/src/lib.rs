@@ -12,6 +12,86 @@ pub struct ParseError {
     pub message: String,
 }
 
+#[wasm_bindgen(js_name = IndentStyle)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndentStyleName {
+    Space = "space",
+    Tab = "tab",
+}
+
+impl From<IndentStyle> for IndentStyleName {
+    fn from(indent_style: IndentStyle) -> Self {
+        match indent_style {
+            IndentStyle::Space => IndentStyleName::Space,
+            IndentStyle::Tab => IndentStyleName::Tab,
+        }
+    }
+}
+
+#[wasm_bindgen(js_name = LineEnding)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineEndingName {
+    Lf = "lf",
+    CrLf = "crlf",
+    Auto = "auto",
+}
+
+impl From<LineEnding> for LineEndingName {
+    fn from(line_ending: LineEnding) -> Self {
+        match line_ending {
+            LineEnding::Lf => LineEndingName::Lf,
+            LineEnding::CrLf => LineEndingName::CrLf,
+            LineEnding::Auto => LineEndingName::Auto,
+        }
+    }
+}
+
+#[wasm_bindgen(js_name = Commas)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommasName {
+    None = "none",
+    Inline = "inline",
+    Always = "always",
+    Trailing = "trailing",
+}
+
+impl From<Commas> for CommasName {
+    fn from(commas: Commas) -> Self {
+        match commas {
+            Commas::None => CommasName::None,
+            Commas::Inline => CommasName::Inline,
+            Commas::Always => CommasName::Always,
+            Commas::Trailing => CommasName::Trailing,
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct DefaultOptions {
+    #[wasm_bindgen(js_name = lineWidth)]
+    pub line_width: u32,
+    #[wasm_bindgen(js_name = indentStyle)]
+    pub indent_style: IndentStyleName,
+    #[wasm_bindgen(js_name = indentWidth)]
+    pub indent_width: u8,
+    #[wasm_bindgen(js_name = lineEnding)]
+    pub line_ending: LineEndingName,
+    pub commas: CommasName,
+}
+
+#[wasm_bindgen(js_name = defaultOptions)]
+pub fn default_options() -> DefaultOptions {
+    let defaults = Config::default();
+    DefaultOptions {
+        line_width: defaults.line_width,
+        indent_style: defaults.indent_style.into(),
+        indent_width: defaults.indent_width,
+        line_ending: defaults.line_ending.into(),
+        commas: defaults.commas.into(),
+    }
+}
+
 #[wasm_bindgen]
 pub fn format(
     source: &str,
@@ -160,7 +240,37 @@ fn choice<T: Copy>(
 
 #[cfg(test)]
 mod tests {
-    use super::{IndentStyle, choice, integer};
+    use super::{
+        Commas, CommasName, IndentStyle, IndentStyleName, LineEnding, LineEndingName, choice,
+        integer,
+    };
+
+    #[test]
+    fn indent_style_name_is_name_in_nuten_format() {
+        for indent_style in IndentStyle::ALL {
+            assert_eq!(
+                IndentStyleName::from(indent_style).to_str(),
+                indent_style.name()
+            );
+        }
+    }
+
+    #[test]
+    fn line_ending_name_is_name_in_nuten_format() {
+        for line_ending in LineEnding::ALL {
+            assert_eq!(
+                LineEndingName::from(line_ending).to_str(),
+                line_ending.name()
+            );
+        }
+    }
+
+    #[test]
+    fn commas_name_is_name_in_nuten_format() {
+        for commas in Commas::ALL {
+            assert_eq!(CommasName::from(commas).to_str(), commas.name());
+        }
+    }
 
     #[test]
     fn integer_takes_whole_number_within_range() {

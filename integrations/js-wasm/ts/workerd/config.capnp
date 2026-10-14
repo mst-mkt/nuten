@@ -8,6 +8,7 @@ const worker :Workerd.Worker = (
   modules = [
     (name = "worker.js", esModule = embed "worker.js"),
     (name = "workerd.js", esModule = embed "../../dist/workerd.js"),
+    (name = "defaults.js", esModule = embed "../../dist/defaults.js"),
     (name = "format.js", esModule = embed "../../dist/format.js"),
     (name = "gen/nuten.js", esModule = embed "../../dist/gen/nuten.js"),
     (name = "gen/nuten_bg.wasm", wasm = embed "../../dist/gen/nuten_bg.wasm"),

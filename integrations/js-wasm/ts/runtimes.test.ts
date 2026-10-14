@@ -4,6 +4,8 @@ import { promisify } from "node:util";
 
 import { expect, test } from "vite-plus/test";
 
+import { defaultOptions } from "./node";
+
 const run = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 
@@ -32,6 +34,18 @@ test("default_entry_formats_in_node", async () => {
   });
 
   expect(stdout).toBe("ls | sort\n");
+});
+
+test("default_entry_gives_default_options_of_node_entry", async () => {
+  const script = `
+    import { defaultOptions } from "./dist/default.js";
+    process.stdout.write(JSON.stringify(defaultOptions));
+  `;
+  const { stdout } = await run(process.execPath, ["--input-type=module", "--eval", script], {
+    cwd: root,
+  });
+
+  expect(JSON.parse(stdout)).toEqual(defaultOptions);
 });
 
 test("workerd_condition_takes_workerd_entry_over_node_entry", async () => {
