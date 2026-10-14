@@ -36,6 +36,7 @@ let
     "prettier"
     "assets"
     "docs"
+    "playground"
   ];
   convcoConfig = (pkgs.formats.yaml { }).generate "convco.yaml" {
     types = map (type: {
