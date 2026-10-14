@@ -1,6 +1,12 @@
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  lint: {
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
+  },
   run: {
     tasks: {
       format: {
@@ -26,6 +32,7 @@ export default defineConfig({
       },
       "lint:ts": {
         command: "vp check",
+        dependsOn: ["@nuten/wasm#build:wasm"],
       },
 
       "test:rust": {
