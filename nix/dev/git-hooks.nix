@@ -33,6 +33,7 @@ let
     "zed"
     "dprint"
     "js-wasm"
+    "prettier"
     "assets"
     "docs"
   ];
