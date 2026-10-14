@@ -81,8 +81,13 @@ impl SyncPluginHandler<Configuration> for Nuten {
             version: env!("CARGO_PKG_VERSION").to_string(),
             config_key: "nuten".to_string(),
             help_url: env!("CARGO_PKG_REPOSITORY").to_string(),
-            config_schema_url: String::new(),
-            update_url: None,
+            config_schema_url: concat!(
+                "https://plugins.dprint.dev/mst-mkt/nuten/",
+                env!("CARGO_PKG_VERSION"),
+                "/schema.json"
+            )
+            .to_string(),
+            update_url: Some("https://plugins.dprint.dev/mst-mkt/nuten/latest.json".to_string()),
         }
     }
 
@@ -758,16 +763,21 @@ mod tests {
     }
 
     #[test]
-    fn plugin_info_names_nuten_with_its_version_and_repository() {
+    fn plugin_info_names_nuten_and_its_urls() {
+        let version = env!("CARGO_PKG_VERSION");
         assert_eq!(
             Nuten.plugin_info(),
             PluginInfo {
                 name: "nuten".to_string(),
-                version: env!("CARGO_PKG_VERSION").to_string(),
+                version: version.to_string(),
                 config_key: "nuten".to_string(),
                 help_url: "https://github.com/mst-mkt/nuten".to_string(),
-                config_schema_url: String::new(),
-                update_url: None,
+                config_schema_url: format!(
+                    "https://plugins.dprint.dev/mst-mkt/nuten/{version}/schema.json"
+                ),
+                update_url: Some(
+                    "https://plugins.dprint.dev/mst-mkt/nuten/latest.json".to_string()
+                ),
             }
         );
     }
