@@ -19,6 +19,7 @@ let
       ../integrations/vscode/package.json
       ../integrations/vscode/icon.png
       ../integrations/vscode/LICENSE
+      ../integrations/vscode/README.md
       (lib.fileset.difference ../integrations/vscode/src ../integrations/vscode/src/test)
     ];
   };
@@ -64,7 +65,7 @@ vscode-utils.buildVscodeExtension (finalAttrs: {
   installPhase = ''
     runHook preInstall
     mkdir -p "$out/$installPrefix"
-    cp --dereference --parents --target-directory="$out/$installPrefix" package.json ${lib.escapeShellArgs manifest.files}
+    cp --dereference --parents --target-directory="$out/$installPrefix" package.json README.md ${lib.escapeShellArgs manifest.files}
     runHook postInstall
   '';
 
