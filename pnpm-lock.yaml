@@ -104,6 +104,9 @@ importers:
       '@cloudflare/vite-plugin':
         specifier: 2.0.0-beta.sha-91c870c02
         version: 2.0.0-beta.sha-91c870c02(@types/node@22.20.5)(@voidzero-dev/vite-plus-core@1.0.0-rc.0(@types/node@22.20.5)(@typescript/typescript6@6.0.2)(terser@5.51.2)(yaml@2.9.1))(workerd@1.20261006.1)
+      '@codemirror/autocomplete':
+        specifier: 6.20.3
+        version: 6.20.3
       '@codemirror/commands':
         specifier: 6.11.1
         version: 6.11.1
@@ -333,6 +336,9 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@codemirror/autocomplete@6.20.3':
+    resolution: {integrity: sha512-tlosUqb+3BbxCxZdu4tKeRghPFC+QM7q4X5YhKV2eCmPG+1r2F3f4AaSz5sCrFqUtX4Jh20VFTKecl16MgiV9g==}
 
   '@codemirror/commands@6.11.1':
     resolution: {integrity: sha512-O/4hG3SC1YwcmQ0d2UVNDs+AsaNWd1iHVxbTeEBuqH+6bExAiPK3iS/BvpY6rZGURALv4ZD3sIgcCmRvw3ehBg==}
@@ -5530,6 +5536,13 @@ snapshots:
 
   '@cloudflare/workerd-windows-64@1.20261006.1':
     optional: true
+
+  '@codemirror/autocomplete@6.20.3':
+    dependencies:
+      '@codemirror/language': 6.13.1
+      '@codemirror/state': 6.7.6
+      '@codemirror/view': 6.43.14
+      '@lezer/common': 1.5.3
 
   '@codemirror/commands@6.11.1':
     dependencies:

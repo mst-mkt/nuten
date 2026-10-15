@@ -14,6 +14,8 @@ import {
   rectangularSelection,
 } from "@codemirror/view";
 
+import { brackets } from "./brackets";
+
 export const setup = [
   lineNumbers(),
   gutters({ fixed: false }),
@@ -33,4 +35,4 @@ export const setup = [
   ]),
 ];
 
-export const editableSetup = [highlightActiveLine(), highlightActiveLineGutter()];
+export const editableSetup = [highlightActiveLine(), highlightActiveLineGutter(), brackets];
