@@ -1,0 +1,74 @@
+@import "../../media.css";
+
+.splitter {
+  flex: 0 0 var(--nuten-page-gutter);
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  cursor: col-resize;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 -4px;
+  }
+
+  &::after {
+    content: "";
+    width: 4px;
+    height: 2.5rem;
+    background: color-mix(in oklch, var(--nuten-text) 15%, var(--nuten-bg));
+    border-radius: 2px;
+    transition: background 150ms var(--nuten-ease-out);
+  }
+
+  @media (--narrow) {
+    cursor: row-resize;
+
+    &::before {
+      inset: -4px 0;
+    }
+
+    &::after {
+      width: 2.5rem;
+      height: 4px;
+    }
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::after {
+    outline: var(--nuten-ring-width) solid var(--nuten-ring);
+  }
+
+  @media (any-hover: hover) and (any-pointer: fine) {
+    &:hover::after {
+      background: color-mix(in oklch, var(--nuten-text) 45%, var(--nuten-bg));
+    }
+  }
+
+  &:active::after {
+    background: color-mix(in oklch, var(--nuten-text) 45%, var(--nuten-bg));
+  }
+
+  @media (forced-colors: active) {
+    &::after {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+
+    &:hover::after,
+    &:focus-visible::after,
+    &:active::after {
+      background: Highlight;
+    }
+
+    &:focus-visible::after {
+      outline-color: CanvasText;
+    }
+  }
+}

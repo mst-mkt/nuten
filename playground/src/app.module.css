@@ -19,16 +19,13 @@
 }
 
 .panes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--nuten-page-gutter);
+  display: flex;
   min-height: 0;
 
   @media (--narrow) {
     --settings-height: calc(var(--nuten-bar-height) + 2px);
 
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
     height: calc(
       100svh - var(--nuten-header-height) - var(--settings-height) - 3 * var(--nuten-page-gutter)
     );
