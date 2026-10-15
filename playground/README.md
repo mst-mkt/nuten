@@ -20,3 +20,11 @@ The unit tests in `src` check how the playground reads the result of formatting,
 ```nushell
 vp run @nuten/playground#test
 ```
+
+## Deployment
+
+The playground runs on Cloudflare Workers, on a route under the docs site, and this command deploys it.
+
+```nushell
+vp run @nuten/playground#deploy
+```
