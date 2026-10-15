@@ -17,8 +17,8 @@ hero:
       text: Get Started
       link: /guide/installation
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/mst-mkt/nuten
+      text: Try in Playground
+      link: https://nuten.keito.dev/playground/
 features:
   - icon: "lucide:zap"
     title: Fast and lightweight

@@ -17,8 +17,8 @@ hero:
       text: はじめる
       link: /ja/guide/installation
     - theme: alt
-      text: GitHub で見る
-      link: https://github.com/mst-mkt/nuten
+      text: Playground で試す
+      link: https://nuten.keito.dev/playground/
 features:
   - icon: "lucide:rocket"
     title: Fast and lightweight

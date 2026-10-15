@@ -94,6 +94,7 @@ export const theme = defineTheme({
   header: {
     logo: "logo.svg",
   },
+  nav: [{ text: "Playground", link: "https://nuten.keito.dev/playground/" }],
   embed: {
     head: `
       <link rel="icon" href="/logo.svg" type="image/svg+xml">

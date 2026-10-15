@@ -149,6 +149,22 @@ body {
   margin-right: 0;
 }
 
+.header-nav-list {
+  justify-content: flex-end;
+}
+
+.header-nav-item > a {
+  padding: 0.5rem 0.6rem;
+  border-radius: 4px;
+  color: var(--octc-color-text-muted);
+  font-size: 0.875rem;
+
+  &:hover {
+    background: color-mix(in srgb, var(--octc-color-bg-alt) 82%, var(--octc-color-primary) 12%);
+    color: var(--octc-color-text);
+  }
+}
+
 .hero-action,
 .feature-card,
 .pager-link,
@@ -159,6 +175,7 @@ body {
 .search-button,
 .theme-toggle,
 .ox-header-select > button,
+.header-nav-item > a,
 .content a,
 .content .ox-container--tools li {
   @media (prefers-reduced-motion: no-preference) {
