@@ -1,5 +1,5 @@
 {
-  "name": "nuten-docs",
+  "name": "@nuten/docs",
   "private": true,
   "type": "module",
   "devDependencies": {

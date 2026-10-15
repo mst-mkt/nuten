@@ -9,8 +9,8 @@ The pages are Markdown files in `content`, with their Japanese versions at the s
 
 ```nushell
 pnpm install
-vp run nuten-docs#dev
-vp run nuten-docs#build
+vp run @nuten/docs#dev
+vp run @nuten/docs#build
 ```
 
 ## Deployment
@@ -18,7 +18,7 @@ vp run nuten-docs#build
 The site runs on Cloudflare Workers, and this command deploys it.
 
 ```nushell
-vp run nuten-docs#deploy
+vp run @nuten/docs#deploy
 ```
 
 CI deploys the site on every push to `main`, and deploys a preview for each pull request that changes the docs.
