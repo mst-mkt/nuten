@@ -15,6 +15,7 @@ import {
 } from "@codemirror/view";
 
 import { brackets } from "./brackets";
+import { quotes } from "./quotes";
 
 export const setup = [
   lineNumbers(),
@@ -35,4 +36,4 @@ export const setup = [
   ]),
 ];
 
-export const editableSetup = [highlightActiveLine(), highlightActiveLineGutter(), brackets];
+export const editableSetup = [highlightActiveLine(), highlightActiveLineGutter(), brackets, quotes];
