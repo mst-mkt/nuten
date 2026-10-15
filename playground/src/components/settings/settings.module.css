@@ -1,0 +1,106 @@
+@import "../../media.css";
+
+.settings {
+  min-width: 0;
+  background: var(--nuten-bg-glass);
+  -webkit-backdrop-filter: blur(var(--nuten-blur));
+  backdrop-filter: blur(var(--nuten-blur));
+  border: 1px solid var(--nuten-border);
+  border-radius: var(--nuten-radius);
+}
+
+.trigger {
+  display: none;
+
+  @media (--narrow) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    height: var(--nuten-bar-height);
+    padding-inline: 1rem 0.75rem;
+    color: inherit;
+    font: inherit;
+    font-size: var(--nuten-font-size-sm);
+    text-align: start;
+    background: transparent;
+    border: 0;
+    border-radius: inherit;
+    cursor: pointer;
+  }
+}
+
+.heading {
+  flex: none;
+  font-weight: 500;
+}
+
+.summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--nuten-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  flex: none;
+  margin-left: auto;
+  color: var(--nuten-text-muted);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: rotate 200ms var(--nuten-ease-out);
+  }
+
+  [data-panel-open] > & {
+    rotate: 180deg;
+  }
+}
+
+.panel {
+  @media not (--narrow) {
+    &[hidden] {
+      display: block;
+    }
+  }
+
+  @media (--narrow) {
+    height: var(--collapsible-panel-height);
+    overflow: hidden;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: height 200ms var(--nuten-ease-out);
+    }
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      height: 0;
+    }
+  }
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 0;
+
+  @media (--narrow) {
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--nuten-rule);
+  }
+}
+
+.legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

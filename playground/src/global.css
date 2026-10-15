@@ -16,12 +16,15 @@
   --nuten-tint: color-mix(in oklch, var(--nuten-text) 2%, transparent);
   --nuten-bg-popover: color-mix(in oklch, var(--nuten-bg) 85%, transparent);
   --nuten-blur: 12px;
+  --nuten-shadow-popover: 0 8px 24px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 40%));
   --nuten-error-tint: color-mix(in oklch, var(--nuten-error) 8%, transparent);
   --nuten-error-border: color-mix(in oklch, var(--nuten-error) 20%, transparent);
   --nuten-control-bg: color-mix(in oklch, var(--nuten-text) 5%, transparent);
   --nuten-control-hover-bg: color-mix(in oklch, var(--nuten-text) 8%, transparent);
   --nuten-ring: color-mix(in oklch, var(--nuten-primary) 35%, transparent);
   --nuten-ring-width: 3px;
+  --nuten-control-width: 8rem;
+  --nuten-control-height: 2.5rem;
   --nuten-header-height: 4rem;
   --nuten-bar-height: 3rem;
   --nuten-radius: 12px;
@@ -45,6 +48,10 @@
     --nuten-border: color-mix(in oklch, var(--nuten-text) 40%, var(--nuten-bg));
     --nuten-rule: var(--nuten-border);
     --nuten-ring: var(--nuten-primary);
+  }
+
+  @media (--narrow) {
+    overflow-y: scroll;
   }
 }
 

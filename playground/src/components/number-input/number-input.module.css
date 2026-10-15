@@ -1,0 +1,87 @@
+@import "../../media.css";
+
+.root {
+  @media (--narrow) {
+    width: 100%;
+  }
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.label {
+  color: var(--nuten-text-muted);
+  font-size: var(--nuten-font-size-sm);
+}
+
+.group {
+  display: flex;
+  min-width: var(--nuten-control-width);
+  height: var(--nuten-control-height);
+  overflow: hidden;
+  background: var(--nuten-control-bg);
+  border-radius: var(--nuten-radius-block);
+  outline: 0 solid transparent;
+  transition:
+    outline-width 150ms var(--nuten-ease-out),
+    outline-color 150ms ease;
+
+  &:focus-within {
+    outline: var(--nuten-ring-width) solid var(--nuten-ring);
+  }
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  field-sizing: content;
+  padding: 0 0.25rem;
+  color: inherit;
+  font: inherit;
+  font-size: var(--nuten-font-size-md);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: transparent;
+  border: 0;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.stepper {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  padding: 0;
+  color: var(--nuten-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline-offset: calc(-1 * var(--nuten-ring-width));
+  }
+
+  &[data-disabled] {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &:not([data-disabled]):active {
+    @media (prefers-reduced-motion: no-preference) {
+      scale: 0.97;
+    }
+  }
+
+  @media (any-hover: hover) and (any-pointer: fine) {
+    &:not([data-disabled]):hover {
+      color: var(--nuten-text);
+      background: var(--nuten-control-hover-bg);
+    }
+  }
+}
