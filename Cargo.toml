@@ -14,6 +14,7 @@ repository = "https://github.com/mst-mkt/nuten"
 nuten-config = { path = "crates/nuten_config" }
 nuten-doc = { path = "crates/nuten_doc" }
 nuten-format = { path = "crates/nuten_format" }
+nuten-highlight = { path = "crates/nuten_highlight" }
 nuten-line-index = { path = "crates/nuten_line_index" }
 nuten-lsp = { path = "crates/nuten_lsp" }
 nuten-parser = { path = "crates/nuten_parser" }

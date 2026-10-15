@@ -357,6 +357,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nuten-highlight"
+version = "0.0.0"
+dependencies = [
+ "nuten-parser",
+ "nuten-syntax",
+]
+
+[[package]]
 name = "nuten-js-wasm"
 version = "0.0.0"
 dependencies = [
