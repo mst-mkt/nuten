@@ -1,0 +1,30 @@
+.pane {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--nuten-bg-glass);
+  -webkit-backdrop-filter: blur(var(--nuten-blur));
+  backdrop-filter: blur(var(--nuten-blur));
+  border: 1px solid var(--nuten-border);
+  border-radius: var(--nuten-radius);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--nuten-bar-height);
+  padding-inline: 1rem 0.5rem;
+  background: var(--nuten-tint);
+  border-bottom: 1px solid var(--nuten-rule);
+}
+
+.title {
+  margin: 0;
+  color: var(--nuten-text-muted);
+  font-size: var(--nuten-font-size-sm);
+  font-weight: 500;
+}

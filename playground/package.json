@@ -1,0 +1,22 @@
+{
+  "name": "@nuten/playground",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@base-ui/react": "1.9.0",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.14",
+    "@css-modules-kit/codegen": "1.4.0",
+    "@fontsource-variable/onest": "5.3.1",
+    "@nuten/wasm": "workspace:*",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@uiw/react-codemirror": "4.25.12",
+    "@vitejs/plugin-react": "6.1.2",
+    "lucide-react": "1.56.0",
+    "oxc-transform-react": "0.152.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  }
+}

@@ -4,5 +4,5 @@
     line_ending: lf
     commas: inline
     include: [*.nu, *.nuon]
-    exclude: [test_data]
+    exclude: [test_data, playground/src/lib/sample.nu]
 }

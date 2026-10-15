@@ -1,0 +1,30 @@
+@import "./media.css";
+
+.app {
+  display: grid;
+  grid-template-rows: var(--nuten-header-height) 1fr;
+  height: 100dvh;
+
+  @media (--narrow) {
+    height: auto;
+  }
+}
+
+.main {
+  display: grid;
+  min-height: 0;
+  padding: var(--nuten-page-gutter);
+}
+
+.panes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nuten-page-gutter);
+  min-height: 0;
+
+  @media (--narrow) {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
+    height: calc(100svh - var(--nuten-header-height) - 2 * var(--nuten-page-gutter));
+  }
+}

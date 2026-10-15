@@ -32,7 +32,7 @@ export default defineConfig({
       },
       "lint:ts": {
         command: "vp check",
-        dependsOn: ["@nuten/wasm#build"],
+        dependsOn: ["@nuten/wasm#build", "@nuten/playground#generate:cmk"],
       },
 
       "test:rust": {

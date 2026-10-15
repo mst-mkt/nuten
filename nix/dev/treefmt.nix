@@ -35,6 +35,7 @@ inputs.treefmt-nix.lib.evalModule pkgs {
       excludes = [
         "crates/*/test_data/**"
         "tasks/oracle/test_data/**"
+        "playground/src/lib/sample.nu"
       ];
     };
   };

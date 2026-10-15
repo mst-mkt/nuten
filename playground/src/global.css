@@ -1,0 +1,122 @@
+@import "./media.css";
+
+:root {
+  color-scheme: light dark;
+  --nuten-bg: light-dark(oklch(0.982 0.004 165), oklch(0.186 0.007 165));
+  --nuten-text: light-dark(oklch(0.21 0.013 165), oklch(0.938 0.008 165));
+  --nuten-primary: light-dark(oklch(0.515 0.096 170), oklch(0.78 0.115 170));
+  --nuten-error: light-dark(oklch(0.55 0.17 25), oklch(0.74 0.14 25));
+  --nuten-bg-alt: color-mix(in oklch, var(--nuten-text) 4%, var(--nuten-bg));
+  --nuten-text-muted: color-mix(in oklch, var(--nuten-text) 65%, var(--nuten-bg));
+  --nuten-border: color-mix(in oklch, var(--nuten-text) 12%, var(--nuten-bg));
+  --nuten-logo-blue: oklch(0.725 0.162 238);
+  --nuten-logo-green: oklch(0.778 0.224 148);
+  --nuten-bg-glass: color-mix(in oklch, var(--nuten-bg) 70%, transparent);
+  --nuten-rule: color-mix(in oklch, var(--nuten-bg-alt) 80%, transparent);
+  --nuten-tint: color-mix(in oklch, var(--nuten-text) 2%, transparent);
+  --nuten-bg-popover: color-mix(in oklch, var(--nuten-bg) 85%, transparent);
+  --nuten-blur: 12px;
+  --nuten-error-tint: color-mix(in oklch, var(--nuten-error) 8%, transparent);
+  --nuten-error-border: color-mix(in oklch, var(--nuten-error) 20%, transparent);
+  --nuten-control-bg: color-mix(in oklch, var(--nuten-text) 5%, transparent);
+  --nuten-control-hover-bg: color-mix(in oklch, var(--nuten-text) 8%, transparent);
+  --nuten-ring: color-mix(in oklch, var(--nuten-primary) 35%, transparent);
+  --nuten-ring-width: 3px;
+  --nuten-header-height: 4rem;
+  --nuten-bar-height: 3rem;
+  --nuten-radius: 12px;
+  --nuten-radius-block: 8px;
+  --nuten-page-gutter: 1rem;
+  --nuten-font-sans:
+    "Onest Variable", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --nuten-font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --nuten-font-size-xs: 0.75rem;
+  --nuten-font-size-sm: 0.875rem;
+  --nuten-font-size-md: 1rem;
+  --nuten-font-size-lg: 1.125rem;
+  --nuten-font-size-xl: 1.25rem;
+  --nuten-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  @media (prefers-reduced-transparency: reduce) {
+    --nuten-bg-glass: var(--nuten-bg);
+  }
+
+  @media (prefers-contrast: more) {
+    --nuten-border: color-mix(in oklch, var(--nuten-text) 40%, var(--nuten-bg));
+    --nuten-rule: var(--nuten-border);
+    --nuten-ring: var(--nuten-primary);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--nuten-text);
+  font-family: var(--nuten-font-sans);
+  background: var(--nuten-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(circle at -10% 80%, var(--nuten-logo-blue), transparent 40%),
+      radial-gradient(circle at 110% 0%, var(--nuten-logo-green), transparent 40%);
+    opacity: 0.3;
+    filter: blur(80px);
+
+    @media (--narrow) {
+      opacity: 0.18;
+    }
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--nuten-border);
+  border-radius: 3px;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--nuten-border) transparent;
+  }
+}
+
+:where(a, button) {
+  outline: 0 solid transparent;
+  transition:
+    color 200ms ease,
+    background-color 200ms ease,
+    outline-width 150ms var(--nuten-ease-out),
+    outline-color 150ms ease,
+    scale 150ms var(--nuten-ease-out);
+}
+
+:focus-visible {
+  outline: var(--nuten-ring-width) solid var(--nuten-ring);
+}
