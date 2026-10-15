@@ -9,30 +9,53 @@ const docOf = (source: string) => {
   return EditorState.create({ doc: source, extensions: keepCarriageReturns }).doc;
 };
 
+const errorsIn = (source: string) => {
+  return { source, errors: syntaxErrorsOf(formatResultOf(source, {})) };
+};
+
 const rangeOf = (source: string, line: number, column: number) => {
-  const [diagnostic] = diagnosticsOf(docOf(source), source, [{ line, column, message: "message" }]);
+  const errors = [{ line, column, message: "message" }];
+  const [diagnostic] = diagnosticsOf(docOf(source), { source, errors });
   return diagnostic && { from: diagnostic.from, to: diagnostic.to };
 };
 
 describe("diagnostics", () => {
   test("diagnostic_marks_point_of_line_and_column", () => {
-    expect(rangeOf("ls\nfoo && bar", 2, 5)).toEqual({ from: 7, to: 7 });
+    const source = "ls\nfoo && bar";
+
+    const range = rangeOf(source, 2, 5);
+
+    expect(range).toEqual({ from: 7, to: 7 });
   });
 
   test("diagnostic_counts_code_point_outside_basic_plane_as_two_code_units", () => {
-    expect(rangeOf("'🧶' && x", 1, 5)).toEqual({ from: 5, to: 5 });
+    const source = "'🧶' && x";
+
+    const range = rangeOf(source, 1, 5);
+
+    expect(range).toEqual({ from: 5, to: 5 });
   });
 
   test("diagnostic_counts_carriage_return_into_line_before_line_feed", () => {
-    expect(rangeOf("ls\r\nfoo && bar", 2, 5)).toEqual({ from: 8, to: 8 });
+    const source = "ls\r\nfoo && bar";
+
+    const range = rangeOf(source, 2, 5);
+
+    expect(range).toEqual({ from: 8, to: 8 });
   });
 
   test("diagnostic_past_end_of_line_marks_end_of_line", () => {
-    expect(rangeOf("ls |\nsort", 1, 9)).toEqual({ from: 4, to: 4 });
+    const source = "ls |\nsort";
+
+    const range = rangeOf(source, 1, 9);
+
+    expect(range).toEqual({ from: 4, to: 4 });
   });
 
   test("diagnostic_is_error_with_message_of_parse_error", () => {
-    const [diagnostic] = diagnosticsOf(docOf("x"), "x", [{ line: 1, column: 1, message: "oops" }]);
+    const errors = [{ line: 1, column: 1, message: "oops" }];
+
+    const [diagnostic] = diagnosticsOf(docOf("x"), { source: "x", errors });
 
     expect(diagnostic).toMatchObject({ severity: "error", message: "oops" });
   });
@@ -40,7 +63,8 @@ describe("diagnostics", () => {
   test("diagnostic_of_syntax_error_marks_its_token", () => {
     const source = "'🧶'\r\nfoo && bar";
     const doc = docOf(source);
-    const [diagnostic] = diagnosticsOf(doc, source, syntaxErrorsOf(formatResultOf(source, {})));
+
+    const [diagnostic] = diagnosticsOf(doc, errorsIn(source));
 
     expect(diagnostic && doc.sliceString(diagnostic.from, diagnostic.from + 2)).toBe("&&");
   });
@@ -48,29 +72,27 @@ describe("diagnostics", () => {
   test("diagnostic_of_syntax_error_after_lone_carriage_return_marks_its_token", () => {
     const source = "ls\rfoo && bar";
     const doc = docOf(source);
-    const [diagnostic] = diagnosticsOf(doc, source, syntaxErrorsOf(formatResultOf(source, {})));
+
+    const [diagnostic] = diagnosticsOf(doc, errorsIn(source));
 
     expect(diagnostic && doc.sliceString(diagnostic.from, diagnostic.from + 2)).toBe("&&");
   });
 
   test("diagnostics_of_errors_for_other_source_are_empty", () => {
-    const errors = syntaxErrorsOf(formatResultOf("ls\nfoo && bar", {}));
+    const errors = errorsIn("ls\nfoo && bar");
 
-    expect(diagnosticsOf(docOf("ls"), "ls\nfoo && bar", errors)).toEqual([]);
+    const diagnostics = diagnosticsOf(docOf("ls"), errors);
+
+    expect(diagnostics).toEqual([]);
   });
 });
 
 describe("error lines", () => {
-  test("error_line_starts_are_start_of_each_line_with_errors_once", () => {
-    const source = "ls\nfoo && bar || baz\nsort\nx && y";
-    const errors = syntaxErrorsOf(formatResultOf(source, {}));
+  test("error_line_starts_are_start_of_each_line_with_diagnostic_once", () => {
+    const doc = docOf("ls\nfoo && bar || baz\nsort\nx && y");
 
-    expect(errorLineStartsOf(docOf(source), source, errors)).toEqual([3, 26]);
-  });
+    const starts = errorLineStartsOf(doc, [7, 14, 29]);
 
-  test("error_line_starts_of_errors_for_other_source_are_empty", () => {
-    const errors = syntaxErrorsOf(formatResultOf("ls\nfoo && bar", {}));
-
-    expect(errorLineStartsOf(docOf("ls"), "ls\nfoo && bar", errors)).toEqual([]);
+    expect(starts).toEqual([3, 26]);
   });
 });

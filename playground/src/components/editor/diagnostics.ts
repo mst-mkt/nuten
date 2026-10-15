@@ -1,9 +1,20 @@
-import { type Diagnostic, linter } from "@codemirror/lint";
-import { type EditorState, RangeSet, type RangeValue, type Text } from "@codemirror/state";
+import { type Diagnostic, type LintSource, linter, setDiagnosticsEffect } from "@codemirror/lint";
+import {
+  RangeSet,
+  type RangeValue,
+  StateField,
+  type Text,
+  type Transaction,
+} from "@codemirror/state";
 import { Decoration, EditorView, GutterMarker, gutterLineClass } from "@codemirror/view";
 import type { ParseError } from "@nuten/wasm";
 
 import { offsetOf } from "./position";
+
+export type SyntaxErrors = {
+  source: string;
+  errors: readonly ParseError[];
+};
 
 const errorLine = Decoration.line({ class: "cm-errorLine" });
 
@@ -11,44 +22,50 @@ const errorLineNumber = new (class extends GutterMarker {
   override elementClass = "cm-errorLineNumber";
 })();
 
-const errorsOf = (doc: Text, source: string, errors: readonly ParseError[]) => {
-  return doc.toString() === source ? errors : [];
-};
+export const diagnosticsOf = (doc: Text, { source, errors }: SyntaxErrors): Diagnostic[] => {
+  if (doc.toString() !== source) return [];
 
-export const diagnosticsOf = (
-  doc: Text,
-  source: string,
-  errors: readonly ParseError[],
-): Diagnostic[] => {
-  return errorsOf(doc, source, errors).map(({ line, column, message }) => {
+  return errors.map(({ line, column, message }) => {
     const at = offsetOf(doc, { line, column });
     return { from: at, to: at, severity: "error", message };
   });
 };
 
-export const errorLineStartsOf = (doc: Text, source: string, errors: readonly ParseError[]) => {
-  const lines = new Set(errorsOf(doc, source, errors).map(({ line }) => line));
-  return Array.from(lines, (line) => doc.line(line).from);
+export const errorLineStartsOf = (doc: Text, positions: readonly number[]) => {
+  return [...new Set(positions.map((pos) => doc.lineAt(pos).from))];
 };
 
-const errorLinesMarkedBy = <Value extends RangeValue>(
-  value: Value,
-  source: string,
-  errors: readonly ParseError[],
-) => {
-  return ({ doc }: EditorState) => {
-    const starts = errorLineStartsOf(doc, source, errors);
-    return RangeSet.of(
-      starts.map((from) => value.range(from)),
-      true,
-    );
+const diagnosedPositionsOf = (tr: Transaction) => {
+  const diagnosed = tr.effects.filter((effect) => effect.is(setDiagnosticsEffect));
+  const latest = diagnosed.at(-1);
+  return latest?.value.map(({ from }) => from);
+};
+
+const markedAt = <Value extends RangeValue>(value: Value) => {
+  return (starts: readonly number[]) => {
+    const ranges = starts.map((from) => value.range(from));
+    return RangeSet.of(ranges, true);
   };
 };
 
-export const syntaxErrors = (source: string, errors: readonly ParseError[]) => {
-  return [
-    linter(({ state }) => diagnosticsOf(state.doc, source, errors), { delay: 0 }),
-    EditorView.decorations.compute(["doc"], errorLinesMarkedBy(errorLine, source, errors)),
-    gutterLineClass.compute(["doc"], errorLinesMarkedBy(errorLineNumber, source, errors)),
-  ];
+const errorLines = StateField.define<readonly number[]>({
+  create: () => [],
+  update: (starts, tr) => {
+    const diagnosed = diagnosedPositionsOf(tr);
+    if (diagnosed !== undefined) return errorLineStartsOf(tr.newDoc, diagnosed);
+    if (!tr.docChanged) return starts;
+
+    const mapped = starts.map((pos) => tr.changes.mapPos(pos));
+    return errorLineStartsOf(tr.newDoc, mapped);
+  },
+  provide: (field) => [
+    EditorView.decorations.from(field, markedAt(errorLine)),
+    gutterLineClass.from(field, markedAt(errorLineNumber)),
+  ],
+});
+
+export const syntaxErrors = (read: () => SyntaxErrors) => {
+  const source: LintSource = ({ state }) => diagnosticsOf(state.doc, read());
+  const markers = linter(source, { delay: 0 });
+  return [markers, errorLines];
 };

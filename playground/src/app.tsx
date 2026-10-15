@@ -1,46 +1,38 @@
-import { type RequiredOptions, defaultOptions } from "@nuten/wasm";
-import type { ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { useId, useRef, useState } from "react";
+import type { EditorView } from "@codemirror/view";
+import { useId, useState, useSyncExternalStore } from "react";
 
 import styles from "./app.module.css";
 import { CopyButton } from "./components/copy-button/copy-button";
-import { Editor } from "./components/editor/editor";
+import { InputEditor } from "./components/editor/input-editor";
+import { OutputEditor } from "./components/editor/output-editor";
 import { revealPosition } from "./components/editor/position";
 import { Header } from "./components/header/header";
 import { Messages } from "./components/messages/messages";
 import { Pane } from "./components/pane/pane";
 import { Settings } from "./components/settings/settings";
-import { type Position, formatResultOf, messagesOf, syntaxErrorsOf } from "./lib/format";
+import { type Position, messagesOf } from "./lib/format";
+import { createPlaygroundStore } from "./lib/playground";
 import sample from "./lib/sample.nu?raw";
 
 export const App = () => {
-  const [source, setSource] = useState(sample);
-  const [options, setOptions] = useState<RequiredOptions>(defaultOptions);
-  const result = formatResultOf(source, options);
+  const [store] = useState(() => createPlaygroundStore(sample));
+  const { options, result } = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const inputTitleId = useId();
   const outputTitleId = useId();
-  const inputEditor = useRef<ReactCodeMirrorRef>(null);
+  const [inputView, setInputView] = useState<EditorView | null>(null);
 
   const revealInInput = (position: Position) => {
-    const view = inputEditor.current?.view;
-    if (view !== undefined) revealPosition(view, position);
+    if (inputView !== null) revealPosition(inputView, position);
   };
 
   return (
     <div className={styles.app}>
       <Header />
       <main className={styles.main}>
-        <Settings options={options} onChange={setOptions} />
+        <Settings options={options} onChange={store.setOptions} />
         <div className={styles.panes}>
           <Pane titleId={inputTitleId} title="Input">
-            <Editor
-              ref={inputEditor}
-              labelledBy={inputTitleId}
-              value={source}
-              tabSize={options.indentWidth}
-              errors={syntaxErrorsOf(result)}
-              onChange={setSource}
-            />
+            <InputEditor store={store} labelledBy={inputTitleId} onView={setInputView} />
           </Pane>
           <Pane
             titleId={outputTitleId}
@@ -48,12 +40,7 @@ export const App = () => {
             actions={result.kind === "output" && <CopyButton text={result.output} />}
           >
             {result.kind === "output" ? (
-              <Editor
-                labelledBy={outputTitleId}
-                value={result.output}
-                tabSize={options.indentWidth}
-                readOnly
-              />
+              <OutputEditor store={store} labelledBy={outputTitleId} />
             ) : (
               <Messages messages={messagesOf(result)} onSelect={revealInInput} />
             )}
