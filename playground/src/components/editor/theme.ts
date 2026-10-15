@@ -66,6 +66,17 @@ export const theme = EditorView.theme({
   ".cm-specialChar": {
     color: faint,
   },
+  ".cm-visibleTab": {
+    position: "relative",
+  },
+  ".cm-visibleTab::before": {
+    content_fallback: '"→"',
+    content: '"→" / ""',
+    position: "absolute",
+    left: 0,
+    color: faint,
+    pointerEvents: "none",
+  },
   ".cm-lintPoint::after": {
     left: "-4px",
     bottom: "-3px",

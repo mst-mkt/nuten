@@ -6,6 +6,7 @@ import { lineEndings, splitLineEndings } from "./line-endings";
 import { setup } from "./setup";
 import { followTabSize, tabSizeOf } from "./tab-size";
 import { theme } from "./theme";
+import { visibleTabs } from "./visible-tabs";
 
 type EditorConfig = {
   text: string;
@@ -21,6 +22,7 @@ export const attachEditor = (parent: HTMLElement, store: PlaygroundStore, config
   const extensions = [
     setup,
     lineEndings(crlf),
+    visibleTabs,
     theme,
     tabSizeOf(options.indentWidth),
     EditorView.contentAttributes.of({ "aria-labelledby": config.labelledBy }),
