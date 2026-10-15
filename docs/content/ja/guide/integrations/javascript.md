@@ -9,32 +9,32 @@ title: JavaScript
 > [!NOTE]
 > パッケージは、まだ npm と JSR に公開していません。
 
-`@nuten/wasm` を使うと、JavaScript から Nushell を整形できます。WebAssembly で動くので、Node.js, Deno, Bun だけでなく、ブラウザや Cloudflare Workers でも使えます。`nuten` コマンドは呼び出さないので、`nuten` をインストールする必要はありません。
+`@nuten/format` を使うと、JavaScript から Nushell を整形できます。WebAssembly で動くので、Node.js, Deno, Bun だけでなく、ブラウザや Cloudflare Workers でも使えます。`nuten` コマンドは呼び出さないので、`nuten` をインストールする必要はありません。
 
 ::: code-group
 
 ```nushell [Vite+]
-vp i @nuten/wasm
+vp i @nuten/format
 ```
 
 ```nushell [npm]
-npm install @nuten/wasm
+npm install @nuten/format
 ```
 
 ```nushell [yarn]
-yarn add @nuten/wasm
+yarn add @nuten/format
 ```
 
 ```nushell [pnpm]
-pnpm add @nuten/wasm
+pnpm add @nuten/format
 ```
 
 ```nushell [Deno]
-deno add jsr:@nuten/wasm
+deno add jsr:@nuten/format
 ```
 
 ```nushell [bun]
-bun add @nuten/wasm
+bun add @nuten/format
 ```
 
 :::
@@ -44,7 +44,7 @@ bun add @nuten/wasm
 `format` は Nushell のコードを整形して返します。オプションは 2 番目の引数で渡します。
 
 ```ts
-import { format } from "@nuten/wasm";
+import { format } from "@nuten/format";
 
 format("ls|sort"); // "ls | sort\n"
 format("[1, 2, 3]", { commas: "none" }); // "[1 2 3]\n"
@@ -53,7 +53,7 @@ format("[1, 2, 3]", { commas: "none" }); // "[1 2 3]\n"
 コードに構文エラーがあると、`format` は `FormatError` を投げます。`FormatError` の `errors` には、各エラーの行, 列, メッセージが入っています。行と列は 1 から数えます。列は UTF-16 のコードユニットではなく、コードポイントで数えます。
 
 ```ts
-import { FormatError, format } from "@nuten/wasm";
+import { FormatError, format } from "@nuten/format";
 
 try {
   format("ls && echo");

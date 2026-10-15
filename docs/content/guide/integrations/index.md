@@ -65,7 +65,7 @@ GitHub Actions, GitLab CI
 ::: card-grid
 
 ::: link-card {/guide/integrations/javascript} JavaScript
-@nuten/wasm (npm, JSR)
+@nuten/format (npm, JSR)
 :::
 
 :::

@@ -9,32 +9,32 @@ title: JavaScript
 > [!NOTE]
 > The package is not yet published on npm or JSR.
 
-`@nuten/wasm` lets you format Nushell from JavaScript. Since it runs on WebAssembly, it works in browsers and Cloudflare Workers as well as in Node.js, Deno, and Bun. It does not call the `nuten` command, so you do not need to install `nuten`.
+`@nuten/format` lets you format Nushell from JavaScript. Since it runs on WebAssembly, it works in browsers and Cloudflare Workers as well as in Node.js, Deno, and Bun. It does not call the `nuten` command, so you do not need to install `nuten`.
 
 ::: code-group
 
 ```nushell [Vite+]
-vp i @nuten/wasm
+vp i @nuten/format
 ```
 
 ```nushell [npm]
-npm install @nuten/wasm
+npm install @nuten/format
 ```
 
 ```nushell [yarn]
-yarn add @nuten/wasm
+yarn add @nuten/format
 ```
 
 ```nushell [pnpm]
-pnpm add @nuten/wasm
+pnpm add @nuten/format
 ```
 
 ```nushell [Deno]
-deno add jsr:@nuten/wasm
+deno add jsr:@nuten/format
 ```
 
 ```nushell [bun]
-bun add @nuten/wasm
+bun add @nuten/format
 ```
 
 :::
@@ -44,7 +44,7 @@ bun add @nuten/wasm
 `format` takes Nushell code and returns it formatted. Options go in the second argument.
 
 ```ts
-import { format } from "@nuten/wasm";
+import { format } from "@nuten/format";
 
 format("ls|sort"); // "ls | sort\n"
 format("[1, 2, 3]", { commas: "none" }); // "[1 2 3]\n"
@@ -53,7 +53,7 @@ format("[1, 2, 3]", { commas: "none" }); // "[1 2 3]\n"
 If the code has syntax errors, `format` throws a `FormatError`. Its `errors` property lists the line, column, and message of each error. Lines and columns start at 1, and columns count code points, not UTF-16 code units.
 
 ```ts
-import { FormatError, format } from "@nuten/wasm";
+import { FormatError, format } from "@nuten/format";
 
 try {
   format("ls && echo");
