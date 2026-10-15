@@ -21,6 +21,20 @@ export default defineConfig({
   plugins: [react({ compiler: true }), cloudflare(), servedUnderPlayground],
   build: {
     assetsDir: "playground/assets",
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "react", test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: "base-ui", test: /[\\/]node_modules[\\/](@base-ui|@floating-ui)[\\/]/ },
+            {
+              name: "codemirror",
+              test: /[\\/]node_modules[\\/](@codemirror|@lezer|style-mod|w3c-keyname|crelt)[\\/]/,
+            },
+          ],
+        },
+      },
+    },
   },
   css: {
     transformer: "lightningcss",
