@@ -134,6 +134,7 @@ CLI から普段使っているツールまで、同じフォーマッタで整�
 ::: tools
 
 - [<span class="icon-[simple-icons--visualstudiocode]"></span> VS Code](/ja/guide/integrations/vscode)
+- [<span class="icon-[simple-icons--cursor]"></span> Cursor](/ja/guide/integrations/vscode)
 - [<span class="icon-[simple-icons--zedindustries]"></span> Zed](/ja/guide/integrations/zed)
 - [LSP](/ja/reference/cli#nuten-lsp)
 - [dprint](/ja/guide/integrations/dprint)

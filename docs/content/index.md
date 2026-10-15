@@ -134,6 +134,7 @@ The same formatter, from the CLI to the tools you already use.
 ::: tools
 
 - [<span class="icon-[simple-icons--visualstudiocode]"></span> VS Code](/guide/integrations/vscode)
+- [<span class="icon-[simple-icons--cursor]"></span> Cursor](/guide/integrations/vscode)
 - [<span class="icon-[simple-icons--zedindustries]"></span> Zed](/guide/integrations/zed)
 - [LSP](/reference/cli#nuten-lsp)
 - [dprint](/guide/integrations/dprint)
