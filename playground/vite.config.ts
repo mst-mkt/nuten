@@ -1,10 +1,27 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite-plus";
+import { type Plugin, defineConfig } from "vite-plus";
+
+// Workers serve each asset at its path in the output, so the page goes under `playground/` to answer at `/playground/`.
+// `assets.basePath` would make this and `assetsDir` unnecessary, but it is not yet enabled for this account.
+const servedUnderPlayground: Plugin = {
+  name: "served-under-playground",
+  apply: "build",
+  enforce: "post",
+  applyToEnvironment: (environment) => environment.name === "client",
+  generateBundle: (_, bundle) => {
+    const html = bundle["index.html"];
+    if (html !== undefined) {
+      html.fileName = "playground/index.html";
+    }
+  },
+};
 
 export default defineConfig({
-  base: "./",
-  plugins: [react({ compiler: true }), cloudflare()],
+  plugins: [react({ compiler: true }), cloudflare(), servedUnderPlayground],
+  build: {
+    assetsDir: "playground/assets",
+  },
   css: {
     transformer: "lightningcss",
     lightningcss: {

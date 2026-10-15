@@ -9,8 +9,5 @@ export default defineConfig({
       triggers.fetch({ pattern: "nuten.keito.dev/playground/", zone: "keito.dev" }),
       triggers.fetch({ pattern: "nuten.keito.dev/playground/assets/*", zone: "keito.dev" }),
     ],
-    assets: {
-      basePath: "/playground",
-    },
   },
 });
