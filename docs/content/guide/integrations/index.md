@@ -59,3 +59,13 @@ GitHub Actions, GitLab CI
 :::
 
 :::
+
+## Libraries
+
+::: card-grid
+
+::: link-card {/guide/integrations/javascript} JavaScript
+@nuten/wasm (npm, JSR)
+:::
+
+:::

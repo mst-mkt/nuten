@@ -63,6 +63,7 @@ const sidebar = [
           { text: "Prettier", link: "/guide/integrations/prettier" },
           { text: "treefmt", link: "/guide/integrations/treefmt" },
           { text: "CI", link: "/guide/integrations/ci" },
+          { text: "JavaScript", link: "/guide/integrations/javascript" },
         ],
       },
     ],
