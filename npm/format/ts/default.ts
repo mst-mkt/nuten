@@ -13,4 +13,3 @@ await init({
 
 export const defaultOptions: Readonly<RequiredOptions> = readDefaultOptions();
 export * from "./format";
-export * from "./highlight";

@@ -59,7 +59,7 @@ test("workerd_condition_takes_workerd_entry_over_node_entry", async () => {
   expect(stdout).toBe(new URL("../dist/workerd.js", import.meta.url).href);
 });
 
-test("workerd_entry_formats_and_highlights_in_workerd", async () => {
+test("workerd_entry_formats_in_workerd", async () => {
   const workerd = fileURLToPath(import.meta.resolve("workerd/bin/workerd"));
   const config = fileURLToPath(new URL("workerd/config.capnp", import.meta.url));
 

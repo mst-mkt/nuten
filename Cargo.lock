@@ -384,9 +384,7 @@ name = "nuten-npm-format"
 version = "0.0.0"
 dependencies = [
  "nuten-format",
- "nuten-highlight",
  "nuten-line-index",
- "nuten-parser",
  "wasm-bindgen",
 ]
 

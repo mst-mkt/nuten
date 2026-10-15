@@ -4,7 +4,6 @@ import {
   type LineEnding,
   format as formatInWasm,
 } from "./gen/nuten.js";
-import { checkSource } from "./source";
 
 export type RequiredOptions = {
   lineWidth: number;
@@ -41,7 +40,12 @@ const optionKeys = {
 } as const satisfies Record<keyof Options, true>;
 
 export const format = (source: string, options: Options = {}): string => {
-  checkSource(source);
+  if (typeof source !== "string") {
+    throw new TypeError("`source` takes a string");
+  }
+  if (!source.isWellFormed()) {
+    throw new TypeError("`source` has a lone surrogate");
+  }
   if (typeof options !== "object" || options === null || Array.isArray(options)) {
     throw new TypeError("`options` takes an object");
   }
