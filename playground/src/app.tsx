@@ -10,10 +10,11 @@ import { Header } from "./components/header/header";
 import { Messages } from "./components/messages/messages";
 import { Pane } from "./components/pane/pane";
 import { Settings } from "./components/settings/settings";
+import { ShareButton } from "./components/share-button/share-button";
 import { type Position, messagesOf } from "./lib/format";
 import { createPlaygroundStore } from "./lib/playground";
 import sample from "./lib/sample.nu?raw";
-import { keepInUrl, sharedIn } from "./lib/share";
+import { keepInUrl, sharedIn, sharedUrlOf } from "./lib/share";
 
 export const App = () => {
   const [store] = useState(() => {
@@ -37,7 +38,13 @@ export const App = () => {
       <main className={styles.main}>
         <Settings options={options} onChange={store.setOptions} />
         <div className={styles.panes}>
-          <Pane titleId={inputTitleId} title="Input">
+          <Pane
+            titleId={inputTitleId}
+            title="Input"
+            actions={
+              <ShareButton urlOf={() => sharedUrlOf(location.href, store.getSnapshot(), sample)} />
+            }
+          >
             <InputEditor store={store} labelledBy={inputTitleId} onView={setInputView} />
           </Pane>
           <Pane
