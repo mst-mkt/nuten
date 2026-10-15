@@ -3,6 +3,7 @@ import { EditorView } from "@codemirror/view";
 
 import type { Playground, PlaygroundStore } from "../../lib/playground";
 import { highlights } from "./highlights";
+import { followIndentUnit, indentUnitOf } from "./indent-unit";
 import { lineEndings, splitLineEndings } from "./line-endings";
 import { setup } from "./setup";
 import { followTabSize, tabSizeOf } from "./tab-size";
@@ -27,6 +28,7 @@ export const attachEditor = (parent: HTMLElement, store: PlaygroundStore, config
     visibleTabs,
     theme,
     tabSizeOf(options.indentWidth),
+    indentUnitOf(options),
     EditorView.contentAttributes.of({ "aria-labelledby": config.labelledBy }),
     config.extensions,
   ];
@@ -39,6 +41,7 @@ export const attachEditor = (parent: HTMLElement, store: PlaygroundStore, config
   const unsubscribe = store.subscribe(() => {
     const playground = store.getSnapshot();
     followTabSize(view, playground.options.indentWidth);
+    followIndentUnit(view, playground.options);
     config.follow?.(view, playground);
   });
 
