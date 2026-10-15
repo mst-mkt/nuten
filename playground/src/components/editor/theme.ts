@@ -41,6 +41,15 @@ export const theme = EditorView.theme({
     color: "var(--nuten-text)",
     background: "transparent",
   },
+  ".cm-errorLine": {
+    background: "var(--nuten-error-tint)",
+  },
+  ".cm-errorLine.cm-activeLine": {
+    background: "var(--nuten-error-tint-strong)",
+  },
+  ".cm-gutterElement.cm-errorLineNumber": {
+    color: "var(--nuten-error)",
+  },
   ".cm-cursor, .cm-dropCursor": {
     borderLeft: "2px solid var(--nuten-primary)",
   },
@@ -56,6 +65,44 @@ export const theme = EditorView.theme({
   },
   ".cm-specialChar": {
     color: faint,
+  },
+  ".cm-lintPoint::after": {
+    left: "-4px",
+    bottom: "-3px",
+    borderInline: "4px solid transparent",
+    borderBottom: "5px solid var(--nuten-error)",
+  },
+  ".cm-tooltip": {
+    ...surface,
+    fontFamily: "var(--nuten-font-sans)",
+    borderRadius: "var(--nuten-radius-block)",
+    boxShadow: "var(--nuten-shadow-popover)",
+    overflow: "hidden",
+  },
+  ".cm-tooltip-lint": {
+    maxWidth: "min(28rem, calc(100vw - 2rem))",
+  },
+  ".cm-diagnostic": {
+    display: "flex",
+    gap: "0.5rem",
+    alignItems: "start",
+    margin: 0,
+    padding: "0.5rem 0.75rem",
+    fontSize: "var(--nuten-font-size-sm)",
+    lineHeight: "1.5",
+    border: "none",
+  },
+  ".cm-diagnostic + .cm-diagnostic": {
+    borderTop: "1px solid var(--nuten-rule)",
+  },
+  ".cm-diagnostic-error::before": {
+    content: '""',
+    flex: "none",
+    width: "0.5rem",
+    height: "0.5rem",
+    background: "var(--nuten-error)",
+    marginBlock: "calc((1lh - 0.5rem) / 2)",
+    borderRadius: "50%",
   },
   ".cm-panels": {
     ...surface,

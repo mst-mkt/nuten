@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatResultOf, messagesOf } from "./format";
+import { formatResultOf, messagesOf, syntaxErrorsOf } from "./format";
 
 describe("format result", () => {
   test("source_without_syntax_errors_gives_formatted_output", () => {
@@ -64,5 +64,19 @@ describe("messages of format result", () => {
 
   test("messages_of_output_are_empty", () => {
     expect(messagesOf(formatResultOf("ls", {}))).toEqual([]);
+  });
+});
+
+describe("syntax errors of format result", () => {
+  test("syntax_errors_of_result_with_syntax_errors_are_its_errors", () => {
+    expect(syntaxErrorsOf(formatResultOf("ls && echo || x", {}))).toMatchObject([
+      { line: 1, column: 4 },
+      { line: 1, column: 12 },
+    ]);
+  });
+
+  test("syntax_errors_of_result_without_syntax_errors_are_empty", () => {
+    expect(syntaxErrorsOf(formatResultOf("ls", {}))).toEqual([]);
+    expect(syntaxErrorsOf(formatResultOf("ls", { lineWidth: 0 }))).toEqual([]);
   });
 });

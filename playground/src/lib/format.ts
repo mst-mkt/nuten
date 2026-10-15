@@ -37,3 +37,7 @@ export const messagesOf = (result: FormatResult): Message[] => {
 
   return [{ text: result.message }];
 };
+
+export const syntaxErrorsOf = (result: FormatResult) => {
+  return result.kind === "syntax-errors" ? result.errors : [];
+};

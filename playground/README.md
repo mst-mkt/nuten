@@ -15,7 +15,7 @@ vp run @nuten/playground#build
 
 ## Tests
 
-The unit tests in `src` check how the playground reads the result of formatting, such as the messages it shows when formatting fails.
+The unit tests in `src` check how the playground reads the result of formatting, such as where each syntax error points in the editor.
 
 ```nushell
 vp run @nuten/playground#test

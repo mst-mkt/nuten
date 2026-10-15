@@ -1,14 +1,16 @@
 import { type RequiredOptions, defaultOptions } from "@nuten/wasm";
-import { useId, useState } from "react";
+import type { ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { useId, useRef, useState } from "react";
 
 import styles from "./app.module.css";
 import { CopyButton } from "./components/copy-button/copy-button";
 import { Editor } from "./components/editor/editor";
+import { revealPosition } from "./components/editor/position";
 import { Header } from "./components/header/header";
 import { Messages } from "./components/messages/messages";
 import { Pane } from "./components/pane/pane";
 import { Settings } from "./components/settings/settings";
-import { formatResultOf, messagesOf } from "./lib/format";
+import { type Position, formatResultOf, messagesOf, syntaxErrorsOf } from "./lib/format";
 import sample from "./lib/sample.nu?raw";
 
 export const App = () => {
@@ -17,6 +19,12 @@ export const App = () => {
   const result = formatResultOf(source, options);
   const inputTitleId = useId();
   const outputTitleId = useId();
+  const inputEditor = useRef<ReactCodeMirrorRef>(null);
+
+  const revealInInput = (position: Position) => {
+    const view = inputEditor.current?.view;
+    if (view !== undefined) revealPosition(view, position);
+  };
 
   return (
     <div className={styles.app}>
@@ -26,9 +34,11 @@ export const App = () => {
         <div className={styles.panes}>
           <Pane titleId={inputTitleId} title="Input">
             <Editor
+              ref={inputEditor}
               labelledBy={inputTitleId}
               value={source}
               tabSize={options.indentWidth}
+              errors={syntaxErrorsOf(result)}
               onChange={setSource}
             />
           </Pane>
@@ -45,7 +55,7 @@ export const App = () => {
                 readOnly
               />
             ) : (
-              <Messages messages={messagesOf(result)} />
+              <Messages messages={messagesOf(result)} onSelect={revealInInput} />
             )}
           </Pane>
         </div>
