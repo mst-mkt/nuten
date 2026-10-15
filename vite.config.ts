@@ -22,7 +22,7 @@ export default defineConfig({
         command: [
           "cargo clippy --workspace --all-targets -- --deny warnings",
           "RUSTDOCFLAGS='--deny warnings' cargo doc --workspace --no-deps",
-          "cargo clippy --package nuten-format --package nuten-dprint --package nuten-npm-format --target wasm32-unknown-unknown -- --deny warnings",
+          "cargo clippy --package nuten-format --package nuten-dprint --package nuten-npm-format --package nuten-npm-highlight --target wasm32-unknown-unknown -- --deny warnings",
           "cargo clippy --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --all-targets -- --deny warnings",
         ],
         input: [{ auto: true }, "!target/**", "!integrations/zed/target/**"],
@@ -45,6 +45,8 @@ export default defineConfig({
           "integrations/dprint/**",
           "npm/format/Cargo.toml",
           "npm/format/src/**",
+          "npm/highlight/Cargo.toml",
+          "npm/highlight/src/**",
           "LICENSE",
           "tasks/oracle/**",
         ],

@@ -1,0 +1,15 @@
+{
+  "name": "@nuten/highlight",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/default.d.ts",
+      "default": "./dist/default.js"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5"
+  }
+}

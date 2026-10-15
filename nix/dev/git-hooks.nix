@@ -34,6 +34,7 @@ let
     "zed"
     "dprint"
     "npm-format"
+    "npm-highlight"
     "prettier"
     "assets"
     "docs"

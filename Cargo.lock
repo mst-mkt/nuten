@@ -391,6 +391,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nuten-npm-highlight"
+version = "0.0.0"
+dependencies = [
+ "nuten-highlight",
+ "nuten-parser",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "nuten-oracle"
 version = "0.0.0"
 dependencies = [

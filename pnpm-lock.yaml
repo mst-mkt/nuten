@@ -90,6 +90,12 @@ importers:
         specifier: 1.20261006.1
         version: 1.20261006.1
 
+  npm/highlight:
+    devDependencies:
+      '@types/node':
+        specifier: 22.20.5
+        version: 22.20.5
+
   playground:
     devDependencies:
       '@base-ui/react':
