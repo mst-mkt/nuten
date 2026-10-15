@@ -32,7 +32,7 @@ export default defineConfig({
       codeGroups: true,
       cards: true,
       icons: {
-        include: ["content/**/*.md"],
+        include: ["content/**/*.md", "theme/*.ts"],
       },
       containers: {
         types: {

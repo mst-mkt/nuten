@@ -96,7 +96,11 @@ export const theme = defineTheme({
   header: {
     logo: "logo.svg",
   },
-  nav: [{ text: "Playground", link: "https://nuten.keito.dev/playground/" }],
+  nav: [
+    { text: { en: "About", ja: "Nuten について" }, link: "/about/what-is-nuten" },
+    { text: { en: "Guide", ja: "ガイド" }, link: "/guide/installation" },
+    { text: "Playground", link: "https://nuten.keito.dev/playground/" },
+  ],
   embed: {
     head: `
       <link rel="icon" href="/logo.svg" type="image/svg+xml">
@@ -125,5 +129,8 @@ export const theme = defineTheme({
     const lang = document.documentElement.lang;
     if (lang !== "en") document.querySelector(".header-title").href = "/" + lang + "/index.html";
     for (const details of document.querySelectorAll(".nav-details:has(.nav-link.active)")) details.open = true;
+    for (const link of document.querySelectorAll('.header-nav-item > a[href^="https://"]')) {
+      link.insertAdjacentHTML("beforeend", '<span class="icon-[lucide--external-link]" aria-hidden="true"></span>');
+    }
   `,
 });
