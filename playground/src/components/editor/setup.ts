@@ -16,6 +16,7 @@ import {
 
 import { brackets } from "./brackets";
 import { comments } from "./comments";
+import { indentation } from "./indentation";
 import { quotes } from "./quotes";
 
 export const setup = [
@@ -43,4 +44,5 @@ export const editableSetup = [
   brackets,
   quotes,
   comments,
+  indentation,
 ];
