@@ -2,6 +2,7 @@ import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
 import type { Playground, PlaygroundStore } from "../../lib/playground";
+import { highlights } from "./highlights";
 import { lineEndings, splitLineEndings } from "./line-endings";
 import { setup } from "./setup";
 import { followTabSize, tabSizeOf } from "./tab-size";
@@ -22,6 +23,7 @@ export const attachEditor = (parent: HTMLElement, store: PlaygroundStore, config
   const extensions = [
     setup,
     lineEndings(crlf),
+    highlights,
     visibleTabs,
     theme,
     tabSizeOf(options.indentWidth),

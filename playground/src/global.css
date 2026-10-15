@@ -6,6 +6,12 @@
   --nuten-text: light-dark(oklch(0.21 0.013 165), oklch(0.938 0.008 165));
   --nuten-primary: light-dark(oklch(0.515 0.096 170), oklch(0.78 0.115 170));
   --nuten-error: light-dark(oklch(0.55 0.17 25), oklch(0.74 0.14 25));
+  --nuten-syntax-comment: light-dark(#59636e, #9198a1);
+  --nuten-syntax-keyword: light-dark(#cf222e, #ff7b72);
+  --nuten-syntax-function: light-dark(#6639ba, #d2a8ff);
+  --nuten-syntax-variable: light-dark(#953800, #ffa657);
+  --nuten-syntax-constant: light-dark(#0550ae, #79c0ff);
+  --nuten-syntax-string: light-dark(#0a3069, #a5d6ff);
   --nuten-bg-alt: color-mix(in oklch, var(--nuten-text) 4%, var(--nuten-bg));
   --nuten-text-muted: color-mix(in oklch, var(--nuten-text) 65%, var(--nuten-bg));
   --nuten-border: color-mix(in oklch, var(--nuten-text) 12%, var(--nuten-bg));

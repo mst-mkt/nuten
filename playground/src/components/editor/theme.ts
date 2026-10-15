@@ -63,6 +63,24 @@ export const theme = EditorView.theme({
   ".cm-matchingBracket, &.cm-focused .cm-matchingBracket": {
     background: highlight,
   },
+  ".cm-nu-comment": {
+    color: "var(--nuten-syntax-comment)",
+  },
+  ".cm-nu-keyword, .cm-nu-operator": {
+    color: "var(--nuten-syntax-keyword)",
+  },
+  ".cm-nu-function": {
+    color: "var(--nuten-syntax-function)",
+  },
+  ".cm-nu-variable, .cm-nu-parameter": {
+    color: "var(--nuten-syntax-variable)",
+  },
+  ".cm-nu-flag, .cm-nu-number, .cm-nu-type, .cm-nu-property": {
+    color: "var(--nuten-syntax-constant)",
+  },
+  ".cm-nu-string": {
+    color: "var(--nuten-syntax-string)",
+  },
   ".cm-specialChar": {
     color: faint,
   },
