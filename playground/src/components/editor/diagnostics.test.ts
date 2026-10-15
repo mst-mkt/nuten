@@ -2,11 +2,12 @@ import { EditorState } from "@codemirror/state";
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatResultOf, syntaxErrorsOf } from "../../lib/format";
-import { keepCarriageReturns } from "./carriage-returns";
 import { diagnosticsOf, errorLineStartsOf } from "./diagnostics";
+import { lineEndings, splitLineEndings } from "./line-endings";
 
-const docOf = (source: string) => {
-  return EditorState.create({ doc: source, extensions: keepCarriageReturns }).doc;
+const stateOf = (text: string) => {
+  const { doc, crlf } = splitLineEndings(text);
+  return EditorState.create({ doc, extensions: lineEndings(crlf) });
 };
 
 const errorsIn = (source: string) => {
@@ -15,7 +16,7 @@ const errorsIn = (source: string) => {
 
 const rangeOf = (source: string, line: number, column: number) => {
   const errors = [{ line, column, message: "message" }];
-  const [diagnostic] = diagnosticsOf(docOf(source), { source, errors });
+  const [diagnostic] = diagnosticsOf(stateOf(source), { source, errors });
   return diagnostic && { from: diagnostic.from, to: diagnostic.to };
 };
 
@@ -36,12 +37,12 @@ describe("diagnostics", () => {
     expect(range).toEqual({ from: 5, to: 5 });
   });
 
-  test("diagnostic_counts_carriage_return_into_line_before_line_feed", () => {
+  test("diagnostic_counts_crlf_as_one_line_break", () => {
     const source = "ls\r\nfoo && bar";
 
     const range = rangeOf(source, 2, 5);
 
-    expect(range).toEqual({ from: 8, to: 8 });
+    expect(range).toEqual({ from: 7, to: 7 });
   });
 
   test("diagnostic_past_end_of_line_marks_end_of_line", () => {
@@ -55,33 +56,33 @@ describe("diagnostics", () => {
   test("diagnostic_is_error_with_message_of_parse_error", () => {
     const errors = [{ line: 1, column: 1, message: "oops" }];
 
-    const [diagnostic] = diagnosticsOf(docOf("x"), { source: "x", errors });
+    const [diagnostic] = diagnosticsOf(stateOf("x"), { source: "x", errors });
 
     expect(diagnostic).toMatchObject({ severity: "error", message: "oops" });
   });
 
-  test("diagnostic_of_syntax_error_marks_its_token", () => {
+  test("diagnostic_of_syntax_error_after_crlf_marks_its_token", () => {
     const source = "'🧶'\r\nfoo && bar";
-    const doc = docOf(source);
+    const state = stateOf(source);
 
-    const [diagnostic] = diagnosticsOf(doc, errorsIn(source));
+    const [diagnostic] = diagnosticsOf(state, errorsIn(source));
 
-    expect(diagnostic && doc.sliceString(diagnostic.from, diagnostic.from + 2)).toBe("&&");
+    expect(diagnostic && state.sliceDoc(diagnostic.from, diagnostic.from + 2)).toBe("&&");
   });
 
   test("diagnostic_of_syntax_error_after_lone_carriage_return_marks_its_token", () => {
     const source = "ls\rfoo && bar";
-    const doc = docOf(source);
+    const state = stateOf(source);
 
-    const [diagnostic] = diagnosticsOf(doc, errorsIn(source));
+    const [diagnostic] = diagnosticsOf(state, errorsIn(source));
 
-    expect(diagnostic && doc.sliceString(diagnostic.from, diagnostic.from + 2)).toBe("&&");
+    expect(diagnostic && state.sliceDoc(diagnostic.from, diagnostic.from + 2)).toBe("&&");
   });
 
   test("diagnostics_of_errors_for_other_source_are_empty", () => {
     const errors = errorsIn("ls\nfoo && bar");
 
-    const diagnostics = diagnosticsOf(docOf("ls"), errors);
+    const diagnostics = diagnosticsOf(stateOf("ls"), errors);
 
     expect(diagnostics).toEqual([]);
   });
@@ -89,7 +90,7 @@ describe("diagnostics", () => {
 
 describe("error lines", () => {
   test("error_line_starts_are_start_of_each_line_with_diagnostic_once", () => {
-    const doc = docOf("ls\nfoo && bar || baz\nsort\nx && y");
+    const { doc } = stateOf("ls\nfoo && bar || baz\nsort\nx && y");
 
     const starts = errorLineStartsOf(doc, [7, 14, 29]);
 

@@ -2,13 +2,13 @@ import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
 import type { Playground, PlaygroundStore } from "../../lib/playground";
-import { keepCarriageReturns, showCarriageReturns } from "./carriage-returns";
+import { lineEndings, splitLineEndings } from "./line-endings";
 import { setup } from "./setup";
 import { followTabSize, tabSizeOf } from "./tab-size";
 import { theme } from "./theme";
 
 type EditorConfig = {
-  doc: string;
+  text: string;
   labelledBy: string;
   extensions: Extension;
   follow?: (view: EditorView, playground: Playground) => void;
@@ -16,11 +16,11 @@ type EditorConfig = {
 
 export const attachEditor = (parent: HTMLElement, store: PlaygroundStore, config: EditorConfig) => {
   const { options } = store.getSnapshot();
+  const { doc, crlf } = splitLineEndings(config.text);
 
   const extensions = [
     setup,
-    keepCarriageReturns,
-    showCarriageReturns,
+    lineEndings(crlf),
     theme,
     tabSizeOf(options.indentWidth),
     EditorView.contentAttributes.of({ "aria-labelledby": config.labelledBy }),
@@ -29,7 +29,7 @@ export const attachEditor = (parent: HTMLElement, store: PlaygroundStore, config
 
   const view = new EditorView({
     parent,
-    state: EditorState.create({ doc: config.doc, extensions }),
+    state: EditorState.create({ doc, extensions }),
   });
 
   const unsubscribe = store.subscribe(() => {
