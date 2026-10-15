@@ -12,7 +12,7 @@ export const Header = () => (
       </span>
     </a>
     <nav className={styles.links}>
-      <a className={styles.link} href="https://nuten.keito.dev/reference/settings">
+      <a className={styles.link} href="https://nuten.keito.dev/">
         Docs
       </a>
       <a className={styles.link} href="https://github.com/mst-mkt/nuten">
