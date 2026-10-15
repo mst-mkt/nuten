@@ -48,8 +48,11 @@ Options and output are covered in the [formatting guide](https://nuten.keito.dev
   - [Vim](https://nuten.keito.dev/guide/integrations/vim), [Neovim](https://nuten.keito.dev/guide/integrations/neovim), [Helix](https://nuten.keito.dev/guide/integrations/helix), and [Emacs](https://nuten.keito.dev/guide/integrations/emacs) through the [language server](https://nuten.keito.dev/reference/cli#nuten-lsp)
 - Tools
   - [dprint](https://nuten.keito.dev/guide/integrations/dprint) Wasm plugin
+  - [Prettier](https://nuten.keito.dev/guide/integrations/prettier) plugin
   - [treefmt](https://nuten.keito.dev/guide/integrations/treefmt) module for treefmt-nix
   - [GitHub Actions](https://nuten.keito.dev/guide/integrations/ci#github-actions) and [GitLab CI](https://nuten.keito.dev/guide/integrations/ci#gitlab-ci) reporters
+- Libraries
+  - [JavaScript](https://nuten.keito.dev/guide/integrations/javascript) package built into Wasm
 
 ## Contributing
 
