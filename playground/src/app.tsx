@@ -1,5 +1,5 @@
 import type { EditorView } from "@codemirror/view";
-import { useId, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
 
 import styles from "./app.module.css";
 import { CopyButton } from "./components/copy-button/copy-button";
@@ -13,13 +13,19 @@ import { Settings } from "./components/settings/settings";
 import { type Position, messagesOf } from "./lib/format";
 import { createPlaygroundStore } from "./lib/playground";
 import sample from "./lib/sample.nu?raw";
+import { keepInUrl, sharedIn } from "./lib/share";
 
 export const App = () => {
-  const [store] = useState(() => createPlaygroundStore(sample));
+  const [store] = useState(() => {
+    const { source, options } = sharedIn(location.href, sample);
+    return createPlaygroundStore(source, options);
+  });
   const { options, result } = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const inputTitleId = useId();
   const outputTitleId = useId();
   const [inputView, setInputView] = useState<EditorView | null>(null);
+
+  useEffect(() => keepInUrl(store, sample), [store]);
 
   const revealInInput = (position: Position) => {
     if (inputView !== null) revealPosition(inputView, position);

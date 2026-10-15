@@ -33,6 +33,18 @@ describe("playground store", () => {
     expect(store.getSnapshot().result).toEqual({ kind: "output", output: "[1, 2]\n" });
   });
 
+  test("store_starts_with_given_options", () => {
+    const options = { ...defaultOptions, commas: "always" } as const;
+
+    const store = createPlaygroundStore("[1 2]", options);
+
+    expect(store.getSnapshot()).toEqual({
+      source: "[1 2]",
+      options,
+      result: { kind: "output", output: "[1, 2]\n" },
+    });
+  });
+
   test("each_change_notifies_listeners_until_they_unsubscribe", () => {
     const store = createPlaygroundStore("ls");
     const sources: string[] = [];

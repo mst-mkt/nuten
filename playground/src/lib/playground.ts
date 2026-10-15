@@ -19,9 +19,12 @@ const playgroundOf = (source: string, options: RequiredOptions): Playground => {
   return { source, options, result: formatResultOf(source, options) };
 };
 
-export const createPlaygroundStore = (source: string): PlaygroundStore => {
+export const createPlaygroundStore = (
+  source: string,
+  options: RequiredOptions = defaultOptions,
+): PlaygroundStore => {
   const listeners = new Set<() => void>();
-  let snapshot = playgroundOf(source, defaultOptions);
+  let snapshot = playgroundOf(source, options);
 
   const update = (next: Playground) => {
     snapshot = next;
