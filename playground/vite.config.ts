@@ -52,22 +52,22 @@ export default defineConfig({
       },
       dev: {
         command: "vp dev",
-        dependsOn: ["@nuten/format#build"],
+        dependsOn: ["@nuten/format#build", "@nuten/highlight#build"],
         cache: false,
       },
       build: {
         command: "vp build",
-        dependsOn: ["@nuten/format#build"],
+        dependsOn: ["@nuten/format#build", "@nuten/highlight#build"],
         input: [{ auto: true }, "!.cloudflare/**"],
       },
       deploy: {
         command: "cf deploy",
-        dependsOn: ["@nuten/format#build"],
+        dependsOn: ["@nuten/format#build", "@nuten/highlight#build"],
         cache: false,
       },
       test: {
         command: "vp test run",
-        dependsOn: ["@nuten/format#build"],
+        dependsOn: ["@nuten/format#build", "@nuten/highlight#build"],
         output: [],
       },
     },

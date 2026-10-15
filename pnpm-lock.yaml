@@ -131,6 +131,9 @@ importers:
       '@nuten/format':
         specifier: workspace:*
         version: link:../npm/format
+      '@nuten/highlight':
+        specifier: workspace:*
+        version: link:../npm/highlight
       '@types/react':
         specifier: 19.3.0
         version: 19.3.0

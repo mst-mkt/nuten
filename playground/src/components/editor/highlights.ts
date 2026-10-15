@@ -1,6 +1,6 @@
 import { type EditorState, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView } from "@codemirror/view";
-import { type TokenType, highlight } from "@nuten/format";
+import { type TokenType, highlight } from "@nuten/highlight";
 
 const markOf = (type: TokenType) => Decoration.mark({ class: `cm-nu-${type}` });
 

@@ -5,7 +5,7 @@ It formats Nushell in the browser through [@nuten/format](../npm/format), and is
 
 ## Development
 
-The tasks build @nuten/format first, which needs the tools that the `nix/dev` devShell provides.
+The tasks build @nuten/format and @nuten/highlight first, which need the tools that the `nix/dev` devShell provides.
 
 ```nushell
 pnpm install
