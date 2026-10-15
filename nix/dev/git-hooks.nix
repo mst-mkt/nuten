@@ -25,6 +25,7 @@ let
     "format"
     "config"
     "line-index"
+    "highlight"
     "nix"
     "oracle"
     "benchmark"
