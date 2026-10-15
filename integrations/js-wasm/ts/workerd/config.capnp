@@ -10,6 +10,8 @@ const worker :Workerd.Worker = (
     (name = "workerd.js", esModule = embed "../../dist/workerd.js"),
     (name = "defaults.js", esModule = embed "../../dist/defaults.js"),
     (name = "format.js", esModule = embed "../../dist/format.js"),
+    (name = "highlight.js", esModule = embed "../../dist/highlight.js"),
+    (name = "source.js", esModule = embed "../../dist/source.js"),
     (name = "gen/nuten.js", esModule = embed "../../dist/gen/nuten.js"),
     (name = "gen/nuten_bg.wasm", wasm = embed "../../dist/gen/nuten_bg.wasm"),
   ],

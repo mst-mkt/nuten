@@ -12,7 +12,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 nuten-format = { workspace = true }
+nuten-highlight = { workspace = true }
 nuten-line-index = { workspace = true }
+nuten-parser = { workspace = true }
 wasm-bindgen = { workspace = true }
 
 [lints]
