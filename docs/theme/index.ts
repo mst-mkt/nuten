@@ -132,5 +132,11 @@ export const theme = defineTheme({
     for (const link of document.querySelectorAll('.header-nav-item > a[href^="https://"]')) {
       link.insertAdjacentHTML("beforeend", '<span class="icon-[lucide--external-link]" aria-hidden="true"></span>');
     }
+    document.querySelector('.mobile-footer-btn[aria-label="GitHub"]')?.insertAdjacentHTML("beforebegin", \`
+      <a href="https://nuten.keito.dev/playground/" class="mobile-footer-btn" aria-label="Playground">
+        <span class="icon-[lucide--square-terminal] mobile-footer-icon" aria-hidden="true"></span>
+        <span class="mobile-footer-label">Playground</span>
+      </a>
+    \`);
   `,
 });

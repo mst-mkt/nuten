@@ -131,6 +131,10 @@ body {
   }
 }
 
+.mobile-footer-icon {
+  font-size: 22px;
+}
+
 .mobile-footer-label {
   position: absolute;
   width: 1px;
