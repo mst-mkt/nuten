@@ -9,7 +9,7 @@ type ShareButtonProps = {
 };
 
 export const ShareButton: FC<ShareButtonProps> = ({ urlOf }) => {
-  const { copied, copy } = useCopy();
+  const { copied, copy } = useCopy("Link copied to clipboard");
 
   return (
     <IconButton

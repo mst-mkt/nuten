@@ -9,7 +9,7 @@ type CopyButtonProps = {
 };
 
 export const CopyButton: FC<CopyButtonProps> = ({ text }) => {
-  const { copied, copy } = useCopy();
+  const { copied, copy } = useCopy("Output copied to clipboard");
 
   return (
     <IconButton

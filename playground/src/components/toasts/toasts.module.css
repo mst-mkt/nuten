@@ -1,0 +1,48 @@
+.viewport {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  color: var(--nuten-bg);
+  font-size: var(--nuten-font-size-sm);
+  font-weight: 500;
+  background: var(--nuten-text);
+  border-radius: 999px;
+  box-shadow: var(--nuten-shadow-popover);
+  pointer-events: auto;
+  translate: 0 var(--toast-swipe-movement-y);
+  transition:
+    opacity 200ms var(--nuten-ease-out),
+    translate 200ms var(--nuten-ease-out),
+    scale 200ms var(--nuten-ease-out);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    pointer-events: none;
+
+    @media (prefers-reduced-motion: no-preference) {
+      translate: 0 0.5rem;
+      scale: 0.97;
+    }
+  }
+
+  &[data-swiping] {
+    transition: none;
+  }
+}
+
+.title {
+  margin: 0;
+}
