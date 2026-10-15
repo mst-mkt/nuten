@@ -58,7 +58,7 @@ pub(super) fn reads_before_assignment(head: &str, next: Option<&str>) -> bool {
 }
 
 /// Ported from nu's `is_parser_keyword`.
-pub(super) fn is_parser_keyword(name: &str) -> bool {
+pub fn is_parser_keyword(name: &str) -> bool {
     matches!(
         name,
         "if" | "match"

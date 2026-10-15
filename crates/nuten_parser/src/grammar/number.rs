@@ -1,6 +1,6 @@
 /// Ported from nu's `parse_number`.
 /// Nu drops every `_` before reading an int or a float.
-pub(super) fn is_number(text: &str) -> bool {
+pub fn is_number(text: &str) -> bool {
     int(text).is_some() || text.replace('_', "").parse::<f64>().is_ok()
 }
 

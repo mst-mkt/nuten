@@ -13,7 +13,7 @@ use rowan::{GreenNode, TextRange};
 
 use crate::lexer::LexError;
 pub use crate::{
-    grammar::{is_command, operator_precedence},
+    grammar::{is_command, is_number, is_parser_keyword, operator_precedence},
     lexer::LexErrorKind,
 };
 

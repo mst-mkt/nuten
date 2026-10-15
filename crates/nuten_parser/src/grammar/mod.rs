@@ -46,7 +46,11 @@ use self::{
     table::{is_table, table_items},
     variable::variable_error,
 };
-pub use self::{builtin::is_command, command::operator_precedence};
+pub use self::{
+    builtin::{is_command, is_parser_keyword},
+    command::operator_precedence,
+    number::is_number,
+};
 pub(crate) use self::{
     names::{Callee, Names},
     parameters::Param,
