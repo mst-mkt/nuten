@@ -1,5 +1,5 @@
 [package]
-name = "nuten-js-wasm"
+name = "nuten-npm-format"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

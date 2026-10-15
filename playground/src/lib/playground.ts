@@ -1,4 +1,4 @@
-import { type RequiredOptions, defaultOptions } from "@nuten/wasm";
+import { type RequiredOptions, defaultOptions } from "@nuten/format";
 
 import { type FormatResult, formatResultOf } from "./format";
 

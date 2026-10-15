@@ -1,4 +1,4 @@
-import type { RequiredOptions } from "@nuten/wasm";
+import type { RequiredOptions } from "@nuten/format";
 
 export const indentStyleLabels = {
   space: "Spaces",

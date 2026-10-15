@@ -40,20 +40,11 @@ importers:
         specifier: 1.0.0-beta.14
         version: 1.0.0-beta.14(@types/node@22.20.5)
 
-  integrations/js-wasm:
-    devDependencies:
-      '@types/node':
-        specifier: 22.20.5
-        version: 22.20.5
-      workerd:
-        specifier: 1.20261006.1
-        version: 1.20261006.1
-
   integrations/prettier:
     dependencies:
-      '@nuten/wasm':
+      '@nuten/format':
         specifier: workspace:*
-        version: link:../js-wasm
+        version: link:../../npm/format
     devDependencies:
       '@types/node':
         specifier: 22.20.5
@@ -90,6 +81,15 @@ importers:
         specifier: 1.2.0
         version: 1.2.0(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
 
+  npm/format:
+    devDependencies:
+      '@types/node':
+        specifier: 22.20.5
+        version: 22.20.5
+      workerd:
+        specifier: 1.20261006.1
+        version: 1.20261006.1
+
   playground:
     devDependencies:
       '@base-ui/react':
@@ -122,9 +122,9 @@ importers:
       '@fontsource-variable/onest':
         specifier: 5.3.1
         version: 5.3.1
-      '@nuten/wasm':
+      '@nuten/format':
         specifier: workspace:*
-        version: link:../integrations/js-wasm
+        version: link:../npm/format
       '@types/react':
         specifier: 19.3.0
         version: 19.3.0

@@ -33,7 +33,7 @@ let
     "vscode"
     "zed"
     "dprint"
-    "js-wasm"
+    "npm-format"
     "prettier"
     "assets"
     "docs"

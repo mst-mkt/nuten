@@ -1,4 +1,4 @@
-# @nuten/wasm
+# @nuten/format
 
 [Nuten](https://nuten.keito.dev), a formatter for Nushell, built into Wasm.
 It formats Nushell in browsers, Node.js, and Cloudflare Workers without the `nuten` binary.
@@ -6,17 +6,17 @@ It formats Nushell in browsers, Node.js, and Cloudflare Workers without the `nut
 ## Installation
 
 ```nushell
-pnpm add @nuten/wasm
+pnpm add @nuten/format
 ```
 
 ```nushell
-deno add jsr:@nuten/wasm
+deno add jsr:@nuten/format
 ```
 
 ## Usage
 
 ```ts
-import { format } from "@nuten/wasm";
+import { format } from "@nuten/format";
 
 format("ls|sort"); // "ls | sort\n"
 format("[1, 2, 3]", { commas: "none" }); // "[1 2 3]\n"
@@ -26,7 +26,7 @@ A syntax error throws a `FormatError`, whose `errors` list where each error is.
 Lines and columns count from 1, and columns count code points.
 
 ```ts
-import { FormatError, format } from "@nuten/wasm";
+import { FormatError, format } from "@nuten/format";
 
 try {
   format("ls && echo");

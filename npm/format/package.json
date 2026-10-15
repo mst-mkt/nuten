@@ -1,5 +1,5 @@
 {
-  "name": "@nuten/wasm",
+  "name": "@nuten/format",
   "version": "0.0.0",
   "description": "A formatter for Nushell. Robust, fast, and lightweight.",
   "keywords": [
@@ -18,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/mst-mkt/nuten.git",
-    "directory": "integrations/js-wasm"
+    "directory": "npm/format"
   },
   "files": [
     "dist",

@@ -13,7 +13,7 @@
     "@codemirror/view": "6.43.14",
     "@css-modules-kit/codegen": "1.4.0",
     "@fontsource-variable/onest": "5.3.1",
-    "@nuten/wasm": "workspace:*",
+    "@nuten/format": "workspace:*",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",

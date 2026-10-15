@@ -2,7 +2,7 @@
   "name": "@nuten/prettier-plugin",
   "version": "0.0.0",
   "imports": {
-    "@nuten/wasm": "jsr:@nuten/wasm@0.0.0",
+    "@nuten/format": "jsr:@nuten/format@0.0.0",
     "prettier": "npm:prettier@^3.0.0"
   },
   "publish": {

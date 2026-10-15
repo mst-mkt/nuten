@@ -1,4 +1,4 @@
-import { type Options, type RequiredOptions, defaultOptions, format } from "@nuten/wasm";
+import { type Options, type RequiredOptions, defaultOptions, format } from "@nuten/format";
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 
 import type { Playground, PlaygroundStore } from "./playground";
@@ -20,7 +20,7 @@ const valueOf = (text: string) => {
   return /^[1-9]\d*$/.test(text) ? Number(text) : text;
 };
 
-// Let @nuten/wasm check the ranges and the choices instead of repeating them.
+// Let @nuten/format check the ranges and the choices instead of repeating them.
 const takes = <Key extends keyof RequiredOptions>(
   key: Key,
   value: string | number,

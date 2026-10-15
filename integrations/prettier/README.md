@@ -1,7 +1,7 @@
 # @nuten/prettier-plugin
 
 The Prettier plugin of [Nuten](https://nuten.keito.dev), a formatter for Nushell.
-It formats `.nu` and `.nuon` files, and Nushell code blocks in Markdown, through [@nuten/wasm](https://github.com/mst-mkt/nuten/tree/main/integrations/js-wasm) without the `nuten` binary.
+It formats `.nu` and `.nuon` files, and Nushell code blocks in Markdown, through [@nuten/format](https://github.com/mst-mkt/nuten/tree/main/npm/format) without the `nuten` binary.
 
 ## Installation
 

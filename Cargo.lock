@@ -365,17 +365,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nuten-js-wasm"
-version = "0.0.0"
-dependencies = [
- "nuten-format",
- "nuten-highlight",
- "nuten-line-index",
- "nuten-parser",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "nuten-line-index"
 version = "0.0.0"
 
@@ -388,6 +377,17 @@ dependencies = [
  "nuten-config",
  "nuten-format",
  "serde_json",
+]
+
+[[package]]
+name = "nuten-npm-format"
+version = "0.0.0"
+dependencies = [
+ "nuten-format",
+ "nuten-highlight",
+ "nuten-line-index",
+ "nuten-parser",
+ "wasm-bindgen",
 ]
 
 [[package]]

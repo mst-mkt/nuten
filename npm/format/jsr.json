@@ -1,5 +1,5 @@
 {
-  "name": "@nuten/wasm",
+  "name": "@nuten/format",
   "version": "0.0.0",
   "publish": {
     "include": ["jsr.json", "ts/", "LICENSE", "README.md"],

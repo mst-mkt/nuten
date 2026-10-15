@@ -1,4 +1,4 @@
-import { defaultOptions } from "@nuten/wasm";
+import { defaultOptions } from "@nuten/format";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { createPlaygroundStore } from "./playground";

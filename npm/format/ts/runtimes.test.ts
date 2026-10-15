@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 
 test("node_takes_node_entry_by_package_name_without_warnings", async () => {
   const script = `
-    import { format } from "@nuten/wasm";
+    import { format } from "@nuten/format";
     process.stdout.write(format("ls|sort"));
   `;
   const { stdout, stderr } = await run(
@@ -49,7 +49,7 @@ test("default_entry_gives_default_options_of_node_entry", async () => {
 });
 
 test("workerd_condition_takes_workerd_entry_over_node_entry", async () => {
-  const script = `process.stdout.write(import.meta.resolve("@nuten/wasm"));`;
+  const script = `process.stdout.write(import.meta.resolve("@nuten/format"));`;
   const { stdout } = await run(
     process.execPath,
     ["--conditions=workerd", "--input-type=module", "--eval", script],

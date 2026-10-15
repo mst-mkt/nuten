@@ -3,7 +3,7 @@ let
   members = [
     ../crates
     ../integrations/dprint
-    ../integrations/js-wasm
+    ../npm
     ../tasks/oracle
   ];
   src = lib.fileset.toSource {

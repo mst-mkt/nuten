@@ -8,7 +8,7 @@ def main []: nothing -> nothing {
 }
 
 def build []: nothing -> path {
-    ^cargo build --profile wasm --package nuten-js-wasm --target wasm32-unknown-unknown --message-format json-render-diagnostics
+    ^cargo build --profile wasm --package nuten-npm-format --target wasm32-unknown-unknown --message-format json-render-diagnostics
     | from json --objects
     | where reason == compiler-artifact
     | get filenames

@@ -1,6 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Fieldset } from "@base-ui/react/fieldset";
-import type { RequiredOptions } from "@nuten/wasm";
+import type { RequiredOptions } from "@nuten/format";
 import { ChevronDown } from "lucide-react";
 import type { FC } from "react";
 

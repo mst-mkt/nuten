@@ -1,4 +1,4 @@
-import type { RequiredOptions } from "@nuten/wasm";
+import type { RequiredOptions } from "@nuten/format";
 import { describe, expect, test } from "vite-plus/test";
 
 import { summaryOf } from "./summary";

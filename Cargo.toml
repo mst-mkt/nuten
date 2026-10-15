@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "integrations/dprint", "integrations/js-wasm", "tasks/*"]
+members = ["crates/*", "integrations/dprint", "npm/*", "tasks/*"]
 exclude = ["tasks/benchmark", "tasks/fuzz"]
 
 [workspace.package]

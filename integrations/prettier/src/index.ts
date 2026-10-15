@@ -1,4 +1,4 @@
-import { FormatError, type Options, format } from "@nuten/wasm";
+import { FormatError, type Options, format } from "@nuten/format";
 import type { Plugin } from "prettier";
 
 type Commas = Options["commas"];

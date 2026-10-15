@@ -22,7 +22,7 @@ export default defineConfig({
         command: [
           "cargo clippy --workspace --all-targets -- --deny warnings",
           "RUSTDOCFLAGS='--deny warnings' cargo doc --workspace --no-deps",
-          "cargo clippy --package nuten-format --package nuten-dprint --package nuten-js-wasm --target wasm32-unknown-unknown -- --deny warnings",
+          "cargo clippy --package nuten-format --package nuten-dprint --package nuten-npm-format --target wasm32-unknown-unknown -- --deny warnings",
           "cargo clippy --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --all-targets -- --deny warnings",
         ],
         input: [{ auto: true }, "!target/**", "!integrations/zed/target/**"],
@@ -32,7 +32,7 @@ export default defineConfig({
       },
       "lint:ts": {
         command: "vp check",
-        dependsOn: ["@nuten/wasm#build", "@nuten/playground#generate:cmk"],
+        dependsOn: ["@nuten/format#build", "@nuten/playground#generate:cmk"],
       },
 
       "test:rust": {
@@ -43,8 +43,8 @@ export default defineConfig({
           ".cargo/**",
           "crates/**",
           "integrations/dprint/**",
-          "integrations/js-wasm/Cargo.toml",
-          "integrations/js-wasm/src/**",
+          "npm/format/Cargo.toml",
+          "npm/format/src/**",
           "LICENSE",
           "tasks/oracle/**",
         ],

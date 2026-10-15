@@ -14,7 +14,7 @@ export default defineConfig({
     tasks: {
       build: {
         command: "vp pack",
-        dependsOn: ["@nuten/wasm#build"],
+        dependsOn: ["@nuten/format#build"],
       },
       test: {
         command: "vp test run",

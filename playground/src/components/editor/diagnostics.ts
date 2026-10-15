@@ -8,7 +8,7 @@ import {
   type Transaction,
 } from "@codemirror/state";
 import { Decoration, EditorView, GutterMarker, gutterLineClass } from "@codemirror/view";
-import type { ParseError } from "@nuten/wasm";
+import type { ParseError } from "@nuten/format";
 
 import { textOf } from "./line-endings";
 import { offsetOf } from "./position";

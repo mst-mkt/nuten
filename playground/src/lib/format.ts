@@ -1,4 +1,4 @@
-import { FormatError, type Options, type ParseError, format } from "@nuten/wasm";
+import { FormatError, type Options, type ParseError, format } from "@nuten/format";
 
 export type Position = Pick<ParseError, "line" | "column">;
 

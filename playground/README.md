@@ -1,11 +1,11 @@
 # @nuten/playground
 
 The playground of [Nuten](https://github.com/mst-mkt/nuten), a formatter for Nushell.
-It formats Nushell in the browser through [@nuten/wasm](../integrations/js-wasm), and is built with React, Base UI, and CodeMirror on Vite+.
+It formats Nushell in the browser through [@nuten/format](../npm/format), and is built with React, Base UI, and CodeMirror on Vite+.
 
 ## Development
 
-The tasks build @nuten/wasm first, which needs the tools that the `nix/dev` devShell provides.
+The tasks build @nuten/format first, which needs the tools that the `nix/dev` devShell provides.
 
 ```nushell
 pnpm install
