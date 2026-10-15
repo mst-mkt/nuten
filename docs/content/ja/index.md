@@ -137,6 +137,7 @@ CLI から普段使っているツールまで、同じフォーマッタで整�
 - [<span class="icon-[simple-icons--zedindustries]"></span> Zed](/ja/guide/integrations/zed)
 - [LSP](/ja/reference/cli#nuten-lsp)
 - [dprint](/ja/guide/integrations/dprint)
+- [<span class="icon-[simple-icons--prettier]"></span> Prettier](/ja/guide/integrations/prettier)
 - [treefmt](/ja/guide/integrations/treefmt)
 - [<span class="icon-[simple-icons--githubactions]"></span> GitHub Actions](/ja/guide/integrations/ci#github-actions)
 - [<span class="icon-[simple-icons--gitlab]"></span> GitLab CI](/ja/guide/integrations/ci#gitlab-ci)

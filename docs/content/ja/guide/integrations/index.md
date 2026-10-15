@@ -46,6 +46,10 @@ Eglot, lsp-mode など
 Wasm Plugin
 :::
 
+::: link-card {/ja/guide/integrations/prettier} Prettier
+@nuten/prettier-plugin (npm, JSR)
+:::
+
 ::: link-card {/ja/guide/integrations/treefmt} treefmt
 treefmt-nix, treefmt.toml
 :::

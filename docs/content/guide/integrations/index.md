@@ -46,6 +46,10 @@ For an editor not listed here, register `nuten lsp` as a language server, or set
 Wasm Plugin
 :::
 
+::: link-card {/guide/integrations/prettier} Prettier
+@nuten/prettier-plugin (npm, JSR)
+:::
+
 ::: link-card {/guide/integrations/treefmt} treefmt
 treefmt-nix, treefmt.toml
 :::

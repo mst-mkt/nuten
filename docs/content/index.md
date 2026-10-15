@@ -137,6 +137,7 @@ The same formatter, from the CLI to the tools you already use.
 - [<span class="icon-[simple-icons--zedindustries]"></span> Zed](/guide/integrations/zed)
 - [LSP](/reference/cli#nuten-lsp)
 - [dprint](/guide/integrations/dprint)
+- [<span class="icon-[simple-icons--prettier]"></span> Prettier](/guide/integrations/prettier)
 - [treefmt](/guide/integrations/treefmt)
 - [<span class="icon-[simple-icons--githubactions]"></span> GitHub Actions](/guide/integrations/ci#github-actions)
 - [<span class="icon-[simple-icons--gitlab]"></span> GitLab CI](/guide/integrations/ci#gitlab-ci)

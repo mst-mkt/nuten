@@ -60,6 +60,7 @@ const sidebar = [
           { text: "Helix", link: "/guide/integrations/helix" },
           { text: "Emacs", link: "/guide/integrations/emacs" },
           { text: "dprint", link: "/guide/integrations/dprint" },
+          { text: "Prettier", link: "/guide/integrations/prettier" },
           { text: "treefmt", link: "/guide/integrations/treefmt" },
           { text: "CI", link: "/guide/integrations/ci" },
         ],
