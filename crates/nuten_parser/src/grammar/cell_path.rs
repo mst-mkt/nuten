@@ -289,7 +289,7 @@ mod tests {
     #[test]
     fn path_error_leaves_enclosing_block_whole() {
         let parsed = parse("if true { $x? }");
-        assert!(parsed.errors().is_empty());
+        assert_eq!(parsed.errors(), []);
         let words = parsed
             .syntax()
             .descendants_with_tokens()

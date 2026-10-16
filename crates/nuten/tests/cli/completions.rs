@@ -30,7 +30,7 @@ fn completions_prints_script_whose_request_names_given_shell() {
 fn completions_rejects_unknown_shell() {
     let output = nuten(&[OsStr::new("completions"), OsStr::new("sh")]);
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn completions_succeeds_when_reader_closes_first() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_eq!(stderr(&output), "");
 }
 
 #[cfg(target_os = "linux")]

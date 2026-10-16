@@ -192,6 +192,6 @@ mod tests {
                 .descendants()
                 .any(|node| node.kind() == SyntaxKind::Binary)
         );
-        assert!(parsed.errors().is_empty());
+        assert_eq!(parsed.errors(), []);
     }
 }

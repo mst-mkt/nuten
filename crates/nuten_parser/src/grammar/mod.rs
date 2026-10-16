@@ -379,7 +379,7 @@ mod tests {
 
     fn parsed_with(src: &str, kind: SyntaxKind) -> (SyntaxNode, usize) {
         let parsed = parse(src);
-        assert!(parsed.errors().is_empty());
+        assert_eq!(parsed.errors(), []);
         let tree = parsed.syntax();
         let count = tree
             .descendants()

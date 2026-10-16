@@ -100,7 +100,7 @@ fn lsp_formats_open_document_with_config_file_nearest_its_file() {
         .collect();
     let output = lsp_in(&dir, &[], &messages);
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_eq!(stderr(&output), "");
     let messages = lsp_messages(&output);
     assert_eq!(messages.len(), 3, "{messages:?}");
     assert_eq!(messages[1]["id"], 1);
@@ -154,7 +154,7 @@ fn lsp_exits_with_1_on_exit_without_shutdown() {
         .collect();
     let output = lsp_in(&dir, &[], &messages);
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_eq!(stderr(&output), "");
 }
 
 #[test]
@@ -162,7 +162,7 @@ fn lsp_exits_with_1_when_stdin_ends_without_exit() {
     let dir = TempDir::new();
     let output = lsp_in(&dir, &[], &lsp_initialization());
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_eq!(stderr(&output), "");
     assert_eq!(lsp_messages(&output).len(), 1);
 }
 
@@ -171,6 +171,6 @@ fn lsp_exits_with_1_when_stdin_ends_before_initialize() {
     let dir = TempDir::new();
     let output = lsp_in(&dir, &[], &[]);
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
-    assert!(output.stdout.is_empty());
-    assert!(output.stderr.is_empty());
+    assert_eq!(stdout(&output), "");
+    assert_eq!(stderr(&output), "");
 }

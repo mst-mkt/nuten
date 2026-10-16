@@ -36,7 +36,7 @@ fn format_help_examples_each_succeed_on_formatted_files() {
 fn wants_subcommand() {
     let output = nuten(&[]);
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn rejects_file_without_subcommand() {
 fn schema_prints_json_schema_of_config_file() {
     let output = nuten(&[OsStr::new("schema")]);
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_eq!(stderr(&output), "");
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
         nuten_config::schema()
@@ -63,7 +63,7 @@ fn schema_prints_json_schema_of_config_file() {
 fn schema_rejects_extra_argument() {
     let output = nuten(&[OsStr::new("schema"), OsStr::new("x")]);
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn schema_succeeds_when_reader_closes_first() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_eq!(stderr(&output), "");
 }
 
 #[cfg(target_os = "linux")]

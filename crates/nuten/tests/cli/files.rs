@@ -6,7 +6,7 @@ use std::{fs, path::Path};
 use crate::support::{BLOCK, fifo, format_in_time};
 use crate::support::{
     FORMATTED, TempDir, UNFORMATTED, assert_succeeds, format, format_in, io_error_line,
-    nuten_command, problems, read, stderr, write_unformatted,
+    nuten_command, problems, read, stderr, stdout, write_unformatted,
 };
 
 /// Sorted, since `read_dir` yields them in no set order.
@@ -26,7 +26,7 @@ fn format_rewrites_each_file_in_place() {
     let b = dir.file("b.nu", "echo   a\n\n\n");
     let output = format(&[&a, &b]);
     assert_succeeds(&output);
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     assert_eq!(read(&a), "ls | first\n");
     assert_eq!(read(&b), "echo a\n");
 }

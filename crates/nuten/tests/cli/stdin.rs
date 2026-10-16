@@ -65,7 +65,7 @@ fn format_writes_nothing_to_stdout_and_reports_syntax_error_of_stdin() {
     let dir = TempDir::new();
     let output = format_stdin_in(&dir, &["-"], b"ls\nls ||");
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     let problems = problems(&output);
     assert_eq!(problems.lines().count(), 1, "{problems}");
     assert!(problems.starts_with("<stdin>:2:4: "), "{problems}");
@@ -76,7 +76,7 @@ fn format_reports_stdin_that_is_not_utf8() {
     let dir = TempDir::new();
     let output = format_stdin_in(&dir, &["-"], b"ls \xff");
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     let problems = problems(&output);
     assert!(problems.starts_with("<stdin>: "), "{problems}");
 }
@@ -87,7 +87,7 @@ fn format_writes_nothing_to_stdout_when_config_file_for_stdin_is_wrong() {
     let nuon = dir.file("nuten.nuon", "{a: 1}");
     let output = format_stdin_in(&dir, &["-"], UNFORMATTED.as_bytes());
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     assert_eq!(
         problems(&output),
         format!("{}:1:2: unknown key `a`\n", nuon.display())
@@ -106,7 +106,7 @@ fn format_check_on_stdin_exits_with_1_and_shows_what_would_change() {
             view_of_unformatted("<stdin>")
         )
     );
-    assert!(unnamed.stderr.is_empty());
+    assert_eq!(stderr(&unnamed), "");
 }
 
 #[test]
@@ -129,7 +129,7 @@ fn format_check_on_stdin_succeeds_quietly_when_it_is_formatted() {
     let dir = TempDir::new();
     let output = format_stdin_in(&dir, &["--check", "-"], FORMATTED.as_bytes());
     assert_succeeds_quietly(&output);
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn format_rejects_stdin_with_other_paths() {
     for args in [["-", "a.nu"], ["a.nu", "-"]] {
         let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
         assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
+        assert_eq!(stdout(&output), "");
         assert_eq!(
             problems(&output),
             "`-` must be the only path, since it reads stdin\n"
@@ -195,7 +195,7 @@ fn format_check_on_stdin_exits_with_2_on_syntax_error() {
     let dir = TempDir::new();
     let output = format_stdin_in(&dir, &["--check", "-"], b"ls ||");
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     let problems = problems(&output);
     assert!(problems.starts_with("<stdin>:1:4: "), "{problems}");
 }
@@ -210,7 +210,7 @@ fn format_counts_stdin_formatted_as_written_when_reader_closes_first() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
-    assert!(output.stderr.is_empty());
+    assert_eq!(stderr(&output), "");
 }
 
 #[cfg(target_os = "linux")]
@@ -285,7 +285,7 @@ fn format_reports_syntax_error_of_stdin_at_stdin_filepath() {
     let args = ["--stdin-filepath", "d/a.nu", "-"];
     let output = format_stdin_in(&dir, &args, b"ls ||");
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     let problems = problems(&output);
     let expected = format!("{}:1:4: ", Path::new("d/a.nu").display());
     assert!(problems.starts_with(&expected), "{problems}");
@@ -297,7 +297,7 @@ fn format_reports_stdin_that_is_not_utf8_at_stdin_filepath() {
     let args = ["--stdin-filepath", "d/a.nu", "-"];
     let output = format_stdin_in(&dir, &args, b"ls \xff");
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     let problems = problems(&output);
     let expected = format!("{}: ", Path::new("d/a.nu").display());
     assert!(problems.starts_with(&expected), "{problems}");
@@ -310,7 +310,7 @@ fn format_check_on_stdin_takes_config_file_nearest_stdin_filepath() {
     let args = ["--check", "--stdin-filepath", "d/a.nu", "-"];
     let output = format_stdin_in(&dir, &args, b"if true {\n  ls\n}\n");
     assert_succeeds_quietly(&output);
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]
@@ -359,7 +359,7 @@ fn format_check_on_stdin_succeeds_when_exclude_matches_stdin_filepath() {
     let args = ["--check", "--stdin-filepath", "a.nu", "-"];
     let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
     assert_succeeds_quietly(&output);
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]

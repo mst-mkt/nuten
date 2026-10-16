@@ -38,7 +38,7 @@ fn format_check_succeeds_and_shows_nothing_when_every_file_is_formatted() {
     dir.file("b.nu", "if true {\n  ls\n}\n");
     let output = format_in(&dir, &["--check"]);
     assert_succeeds(&output);
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]

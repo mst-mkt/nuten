@@ -118,7 +118,7 @@ fn format_wants_value_for_config_flag() {
     let path = dir.file("a.nu", "ls|first");
     let output = format_in(&dir, &["a.nu", "-c"]);
     assert_eq!(output.status.code(), Some(2));
-    assert!(!output.stderr.is_empty());
+    assert_ne!(stderr(&output), "");
     assert_eq!(read(&path), "ls|first");
 }
 

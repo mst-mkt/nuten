@@ -473,7 +473,10 @@ mod tests {
             resolved(ConfigKeyMap::new(), &GlobalConfiguration::default()),
             nuten_format::Config::default()
         );
-        assert!(diagnostics(ConfigKeyMap::new(), &GlobalConfiguration::default()).is_empty());
+        assert_eq!(
+            diagnostics(ConfigKeyMap::new(), &GlobalConfiguration::default()),
+            []
+        );
     }
 
     #[test]
@@ -590,7 +593,7 @@ mod tests {
             resolved(config.clone(), &global_settings()),
             resolved(ConfigKeyMap::new(), &global_settings())
         );
-        assert!(diagnostics(config, &global_settings()).is_empty());
+        assert_eq!(diagnostics(config, &global_settings()), []);
     }
 
     #[test]
@@ -600,7 +603,7 @@ mod tests {
                 ("lineWidth", ConfigKeyValue::from_i32(line_width)),
                 ("indentWidth", ConfigKeyValue::from_i32(indent_width)),
             ]);
-            assert!(diagnostics(config, &GlobalConfiguration::default()).is_empty());
+            assert_eq!(diagnostics(config, &GlobalConfiguration::default()), []);
         }
     }
 

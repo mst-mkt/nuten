@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn map_of_no_items_is_empty() {
         let items: [usize; 0] = [];
-        assert!(map(&items, |item| *item).is_empty());
+        assert_eq!(map(&items, |item| *item), Vec::<usize>::new());
     }
 
     #[test]

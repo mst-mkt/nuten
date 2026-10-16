@@ -795,7 +795,7 @@ mod tests {
 
     #[test]
     fn empty_input_makes_no_tokens() {
-        assert!(lexed("").is_empty());
+        assert_eq!(lexed(""), []);
     }
 
     #[test]
@@ -1679,7 +1679,7 @@ mod tests {
             lexed_ranges(r#""a b""#, range(0, 3)),
             [(Error, range(0, 3))]
         );
-        assert!(lexed_ranges("abcd", range(2, 2)).is_empty());
+        assert_eq!(lexed_ranges("abcd", range(2, 2)), []);
     }
 
     #[test]

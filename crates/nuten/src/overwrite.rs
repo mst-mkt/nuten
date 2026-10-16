@@ -599,7 +599,7 @@ mod tests {
         for backup in [&first_path, &second_path] {
             assert_eq!(backup.parent(), path.parent());
             assert_eq!(backup.extension().unwrap(), "nuten-backup");
-            assert!(fs::read(backup).unwrap().is_empty());
+            assert_eq!(fs::read(backup).unwrap(), b"");
         }
     }
 

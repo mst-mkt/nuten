@@ -30,7 +30,7 @@ fn format_list_different_succeeds_with_nothing_when_no_file_would_change() {
     dir.file("a.nu", FORMATTED);
     let output = format_in(&dir, &["--list-different", "a.nu"]);
     assert_eq!(output.status.code(), Some(0));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     assert!(output.stderr.is_empty(), "{}", stderr(&output));
 }
 
@@ -70,7 +70,7 @@ fn format_list_different_names_no_stdin_that_would_not_change() {
     let dir = TempDir::new();
     let output = format_stdin_in(&dir, &["--list-different", "-"], FORMATTED.as_bytes());
     assert_eq!(output.status.code(), Some(0));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn format_list_different_names_no_stdin_it_cannot_format() {
     let dir = TempDir::new();
     let output = format_stdin_in(&dir, &["--list-different", "-"], b"ls || x\n");
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
 }
 
 #[test]

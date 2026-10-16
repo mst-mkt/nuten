@@ -267,7 +267,10 @@ mod tests {
 
     #[test]
     fn match_is_case_sensitive() {
-        assert!(matching_files("a.nu", &["/r/A.nu", "/r/a.NU"]).is_empty());
+        assert_eq!(
+            matching_files("a.nu", &["/r/A.nu", "/r/a.NU"]),
+            Vec::<&str>::new()
+        );
     }
 
     #[test]
@@ -280,8 +283,8 @@ mod tests {
 
     #[test]
     fn file_matches_not_by_ancestor_alone() {
-        assert!(matching_files("d", &["/r/d/a.nu"]).is_empty());
-        assert!(matching_files("/d", &["/r/d/a.nu"]).is_empty());
+        assert_eq!(matching_files("d", &["/r/d/a.nu"]), Vec::<&str>::new());
+        assert_eq!(matching_files("/d", &["/r/d/a.nu"]), Vec::<&str>::new());
     }
 
     #[test]
