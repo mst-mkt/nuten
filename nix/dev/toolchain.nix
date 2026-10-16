@@ -8,9 +8,6 @@ let
     inherit (inputs) fenix;
   };
   fenixPackages = inputs.fenix.packages.${system};
-
-  vp = inputs.nix-vite-plus.packages.${system}.vp.override { inherit (rootToolchain) nodejs; };
-  vite-plus-local-version = (pkgs.lib.importJSON ../../package.json).devDependencies.vite-plus;
 in
 {
   rust = fenixPackages.combine [
@@ -33,10 +30,6 @@ in
   nushell = inputs.nushell.packages.${system}.default.overrideAttrs { doCheck = false; };
 
   inherit (rootToolchain) nodejs pnpm;
-  vite-plus =
-    assert pkgs.lib.assertMsg (
-      vp.version == vite-plus-local-version
-    ) "vite-plus differs between nix/dev/flake.lock and package.json";
-    vp;
+  vite-plus = inputs.nix-vite-plus.packages.${system}.vp.override { inherit (rootToolchain) nodejs; };
   wasm-bindgen-cli = pkgs.wasm-bindgen-cli_0_2_127;
 }

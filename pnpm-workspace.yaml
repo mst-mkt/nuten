@@ -6,8 +6,12 @@ packages:
 
 savePrefix: ""
 
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.2.0
+  vite-plus: 1.2.0
+
 overrides:
-  vite@*: npm:@voidzero-dev/vite-plus-core@1.2.0
+  vite@*: "catalog:"
 
 allowBuilds:
   "@vscode/vsce-sign": false

@@ -11,9 +11,27 @@ def main []: nothing -> nothing {
 
 def follow-vite-plus []: nothing -> nothing {
     let version = ^nix eval --raw --no-update-lock-file --inputs-from ./nix/dev nix-vite-plus#vp.version
+    let catalog = { vite: $"npm:@voidzero-dev/vite-plus-core@($version)", vite-plus: $version }
 
-    ^nix shell --inputs-from ./nix/dev nixpkgs#pnpm_11 --command pnpm pkg set --config.runtime-on-fail=ignore $"devDependencies.vite-plus=($version)"
+    open --raw pnpm-workspace.yaml | follow-catalog $catalog | save --force pnpm-workspace.yaml
     ^nix develop --no-update-lock-file ./nix/dev --command pnpm install --lockfile-only
+}
+
+def follow-catalog [catalog: record]: string -> string {
+    let workspace = $in
+    let followed = $catalog
+        | transpose key value
+        | reduce --fold $workspace {|entry, text|
+              $text
+              | str replace --regex $"\(?m\)^  ($entry.key): .*$" $"  ($entry.key): ($entry.value)"
+          }
+
+    if ($followed | from yaml) != ($workspace | from yaml | update catalog { merge $catalog }) {
+        error make {
+            msg: "the catalog in pnpm-workspace.yaml is not in the shape follow-flake.nu rewrites"
+        }
+    }
+    $followed
 }
 
 def follow-rust []: nothing -> nothing {
