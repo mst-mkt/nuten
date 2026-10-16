@@ -4,11 +4,12 @@ use nuten_format::{Commas, Config, FormatError, IndentStyle, LineEnding};
 use nuten_line_index::located;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(getter_with_clone)]
+#[wasm_bindgen]
 #[derive(Debug)]
 pub struct ParseError {
     pub line: usize,
     pub column: usize,
+    #[wasm_bindgen(getter_with_clone)]
     pub message: String,
 }
 
