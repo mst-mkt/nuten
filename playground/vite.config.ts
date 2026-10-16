@@ -58,7 +58,9 @@ export default defineConfig({
       build: {
         command: "vp build",
         dependsOn: ["@nuten/format#build", "@nuten/highlight#build"],
-        input: [{ auto: true }, "!.cloudflare/**"],
+        cache: {
+          input: [{ auto: true }, "!.cloudflare/**"],
+        },
       },
       deploy: {
         command: "cf deploy",
@@ -68,7 +70,9 @@ export default defineConfig({
       test: {
         command: "vp test run",
         dependsOn: ["@nuten/format#build", "@nuten/highlight#build"],
-        output: [],
+        cache: {
+          output: [],
+        },
       },
     },
   },

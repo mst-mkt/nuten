@@ -32,24 +32,32 @@ export default defineConfig({
       },
       "build:test": {
         command: "vp pack --filter test",
-        input: [{ auto: true }, "!out/**"],
+        cache: {
+          input: [{ auto: true }, "!out/**"],
+        },
       },
       "build:nuten": {
         command: "cargo build --package nuten",
-        env: ["PATH"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        input: [{ auto: true }, { pattern: "!target/**", base: "workspace" }],
-        output: [{ pattern: "target/debug/nuten", base: "workspace" }],
+        cache: {
+          env: ["PATH"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          input: [{ auto: true }, { pattern: "!target/**", base: "workspace" }],
+          output: [{ pattern: "target/debug/nuten", base: "workspace" }],
+        },
       },
       package: {
         command: "vsce package --no-dependencies --out dist/",
         dependsOn: ["build"],
-        input: [{ auto: true }, "!dist/*.vsix"],
+        cache: {
+          input: [{ auto: true }, "!dist/*.vsix"],
+        },
       },
       test: {
         command: "nix develop ../../nix/dev#vscode-test --command vscode-test",
         dependsOn: ["build", "build:test", "build:nuten"],
-        output: [],
+        cache: {
+          output: [],
+        },
       },
     },
   },

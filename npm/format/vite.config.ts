@@ -19,16 +19,18 @@ export default defineConfig({
     tasks: {
       "build:wasm": {
         command: "nu build.nu",
-        env: ["PATH"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        input: [
-          "build.nu",
-          "Cargo.toml",
-          "src/**",
-          { pattern: "Cargo.{toml,lock}", base: "workspace" },
-          { pattern: "crates/**", base: "workspace" },
-        ],
-        output: ["ts/gen/**"],
+        cache: {
+          env: ["PATH"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          input: [
+            "build.nu",
+            "Cargo.toml",
+            "src/**",
+            { pattern: "Cargo.{toml,lock}", base: "workspace" },
+            { pattern: "crates/**", base: "workspace" },
+          ],
+          output: ["ts/gen/**"],
+        },
       },
       build: {
         command: "vp pack",
@@ -37,7 +39,9 @@ export default defineConfig({
       test: {
         command: "vp test run",
         dependsOn: ["build"],
-        output: [],
+        cache: {
+          output: [],
+        },
       },
     },
   },

@@ -74,7 +74,9 @@ export default defineConfig({
       },
       build: {
         command: "vp build",
-        input: [{ auto: true }, "!.cloudflare/**"],
+        cache: {
+          input: [{ auto: true }, "!.cloudflare/**"],
+        },
       },
       deploy: {
         command: "cf deploy",

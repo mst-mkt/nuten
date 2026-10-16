@@ -19,7 +19,9 @@ export default defineConfig({
       test: {
         command: "vp test run",
         dependsOn: ["build"],
-        output: [],
+        cache: {
+          output: [],
+        },
       },
     },
   },

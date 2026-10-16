@@ -15,7 +15,9 @@ export default defineConfig({
       },
       "format:check": {
         command: "treefmt --ci",
-        env: ["PATH"],
+        cache: {
+          env: ["PATH"],
+        },
       },
 
       "lint:rust": {
@@ -25,10 +27,12 @@ export default defineConfig({
           "cargo clippy --package nuten-format --package nuten-dprint --package nuten-npm-format --package nuten-npm-highlight --target wasm32-unknown-unknown -- --deny warnings",
           "cargo clippy --manifest-path integrations/zed/Cargo.toml --target wasm32-wasip2 --all-targets -- --deny warnings",
         ],
-        input: [{ auto: true }, "!target/**", "!integrations/zed/target/**"],
-        env: ["PATH"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        output: [],
+        cache: {
+          input: [{ auto: true }, "!target/**", "!integrations/zed/target/**"],
+          env: ["PATH"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          output: [],
+        },
       },
       "lint:ts": {
         command: "vp check",
@@ -41,51 +45,61 @@ export default defineConfig({
 
       "test:rust": {
         command: "cargo nextest run --workspace",
-        input: [
-          "Cargo.toml",
-          "Cargo.lock",
-          ".cargo/**",
-          "crates/**",
-          "integrations/dprint/**",
-          "npm/format/Cargo.toml",
-          "npm/format/src/**",
-          "npm/highlight/Cargo.toml",
-          "npm/highlight/src/**",
-          "LICENSE",
-          "tasks/oracle/**",
-        ],
-        env: ["PATH", "NUTEN_CORPUS"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        output: [],
+        cache: {
+          input: [
+            "Cargo.toml",
+            "Cargo.lock",
+            ".cargo/**",
+            "crates/**",
+            "integrations/dprint/**",
+            "npm/format/Cargo.toml",
+            "npm/format/src/**",
+            "npm/highlight/Cargo.toml",
+            "npm/highlight/src/**",
+            "LICENSE",
+            "tasks/oracle/**",
+          ],
+          env: ["PATH", "NUTEN_CORPUS"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          output: [],
+        },
       },
       "test:oracle": {
         // Vite+ sets FORCE_COLOR=1, which makes nu color the error messages the oracle compares.
         command: 'env -u FORCE_COLOR cargo oracle format tasks/oracle/test_data "$NUTEN_CORPUS"',
-        input: [{ auto: true }, "!target/**"],
-        env: ["PATH", "NUTEN_CORPUS"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        output: [],
+        cache: {
+          input: [{ auto: true }, "!target/**"],
+          env: ["PATH", "NUTEN_CORPUS"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          output: [],
+        },
       },
       "test:zed": {
         command: "cargo test --manifest-path integrations/zed/Cargo.toml",
-        input: [{ auto: true }, "!integrations/zed/target/**"],
-        env: ["PATH"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        output: [],
+        cache: {
+          input: [{ auto: true }, "!integrations/zed/target/**"],
+          env: ["PATH"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          output: [],
+        },
       },
       "test:dprint": {
         command: "nu integrations/dprint/test.nu",
-        input: [{ auto: true }, "!target/**"],
-        env: ["PATH", "NU_LIB_DIRS"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        output: [],
+        cache: {
+          input: [{ auto: true }, "!target/**"],
+          env: ["PATH", "NU_LIB_DIRS"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          output: [],
+        },
       },
       "test:nu": {
         command: "nu scripts/test-nu.nu",
-        input: [{ auto: true }, "!target/**"],
-        env: ["PATH", "NU_LIB_DIRS"],
-        untrackedEnv: ["NIX_*", "SDKROOT"],
-        output: [],
+        cache: {
+          input: [{ auto: true }, "!target/**"],
+          env: ["PATH", "NU_LIB_DIRS"],
+          untrackedEnv: ["NIX_*", "SDKROOT"],
+          output: [],
+        },
       },
       "test:fuzz": {
         command: [
