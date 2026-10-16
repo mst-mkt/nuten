@@ -23,7 +23,6 @@ def main [
         print --stderr $"($missing_flags | str join ', ') not given"
         exit 2
     }
-    # Hyperfine hangs when asked for no run.
     if $runs < 1 {
         print --stderr "--runs must be at least 1"
         exit 2
@@ -301,8 +300,7 @@ def time-commands [
     $exported
     | from json
     | get results
-    | select command median
-    | update median { $in * 1sec }
+    | each {|result| { name: $result.name median: ($result.summary.time_wall_clock.median * 1sec) } }
     | transpose --header-row --as-record
 }
 
