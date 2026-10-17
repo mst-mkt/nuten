@@ -1,6 +1,7 @@
 use std/assert
 use std/testing *
 
+use support.nu put
 source ../select.nu
 
 const SELECT = path self ../select.nu
@@ -20,13 +21,6 @@ def setup []: nothing -> record {
 @after-each
 def teardown []: record -> nothing {
     rm --recursive $in.dir
-}
-
-def put [corpus: path, file: string, content: oneof<string, binary>]: nothing -> path {
-    let path = $corpus | path join $file
-    mkdir ($path | path dirname)
-    $content | save $path
-    $path
 }
 
 @test

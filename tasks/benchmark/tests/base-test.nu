@@ -1,6 +1,7 @@
 use std/assert
 use std/testing *
 
+use support.nu put
 source ../base.nu
 
 const BASE = path self ../base.nu
@@ -28,13 +29,6 @@ def setup []: nothing -> record {
 @after-each
 def teardown []: record -> nothing {
     rm --recursive $in.dir
-}
-
-def put [corpus: path, file: string, content: string]: nothing -> path {
-    let path = $corpus | path join $file
-    mkdir ($path | path dirname)
-    $content | save --force $path
-    $path
 }
 
 # Small files at the picked paths, so what reads them runs in seconds.

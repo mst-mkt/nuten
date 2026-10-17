@@ -1,7 +1,9 @@
 # Compares nuten with nufmt, over only the files both format without changing what nu parses.
-# A formatter must not win time on a file it fails on or reads differently, so such files are left out for both.
 
+use comparable.nu screen
 use cpus.nu [allowed-cpus, fastest-allowed-cpu]
+use provenance.nu [environment, versions]
+use staging.nu stage
 
 const REPOSITORY = path self ../..
 const LOCK = path self ../../nix/dev/flake.lock
@@ -33,25 +35,20 @@ def main [
         exit 2
     }
 
-    # Each formatter runs in the directory of its file, where a relative path would lead elsewhere.
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
     let oracle = $oracle | path expand
     let corpus = $corpus | path expand
     let versions = versions $REPOSITORY $LOCK
     let environment = environment
     let sizes = sizes $formatters
-    # macOS has no taskset, so nothing is timed on one CPU there.
     let cpus = if (which taskset | is-empty) {
         null
     } else {
         { all: (allowed-cpus), one: (fastest-allowed-cpu) }
     }
 
-    let selection = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)]
-        | uniq
-        | par-each {|file| verdict $file $formatters $oracle $time_limit }
-        | sort-by file
-        | report
+    let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
+    let selection = screen $files $formatters $oracle $time_limit
     # One file or directory at a time, since formatters timed side by side would slow each other down.
     let timing = $selection.compared | each {|file| time-file $file $formatters $runs } | summarize
     let directories = time-directories $selection.compared $corpus $formatters $runs $cpus
@@ -71,94 +68,22 @@ def formatters [nuten: path, nufmt: path]: nothing -> list<record> {
         {
             name: nuten
             command: $nuten
-            arguments: {|file| [format, --stdin-filepath, $file, -] }
-            directory: {|dir| [format, --list-different, $dir] }
+            file: {|file| [$nuten, format, --stdin-filepath, $file, -] }
+            directory: {|dir| [$nuten, format, --list-different, $dir] }
         }
         {
             name: nufmt
             command: $nufmt
-            arguments: {|file| [--stdin] }
-            directory: {|dir| [--dry-run, $dir] }
+            file: {|file| [$nufmt, --stdin] }
+            directory: {|dir| [$nufmt, --dry-run, $dir] }
         }
     ]
-}
-
-# Nu reads no file that is not UTF-8, so neither formatter is asked about one.
-def verdict [
-    file: path
-    formatters: list<record>
-    oracle: path
-    limit: duration
-]: nothing -> record {
-    let source = open --raw $file
-    if ($source | describe) != string {
-        return { file: $file, unreadable: true, problems: [] }
-    }
-    let problems = $formatters
-        | each {|formatter|
-          let reason = problem $file $source $formatter $oracle $limit
-          if $reason != null {
-              { formatter: $formatter.name reason: $reason }
-          }
-      }
-        | compact
-
-    { file: $file, unreadable: false, problems: $problems }
-}
-
-# Running in the directory of the file, nufmt finds a config from there as nuten does by the path.
-def problem [
-    file: path
-    source: string
-    formatter: record
-    oracle: path
-    limit: duration
-]: nothing -> oneof<string, nothing> {
-    cd ($file | path dirname)
-    let seconds = $limit / 1sec
-    let formatted = $source
-        | ^timeout $seconds $formatter.command ...(do $formatter.arguments $file)
-        | complete
-    match $formatted.exit_code {
-        0 => {}
-        124 => { return "times out" }
-        _ => { return fails }
-    }
-    let output = mktemp --tmpdir --suffix .nu
-    $formatted.stdout | save --force $output
-    let compared = ^$oracle compare $file $output | complete
-    rm $output
-
-    match $compared.exit_code {
-        0 => null
-        1 => "changes the AST"
-        _ => { error make { msg: $"nuten-oracle failed on ($file): ($compared.stderr)" } }
-    }
-}
-
-def report []: list<record> -> record {
-    let verdicts = $in
-
-    {
-        compared: ($verdicts | where not $it.unreadable and ($it.problems | is-empty) | get file)
-        excluded: ($verdicts | excluded)
-        unreadable: ($verdicts | where unreadable | get file)
-    }
-}
-
-def excluded []: list<record> -> table {
-    each {|verdict| $verdict.problems | insert file $verdict.file }
-    | flatten
-    | group-by formatter reason --to-table
-    | each {|group|
-          { formatter: $group.formatter reason: $group.reason files: ($group.items | get file) }
-      }
 }
 
 def time-file [file: path, formatters: list<record>, runs: int]: nothing -> record {
     cd ($file | path dirname)
     let commands = $formatters
-        | each {|formatter| { name: $formatter.name words: [$formatter.command ...(do $formatter.arguments $file)] } }
+        | each {|formatter| { name: $formatter.name, words: (do $formatter.file $file) } }
 
     { file: $file, ...(time-commands $commands $runs [--input $file] $file) }
 }
@@ -183,35 +108,6 @@ def time-directories [
         rm --recursive $staged
         error make $error.raw
     }
-}
-
-def stage [files: list<path>, corpus: path]: nothing -> path {
-    let root = mktemp --directory
-    $files
-    | enumerate
-    | each {|entry|
-        let target = $root | path join (staged-path $entry.item $corpus $entry.index)
-        mkdir ($target | path dirname)
-        cp $entry.item $target
-    }
-    | ignore
-
-    $root
-}
-
-# A leading dot is dropped from every part, since nufmt skips hidden files and directories where nuten does not.
-# A file from outside the corpus gets a directory of its own, so two of the same name do not meet.
-def staged-path [file: path, corpus: path, index: int]: nothing -> path {
-    let relative = if ($file | str starts-with $"($corpus)/") {
-        $file | path relative-to $corpus
-    } else {
-        [also, ($index | into string), ($file | path basename)] | path join
-    }
-
-    $relative
-    | path split
-    | each { if ($in | str starts-with '.') { $"_($in | str substring 1..)" } else { $in } }
-    | path join
 }
 
 def groups [staged: path]: nothing -> table {
@@ -268,15 +164,11 @@ def time-directory [
 ]: nothing -> record {
     cd $dir
     let commands = $formatters
-        | each {|formatter|
-        { name: $formatter.name words: [...$prefix $formatter.command ...(do $formatter.directory $dir)] }
-    }
+        | each {|formatter| { name: $formatter.name, words: [...$prefix ...(do $formatter.directory $dir)] } }
 
-    # Both exit with 1 when a file would change, which is no failure here.
     time-commands $commands $runs [--ignore-failure=1] $dir
 }
 
-# The median shrugs off a run slowed by something else on the machine.
 def time-commands [
     commands: list<record>
     runs: int
@@ -304,7 +196,6 @@ def time-commands [
     | transpose --header-row --as-record
 }
 
-# Hyperfine splits a command without a shell into words as a shell would, so each is quoted.
 def command-line [words: list<string>]: nothing -> string {
     $words
     | each { $"'($in | str replace --all "'" "'\\''")'" }
@@ -338,7 +229,7 @@ def has-gnu-time []: nothing -> bool {
 # The peak goes to a file of its own, so what the formatter writes to stderr does not mix in.
 def peak [formatter: record, dir: path]: nothing -> filesize {
     let report = mktemp --tmpdir
-    let run = ^time -f %M -o $report $formatter.command ...(do $formatter.directory $dir) | complete
+    let run = ^time -f %M -o $report ...(do $formatter.directory $dir) | complete
     let peak = open --raw $report
     rm $report
     # Both exit with 1 when a file would change, which is no failure here.
@@ -368,7 +259,6 @@ def with-speedup []: record -> record {
 
 def summarize []: list<record> -> record {
     let files = $in | each { with-speedup }
-    # math median fails on an empty list.
     if ($files | is-empty) {
         return { files: [], total: null, speedup: null }
     }
@@ -383,75 +273,9 @@ def summarize []: list<record> -> record {
     }
 }
 
-# Nearest rank rather than interpolation, so the result is always one of the values.
-# Multiplying before dividing keeps a whole rank whole, where float error would let math ceil push it up.
 def percentile [percent: number]: list<number> -> number {
     let sorted = $in | sort
     let rank = ($percent * ($sorted | length) / 100 | math ceil) - 1
 
     $sorted | get ([$rank, 0] | math max)
-}
-
-def versions [repository: path, lock: path]: nothing -> record {
-    { nuten: (nuten-version $repository), ...(locked-versions $lock) }
-}
-
-# The binaries given may be built from anywhere, so nuten is named by the tree this script is in.
-def nuten-version [repository: path]: nothing -> oneof<string, nothing> {
-    if (which git | is-empty) {
-        return null
-    }
-    let described = ^git -C $repository describe --always --dirty | complete
-
-    if $described.exit_code == 0 {
-        $described.stdout | str trim
-    } else {
-        null
-    }
-}
-
-# A corpus path does not tell its version, so the lock that fills NUTEN_CORPUS in the devShell does.
-def locked-versions [lock: path]: nothing -> record {
-    if not ($lock | path exists) {
-        return { nufmt: null, nixpkgs-nushell: null, corpus: null }
-    }
-    let nodes = open --raw $lock | from json | get nodes
-
-    {
-        nufmt: ($nodes | locked nufmt)
-        nixpkgs-nushell: ($nodes | locked nixpkgs-nushell)
-        corpus: ($nodes | corpus-versions)
-    }
-}
-
-def corpus-versions []: record -> record {
-    let nodes = $in
-
-    $nodes
-    | columns
-    | where $it starts-with corpus-
-    | each {|name| { name: ($name | str replace corpus- '') locked: ($nodes | locked $name) } }
-    | transpose --header-row --as-record
-}
-
-def locked [name: string]: record -> oneof<record, nothing> {
-    let node = $in | get --optional $name
-    if $node == null {
-        return null
-    }
-
-    { rev: $node.locked.rev, date: ($node.locked.lastModified * 1_000_000_000 | into datetime) }
-}
-
-# The host name is left out, since the results may be shared.
-def environment []: nothing -> record {
-    let host = sys host
-    let cpus = sys cpu
-
-    {
-        os: $host.long_os_version
-        kernel: $host.kernel_version
-        cpu: ($cpus | first | get brand)
-        cpus: ($cpus | length)
-    }
 }

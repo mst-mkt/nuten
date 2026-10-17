@@ -2,10 +2,10 @@ use std/assert
 use std/testing *
 
 use ../cpus.nu [allowed-cpus, fastest-allowed-cpu]
+use support.nu [nuten-formatter, put]
 source ../nufmt.nu
 
 const NUFMT = path self ../nufmt.nu
-const DEV_LOCK = path self ../../../nix/dev/flake.lock
 
 @before-each
 def setup []: nothing -> record {
@@ -16,12 +16,7 @@ def setup []: nothing -> record {
 
     {
         dir: $dir
-        nuten: {
-            name: nuten
-            command: $env.NUTEN
-            arguments: {|file| [format, --stdin-filepath, $file, -] }
-            directory: {|dir| [format, --list-different, $dir] }
-        }
+        nuten: (nuten-formatter $env.NUTEN)
         oracle: $env.NUTEN_ORACLE
     }
 }
@@ -29,13 +24,6 @@ def setup []: nothing -> record {
 @after-each
 def teardown []: record -> nothing {
     rm --recursive $in.dir
-}
-
-def put [dir: path, file: string, content: oneof<string, binary>]: nothing -> path {
-    let path = $dir | path join $file
-    mkdir ($path | path dirname)
-    $content | save --force $path
-    $path
 }
 
 def pair [formatter: record]: nothing -> list<record> {
@@ -50,20 +38,6 @@ def times []: nothing -> list<record> {
     ]
 }
 
-def commit [dir: path]: nothing -> string {
-    let config = [
-        user.name=test
-        user.email=test@example.com
-        commit.gpgsign=false
-        core.hooksPath=/dev/null
-    ]
-    let git = [-C, $dir, ...($config | each { [-c $in] } | flatten)]
-    ^git ...$git init --quiet
-    ^git ...$git add --all
-    ^git ...$git commit --quiet -m test
-    ^git -C $dir rev-parse --short HEAD | str trim
-}
-
 # Nu's mktemp reads TMPDIR from the environment the process started with, so time-directories runs in a process of its own.
 def time-directories-in-child [
     tmp: path
@@ -73,7 +47,7 @@ def time-directories-in-child [
 ]: nothing -> record {
     let script = $"
         source ($NUFMT | to nuon)
-        let formatter = { name: nuten command: $env.FORMATTER directory: {|dir| [format --list-different $dir] } }
+        let formatter = { name: nuten directory: {|dir| [$env.FORMATTER format --list-different $dir] } }
         time-directories [$env.FILE] $env.CORPUS [$formatter \($formatter | update name nufmt\)] 1 null
     "
     let environment = { TMPDIR: $tmp, FILE: $file, CORPUS: $corpus, FORMATTER: $formatter }
@@ -82,131 +56,19 @@ def time-directories-in-child [
 }
 
 @test
-def "formatters passes nuten path of file and nufmt stdin flag" [] {
+def "formatters gives nuten file path and nufmt stdin flag" [] {
     let actual = formatters /bin/nuten /bin/nufmt
 
-    assert equal (do $actual.0.arguments a.nu) [format --stdin-filepath a.nu -]
-    assert equal (do $actual.1.arguments a.nu) [--stdin]
+    assert equal (do $actual.0.file a.nu) [/bin/nuten format --stdin-filepath a.nu -]
+    assert equal (do $actual.1.file a.nu) [/bin/nufmt --stdin]
 }
 
 @test
 def "formatters checks directory with nuten and dry-runs it with nufmt" [] {
     let actual = formatters /bin/nuten /bin/nufmt
 
-    assert equal (do $actual.0.directory /d) [format --list-different /d]
-    assert equal (do $actual.1.directory /d) [--dry-run /d]
-}
-
-@test
-def "problem gives nothing for formatter that keeps ast" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls|length"
-
-    let actual = problem $file "ls|length" $context.nuten $context.oracle 100sec
-
-    assert equal $actual null
-}
-
-@test
-def "problem tells formatter that fails" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls | ("
-
-    let actual = problem $file "ls | (" $context.nuten $context.oracle 100sec
-
-    assert equal $actual fails
-}
-
-@test
-def "problem tells formatter that changes ast" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls | length"
-    let splitting = { name: sed, command: sed, arguments: {|file| ['s/|/;/'] } }
-
-    let actual = problem $file "ls | length" $splitting $context.oracle 100sec
-
-    assert equal $actual "changes the AST"
-}
-
-@test
-def "problem tells formatter that times out" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls"
-    let sleeping = { name: sleep, command: sleep, arguments: {|file| [10] } }
-
-    let actual = problem $file "ls" $sleeping $context.oracle 1sec
-
-    assert equal $actual "times out"
-}
-
-@test
-def "problem runs formatter in directory of file" [] {
-    let context = $in
-    let file = put $context.dir sub/a.nu "ls"
-    let telling = { name: sh, command: sh, arguments: {|file| [-c, "pwd > ran-in; cat"] } }
-
-    problem $file "ls" $telling $context.oracle 100sec
-
-    assert (($context.dir | path join sub ran-in) | path exists)
-}
-
-@test
-def "verdict marks file not in utf-8 unreadable" [] {
-    let context = $in
-    let file = put $context.dir a.nu (0x[ff fe])
-
-    let actual = verdict $file [$context.nuten] $context.oracle 100sec
-
-    assert equal $actual { file: $file unreadable: true problems: [] }
-}
-
-@test
-def "verdict lists problem of each formatter" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls | ("
-    let formatters = [$context.nuten, ($context.nuten | update name other)]
-
-    let actual = verdict $file $formatters $context.oracle 100sec
-
-    assert equal $actual.problems [{ formatter: nuten reason: fails } { formatter: other reason: fails }]
-}
-
-@test
-def "report compares only files every formatter keeps" [] {
-    let verdicts = [
-        { file: a.nu, unreadable: false, problems: [] }
-        { file: b.nu, unreadable: false, problems: [{ formatter: nufmt, reason: fails }] }
-        { file: c.nu, unreadable: true, problems: [] }
-    ]
-
-    let actual = $verdicts | report
-
-    assert equal $actual.compared [a.nu]
-}
-
-@test
-def "report lists unreadable files apart" [] {
-    let verdicts = [
-        { file: a.nu, unreadable: false, problems: [] }
-        { file: c.nu, unreadable: true, problems: [] }
-    ]
-
-    let actual = $verdicts | report
-
-    assert equal $actual.unreadable [c.nu]
-}
-
-@test
-def "excluded groups files by formatter and reason" [] {
-    let verdicts = [
-        { file: a.nu, unreadable: false, problems: [{ formatter: nufmt, reason: fails }] }
-        { file: b.nu, unreadable: false, problems: [] }
-        { file: c.nu, unreadable: false, problems: [{ formatter: nufmt, reason: fails }] }
-    ]
-
-    let actual = $verdicts | excluded
-
-    assert equal $actual [{ formatter: nufmt reason: fails files: [a.nu c.nu] }]
+    assert equal (do $actual.0.directory /d) [/bin/nuten format --list-different /d]
+    assert equal (do $actual.1.directory /d) [/bin/nufmt --dry-run /d]
 }
 
 @test
@@ -223,21 +85,22 @@ def "time-file times each formatter on file" [] {
 }
 
 @test
-def "time-file runs formatter in directory of file" [] {
+def "time-file runs formatter in directory of file with file on stdin" [] {
     let context = $in
     let file = put $context.dir sub/a.nu "ls"
-    let telling = { name: sh, command: sh, arguments: {|file| [-c, "pwd > ran-in; cat"] } }
+    let telling = { name: sh, file: {|file| [sh, -c, "pwd > ran-in; cat > got"] } }
 
     time-file $file [$telling] 1
 
     assert (($context.dir | path join sub ran-in) | path exists)
+    assert equal (open --raw ($context.dir | path join sub got)) "ls"
 }
 
 @test
 def "time-file runs formatter once to warm up and then as many times as asked" [] {
     let context = $in
     let file = put $context.dir a.nu "ls"
-    let counting = { name: sh, command: sh, arguments: {|file| [-c, "echo >> ran; cat"] } }
+    let counting = { name: sh, file: {|file| [sh, -c, "echo >> ran; cat"] } }
 
     time-file $file [$counting] 2
 
@@ -250,7 +113,7 @@ def "time-file gives median of runs" [] {
     let file = put $context.dir a.nu "ls"
     # The three runs after the warmup sleep 0.1, 2, and 0.4 seconds, so only their median lies in [0.4, 0.8).
     let script = "echo >> ran; case $(wc -l < ran) in 2) sleep 0.1 ;; 3) sleep 2 ;; *) sleep 0.4 ;; esac; cat"
-    let sleeping = { name: nuten, command: sh, arguments: {|file| [-c, $script] } }
+    let sleeping = { name: nuten, file: {|file| [sh, -c, $script] } }
 
     let actual = time-file $file [$sleeping] 3
 
@@ -288,51 +151,13 @@ def "command-line quotes each word" [] {
 }
 
 @test
-def "staged-path keeps path of file in corpus" [] {
-    let actual = staged-path /corpus/a/b.nu /corpus 0
-
-    assert equal $actual a/b.nu
-}
-
-@test
-def "staged-path puts file from outside corpus in directory of its own" [] {
-    let actual = [/elsewhere/a.nu, /corpus-other/a.nu]
-        | enumerate
-        | each {|entry| staged-path $entry.item /corpus $entry.index }
-
-    assert equal $actual [also/0/a.nu also/1/a.nu]
-}
-
-@test
-def "staged-path drops leading dot from each part" [] {
-    let actual = staged-path /corpus/.github/.hidden.nu /corpus 0
-
-    assert equal $actual _github/_hidden.nu
-}
-
-@test
-def "stage copies each file to its staged path" [] {
-    let context = $in
-    let corpus = $context.dir | path join corpus
-    let inside = put $corpus .dir/a.nu "ls"
-    let outside = put $context.dir b.nu "ls | length"
-
-    let actual = stage [$inside $outside] $corpus
-
-    assert equal (open --raw ($actual | path join _dir/a.nu)) "ls"
-    assert equal (open --raw ($actual | path join also/1/b.nu)) "ls | length"
-    rm --recursive $actual
-}
-
-@test
 def "time-directory runs formatter on directory from inside it" [] {
     let context = $in
     let dir = $context.dir | path join staged
     mkdir $dir
     let telling = {
         name: sh
-        command: sh
-        directory: {|dir| [-c, $"pwd > ran-in; echo ($dir) > ran-on"] }
+        directory: {|dir| [sh, -c, $"pwd > ran-in; echo ($dir) > ran-on"] }
     }
 
     time-directory $dir [$telling] 1 []
@@ -357,7 +182,7 @@ def "time-directory runs formatter behind prefix" [] {
     let context = $in
     let dir = $context.dir | path join staged
     mkdir $dir
-    let telling = { name: sh, command: sh, directory: {|dir| [-c, 'echo $PREFIXED > ran'] } }
+    let telling = { name: sh, directory: {|dir| [sh, -c, 'echo $PREFIXED > ran'] } }
 
     time-directory $dir [$telling] 1 [env PREFIXED=yes]
 
@@ -369,7 +194,7 @@ def "time-directory fails naming directory when formatter crashes" [] {
     let context = $in
     let dir = $context.dir | path join staged
     mkdir $dir
-    let crashing = { name: sh, command: sh, directory: {|dir| [-c, 'exit 2'] } }
+    let crashing = { name: sh, directory: {|dir| [sh, -c, 'exit 2'] } }
 
     let actual = try { time-directory $dir [$crashing] 1 [] } catch {|error| $error.msg }
 
@@ -409,8 +234,7 @@ def "time-group runs formatters on all allowed cpus and on fastest one" [] {
     let seen = $context.dir | path join seen
     let telling = {
         name: nuten
-        command: sh
-        directory: {|dir| [-c, $"grep Cpus_allowed_list /proc/self/status >> ($seen)"] }
+        directory: {|dir| [sh, -c, $"grep Cpus_allowed_list /proc/self/status >> ($seen)"] }
     }
     let cpus = { all: (allowed-cpus), one: (fastest-allowed-cpu) }
     let allowed = open /proc/self/status | lines | where $it starts-with Cpus_allowed_list | first
@@ -558,7 +382,7 @@ def "memory weighs nothing without gnu time" [] {
 @test
 def "memory fails naming formatter that crashes" [] {
     let context = $in
-    let crashing = { name: sh, command: sh, directory: {|dir| [-c, 'exit 2'] } }
+    let crashing = { name: sh, directory: {|dir| [sh, -c, 'exit 2'] } }
 
     let actual = try {
         memory $context.dir [$crashing]
@@ -576,8 +400,7 @@ def "memory runs formatter on directory from inside it" [] {
     mkdir $dir
     let telling = {
         name: sh
-        command: sh
-        directory: {|dir| [-c, $"pwd > ran-in; echo ($dir) > ran-on"] }
+        directory: {|dir| [sh, -c, $"pwd > ran-in; echo ($dir) > ran-on"] }
     }
 
     memory $dir [$telling]
@@ -690,91 +513,6 @@ def "percentile does not round whole rank up" [] {
 }
 
 @test
-def "versions reads nufmt, nixpkgs-nushell, and corpus from lock" [] {
-    let context = $in
-    let node = {|rev| { locked: { rev: $rev, lastModified: 1700000000 } } }
-    let lock = {
-        nodes: {
-            nufmt: (do $node a)
-            nixpkgs-nushell: (do $node b)
-            corpus-nupm: (do $node c)
-            fenix: (do $node d)
-        }
-    }
-    let path = put $context.dir flake.lock ($lock | to json)
-    let date = 2023-11-14T22:13:20+00:00
-
-    let actual = versions $context.dir $path
-
-    assert equal $actual.nufmt { rev: a date: $date }
-    assert equal $actual.nixpkgs-nushell { rev: b date: $date }
-    assert equal $actual.corpus { nupm: { rev: c date: $date } }
-}
-
-@test
-def "versions gives no version for node lock lacks" [] {
-    let context = $in
-    let path = put $context.dir flake.lock ({ nodes: {} } | to json)
-
-    let actual = versions $context.dir $path
-
-    assert equal $actual.nufmt null
-    assert equal $actual.nixpkgs-nushell null
-}
-
-@test
-def "versions gives no locked version without lock" [] {
-    let context = $in
-
-    let actual = versions $context.dir ($context.dir | path join flake.lock)
-
-    assert equal ($actual | reject nuten) { nufmt: null nixpkgs-nushell: null corpus: null }
-}
-
-@test
-def "versions names nuten by commit of tree it is in" [] {
-    let context = $in
-    put $context.dir a.nu "ls"
-    let commit = commit $context.dir
-
-    let actual = versions $context.dir ($context.dir | path join flake.lock)
-
-    assert equal $actual.nuten $commit
-}
-
-@test
-def "versions marks nuten dirty when tree has changes" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls"
-    let commit = commit $context.dir
-    "ls | length" | save --force $file
-
-    let actual = versions $context.dir ($context.dir | path join flake.lock)
-
-    assert equal $actual.nuten $"($commit)-dirty"
-}
-
-@test
-def "versions gives no nuten version outside git tree" [] {
-    let context = $in
-
-    let actual = with-env { GIT_CEILING_DIRECTORIES: ($context.dir | path dirname) } {
-        versions $context.dir ($context.dir | path join flake.lock)
-    }
-
-    assert equal $actual.nuten null
-}
-
-@test
-def "environment gives machine without host name" [] {
-    let actual = environment
-
-    assert equal ($actual | columns) [os kernel cpu cpus]
-    assert equal $actual.kernel (^uname -r | str trim)
-    assert ($actual.cpus > 0)
-}
-
-@test
 def "main takes files under corpus and after it" [] {
     let context = $in
     let corpus = $context.dir | path join corpus
@@ -864,7 +602,7 @@ def "main gives size of each binary" [] {
 def "main gives versions nufmt and corpus are locked at" [] {
     let context = $in
     put $context.dir a.nu "ls"
-    let nodes = open --raw $DEV_LOCK | from json | get nodes
+    let nodes = open --raw $LOCK | from json | get nodes
 
     # nuten stands in for nufmt too, and fails on the flag nufmt takes.
     let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
