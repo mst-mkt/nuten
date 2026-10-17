@@ -14,6 +14,15 @@ Nuten is not an official Nushell project.
 The official formatter is [nufmt](https://github.com/nushell/nufmt).
 The documentation [introduces Nuten](https://nuten.keito.dev/about/what-is-nuten), including how it differs from nufmt.
 
+## Benchmark
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/benchmark/readme-dark.svg" />
+  <img src="./assets/benchmark/readme-light.svg" alt="Bar charts comparing Nuten with nufmt in speed, memory, binary size, and correctness" />
+</picture>
+
+More results and how they are measured are on the [performance page](https://nuten.keito.dev/about/performance).
+
 ## Installation
 
 ```nushell
