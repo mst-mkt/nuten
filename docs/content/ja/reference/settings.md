@@ -109,6 +109,13 @@ title: 設定項目
 
 `.gitignore` などに書かれたファイルを、対象から外すかどうかを指定します。
 
+## editorconfig
+
+**Type** `boolean` \
+**Default** `true`
+
+`.editorconfig` から設定を読むかどうかを指定します。読むプロパティと優先順は、[設定](/ja/guide/configuration#editorconfig) の EditorConfig の節にあります。
+
 ## overrides
 
 **Type** `{ include: string[], exclude?: string[], line_width?, indent_style?, indent_width?, line_ending?, commas? }[]` \

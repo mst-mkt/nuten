@@ -66,6 +66,39 @@ From [Prettier](/guide/integrations/prettier), they go in the Prettier config.
 
 Each entry picks files with `include` and `exclude`, and applies the rest of its settings to them. When a file is picked by several entries, the later one takes precedence.
 
+## EditorConfig
+
+When there is an `.editorconfig`, its settings are used as well.
+
+```ini [.editorconfig]
+root = true
+
+[*.nu]
+indent_style = space
+indent_size = 2
+max_line_length = 100
+```
+
+`.editorconfig` is found as follows.
+
+- Every `.editorconfig` found from the directory of the file being formatted, through each parent in turn, is read
+- The lookup stops at an `.editorconfig` with `root = true`, or at the directory holding `.git` or the like
+- When several `.editorconfig` files give the same property, the one nearest the file being formatted is used
+
+These properties are read. Properties not in the table, and values nuten cannot take, are ignored.
+
+| EditorConfig      | nuten          | Note                                              |
+| ----------------- | -------------- | ------------------------------------------------- |
+| `indent_style`    | `indent_style` |                                                   |
+| `indent_size`     | `indent_width` | When indenting with spaces                        |
+| `tab_width`       | `indent_width` | When indenting with tabs; `indent_size` if absent |
+| `end_of_line`     | `line_ending`  |                                                   |
+| `max_line_length` | `line_width`   | `off` leaves lines unbroken by width              |
+
+Settings written in the config file and its `overrides` take precedence over `.editorconfig`. Set [`editorconfig`](/reference/settings#editorconfig) to `false` to leave `.editorconfig` unread.
+
+From [dprint](/guide/integrations/dprint) and [Prettier](/guide/integrations/prettier), nuten does not read `.editorconfig`. Prettier reads `.editorconfig` itself and passes it to nuten as Prettier options.
+
 ## JSON Schema
 
 `nuten schema` prints the JSON Schema of the config file.

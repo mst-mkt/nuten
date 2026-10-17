@@ -109,6 +109,13 @@ Patterns are relative to the directory of the config file. A pattern without `/`
 
 Specifies whether to skip files listed in `.gitignore` and the like.
 
+## editorconfig
+
+**Type** `boolean` \
+**Default** `true`
+
+Specifies whether to take settings from `.editorconfig`. The properties taken and their precedence are in the EditorConfig section of [Configuration](/guide/configuration#editorconfig).
+
 ## overrides
 
 **Type** `{ include: string[], exclude?: string[], line_width?, indent_style?, indent_width?, line_ending?, commas? }[]` \
