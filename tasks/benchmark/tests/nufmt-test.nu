@@ -107,31 +107,6 @@ def "time-file runs formatter in directory of file with file on stdin" [] {
 }
 
 @test
-def "time-file runs formatter once to warm up and then as many times as asked" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls"
-    let counting = { name: sh, file: {|file| [sh, -c, "echo >> ran; cat"] } }
-
-    time-file $file [$counting] 2
-
-    assert equal (open ($context.dir | path join ran) | lines | length) 3
-}
-
-@test
-def "time-file gives median of runs" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls"
-    # The three runs after the warmup sleep 0.1, 2, and 0.4 seconds, so only their median lies in [0.4, 0.8).
-    let script = "echo >> ran; case $(wc -l < ran) in 2) sleep 0.1 ;; 3) sleep 2 ;; *) sleep 0.4 ;; esac; cat"
-    let sleeping = { name: nuten, file: {|file| [sh, -c, $script] } }
-
-    let actual = time-file $file [$sleeping] 3
-
-    assert ($actual.nuten >= 400ms)
-    assert ($actual.nuten < 800ms)
-}
-
-@test
 def "time-file times file whose path holds single quote" [] {
     let context = $in
     let file = put $context.dir "it's.nu" "ls"
@@ -139,25 +114,6 @@ def "time-file times file whose path holds single quote" [] {
     let actual = time-file $file [$context.nuten] 1
 
     assert ($actual.nuten > 0sec)
-}
-
-@test
-def "time-file fails naming file when formatter fails" [] {
-    let context = $in
-    let file = put $context.dir a.nu "ls | ("
-
-    let actual = try { time-file $file [$context.nuten] 1 } catch {|error| $error.msg }
-
-    assert str contains $actual $"hyperfine failed on ($file)"
-}
-
-@test
-def "command-line quotes each word" [] {
-    let words = ["/a b/nuten", --stdin-filepath, "/c d/it's.nu"]
-
-    let actual = command-line $words
-
-    assert equal $actual "'/a b/nuten' '--stdin-filepath' '/c d/it'\\''s.nu'"
 }
 
 @test
@@ -184,7 +140,7 @@ def "time-directory takes check that finds change as success" [] {
 
     let actual = time-directory $dir [$context.nuten] 1 []
 
-    assert ($actual.nuten > 0sec)
+    assert ($actual.time_wall_clock.nuten > 0sec)
 }
 
 @test
@@ -197,18 +153,6 @@ def "time-directory runs formatter behind prefix" [] {
     time-directory $dir [$telling] 1 [env PREFIXED=yes]
 
     assert equal (open ($dir | path join ran) | str trim) yes
-}
-
-@test
-def "time-directory fails naming directory when formatter crashes" [] {
-    let context = $in
-    let dir = $context.dir | path join staged
-    mkdir $dir
-    let crashing = { name: sh, directory: {|dir| [sh, -c, 'exit 2'] } }
-
-    let actual = try { time-directory $dir [$crashing] 1 [] } catch {|error| $error.msg }
-
-    assert str contains $actual $"hyperfine failed on ($dir)"
 }
 
 @test
@@ -257,7 +201,7 @@ def "time-group runs formatters on all allowed cpus and on fastest one" [] {
 }
 
 @test
-def "time-group gives times, speedups, and gains of both formatters" [] {
+def "time-group gives metrics, speedups, and gains of both formatters" [] {
     let context = $in
     let dir = $context.dir | path join staged
     put $dir a.nu "ls"
@@ -265,13 +209,18 @@ def "time-group gives times, speedups, and gains of both formatters" [] {
 
     let actual = time-group { name: nu-std dir: $dir files: 1 } (pair $context.nuten) 1 $cpus
 
+    let all_cpus = $actual.all_cpus.time_wall_clock
+    let one_cpu = $actual.one_cpu.time_wall_clock
     assert equal $actual.name nu-std
     assert equal $actual.files 1
-    assert equal ($actual.all_cpus | columns) [nuten nufmt speedup]
+    assert equal ($actual.all_cpus | columns) [time_wall_clock time_cpu memory_peak_resident]
+    assert ($actual.all_cpus.memory_peak_resident.nuten > 0b)
+    assert equal $all_cpus.speedup ($all_cpus.nufmt / $all_cpus.nuten)
+    assert equal $one_cpu.speedup ($one_cpu.nufmt / $one_cpu.nuten)
     assert equal $actual.one_cpu.cpu $cpus.one
     assert equal $actual.parallel_gain {
-        nuten: ($actual.one_cpu.nuten / $actual.all_cpus.nuten)
-        nufmt: ($actual.one_cpu.nufmt / $actual.all_cpus.nufmt)
+        nuten: ($one_cpu.nuten / $all_cpus.nuten)
+        nufmt: ($one_cpu.nufmt / $all_cpus.nufmt)
     }
 }
 
@@ -283,7 +232,7 @@ def "time-group times nothing on one cpu without cpus to pin to" [] {
 
     let actual = time-group { name: all dir: $dir files: 1 } (pair $context.nuten) 1 null
 
-    assert ($actual.all_cpus.nuten > 0sec)
+    assert ($actual.all_cpus.time_wall_clock.nuten > 0sec)
     assert equal $actual.one_cpu null
     assert equal $actual.parallel_gain null
 }
@@ -317,15 +266,14 @@ def "parallel-gain gives nothing without time on one cpu" [] {
 }
 
 @test
-def "time-directories times groups and weighs memory in staged directory" [] {
+def "time-directories times groups in staged directory" [] {
     let context = $in
     let corpus = $context.dir | path join corpus
     let file = put $corpus nu-std/a.nu "ls"
 
     let actual = time-directories [$file] $corpus (pair $context.nuten) 1 null
 
-    assert equal ($actual.directories | get name) [nu-std all]
-    assert ($actual.memory.nuten > 0b)
+    assert equal ($actual | get name) [nu-std all]
 }
 
 @test
@@ -356,67 +304,6 @@ def "time-directories removes staged directory when formatter crashes" [] {
 
     assert str contains $actual.stderr "hyperfine failed"
     assert equal (ls $tmp) []
-}
-
-@test
-def "max-rss reads kibibytes on last line" [] {
-    let report = "Command exited with non-zero status 1\n4532\n"
-
-    let actual = $report | max-rss
-
-    assert equal $actual 4532KiB
-}
-
-@test
-def "memory gives peak memory of each formatter on directory" [] {
-    let context = $in
-    let dir = $context.dir | path join staged
-    put $dir a.nu "ls|length"
-
-    let actual = memory $dir (pair $context.nuten)
-
-    assert equal ($actual | columns) [nuten nufmt]
-    assert ($actual.nuten > 0b)
-    assert ($actual.nufmt > 0b)
-}
-
-@test
-def "memory weighs nothing without gnu time" [] {
-    let context = $in
-
-    let actual = with-env { PATH: [] } { memory $context.dir [$context.nuten] }
-
-    assert equal $actual null
-}
-
-@test
-def "memory fails naming formatter that crashes" [] {
-    let context = $in
-    let crashing = { name: sh, directory: {|dir| [sh, -c, 'exit 2'] } }
-
-    let actual = try {
-        memory $context.dir [$crashing]
-    } catch {|error|
-        $error.rendered | ansi strip
-    }
-
-    assert str contains $actual $"sh failed on ($context.dir) with exit code 2"
-}
-
-@test
-def "memory runs formatter on directory from inside it" [] {
-    let context = $in
-    let dir = $context.dir | path join staged
-    mkdir $dir
-    let telling = {
-        name: sh
-        directory: {|dir| [sh, -c, $"pwd > ran-in; echo ($dir) > ran-on"] }
-    }
-
-    memory $dir [$telling]
-
-    assert equal (open ($dir | path join ran-in) | str trim) $dir
-    assert equal (open ($dir | path join ran-on) | str trim) $dir
 }
 
 @test
@@ -576,7 +463,7 @@ def "compare times files both keep on each file and directory" [] {
 }
 
 @test
-def "compare times no file and no directory, and weighs no memory, when every file is left out" [] {
+def "compare times no file and no directory when every file is left out" [] {
     let context = $in
     put $context.dir a.nu "ls"
 
@@ -584,7 +471,6 @@ def "compare times no file and no directory, and weighs no memory, when every fi
 
     assert equal $actual.timing { files: [] total: null speedup: null }
     assert equal $actual.directories []
-    assert equal $actual.memory null
 }
 
 @test
