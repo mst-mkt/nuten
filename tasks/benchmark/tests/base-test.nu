@@ -2,9 +2,9 @@ use std/assert
 use std/testing *
 
 use support.nu put
-source ../base.nu
+source ../lib/base.nu
 
-const BASE = path self ../base.nu
+const MAIN = path self ../main.nu
 
 const PICKS = {
     largest: a.nu
@@ -31,13 +31,11 @@ def teardown []: record -> nothing {
     rm --recursive $in.dir
 }
 
-# Small files at the picked paths, so what reads them runs in seconds.
 def put-picks [corpus: path, picks: record]: nothing -> nothing {
     $picks | reject directory | values | each {|file| put $corpus $file "ls" } | ignore
     put $corpus ($picks.directory | path join lib.nu) "ls" | ignore
 }
 
-# A nuten that never finishes, since the real one cannot be made slow.
 def sleeper [dir: path]: nothing -> path {
     let path = $dir | path join sleeper
     "#!/bin/sh\nexec sleep 10\n" | save $path
@@ -153,9 +151,6 @@ def "nest-inputs makes nu that nuten formats" [] {
 def "inputs lists files, directory, and nests in turn" [] {
     let context = $in
     put-picks $context.corpus $PICKS
-
-    let actual = inputs $context.corpus $PICKS
-
     let expected = [
         a.nu
         b.nu
@@ -166,6 +161,9 @@ def "inputs lists files, directory, and nests in turn" [] {
         nested-records
         nested-closures
     ]
+
+    let actual = inputs $context.corpus $PICKS
+
     assert equal ($actual | get name) $expected
 }
 
@@ -266,25 +264,25 @@ def "compare marks input head timed out on" [] {
 }
 
 @test
-def "main finds no regression when head does same work as base" [] {
+def "changes finds no regression when head does same work as base" [] {
     let context = $in
     put-picks $context.corpus (open $INPUTS)
-
-    let actual = main $context.corpus $context.nuten $context.nuten
-
     let names = inputs $context.corpus (open $INPUTS) | get name
+
+    let actual = changes $context.corpus $context.nuten $context.nuten 100sec | get changes
+
     assert equal ($actual | get input | uniq) $names
     assert equal ($actual | length) (($names | length) * ($METRICS | length))
     assert equal ($actual | where regressed | length) 0
 }
 
 @test
-def "main exits with 2 naming inputs base times out on" [] {
+def "main base exits with 2 naming inputs base times out on" [] {
     let context = $in
     put-picks $context.corpus (open $INPUTS)
     let base = sleeper $context.dir
 
-    let actual = ^$nu.current-exe $BASE --time-limit 1sec $context.corpus $base $context.nuten
+    let actual = ^$nu.current-exe $MAIN base --time-limit 1sec $context.corpus $base $context.nuten
         | complete
 
     assert equal $actual.exit_code 2
@@ -292,11 +290,11 @@ def "main exits with 2 naming inputs base times out on" [] {
 }
 
 @test
-def "main exits with 2 naming tools not found" [] {
+def "main base exits with 2 naming tools not found" [] {
     let context = $in
 
     let actual = with-env { PATH: [] } {
-        ^$nu.current-exe $BASE $context.corpus $context.nuten $context.nuten | complete
+        ^$nu.current-exe $MAIN base $context.corpus $context.nuten $context.nuten | complete
     }
 
     assert equal $actual.exit_code 2

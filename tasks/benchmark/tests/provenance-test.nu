@@ -2,7 +2,7 @@ use std/assert
 use std/testing *
 
 use support.nu put
-source ../provenance.nu
+source ../lib/provenance.nu
 
 @before-each
 def setup []: nothing -> record {

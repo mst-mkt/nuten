@@ -2,7 +2,7 @@ use std/assert
 use std/testing *
 
 use support.nu [nuten-formatter, put]
-source ../comparable.nu
+source ../lib/comparable.nu
 
 @before-each
 def setup []: nothing -> record {

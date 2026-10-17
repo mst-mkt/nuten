@@ -1,8 +1,8 @@
-# Compares the work two nuten do on each input under valgrind, whose counts hold still between runs unlike time.
+# Valgrind counts hold still between runs, unlike time.
 
 use cpus.nu any-allowed-cpu
 
-const INPUTS = path self inputs.nuon
+const INPUTS = path self ../inputs.nuon
 const DEPTH = 64
 const METRICS = [instructions, allocations, allocated_bytes, peak_bytes]
 # Code elsewhere can shift the counts a little through inlining, which is no regression.
@@ -16,27 +16,15 @@ const TIMED_OUT = {
     peak_bytes: null
 }
 
-# How the work of head differs from that of base on each input.
-export def main [
-    corpus: path # The corpus directory, as NUTEN_CORPUS names it
-    base: path # The nuten binary to compare against
-    head: path # The nuten binary to compare
-    --time-limit: duration = 100sec # How long one run may take before it is cut off
-]: nothing -> table {
-    let missing = [valgrind, timeout, taskset] | where { which $in | is-empty }
-    if not ($missing | is-empty) {
-        print --stderr $"($missing | str join ', ') not found"
-        exit 2
-    }
-
+export def changes [corpus: path, base: path, head: path, time_limit: duration]: nothing -> record {
     let inputs = inputs $corpus (open $INPUTS)
     let before = measure-each $base $inputs $time_limit
-    let unmeasured = $before | where timed_out | get input
-    if not ($unmeasured | is-empty) {
-        print --stderr $"base timed out on ($unmeasured | str join ', ')"
-        exit 2
+    let base_timed_out = $before | where timed_out | get input
+    if not ($base_timed_out | is-empty) {
+        return { base_timed_out: $base_timed_out, changes: null }
     }
-    compare $before (measure-each $head $inputs $time_limit)
+
+    { base_timed_out: [], changes: (compare $before (measure-each $head $inputs $time_limit)) }
 }
 
 def measure-each [nuten: path, inputs: list<record>, limit: duration]: nothing -> table {
@@ -50,7 +38,6 @@ def compare [before: table, after: table]: nothing -> table {
     | flatten
 }
 
-# A timeout has no counts to compare, and is a regression in itself.
 def compare-input [before: record, after: record]: nothing -> list<record> {
     if $after.timed_out {
         return [
@@ -106,7 +93,6 @@ def file-inputs [corpus: path, picks: record]: nothing -> list<record> {
       }
 }
 
-# nuten exits with 1 when a file would change, which is no failure here.
 def directory-input [corpus: path, directory: string]: nothing -> record {
     {
         name: $directory
@@ -116,7 +102,7 @@ def directory-input [corpus: path, directory: string]: nothing -> record {
     }
 }
 
-# Nests are made rather than picked, since the corpus nests too shallow to show a blowup.
+# Nests are made rather than picked, since the corpus nests too shallowly to show a blowup.
 # A path in the corpus keeps nuten from taking a config found from where this runs.
 def nest-inputs [corpus: path]: nothing -> list<record> {
     let generated = $corpus | path join generated.nu
@@ -144,7 +130,6 @@ def nest [open: string, close: string, depth: int]: nothing -> string {
     $"($opens)1($closes)"
 }
 
-# DHAT is skipped after a timeout, which it would only reach again.
 def measure [nuten: path, input: record, limit: duration]: nothing -> record {
     let cachegrind = run-valgrind [
         --tool=cachegrind
@@ -162,8 +147,7 @@ def measure [nuten: path, input: record, limit: duration]: nothing -> record {
     { timed_out: false, instructions: ($cachegrind | instructions), ...($dhat | allocations) }
 }
 
-# The report goes to its own file, so what nuten writes to stderr does not mix in.
-# One CPU leaves nuten one worker, so the counts do not hang on how its threads take turns.
+# One CPU leaves nuten one worker, so the counts do not depend on how its threads take turns.
 def run-valgrind [
     tool: list<string>
     nuten: path
@@ -191,7 +175,6 @@ def run-valgrind [
     $report
 }
 
-# Valgrind groups the digits with commas, which into int does not read.
 def instructions []: string -> int {
     str replace --all ',' ''
     | parse --regex 'I refs:\s+(?<count>\d+)'

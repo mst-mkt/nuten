@@ -2,9 +2,9 @@ use std/assert
 use std/testing *
 
 use support.nu put
-source ../select.nu
+source ../lib/select.nu
 
-const SELECT = path self ../select.nu
+const MAIN = path self ../main.nu
 
 @before-each
 def setup []: nothing -> record {
@@ -226,7 +226,7 @@ def "render puts header before nuon" [] {
 }
 
 @test
-def "main picks from nu files that nuten formats anywhere under corpus" [] {
+def "main select picks from nu files that nuten formats anywhere under corpus" [] {
     let context = $in
     let long_pipeline = 1..100 | each { 'ls' } | str join ' | '
     put $context.corpus large.nu $"# (1..200 | each { 'x' } | str join)"
@@ -243,19 +243,19 @@ def "main picks from nu files that nuten formats anywhere under corpus" [] {
         directory: nu-std
     }
 
-    let actual = ^$nu.current-exe $SELECT $context.corpus $context.nuten | complete
+    let actual = ^$nu.current-exe $MAIN select $context.corpus $context.nuten | complete
 
     assert equal $actual.exit_code 0 $actual.stderr
     assert equal ($actual.stdout | from nuon) $expected
 }
 
 @test
-def "main prints nuon nuten leaves unchanged as inputs.nuon" [] {
+def "main select prints nuon nuten leaves unchanged as inputs.nuon" [] {
     let context = $in
     put $context.corpus a.nu "ls"
     put $context.corpus nu-std/std/lib.nu "ls"
 
-    let actual = ^$nu.current-exe $SELECT $context.corpus $context.nuten | complete
+    let actual = ^$nu.current-exe $MAIN select $context.corpus $context.nuten | complete
 
     let check = $actual.stdout
         | ^$context.nuten format --check --stdin-filepath $OUTPUT -
@@ -264,21 +264,21 @@ def "main prints nuon nuten leaves unchanged as inputs.nuon" [] {
 }
 
 @test
-def "main exits with 2 when corpus holds no nu file" [] {
+def "main select exits with 2 when corpus holds no nu file" [] {
     let context = $in
 
-    let actual = ^$nu.current-exe $SELECT $context.corpus $context.nuten | complete
+    let actual = ^$nu.current-exe $MAIN select $context.corpus $context.nuten | complete
 
     assert equal $actual.exit_code 2
     assert str contains $actual.stderr "no .nu file"
 }
 
 @test
-def "main exits with 2 naming rule no file meets" [] {
+def "main select exits with 2 naming rule no file meets" [] {
     let context = $in
     put $context.corpus a.nu "ls"
 
-    let actual = ^$nu.current-exe $SELECT $context.corpus $context.nuten | complete
+    let actual = ^$nu.current-exe $MAIN select $context.corpus $context.nuten | complete
 
     assert equal $actual.exit_code 2
     assert str contains $actual.stderr "largest_in_stdlib"

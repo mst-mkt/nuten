@@ -31,7 +31,6 @@ export def fastest-allowed-cpu []: nothing -> int {
     $frequencies | where frequency == $fastest | first | get cpu
 }
 
-# A machine without cpufreq, as some virtual machines are, tells no frequency, so every CPU counts the same there.
 def max-frequency [cpu: int]: nothing -> int {
     let path = $"/sys/devices/system/cpu/cpu($cpu)/cpufreq/cpuinfo_max_freq"
     if ($path | path exists) {

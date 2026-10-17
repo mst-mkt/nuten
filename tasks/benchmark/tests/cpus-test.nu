@@ -1,9 +1,9 @@
 use std/assert
 use std/testing *
 
-use ../cpus.nu [allowed-cpus, any-allowed-cpu, fastest-allowed-cpu, parse-cpu-list]
+use ../lib/cpus.nu [allowed-cpus, any-allowed-cpu, fastest-allowed-cpu, parse-cpu-list]
 
-const CPUS = path self ../cpus.nu
+const CPUS = path self ../lib/cpus.nu
 
 @test
 def "allowed-cpus gives cpus process may run on" [] {

@@ -2,7 +2,7 @@ use std/assert
 use std/testing *
 
 use support.nu put
-source ../staging.nu
+source ../lib/staging.nu
 
 @before-each
 def setup []: nothing -> record {

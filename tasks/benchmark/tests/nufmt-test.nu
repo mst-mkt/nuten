@@ -1,11 +1,12 @@
 use std/assert
 use std/testing *
 
-use ../cpus.nu [allowed-cpus, fastest-allowed-cpu]
+use ../lib/cpus.nu [allowed-cpus, fastest-allowed-cpu]
 use support.nu [nuten-formatter, put]
-source ../nufmt.nu
+source ../lib/nufmt.nu
 
-const NUFMT = path self ../nufmt.nu
+const MAIN = path self ../main.nu
+const NUFMT = path self ../lib/nufmt.nu
 
 @before-each
 def setup []: nothing -> record {
@@ -17,6 +18,8 @@ def setup []: nothing -> record {
     {
         dir: $dir
         nuten: (nuten-formatter $env.NUTEN)
+        # nuten stands in for nufmt too, and fails on the flag nufmt takes.
+        failing_nufmt: $env.NUTEN
         oracle: $env.NUTEN_ORACLE
     }
 }
@@ -24,6 +27,13 @@ def setup []: nothing -> record {
 @after-each
 def teardown []: record -> nothing {
     rm --recursive $in.dir
+}
+
+# Each file passes through unchanged, so the oracle finds the same AST.
+def keeping-nufmt [dir: path]: nothing -> path {
+    let nufmt = put $dir nufmt "#!/bin/sh\ncase \"$1\" in --stdin) cat ;; esac\n"
+    chmod +x $nufmt
+    $nufmt
 }
 
 def pair [formatter: record]: nothing -> list<record> {
@@ -513,130 +523,89 @@ def "percentile does not round whole rank up" [] {
 }
 
 @test
-def "main takes files under corpus and after it" [] {
+def "compare takes files under corpus and those also given" [] {
     let context = $in
     let corpus = $context.dir | path join corpus
     let inside = put $corpus sub/a.nu "ls"
     let after = put $context.dir b.nu "ls"
 
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $corpus $after --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle
+    let actual = compare $corpus $context.nuten.command $context.failing_nufmt $context.oracle [$after] 100sec 1
 
     assert equal $actual.compared []
     assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [$after $inside] }]
 }
 
 @test
-def "main takes file given twice once" [] {
+def "compare takes file given twice once" [] {
     let context = $in
     let file = put $context.dir a.nu "ls"
 
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $context.dir $file --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [$file] 100sec 1
 
     assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [$file] }]
 }
 
 @test
-def "main takes relative paths from where it runs" [] {
+def "compare takes relative paths from where it runs" [] {
     let context = $in
-    let corpus = $context.dir | path join corpus
-    mkdir $corpus
+    let inside = put $context.dir corpus/nu-std/a.nu "ls"
     let after = put $context.dir b.nu "ls"
+    ^ln -s $context.nuten.command ($context.dir | path join nuten)
+    ^ln -s $context.oracle ($context.dir | path join oracle)
+    let nufmt = keeping-nufmt $context.dir | path basename
 
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
     let actual = do {
         cd $context.dir
-        main corpus b.nu --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle
+        compare corpus ./nuten $"./($nufmt)" ./oracle [b.nu] 100sec 1
     }
 
-    assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [$after] }]
+    assert equal $actual.compared [$after $inside]
+    assert equal ($actual.directories | get name) [nu-std all]
 }
 
 @test
-def "main times no file when every file is left out" [] {
+def "compare times files both keep on each file and directory" [] {
+    let context = $in
+    let file = put $context.dir nu-std/a.nu "ls"
+    let nufmt = keeping-nufmt $context.dir
+
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1
+
+    assert equal ($actual.timing.files | get file) [$file]
+    assert equal ($actual.directories | get name) [nu-std all]
+}
+
+@test
+def "compare times no file and no directory, and weighs no memory, when every file is left out" [] {
     let context = $in
     put $context.dir a.nu "ls"
 
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1
 
     assert equal $actual.timing { files: [] total: null speedup: null }
-}
-
-@test
-def "main times no directory when every file is left out" [] {
-    let context = $in
-    put $context.dir a.nu "ls"
-
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
-
     assert equal $actual.directories []
-}
-
-@test
-def "main weighs no memory when every file is left out" [] {
-    let context = $in
-    put $context.dir a.nu "ls"
-
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
-
     assert equal $actual.memory null
 }
 
 @test
-def "main gives size of each binary" [] {
+def "compare gives versions, machine, and binary sizes" [] {
     let context = $in
     put $context.dir a.nu "ls"
+    let nodes = open --raw $LOCK | from json | get nodes
     let size = ls $context.nuten.command | get 0.size
 
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1
 
+    assert equal $actual.versions.nufmt.rev $nodes.nufmt.locked.rev
+    assert equal $actual.environment.cpus (sys cpu | length)
     assert equal $actual.sizes { nuten: $size nufmt: $size }
 }
 
 @test
-def "main gives versions nufmt and corpus are locked at" [] {
-    let context = $in
-    put $context.dir a.nu "ls"
-    let nodes = open --raw $LOCK | from json | get nodes
-
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
-
-    assert equal $actual.versions.nufmt.rev $nodes.nufmt.locked.rev
-    assert equal $actual.versions.corpus.nupm.rev $nodes.corpus-nupm.locked.rev
-}
-
-@test
-def "main gives machine it runs on" [] {
-    let context = $in
-    put $context.dir a.nu "ls"
-
-    # nuten stands in for nufmt too, and fails on the flag nufmt takes.
-    let actual = main $context.dir --nuten $context.nuten.command --nufmt $context.nuten.command --oracle $context.oracle --runs 1
-
-    assert equal $actual.environment.cpus (sys cpu | length)
-}
-
-@test
-def "main exits with 2 naming flags not given" [] {
+def "main nufmt exits with 2 when asked for no run" [] {
     let context = $in
 
-    let actual = ^$nu.current-exe $NUFMT $context.dir --nuten $context.nuten.command | complete
-
-    assert equal $actual.exit_code 2
-    assert str contains $actual.stderr "--nufmt, --oracle not given"
-}
-
-@test
-def "main exits with 2 when asked for no run" [] {
-    let context = $in
-
-    let actual = ^$nu.current-exe $NUFMT $context.dir --nuten a --nufmt b --oracle c --runs 0
+    let actual = ^$nu.current-exe $MAIN nufmt $context.dir a b c --runs 0
         | complete
 
     assert equal $actual.exit_code 2
@@ -644,11 +613,11 @@ def "main exits with 2 when asked for no run" [] {
 }
 
 @test
-def "main exits with 2 naming tools not found" [] {
+def "main nufmt exits with 2 naming tools not found" [] {
     let context = $in
 
     let actual = with-env { PATH: [] } {
-        ^$nu.current-exe $NUFMT $context.dir --nuten a --nufmt b --oracle c | complete
+        ^$nu.current-exe $MAIN nufmt $context.dir a b c | complete
     }
 
     assert equal $actual.exit_code 2

@@ -1,12 +1,18 @@
-use ../tasks/benchmark/base.nu
+use ../tasks/benchmark/lib/base.nu
 
 # The body of a pull request comment telling how the work of head differs from that of base.
 def main [
     corpus: path # The corpus directory, as NUTEN_CORPUS names it
     base: path # The nuten binary of the base branch
     head: path # The nuten binary of the pull request
+    --time-limit: duration = 100sec # How long one run may take before it is cut off
 ]: nothing -> string {
-    base $corpus $base $head | comment
+    let result = base changes $corpus $base $head $time_limit
+    if not ($result.base_timed_out | is-empty) {
+        error make { msg: $"base timed out on ($result.base_timed_out | str join ', ')" }
+    }
+
+    $result.changes | comment
 }
 
 def comment []: table -> string {
@@ -34,7 +40,7 @@ def comment []: table -> string {
         $summary
         ...$regressions
         "### Changes"
-        ($comparison | changes | to md)
+        ($comparison | by-input | to md)
         "<details><summary>Counts</summary>"
         ...$counts
         "</details>"
@@ -42,7 +48,7 @@ def comment []: table -> string {
     | str join "\n\n"
 }
 
-def changes []: table -> table {
+def by-input []: table -> table {
     let comparison = $in
     let metrics = $comparison | where metric != 'timed_out' | get metric | uniq
 

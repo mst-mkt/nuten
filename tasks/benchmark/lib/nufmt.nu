@@ -1,65 +1,40 @@
-# Compares nuten with nufmt, over only the files both format without changing what nu parses.
-
 use comparable.nu screen
 use cpus.nu [allowed-cpus, fastest-allowed-cpu]
 use provenance.nu [environment, versions]
 use staging.nu stage
 
-const REPOSITORY = path self ../..
-const LOCK = path self ../../nix/dev/flake.lock
+const REPOSITORY = path self ../../..
+const LOCK = path self ../../../nix/dev/flake.lock
 
-# Prints which files the comparison takes, which each formatter leaves out and why, how both fare on the files compared, and the versions and machine behind the numbers.
-def main [
-    corpus: path # The corpus directory, as NUTEN_CORPUS names it
-    ...also: path # More files to compare, such as the one nufmt benchmarks itself on
-    --nuten: path # The nuten binary
-    --nufmt: path # The nufmt binary
-    --oracle: path # The nuten-oracle binary, which asks nu whether formatting keeps the AST
-    --time-limit: duration = 100sec # How long a formatter may take on one file before it is cut off
-    --runs: int = 5 # How many times each formatter is timed on each file
+export def compare [
+    corpus: path
+    nuten: path
+    nufmt: path
+    oracle: path
+    also: list<path>
+    time_limit: duration
+    runs: int
 ]: nothing -> record {
-    let missing_flags = [[flag, value]; [--nuten, $nuten], [--nufmt, $nufmt], [--oracle, $oracle]]
-        | where value == null
-        | get flag
-    if not ($missing_flags | is-empty) {
-        print --stderr $"($missing_flags | str join ', ') not given"
-        exit 2
-    }
-    if $runs < 1 {
-        print --stderr "--runs must be at least 1"
-        exit 2
-    }
-    let missing_tools = [timeout, hyperfine] | where { which $in | is-empty }
-    if not ($missing_tools | is-empty) {
-        print --stderr $"($missing_tools | str join ', ') not found"
-        exit 2
-    }
-
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
-    let oracle = $oracle | path expand
     let corpus = $corpus | path expand
-    let versions = versions $REPOSITORY $LOCK
-    let environment = environment
-    let sizes = sizes $formatters
+    let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
+    let selection = screen $files $formatters ($oracle | path expand) $time_limit
     let cpus = if (which taskset | is-empty) {
         null
     } else {
         { all: (allowed-cpus), one: (fastest-allowed-cpu) }
     }
-
-    let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
-    let selection = screen $files $formatters $oracle $time_limit
     # One file or directory at a time, since formatters timed side by side would slow each other down.
     let timing = $selection.compared | each {|file| time-file $file $formatters $runs } | summarize
     let directories = time-directories $selection.compared $corpus $formatters $runs $cpus
 
     {
-        versions: $versions
-        environment: $environment
+        versions: (versions $REPOSITORY $LOCK)
+        environment: (environment)
         ...$selection
         timing: $timing
         ...$directories
-        sizes: $sizes
+        sizes: (sizes $formatters)
     }
 }
 
