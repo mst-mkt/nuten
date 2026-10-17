@@ -29,18 +29,21 @@ Compares `nuten` with nufmt on the files both format without breaking.
 It times them under hyperfine, and counts the instructions on each file under valgrind.
 
 ```nushell
-nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle
+nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle | to json | save -f compare.json
 ```
 
 ```
 {
+    schema: 1
+    measured_at
+    runs
     versions: { nuten, nufmt, nushell, corpus }
     environment: { os, kernel, cpu, cpus }
-    compared: [file]
+    files
     excluded: [{ formatter, reason, files }]
     unreadable: [file]
     timing: {
-        files: [{ file, time_wall_clock, memory_peak_resident, instructions }]
+        files: [{ file, size, time_wall_clock, memory_peak_resident, instructions }]
         total: { time_wall_clock, instructions }
         speedup: { time_wall_clock: { median, p10 }, instructions: { median, p10 } }
     }

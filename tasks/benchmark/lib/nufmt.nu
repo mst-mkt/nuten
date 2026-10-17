@@ -9,6 +9,7 @@ const LOCK = path self ../../../nix/dev/flake.lock
 const FILE_METRICS = [time_wall_clock, memory_peak_resident]
 const DIRECTORY_METRICS = [time_wall_clock, time_cpu, memory_peak_resident]
 const SPEEDUP_METRICS = [time_wall_clock, instructions]
+const SCHEMA = 1
 const VALGRIND_SLOWDOWN = 100
 
 export def compare [
@@ -21,6 +22,7 @@ export def compare [
     runs: int
     cpu: oneof<int, nothing>
 ]: nothing -> record {
+    let measured_at = date now
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
     let corpus = $corpus | path expand
     let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
@@ -34,18 +36,34 @@ export def compare [
         | merge ($instructions | wrap instructions)
         | each {|row|
               time-file $row.file $formatters $runs --cpu $cpu
+              | insert size (ls ($row.file | path expand) | get 0.size)
               | insert instructions $row.instructions
           }
         | summarize
     let directories = time-directories $selection.compared $corpus $formatters $runs $cpu
 
     {
+        schema: $SCHEMA
+        measured_at: $measured_at
+        runs: $runs
         versions: (versions $REPOSITORY $LOCK)
         environment: (environment)
-        ...$selection
-        timing: $timing
+        files: ($files | length)
+        excluded: ($selection.excluded | each { update files { each { relative $corpus } } })
+        unreadable: ($selection.unreadable | each { relative $corpus })
+        timing: ($timing | update files { each { update file { relative $corpus } } })
         directories: $directories
         sizes: (sizes $formatters)
+    }
+}
+
+def relative [corpus: path]: path -> path {
+    let file = $in
+
+    if ($file | str starts-with $"($corpus)/") {
+        $file | path relative-to $corpus
+    } else {
+        $file
     }
 }
 
