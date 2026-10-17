@@ -64,29 +64,6 @@ def input [dir: path, source: string]: nothing -> record {
 }
 
 @test
-def "instructions reads count from cachegrind report" [] {
-    let report = "==1== \n==1== I refs:        345,770,384\n"
-
-    let actual = $report | instructions
-
-    assert equal $actual 345770384
-}
-
-@test
-def "allocations reads blocks and bytes from dhat report" [] {
-    let report = [
-        "==1== Total:     22,178 bytes in 147 blocks"
-        "==1== At t-gmax: 11,274 bytes in 23 blocks"
-        "==1== At t-end:  8,736 bytes in 2 blocks"
-    ]
-        | str join "\n"
-
-    let actual = $report | allocations
-
-    assert equal $actual { allocations: 147 allocated_bytes: 22178 peak_bytes: 11274 }
-}
-
-@test
 def "nest wraps value in brackets to depth" [] {
     let actual = nest "(" ")" 3
 

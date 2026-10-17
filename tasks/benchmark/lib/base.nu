@@ -1,6 +1,4 @@
-# CI runners have no hardware counters, and valgrind counts the same on any machine.
-
-use cpus.nu any-allowed-cpu
+use valgrind.nu [count-allocations, count-instructions]
 
 const INPUTS = path self ../inputs.nuon
 const DEPTH = 64
@@ -131,64 +129,20 @@ def nest [open: string, close: string, depth: int]: nothing -> string {
 }
 
 def measure [nuten: path, input: record, limit: duration]: nothing -> record {
-    let cachegrind = run-valgrind [
-        --tool=cachegrind
-        --cache-sim=no
-        --cachegrind-out-file=/dev/null
-    ] $nuten $input $limit
-    if $cachegrind == null {
+    let run = {
+        name: $input.name
+        words: [$nuten, ...$input.arguments]
+        stdin: $input.stdin
+        exit_codes: $input.exit_codes
+    }
+    let instructions = count-instructions $run $limit
+    if $instructions == null {
         return $TIMED_OUT
     }
-    let dhat = run-valgrind [--tool=dhat --dhat-out-file=/dev/null] $nuten $input $limit
-    if $dhat == null {
+    let allocations = count-allocations $run $limit
+    if $allocations == null {
         return $TIMED_OUT
     }
 
-    { timed_out: false, instructions: ($cachegrind | instructions), ...($dhat | allocations) }
-}
-
-# One CPU leaves nuten one worker, so the counts do not depend on how its threads take turns.
-def run-valgrind [
-    tool: list<string>
-    nuten: path
-    input: record
-    limit: duration
-]: nothing -> oneof<string, nothing> {
-    let log = mktemp --tmpdir
-    let seconds = $limit / 1sec
-    let cpu = any-allowed-cpu
-    let result = $input.stdin
-        | ^timeout $seconds taskset --cpu-list $cpu valgrind ...$tool $"--log-file=($log)" $nuten ...$input.arguments
-        | complete
-    let report = open --raw $log
-    rm $log
-
-    if $result.exit_code == 124 {
-        return null
-    }
-    if ($report | is-empty) {
-        error make { msg: $"valgrind did not run on ($input.name): ($result.stderr)" }
-    }
-    if $result.exit_code not-in $input.exit_codes {
-        error make { msg: $"($input.name) failed under valgrind: ($result.stderr)" }
-    }
-    $report
-}
-
-def instructions []: string -> int {
-    str replace --all ',' ''
-    | parse --regex 'I refs:\s+(?<count>\d+)'
-    | get 0.count
-    | into int
-}
-
-def allocations []: string -> record {
-    let report = $in | str replace --all ',' ''
-    let total = $report
-        | parse --regex 'Total:\s+(?<bytes>\d+) bytes in (?<blocks>\d+) blocks'
-        | first
-        | into int bytes blocks
-    let peak = $report | parse --regex 'At t-gmax:\s+(?<bytes>\d+) bytes' | first | into int bytes
-
-    { allocations: $total.blocks, allocated_bytes: $total.bytes, peak_bytes: $peak.bytes }
+    { timed_out: false, instructions: $instructions, ...$allocations }
 }
