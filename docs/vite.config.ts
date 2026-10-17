@@ -5,6 +5,7 @@ import { oxContent } from "@ox-content/vite-plugin";
 import { defineConfig } from "vite-plus";
 import { theme } from "./theme";
 import { ansi } from "./theme/ansi";
+import { benchmark } from "./theme/benchmark";
 import { table } from "./theme/table";
 
 const themeCss = join(import.meta.dirname, "theme/style.css");
@@ -40,7 +41,7 @@ export default defineConfig({
           tools: {},
         },
       },
-      transformers: [ansi, table],
+      transformers: [ansi, benchmark, table],
       siteMaps: true,
       i18n: {
         enabled: true,
@@ -66,8 +67,17 @@ export default defineConfig({
       },
     }),
   ],
+  test: {
+    include: ["theme/**/*.test.ts"],
+  },
   run: {
     tasks: {
+      test: {
+        command: "vp test run",
+        cache: {
+          output: [],
+        },
+      },
       dev: {
         command: "vp dev",
         cache: false,
