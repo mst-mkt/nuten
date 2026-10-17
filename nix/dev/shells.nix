@@ -33,7 +33,6 @@ in
       nuten
 
       pkgs.hyperfine
-      pkgs.time
     ]
     ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
       pkgs.valgrind # Valgrind is broken on darwin
