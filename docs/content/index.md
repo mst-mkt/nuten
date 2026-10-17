@@ -143,5 +143,6 @@ The same formatter, from the CLI to the tools you already use.
 - [<span class="icon-[simple-icons--githubactions]"></span> GitHub Actions](/guide/integrations/ci#github-actions)
 - [<span class="icon-[simple-icons--gitlab]"></span> GitLab CI](/guide/integrations/ci#gitlab-ci)
 - [<span class="icon-[simple-icons--npm]"></span> JavaScript](/guide/integrations/javascript)
+- [<span class="icon-[simple-icons--editorconfig]"></span> EditorConfig](/guide/configuration#editorconfig)
 
 :::

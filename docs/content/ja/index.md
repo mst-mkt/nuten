@@ -143,5 +143,6 @@ CLI から普段使っているツールまで、同じフォーマッタで整�
 - [<span class="icon-[simple-icons--githubactions]"></span> GitHub Actions](/ja/guide/integrations/ci#github-actions)
 - [<span class="icon-[simple-icons--gitlab]"></span> GitLab CI](/ja/guide/integrations/ci#gitlab-ci)
 - [<span class="icon-[simple-icons--npm]"></span> JavaScript](/ja/guide/integrations/javascript)
+- [<span class="icon-[simple-icons--editorconfig]"></span> EditorConfig](/ja/guide/configuration#editorconfig)
 
 :::
