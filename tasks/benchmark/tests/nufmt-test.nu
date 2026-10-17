@@ -104,6 +104,14 @@ def "formatters checks directory with nuten and dry-runs it with nufmt" [] {
 }
 
 @test
+def "formatters gives rejection code of nuten and none of nufmt" [] {
+    let actual = formatters /bin/nuten /bin/nufmt
+
+    assert equal $actual.0.rejection_exit_code 2
+    assert equal $actual.1.rejection_exit_code? null
+}
+
+@test
 def "time-file times each formatter on file" [] {
     let context = $in
     let file = put $context.dir a.nu "ls|length"

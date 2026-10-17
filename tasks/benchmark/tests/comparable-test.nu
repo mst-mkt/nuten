@@ -36,9 +36,42 @@ def "problem gives nothing for formatter that keeps ast" [] {
 @test
 def "problem tells formatter that fails" [] {
     let context = $in
+    let file = put $context.dir a.nu "ls"
+    let failing = { name: sh, file: {|file| [sh, -c, "exit 1"] } }
+
+    let actual = problem $file "ls" $failing $context.oracle 100sec
+
+    assert equal $actual fails
+}
+
+@test
+def "problem tells formatter that rejects file nu rejects" [] {
+    let context = $in
     let file = put $context.dir a.nu "ls | ("
 
     let actual = problem $file "ls | (" $context.nuten $context.oracle 100sec
+
+    assert equal $actual "rejects a file nu rejects"
+}
+
+@test
+def "problem tells formatter that rejects file nu accepts as failing" [] {
+    let context = $in
+    let file = put $context.dir a.nu "ls"
+    let rejecting = { name: sh, file: {|file| [sh, -c, "exit 2"] }, rejection_exit_code: 2 }
+
+    let actual = problem $file "ls" $rejecting $context.oracle 100sec
+
+    assert equal $actual fails
+}
+
+@test
+def "problem tells formatter whose exit code is not its rejection code as failing" [] {
+    let context = $in
+    let file = put $context.dir a.nu "ls | ("
+    let failing = { name: sh, file: {|file| [sh, -c, "exit 1"] }, rejection_exit_code: 2 }
+
+    let actual = problem $file "ls | (" $failing $context.oracle 100sec
 
     assert equal $actual fails
 }
@@ -90,11 +123,17 @@ def "verdict marks file not in utf-8 unreadable" [] {
 def "verdict lists problem of each formatter" [] {
     let context = $in
     let file = put $context.dir a.nu "ls | ("
-    let formatters = [$context.nuten, ($context.nuten | update name other)]
+    let formatters = [
+        $context.nuten
+        ($context.nuten | reject rejection_exit_code | update name other)
+    ]
 
     let actual = verdict $file $formatters $context.oracle 100sec
 
-    assert equal $actual.problems [{ formatter: nuten reason: fails } { formatter: other reason: fails }]
+    assert equal $actual.problems [
+        { formatter: nuten reason: "rejects a file nu rejects" }
+        { formatter: other reason: fails }
+    ]
 }
 
 @test

@@ -56,6 +56,7 @@ def formatters [nuten: path, nufmt: path]: nothing -> list<record> {
             command: $nuten
             file: {|file| [$nuten, format, --stdin-filepath, $file, -] }
             directory: {|dir| [$nuten, format, --list-different, $dir] }
+            rejection_exit_code: 2
         }
         {
             name: nufmt

@@ -48,6 +48,9 @@ def problem [
     match $formatted.exit_code {
         0 => {}
         124 => { return "times out" }
+        $code if $code == $formatter.rejection_exit_code? and (nu-rejects $file) => {
+            return "rejects a file nu rejects"
+        }
         _ => { return fails }
     }
     let output = mktemp --tmpdir --suffix .nu
@@ -60,6 +63,16 @@ def problem [
         1 => "changes the AST"
         _ => { error make { msg: $"nuten-oracle failed on ($file): ($compared.stderr)" } }
     }
+}
+
+# Nu also rejects a file whose modules it cannot find, so SYNTAX_ERRORS in the corpus test pins the files nuten rejects.
+# The corpus holds no config files, so nuten exits with its rejection code there only on a syntax error.
+def nu-rejects [file: path]: nothing -> bool {
+    let checked = with-env { FILE: $file } {
+        ^$nu.current-exe --no-config-file --commands 'nu-check $env.FILE' | complete
+    }
+
+    ($checked.stdout | str trim) == "false"
 }
 
 def report []: list<record> -> record {

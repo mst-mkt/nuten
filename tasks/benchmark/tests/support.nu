@@ -11,5 +11,6 @@ export def nuten-formatter [nuten: path]: nothing -> record {
         command: $nuten
         file: {|file| [$nuten, format, --stdin-filepath, $file, -] }
         directory: {|dir| [$nuten, format, --list-different, $dir] }
+        rejection_exit_code: 2
     }
 }
