@@ -2,12 +2,14 @@ use comparable.nu screen
 use hyperfine.nu medians
 use provenance.nu [environment, versions]
 use staging.nu stage
+use valgrind.nu count-instructions
 
 const REPOSITORY = path self ../../..
 const LOCK = path self ../../../nix/dev/flake.lock
 const FILE_METRICS = [time_wall_clock, memory_peak_resident]
 const DIRECTORY_METRICS = [time_wall_clock, time_cpu, memory_peak_resident]
 const SPEEDUP_METRICS = [time_wall_clock, instructions]
+const VALGRIND_SLOWDOWN = 100
 
 export def compare [
     corpus: path
@@ -23,9 +25,17 @@ export def compare [
     let corpus = $corpus | path expand
     let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
     let selection = screen $files $formatters ($oracle | path expand) $time_limit
+    let instructions = instructions-of-files $selection.compared $formatters (
+        $time_limit * $VALGRIND_SLOWDOWN
+    )
     # One file or directory at a time, since formatters timed side by side would slow each other down.
     let timing = $selection.compared
-        | each {|file| time-file $file $formatters $runs --cpu $cpu }
+        | wrap file
+        | merge ($instructions | wrap instructions)
+        | each {|row|
+              time-file $row.file $formatters $runs --cpu $cpu
+              | insert instructions $row.instructions
+          }
         | summarize
     let directories = time-directories $selection.compared $corpus $formatters $runs $cpu
 
@@ -62,7 +72,41 @@ def time-file [file: path, formatters: list<record>, runs: int, --cpu: int]: not
         | each {|formatter| { name: $formatter.name, words: (do $formatter.file $file) } }
     let measured = medians $commands $runs [--input, $file] $file --cpu $cpu
 
-    { file: $file, ...($measured | keep $FILE_METRICS --cpu $cpu | with-speedups) }
+    { file: $file, ...($measured | select ...$FILE_METRICS | with-speedups) }
+}
+
+# Valgrind counts the same however many runs share the CPUs, so files are counted side by side.
+def instructions-of-files [
+    files: list<path>
+    formatters: list<record>
+    limit: duration
+]: nothing -> list<record> {
+    $files | par-each --keep-order {|file| instructions-of-file $file $formatters $limit }
+}
+
+def instructions-of-file [
+    file: path
+    formatters: list<record>
+    limit: duration
+]: nothing -> record {
+    cd ($file | path dirname)
+    let source = open --raw $file
+    let counts = $formatters
+        | each {|formatter|
+              let run = {
+                  name: $"($formatter.name) with ($file)"
+                  words: (do $formatter.file $file)
+                  stdin: $source
+                  exit_codes: [0]
+              }
+              { name: $formatter.name, count: (count-instructions $run $limit) }
+          }
+    let timed_out = $counts | where count == null | get name
+    if not ($timed_out | is-empty) {
+        error make { msg: $"($timed_out | str join ', ') timed out under valgrind on ($file)" }
+    }
+
+    $counts | each { [$in.name, $in.count] } | into record | with-speedup
 }
 
 # Only the compared files are staged, so neither formatter meets a file left out of the comparison.
@@ -104,7 +148,7 @@ def time-group [
         null
     } else {
         time-directory $group.dir $formatters $runs --cpu $cpu
-        | keep $DIRECTORY_METRICS --cpu $cpu
+        | select ...$DIRECTORY_METRICS
         | with-speedups
         | insert cpu $cpu
     }
@@ -116,16 +160,6 @@ def time-group [
         one_cpu: $one_cpu
         parallel_gain: (parallel-gain $all_cpus.time_wall_clock $one_cpu.time_wall_clock?)
     }
-}
-
-# Hyperfine counts instructions on one kind of core of a hybrid CPU, so an unpinned run counts part of them and a run pinned to the other kind reads zero.
-def keep [metrics: list<string>, --cpu: int]: record -> record {
-    let measured = $in
-    let counted = $cpu != null and (
-        $measured.instructions? | default { nuten: 0, nufmt: 0 } | values | all { $in > 0 }
-    )
-
-    $measured | select ...$metrics ...(if $counted { [instructions] } else { [] })
 }
 
 def parallel-gain [
