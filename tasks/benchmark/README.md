@@ -1,42 +1,65 @@
 # benchmark
 
 The benchmarks of [Nuten](https://github.com/mst-mkt/nuten), a formatter for Nushell.
-They are Nushell scripts that run the `nuten` binary on files from the corpus.
+The `nix/dev` devShell has the tools they need, and sets `NUTEN_CORPUS` to the corpus.
 
-## Usage
+```nushell
+nu tasks/benchmark/main.nu --help
+```
 
-`main.nu` runs each task below as a subcommand, and `nu tasks/benchmark/main.nu --help` lists them.
-Each subcommand takes the corpus first.
-The `nix/dev` devShell sets `NUTEN_CORPUS` to the corpus.
-Without Nix, `nu scripts/prepare-corpus.nu path/to/corpus` assembles it.
+## Subcommands
 
 ### base
 
-Compares the instructions and heap usage of two `nuten` builds under valgrind, on each input.
-It needs valgrind, timeout, and taskset, so it runs on Linux only.
+Compares two `nuten` builds under valgrind, and CI posts the result on pull requests.
 
 ```nushell
-nu tasks/benchmark/main.nu base path/to/corpus path/to/base/nuten path/to/head/nuten
+nu tasks/benchmark/main.nu base $env.NUTEN_CORPUS path/to/base/nuten path/to/head/nuten
 ```
 
-CI runs it on pull requests, and posts the result as a comment.
+| input                                       | metric       | base      | head      | change_percent | regressed |
+| ------------------------------------------- | ------------ | --------- | --------- | -------------- | --------- |
+| kurokirasama-nushell_scripts/update_apps.nu | instructions | 139485238 | 139486166 | 0.0            | false     |
+| kurokirasama-nushell_scripts/update_apps.nu | allocations  | 226145    | 226145    | 0.0            | false     |
+| …                                           | …            | …         | …         | …              | …         |
 
 ### nufmt
 
-Compares the time of `nuten` and nufmt with hyperfine, on the files both format without breaking, which `nuten-oracle` finds.
-It needs timeout and hyperfine.
+Compares `nuten` with nufmt under hyperfine, on the files both format without breaking.
 
 ```nushell
-nu tasks/benchmark/main.nu nufmt path/to/corpus path/to/nuten path/to/nufmt path/to/nuten-oracle
+nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle
+```
+
+```
+{
+    versions: { nuten, nufmt, nixpkgs-nushell, corpus }
+    environment: { os, kernel, cpu, cpus }
+    compared: [file]
+    excluded: [{ formatter, reason, files }]
+    unreadable: [file]
+    timing: { files: [{ file, nuten, nufmt, speedup }], total, speedup: { median, p10 } }
+    directories: [{ name, files, all_cpus, one_cpu, parallel_gain }]
+    sizes: { nuten, nufmt }
+}
 ```
 
 ### select
 
-Picks the inputs of `base` from the corpus, such as the largest file and the one with the most pipes.
-Run it again after updating the corpus.
+Picks the inputs of `base` from the corpus.
 
 ```nushell
-nu tasks/benchmark/main.nu select path/to/corpus path/to/nuten | save -f tasks/benchmark/inputs.nuon
+nu tasks/benchmark/main.nu select $env.NUTEN_CORPUS path/to/nuten | save -f tasks/benchmark/inputs.nuon
+```
+
+```nushell
+{
+    largest: "nu_scripts/custom-completions/auto-generate/completions/mvn.nu"
+    most_interpolations: "kurokirasama-nushell_scripts/update_apps.nu"
+    most_pipes: "nu_scripts/sourced/nu_rust_ast/rust_ast.nu"
+    largest_in_stdlib: "nu-std/std/help/mod.nu"
+    directory: nu-std
+}
 ```
 
 ## Tests
