@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="456" viewBox="0 0 720 456" role="img">
+  <title>Speed, time to format 1,497 files: nuten 58 ms, nufmt 162 ms. Memory, peak usage while formatting 1,497 files: nuten 24.5 MiB, nufmt 52.3 MiB. Binary size, size of the executable: nuten 3.2 MiB, nufmt 12.9 MiB. Correctness, files where formatting changed the AST, out of 1,752 files in the corpus: nuten 0 files, nufmt 254 files</title>
+  <text x="0" y="18" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+    <tspan font-weight="bold" fill="#1f2328">Speed</tspan>
+    <tspan fill="#59636e">· time to format 1,497 files</tspan>
+  </text>
+  <text x="0" y="48" fill="#1f2328" font-weight="bold" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nuten</text>
+  <rect x="64" y="34" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="34" width="199.8" height="18" rx="3" fill="#1f7f6b"/>
+  <text y="48" font-size="13" font-weight="bold" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" x="273.8" fill="#1f7f6b">2.8x faster</text>
+  <text x="632" y="48" fill="#1f2328" font-weight="bold" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">58 ms</text>
+  <text x="0" y="78" fill="#1f2328" font-weight="normal" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nufmt</text>
+  <rect x="64" y="64" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="64" width="556" height="18" rx="3" fill="#818b98"/>
+  <text x="632" y="78" fill="#1f2328" font-weight="normal" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">162 ms</text>
+  <text x="0" y="124" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+    <tspan font-weight="bold" fill="#1f2328">Memory</tspan>
+    <tspan fill="#59636e">· peak usage while formatting 1,497 files</tspan>
+  </text>
+  <text x="0" y="154" fill="#1f2328" font-weight="bold" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nuten</text>
+  <rect x="64" y="140" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="140" width="260.9" height="18" rx="3" fill="#1f7f6b"/>
+  <text y="154" font-size="13" font-weight="bold" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" x="334.9" fill="#1f7f6b">2.1x less</text>
+  <text x="632" y="154" fill="#1f2328" font-weight="bold" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">24.5 MiB</text>
+  <text x="0" y="184" fill="#1f2328" font-weight="normal" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nufmt</text>
+  <rect x="64" y="170" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="170" width="556" height="18" rx="3" fill="#818b98"/>
+  <text x="632" y="184" fill="#1f2328" font-weight="normal" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">52.3 MiB</text>
+  <text x="0" y="230" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+    <tspan font-weight="bold" fill="#1f2328">Binary size</tspan>
+    <tspan fill="#59636e">· size of the executable</tspan>
+  </text>
+  <text x="0" y="260" fill="#1f2328" font-weight="bold" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nuten</text>
+  <rect x="64" y="246" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="246" width="140" height="18" rx="3" fill="#1f7f6b"/>
+  <text y="260" font-size="13" font-weight="bold" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" x="214" fill="#1f7f6b">4.0x smaller</text>
+  <text x="632" y="260" fill="#1f2328" font-weight="bold" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">3.2 MiB</text>
+  <text x="0" y="290" fill="#1f2328" font-weight="normal" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nufmt</text>
+  <rect x="64" y="276" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="276" width="556" height="18" rx="3" fill="#818b98"/>
+  <text x="632" y="290" fill="#1f2328" font-weight="normal" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">12.9 MiB</text>
+  <text x="0" y="336" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+    <tspan font-weight="bold" fill="#1f2328">Correctness</tspan>
+    <tspan fill="#59636e">· files where formatting changed the AST, out of 1,752 files in the corpus</tspan>
+  </text>
+  <text x="0" y="366" fill="#1f2328" font-weight="bold" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nuten</text>
+  <rect x="64" y="352" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="352" width="0" height="18" rx="3" fill="#1f7f6b"/>
+  <text y="366" font-size="13" font-weight="bold" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" x="74" fill="#1f7f6b">keeps every AST</text>
+  <text x="632" y="366" fill="#1f2328" font-weight="bold" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">0 files</text>
+  <text x="0" y="396" fill="#1f2328" font-weight="normal" font-size="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">nufmt</text>
+  <rect x="64" y="382" width="556" height="18" rx="3" fill="#eff2f5"/>
+  <rect x="64" y="382" width="556" height="18" rx="3" fill="#818b98"/>
+  <text x="632" y="396" fill="#1f2328" font-weight="normal" font-size="13" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">254 files</text>
+  <text x="0" y="433" fill="#59636e" font-size="12" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">Speed and memory are measured on the 1,497 corpus files that both format without failing or changing the AST.</text>
+  <text x="0" y="451" fill="#59636e" font-size="12" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">Measured on 2026-10-17 with nuten 162a378 and nufmt ce67377 on Intel Core Ultra 9 185H (22 threads).</text>
+</svg>
