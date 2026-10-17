@@ -280,7 +280,7 @@ fn format_writes_nothing_to_stdout_when_editorconfig_of_stdin_filepath_cannot_be
     let args = ["--stdin-filepath", "d/a.nu", "-"];
     let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     assert_eq!(
         problems(&output),
         format!("{}: not a regular file\n", editorconfig.display())
@@ -294,7 +294,7 @@ fn format_writes_nothing_to_stdout_when_editorconfig_of_unwritten_stdin_filepath
     let args = ["--stdin-filepath", "d/new/a.nu", "-"];
     let output = format_stdin_in(&dir, &args, BLOCK.as_bytes());
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(stdout(&output), "");
     assert_eq!(
         problems(&output),
         format!("{}: not a regular file\n", editorconfig.display())

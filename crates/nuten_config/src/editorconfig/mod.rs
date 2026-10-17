@@ -392,7 +392,7 @@ mod tests {
             ("/r", "[*]\nindent_size = 2\n"),
             ("/r/d", "[*]\nindent_size = UNSET\n"),
         ];
-        assert!(file_changes(&files, "/r/d/x.nu").is_empty());
+        assert_eq!(file_changes(&files, "/r/d/x.nu"), []);
     }
 
     #[test]
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn value_runs_to_end_of_line() {
         let text = "[*]\nindent_size = 2 = 3\nend_of_line = lf ; c\n";
-        assert!(file_changes(&[("/r", text)], "/r/x.nu").is_empty());
+        assert_eq!(file_changes(&[("/r", text)], "/r/x.nu"), []);
     }
 
     #[test]
@@ -442,7 +442,7 @@ mod tests {
 
     #[test]
     fn pairs_before_any_section_hold_for_no_file() {
-        assert!(file_changes(&[("/r", "indent_size = 2\n")], "/r/x.nu").is_empty());
+        assert_eq!(file_changes(&[("/r", "indent_size = 2\n")], "/r/x.nu"), []);
     }
 
     #[test]
@@ -487,7 +487,7 @@ mod tests {
     fn indent_size_of_tab_takes_tab_width() {
         let pairs = [("indent_size", "tab"), ("tab_width", "3")];
         assert_eq!(changes(&pairs, IndentStyle::Space), [THREE]);
-        assert!(changes(&[("indent_size", "tab")], IndentStyle::Space).is_empty());
+        assert_eq!(changes(&[("indent_size", "tab")], IndentStyle::Space), []);
     }
 
     #[test]
@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn tab_width_alone_gives_no_indent_width_with_spaces() {
-        assert!(changes(&[("tab_width", "8")], IndentStyle::Space).is_empty());
+        assert_eq!(changes(&[("tab_width", "8")], IndentStyle::Space), []);
     }
 
     #[test]

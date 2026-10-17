@@ -570,7 +570,7 @@ mod tests {
             matching("a?.nu", &["ab.nu", "a.nu", "abc.nu", "a日.nu"]),
             ["ab.nu", "a日.nu"]
         );
-        assert!(matching("d?a.nu", &["d/a.nu"]).is_empty());
+        assert_eq!(matching("d?a.nu", &["d/a.nu"]), Vec::<&str>::new());
     }
 
     #[test]
@@ -666,16 +666,22 @@ mod tests {
 
     #[test]
     fn number_range_is_empty_when_first_is_greater() {
-        assert!(matching("a{3..1}", &["a1", "a2", "a3"]).is_empty());
+        assert_eq!(matching("a{3..1}", &["a1", "a2", "a3"]), Vec::<&str>::new());
     }
 
     #[test]
     fn number_range_takes_no_number_beyond_i64() {
         let huge = format!("a{}", "9".repeat(30));
-        assert!(matching("a{1..9}", &[&huge]).is_empty());
+        assert_eq!(matching("a{1..9}", &[&huge]), Vec::<&str>::new());
         assert_eq!(matching("a{1..9}*", &[&huge]), [&huge]);
-        assert!(matching("a{1..9}", &["a18446744073709551621"]).is_empty());
-        assert!(matching("{0..9223372036854775807}", &["-9223372036854775809"]).is_empty());
+        assert_eq!(
+            matching("a{1..9}", &["a18446744073709551621"]),
+            Vec::<&str>::new()
+        );
+        assert_eq!(
+            matching("{0..9223372036854775807}", &["-9223372036854775809"]),
+            Vec::<&str>::new()
+        );
     }
 
     #[test]
@@ -694,7 +700,7 @@ mod tests {
 
     #[test]
     fn match_is_case_sensitive() {
-        assert!(matching("*.nu", &["a.NU"]).is_empty());
+        assert_eq!(matching("*.nu", &["a.NU"]), Vec::<&str>::new());
     }
 
     #[test]
@@ -710,20 +716,20 @@ mod tests {
     fn many_stars_fail_on_long_name_in_time() {
         let name = format!("{}.nu", "a".repeat(60));
         let section = format!("{}b", "*a".repeat(20));
-        assert!(matching(&section, &[&name]).is_empty());
+        assert_eq!(matching(&section, &[&name]), Vec::<&str>::new());
     }
 
     #[test]
     fn many_empty_alternatives_fail_on_long_name_in_time() {
         let name = format!("{}.nu", "a".repeat(60));
         let section = format!("{}x", "{,}".repeat(40));
-        assert!(matching(&section, &[&name]).is_empty());
+        assert_eq!(matching(&section, &[&name]), Vec::<&str>::new());
     }
 
     #[test]
     fn number_ranges_fail_on_long_digits_in_time() {
         let name = "1".repeat(250);
         let section = format!("{}x", "*{1..9}".repeat(50));
-        assert!(matching(&section, &[&name]).is_empty());
+        assert_eq!(matching(&section, &[&name]), Vec::<&str>::new());
     }
 }
