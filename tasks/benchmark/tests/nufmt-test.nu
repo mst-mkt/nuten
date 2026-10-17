@@ -46,15 +46,33 @@ def measured [instructions: record]: nothing -> record {
     }
 }
 
+def counts-instructions [cpu: int, dir: path]: nothing -> bool {
+    let probe = medians [{ name: probe, words: ['true'] }] 1 [] $dir --cpu $cpu
+
+    $probe.instructions?.probe? | default 0 | $in > 0
+}
+
 def pair [formatter: record]: nothing -> list<record> {
     [$formatter, ($formatter | update name nufmt)]
 }
 
 def times []: nothing -> list<record> {
     [
-        { file: a.nu, nuten: 10ms, nufmt: 40ms }
-        { file: b.nu, nuten: 20ms, nufmt: 20ms }
-        { file: c.nu, nuten: 20ms, nufmt: 30ms }
+        {
+            file: a.nu
+            time_wall_clock: { nuten: 10ms, nufmt: 40ms, speedup: 4.0 }
+            instructions: { nuten: 10, nufmt: 20, speedup: 2.0 }
+        }
+        {
+            file: b.nu
+            time_wall_clock: { nuten: 20ms, nufmt: 20ms, speedup: 1.0 }
+            instructions: { nuten: 10, nufmt: 10, speedup: 1.0 }
+        }
+        {
+            file: c.nu
+            time_wall_clock: { nuten: 20ms, nufmt: 30ms, speedup: 1.5 }
+            instructions: { nuten: 10, nufmt: 30, speedup: 3.0 }
+        }
     ]
 }
 
@@ -98,19 +116,22 @@ def "time-file times each formatter on file" [] {
 
     let actual = time-file $file (pair $context.nuten) 1
 
-    assert equal ($actual | columns) [file nuten nufmt]
+    assert equal ($actual | columns) [file time_wall_clock memory_peak_resident]
     assert equal $actual.file $file
-    assert ($actual.nuten > 0sec)
-    assert ($actual.nufmt > 0sec)
+    assert ($actual.time_wall_clock.nufmt > 0sec)
+    assert equal $actual.time_wall_clock.speedup (
+        $actual.time_wall_clock.nufmt / $actual.time_wall_clock.nuten
+    )
+    assert ($actual.memory_peak_resident.nuten > 0b)
 }
 
 @test
 def "time-file runs formatter in directory of file with file on stdin" [] {
     let context = $in
     let file = put $context.dir sub/a.nu "ls"
-    let telling = { name: sh, file: {|file| [sh, -c, "pwd > ran-in; cat > got"] } }
+    let telling = { name: nuten, file: {|file| [sh, -c, "pwd > ran-in; cat > got"] } }
 
-    time-file $file [$telling] 1
+    time-file $file (pair $telling) 1
 
     assert (($context.dir | path join sub ran-in) | path exists)
     assert equal (open --raw ($context.dir | path join sub got)) "ls"
@@ -132,13 +153,25 @@ def "time-file runs formatter on cpu given" [] {
 }
 
 @test
+def "time-file keeps instructions on cpu given where cpu counts them" [] {
+    let context = $in
+    let file = put $context.dir a.nu "ls"
+    let cpu = fastest-allowed-cpu
+    let counts = counts-instructions $cpu $context.dir
+
+    let actual = time-file $file (pair $context.nuten) 1 --cpu $cpu
+
+    assert equal ("instructions" in ($actual | columns)) $counts
+}
+
+@test
 def "time-file times file whose path holds single quote" [] {
     let context = $in
     let file = put $context.dir "it's.nu" "ls"
 
-    let actual = time-file $file [$context.nuten] 1
+    let actual = time-file $file (pair $context.nuten) 1
 
-    assert ($actual.nuten > 0sec)
+    assert ($actual.time_wall_clock.nuten > 0sec)
 }
 
 @test
@@ -219,6 +252,7 @@ def "time-group gives metrics, speedups, and gains of both formatters" [] {
     let dir = $context.dir | path join staged
     put $dir a.nu "ls"
     let cpu = fastest-allowed-cpu
+    let counts = counts-instructions $cpu $context.dir
 
     let actual = time-group { name: nu-std dir: $dir files: 1 } (pair $context.nuten) 1 $cpu
 
@@ -227,6 +261,7 @@ def "time-group gives metrics, speedups, and gains of both formatters" [] {
     assert equal $actual.name nu-std
     assert equal $actual.files 1
     assert equal ($actual.all_cpus | columns) [time_wall_clock time_cpu memory_peak_resident]
+    assert equal ("instructions" in ($actual.one_cpu | columns)) $counts
     assert ($actual.all_cpus.memory_peak_resident.nuten > 0b)
     assert equal $all_cpus.speedup ($all_cpus.nufmt / $all_cpus.nuten)
     assert equal $one_cpu.speedup ($one_cpu.nufmt / $one_cpu.nuten)
@@ -251,30 +286,39 @@ def "time-group times nothing on one cpu without cpu to pin to" [] {
 }
 
 @test
-def "one-cpu-metrics keeps instructions where cpu counts them" [] {
+def "keep keeps metrics given and instructions on cpu given where cpu counts them" [] {
     let measured = measured { nuten: 2, nufmt: 3 }
 
-    let actual = $measured | one-cpu-metrics
+    let actual = $measured | keep [time_wall_clock memory_peak_resident] --cpu 0
 
-    assert equal ($actual | columns) [time_wall_clock time_cpu memory_peak_resident instructions]
+    assert equal ($actual | columns) [time_wall_clock memory_peak_resident instructions]
 }
 
 @test
-def "one-cpu-metrics leaves out instructions where cpu reads zero" [] {
+def "keep leaves out instructions where cpu reads zero" [] {
     let measured = measured { nuten: 2, nufmt: 0 }
 
-    let actual = $measured | one-cpu-metrics
+    let actual = $measured | keep [time_wall_clock memory_peak_resident] --cpu 0
 
-    assert equal ($actual | columns) [time_wall_clock time_cpu memory_peak_resident]
+    assert equal ($actual | columns) [time_wall_clock memory_peak_resident]
 }
 
 @test
-def "one-cpu-metrics leaves out instructions hyperfine could not count" [] {
+def "keep leaves out instructions hyperfine could not count" [] {
     let measured = measured { nuten: 2, nufmt: 3 } | reject instructions
 
-    let actual = $measured | one-cpu-metrics
+    let actual = $measured | keep [time_wall_clock memory_peak_resident] --cpu 0
 
-    assert equal ($actual | columns) [time_wall_clock time_cpu memory_peak_resident]
+    assert equal ($actual | columns) [time_wall_clock memory_peak_resident]
+}
+
+@test
+def "keep leaves out instructions without cpu given" [] {
+    let measured = measured { nuten: 2, nufmt: 3 }
+
+    let actual = $measured | keep [time_wall_clock memory_peak_resident]
+
+    assert equal ($actual | columns) [time_wall_clock memory_peak_resident]
 }
 
 @test
@@ -352,44 +396,58 @@ def "with-speedup divides time of nufmt by that of nuten" [] {
 }
 
 @test
-def "summarize gives speedup of nuten on each file" [] {
-    let actual = times | summarize
+def "with-speedups gives speedup by wall time and instructions and no other metric" [] {
+    let measured = measured { nuten: 2, nufmt: 3 }
 
-    assert equal ($actual.files | select file speedup) [
-        { file: a.nu speedup: 4.0 }
-        { file: b.nu speedup: 1.0 }
-        { file: c.nu speedup: 1.5 }
-    ]
+    let actual = $measured | with-speedups
+
+    assert equal $actual.time_wall_clock.speedup 2.0
+    assert equal $actual.instructions.speedup 1.5
+    assert ("speedup" not-in ($actual.memory_peak_resident | columns))
 }
 
 @test
-def "summarize keeps time of each formatter on each file" [] {
+def "summarize keeps each file" [] {
     let actual = times | summarize
 
-    assert equal ($actual.files | select file nuten nufmt) (times)
+    assert equal $actual.files (times)
 }
 
 @test
-def "summarize totals time of each formatter" [] {
+def "summarize totals wall time and instructions of each formatter" [] {
     let actual = times | summarize
 
-    assert equal $actual.total { nuten: 50ms nufmt: 90ms }
+    assert equal $actual.total {
+        time_wall_clock: { nuten: 50ms nufmt: 90ms }
+        instructions: { nuten: 30 nufmt: 60 }
+    }
 }
 
 @test
-def "summarize gives median speedup of nuten" [] {
+def "summarize gives median speedup by wall time and instructions" [] {
     let actual = times | summarize
 
-    assert equal $actual.speedup.median 1.5
+    assert equal $actual.speedup.time_wall_clock.median 1.5
+    assert equal $actual.speedup.instructions.median 2.0
 }
 
 @test
-def "summarize gives 10th percentile speedup of nuten" [] {
-    let spread = 1..20 | each {|i| { file: $"($i).nu" nuten: 10ms nufmt: ($i * 10ms) } }
+def "summarize gives 10th percentile speedup" [] {
+    let files = 1..20
+        | each {|i| { file: $"($i).nu" time_wall_clock: { nuten: 10ms, nufmt: ($i * 10ms), speedup: $i } } }
 
-    let actual = $spread | summarize
+    let actual = $files | summarize
 
-    assert equal $actual.speedup.p10 2.0
+    assert equal $actual.speedup.time_wall_clock.p10 2
+}
+
+@test
+def "summarize gives speedup only by metrics every file has" [] {
+    let files = times | update 1 { reject instructions }
+
+    let actual = $files | summarize
+
+    assert equal ($actual.speedup | columns) [time_wall_clock]
 }
 
 @test

@@ -5,7 +5,9 @@ use staging.nu stage
 
 const REPOSITORY = path self ../../..
 const LOCK = path self ../../../nix/dev/flake.lock
+const FILE_METRICS = [time_wall_clock, memory_peak_resident]
 const DIRECTORY_METRICS = [time_wall_clock, time_cpu, memory_peak_resident]
+const SPEEDUP_METRICS = [time_wall_clock, instructions]
 
 export def compare [
     corpus: path
@@ -58,9 +60,9 @@ def time-file [file: path, formatters: list<record>, runs: int, --cpu: int]: not
     cd ($file | path dirname)
     let commands = $formatters
         | each {|formatter| { name: $formatter.name, words: (do $formatter.file $file) } }
-    let timed = medians $commands $runs [--input, $file] $file --cpu $cpu
+    let measured = medians $commands $runs [--input, $file] $file --cpu $cpu
 
-    { file: $file, ...$timed.time_wall_clock }
+    { file: $file, ...($measured | keep $FILE_METRICS --cpu $cpu | with-speedups) }
 }
 
 # Only the compared files are staged, so neither formatter meets a file left out of the comparison.
@@ -97,13 +99,13 @@ def time-group [
 ]: nothing -> record {
     let all_cpus = time-directory $group.dir $formatters $runs
         | select ...$DIRECTORY_METRICS
-        | update time_wall_clock { with-speedup }
+        | with-speedups
     let one_cpu = if $cpu == null {
         null
     } else {
         time-directory $group.dir $formatters $runs --cpu $cpu
-        | one-cpu-metrics
-        | update time_wall_clock { with-speedup }
+        | keep $DIRECTORY_METRICS --cpu $cpu
+        | with-speedups
         | insert cpu $cpu
     }
 
@@ -116,16 +118,14 @@ def time-group [
     }
 }
 
-# Hyperfine counts instructions on only one kind of core of a hybrid CPU, and reads zero on the other.
-def one-cpu-metrics []: record -> record {
+# Hyperfine counts instructions on one kind of core of a hybrid CPU, so an unpinned run counts part of them and a run pinned to the other kind reads zero.
+def keep [metrics: list<string>, --cpu: int]: record -> record {
     let measured = $in
-    let counted = $measured.instructions?
-        | default { nuten: 0, nufmt: 0 }
-        | values
-        | all { $in > 0 }
-    let metrics = if $counted { [...$DIRECTORY_METRICS, instructions] } else { $DIRECTORY_METRICS }
+    let counted = $cpu != null and (
+        $measured.instructions? | default { nuten: 0, nufmt: 0 } | values | all { $in > 0 }
+    )
 
-    $measured | select ...$metrics
+    $measured | select ...$metrics ...(if $counted { [instructions] } else { [] })
 }
 
 def parallel-gain [
@@ -162,20 +162,38 @@ def with-speedup []: record -> record {
     insert speedup ($in.nufmt / $in.nuten)
 }
 
+def with-speedups []: record -> record {
+    let measured = $in
+
+    $SPEEDUP_METRICS
+    | where $it in ($measured | columns)
+    | reduce --fold $measured {|metric, sped| $sped | update $metric { with-speedup } }
+}
+
 def summarize []: list<record> -> record {
-    let files = $in | each { with-speedup }
+    let files = $in
     if ($files | is-empty) {
         return { files: [], total: null, speedup: null }
     }
+    let metrics = $SPEEDUP_METRICS | where {|metric| $files | all { $metric in ($in | columns) } }
 
     {
         files: $files
-        total: { nuten: ($files.nuten | math sum), nufmt: ($files.nufmt | math sum) }
-        speedup: {
-            median: ($files.speedup | math median)
-            p10: ($files.speedup | percentile 10)
-        }
+        total: (
+            $metrics
+            | each {|metric| [$metric, ($files | get $metric | select nuten nufmt | math sum)] }
+            | into record
+        )
+        speedup: (
+            $metrics
+            | each {|metric| [$metric, ($files | get $metric | get speedup | median-and-p10)] }
+            | into record
+        )
     }
+}
+
+def median-and-p10 []: list<number> -> record {
+    { median: ($in | math median), p10: ($in | percentile 10) }
 }
 
 def percentile [percent: number]: list<number> -> number {

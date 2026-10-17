@@ -38,7 +38,11 @@ nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt p
     compared: [file]
     excluded: [{ formatter, reason, files }]
     unreadable: [file]
-    timing: { files: [{ file, nuten, nufmt, speedup }], total, speedup: { median, p10 } }
+    timing: {
+        files: [{ file, time_wall_clock, memory_peak_resident, instructions }]
+        total: { time_wall_clock, instructions }
+        speedup: { time_wall_clock: { median, p10 }, instructions: { median, p10 } }
+    }
     directories: [{ name, files, all_cpus, one_cpu, parallel_gain }]
     sizes: { nuten, nufmt }
 }
