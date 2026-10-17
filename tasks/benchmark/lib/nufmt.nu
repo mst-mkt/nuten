@@ -22,7 +22,9 @@ export def compare [
     let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
     let selection = screen $files $formatters ($oracle | path expand) $time_limit
     # One file or directory at a time, since formatters timed side by side would slow each other down.
-    let timing = $selection.compared | each {|file| time-file $file $formatters $runs } | summarize
+    let timing = $selection.compared
+        | each {|file| time-file $file $formatters $runs --cpu $cpu }
+        | summarize
     let directories = time-directories $selection.compared $corpus $formatters $runs $cpu
 
     {
@@ -52,11 +54,11 @@ def formatters [nuten: path, nufmt: path]: nothing -> list<record> {
     ]
 }
 
-def time-file [file: path, formatters: list<record>, runs: int]: nothing -> record {
+def time-file [file: path, formatters: list<record>, runs: int, --cpu: int]: nothing -> record {
     cd ($file | path dirname)
     let commands = $formatters
         | each {|formatter| { name: $formatter.name, words: (do $formatter.file $file) } }
-    let timed = medians $commands $runs [--input, $file] $file
+    let timed = medians $commands $runs [--input, $file] $file --cpu $cpu
 
     { file: $file, ...$timed.time_wall_clock }
 }

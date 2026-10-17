@@ -1,7 +1,7 @@
 use std/assert
 use std/testing *
 
-use ../lib/cpus.nu fastest-allowed-cpu
+use ../lib/cpus.nu [allowed-cpus, fastest-allowed-cpu]
 use support.nu [nuten-formatter, put]
 source ../lib/nufmt.nu
 
@@ -114,6 +114,21 @@ def "time-file runs formatter in directory of file with file on stdin" [] {
 
     assert (($context.dir | path join sub ran-in) | path exists)
     assert equal (open --raw ($context.dir | path join sub got)) "ls"
+}
+
+@test
+def "time-file runs formatter on cpu given" [] {
+    let context = $in
+    let file = put $context.dir a.nu "ls"
+    let telling = {
+        name: nuten
+        file: {|file| [sh, -c, "grep Cpus_allowed_list /proc/self/status > ran; cat"] }
+    }
+    let cpu = allowed-cpus | last
+
+    time-file $file (pair $telling) 1 --cpu $cpu
+
+    assert equal (open ($context.dir | path join ran) | str trim) $"Cpus_allowed_list:\t($cpu)"
 }
 
 @test
@@ -462,7 +477,7 @@ def "compare takes relative paths from where it runs" [] {
 }
 
 @test
-def "compare times files both keep on each file and directory, and on cpu given" [] {
+def "compare times files both keep on each file and directory, and directories on cpu given" [] {
     let context = $in
     let file = put $context.dir nu-std/a.nu "ls"
     let nufmt = keeping-nufmt $context.dir
@@ -473,6 +488,20 @@ def "compare times files both keep on each file and directory, and on cpu given"
     assert equal ($actual.timing.files | get file) [$file]
     assert equal ($actual.directories | get name) [nu-std all]
     assert equal $actual.directories.0.one_cpu.cpu $cpu
+}
+
+@test
+def "compare times each file on cpu given" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+    let script = "case \"$1\" in --stdin) grep Cpus_allowed_list /proc/self/status >> ran; cat ;; esac"
+    let nufmt = put $context.dir nufmt $"#!/bin/sh\n($script)\n"
+    chmod +x $nufmt
+    let cpu = allowed-cpus | last
+
+    compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1 $cpu
+
+    assert ($"Cpus_allowed_list:\t($cpu)" in (open ($context.dir | path join ran) | lines))
 }
 
 @test
