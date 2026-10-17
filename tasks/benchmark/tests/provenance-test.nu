@@ -29,13 +29,13 @@ def commit [dir: path]: nothing -> string {
 }
 
 @test
-def "versions reads nufmt, nixpkgs-nushell, and corpus from lock" [] {
+def "versions reads nufmt, nushell, and corpus from lock" [] {
     let context = $in
     let node = {|rev| { locked: { rev: $rev, lastModified: 1700000000 } } }
     let lock = {
         nodes: {
             nufmt: (do $node a)
-            nixpkgs-nushell: (do $node b)
+            nushell: (do $node b)
             corpus-nupm: (do $node c)
             fenix: (do $node d)
         }
@@ -46,7 +46,7 @@ def "versions reads nufmt, nixpkgs-nushell, and corpus from lock" [] {
     let actual = versions $context.dir $path
 
     assert equal $actual.nufmt { rev: a date: $date }
-    assert equal $actual.nixpkgs-nushell { rev: b date: $date }
+    assert equal $actual.nushell { rev: b date: $date }
     assert equal $actual.corpus { nupm: { rev: c date: $date } }
 }
 
@@ -58,7 +58,7 @@ def "versions gives nothing for node missing from lock" [] {
     let actual = versions $context.dir $path
 
     assert equal $actual.nufmt null
-    assert equal $actual.nixpkgs-nushell null
+    assert equal $actual.nushell null
 }
 
 @test
@@ -67,7 +67,7 @@ def "versions gives no locked version without lock" [] {
 
     let actual = versions $context.dir ($context.dir | path join flake.lock)
 
-    assert equal ($actual | reject nuten) { nufmt: null nixpkgs-nushell: null corpus: null }
+    assert equal ($actual | reject nuten) { nufmt: null nushell: null corpus: null }
 }
 
 @test

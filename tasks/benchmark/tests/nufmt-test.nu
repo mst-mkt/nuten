@@ -583,6 +583,7 @@ def "compare gives versions, machine, and binary sizes" [] {
     let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1 null
 
     assert equal $actual.versions.nufmt.rev $nodes.nufmt.locked.rev
+    assert equal $actual.versions.nushell.rev $nodes.nushell.locked.rev
     assert equal $actual.environment.cpus (sys cpu | length)
     assert equal $actual.sizes { nuten: $size nufmt: $size }
 }

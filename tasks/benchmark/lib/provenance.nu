@@ -17,13 +17,13 @@ def nuten-version [repository: path]: nothing -> oneof<string, nothing> {
 
 def locked-versions [lock: path]: nothing -> record {
     if not ($lock | path exists) {
-        return { nufmt: null, nixpkgs-nushell: null, corpus: null }
+        return { nufmt: null, nushell: null, corpus: null }
     }
     let nodes = open --raw $lock | from json | get nodes
 
     {
         nufmt: ($nodes | locked nufmt)
-        nixpkgs-nushell: ($nodes | locked nixpkgs-nushell)
+        nushell: ($nodes | locked nushell)
         corpus: ($nodes | corpus-versions)
     }
 }

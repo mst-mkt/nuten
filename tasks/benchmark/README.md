@@ -33,7 +33,7 @@ nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt p
 
 ```
 {
-    versions: { nuten, nufmt, nixpkgs-nushell, corpus }
+    versions: { nuten, nufmt, nushell, corpus }
     environment: { os, kernel, cpu, cpus }
     compared: [file]
     excluded: [{ formatter, reason, files }]
