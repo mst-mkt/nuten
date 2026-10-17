@@ -1,4 +1,5 @@
 use lib/base.nu
+use lib/cpus.nu fastest-allowed-cpu
 use lib/nufmt.nu
 use lib/select.nu
 
@@ -37,8 +38,9 @@ def "main nufmt" [
         stop "--runs must be at least 1"
     }
     require [timeout, hyperfine]
+    let cpu = if (which taskset | is-empty) { null } else { fastest-allowed-cpu }
 
-    nufmt compare $corpus $nuten $nufmt $oracle $also $time_limit $runs
+    nufmt compare $corpus $nuten $nufmt $oracle $also $time_limit $runs $cpu
 }
 
 # The picked inputs of base as NUON, with paths relative to the corpus.

@@ -1,4 +1,4 @@
-# Valgrind counts hold still between runs, unlike time.
+# CI runners have no hardware counters, and valgrind counts the same on any machine.
 
 use cpus.nu any-allowed-cpu
 

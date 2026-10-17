@@ -1,7 +1,7 @@
 use std/assert
 use std/testing *
 
-use ../lib/cpus.nu [allowed-cpus, fastest-allowed-cpu]
+use ../lib/cpus.nu fastest-allowed-cpu
 use support.nu [nuten-formatter, put]
 source ../lib/nufmt.nu
 
@@ -34,6 +34,16 @@ def keeping-nufmt [dir: path]: nothing -> path {
     let nufmt = put $dir nufmt "#!/bin/sh\ncase \"$1\" in --stdin) cat ;; esac\n"
     chmod +x $nufmt
     $nufmt
+}
+
+def measured [instructions: record]: nothing -> record {
+    {
+        time_wall_clock: { nuten: 1ms, nufmt: 2ms }
+        time_cpu: { nuten: 1ms, nufmt: 2ms }
+        memory_peak_resident: { nuten: 1MB, nufmt: 2MB }
+        time_user: { nuten: 1ms, nufmt: 2ms }
+        instructions: $instructions
+    }
 }
 
 def pair [formatter: record]: nothing -> list<record> {
@@ -126,7 +136,7 @@ def "time-directory runs formatter on directory from inside it" [] {
         directory: {|dir| [sh, -c, $"pwd > ran-in; echo ($dir) > ran-on"] }
     }
 
-    time-directory $dir [$telling] 1 []
+    time-directory $dir [$telling] 1
 
     assert equal (open ($dir | path join ran-in) | str trim) $dir
     assert equal (open ($dir | path join ran-on) | str trim) $dir
@@ -138,21 +148,9 @@ def "time-directory takes check that finds change as success" [] {
     let dir = $context.dir | path join staged
     put $dir a.nu "ls|length"
 
-    let actual = time-directory $dir [$context.nuten] 1 []
+    let actual = time-directory $dir [$context.nuten] 1
 
     assert ($actual.time_wall_clock.nuten > 0sec)
-}
-
-@test
-def "time-directory runs formatter behind prefix" [] {
-    let context = $in
-    let dir = $context.dir | path join staged
-    mkdir $dir
-    let telling = { name: sh, directory: {|dir| [sh, -c, 'echo $PREFIXED > ran'] } }
-
-    time-directory $dir [$telling] 1 [env PREFIXED=yes]
-
-    assert equal (open ($dir | path join ran) | str trim) yes
 }
 
 @test
@@ -190,13 +188,13 @@ def "time-group runs formatters on all allowed cpus and on fastest one" [] {
         name: nuten
         directory: {|dir| [sh, -c, $"grep Cpus_allowed_list /proc/self/status >> ($seen)"] }
     }
-    let cpus = { all: (allowed-cpus), one: (fastest-allowed-cpu) }
+    let cpu = fastest-allowed-cpu
     let allowed = open /proc/self/status | lines | where $it starts-with Cpus_allowed_list | first
 
-    time-group { name: all dir: $dir files: 0 } (pair $telling) 1 $cpus
+    time-group { name: all dir: $dir files: 0 } (pair $telling) 1 $cpu
 
     assert equal (open $seen | lines | uniq | sort) (
-        [$allowed, $"Cpus_allowed_list:\t($cpus.one)"] | uniq | sort
+        [$allowed, $"Cpus_allowed_list:\t($cpu)"] | uniq | sort
     )
 }
 
@@ -205,9 +203,9 @@ def "time-group gives metrics, speedups, and gains of both formatters" [] {
     let context = $in
     let dir = $context.dir | path join staged
     put $dir a.nu "ls"
-    let cpus = { all: (allowed-cpus), one: (fastest-allowed-cpu) }
+    let cpu = fastest-allowed-cpu
 
-    let actual = time-group { name: nu-std dir: $dir files: 1 } (pair $context.nuten) 1 $cpus
+    let actual = time-group { name: nu-std dir: $dir files: 1 } (pair $context.nuten) 1 $cpu
 
     let all_cpus = $actual.all_cpus.time_wall_clock
     let one_cpu = $actual.one_cpu.time_wall_clock
@@ -217,7 +215,7 @@ def "time-group gives metrics, speedups, and gains of both formatters" [] {
     assert ($actual.all_cpus.memory_peak_resident.nuten > 0b)
     assert equal $all_cpus.speedup ($all_cpus.nufmt / $all_cpus.nuten)
     assert equal $one_cpu.speedup ($one_cpu.nufmt / $one_cpu.nuten)
-    assert equal $actual.one_cpu.cpu $cpus.one
+    assert equal $actual.one_cpu.cpu $cpu
     assert equal $actual.parallel_gain {
         nuten: ($one_cpu.nuten / $all_cpus.nuten)
         nufmt: ($one_cpu.nufmt / $all_cpus.nufmt)
@@ -225,7 +223,7 @@ def "time-group gives metrics, speedups, and gains of both formatters" [] {
 }
 
 @test
-def "time-group times nothing on one cpu without cpus to pin to" [] {
+def "time-group times nothing on one cpu without cpu to pin to" [] {
     let context = $in
     let dir = $context.dir | path join staged
     put $dir a.nu "ls"
@@ -238,17 +236,30 @@ def "time-group times nothing on one cpu without cpus to pin to" [] {
 }
 
 @test
-def "pin gives taskset on cpus given" [] {
-    let actual = pin [1 3]
+def "one-cpu-metrics keeps instructions where cpu counts them" [] {
+    let measured = measured { nuten: 2, nufmt: 3 }
 
-    assert equal $actual [taskset --cpu-list "1,3"]
+    let actual = $measured | one-cpu-metrics
+
+    assert equal ($actual | columns) [time_wall_clock time_cpu memory_peak_resident instructions]
 }
 
 @test
-def "pin gives nothing without cpus" [] {
-    let actual = pin null
+def "one-cpu-metrics leaves out instructions where cpu reads zero" [] {
+    let measured = measured { nuten: 2, nufmt: 0 }
 
-    assert equal $actual []
+    let actual = $measured | one-cpu-metrics
+
+    assert equal ($actual | columns) [time_wall_clock time_cpu memory_peak_resident]
+}
+
+@test
+def "one-cpu-metrics leaves out instructions hyperfine could not count" [] {
+    let measured = measured { nuten: 2, nufmt: 3 } | reject instructions
+
+    let actual = $measured | one-cpu-metrics
+
+    assert equal ($actual | columns) [time_wall_clock time_cpu memory_peak_resident]
 }
 
 @test
@@ -416,7 +427,7 @@ def "compare takes files under corpus and those also given" [] {
     let inside = put $corpus sub/a.nu "ls"
     let after = put $context.dir b.nu "ls"
 
-    let actual = compare $corpus $context.nuten.command $context.failing_nufmt $context.oracle [$after] 100sec 1
+    let actual = compare $corpus $context.nuten.command $context.failing_nufmt $context.oracle [$after] 100sec 1 null
 
     assert equal $actual.compared []
     assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [$after $inside] }]
@@ -427,7 +438,7 @@ def "compare takes file given twice once" [] {
     let context = $in
     let file = put $context.dir a.nu "ls"
 
-    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [$file] 100sec 1
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [$file] 100sec 1 null
 
     assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [$file] }]
 }
@@ -443,7 +454,7 @@ def "compare takes relative paths from where it runs" [] {
 
     let actual = do {
         cd $context.dir
-        compare corpus ./nuten $"./($nufmt)" ./oracle [b.nu] 100sec 1
+        compare corpus ./nuten $"./($nufmt)" ./oracle [b.nu] 100sec 1 null
     }
 
     assert equal $actual.compared [$after $inside]
@@ -451,15 +462,17 @@ def "compare takes relative paths from where it runs" [] {
 }
 
 @test
-def "compare times files both keep on each file and directory" [] {
+def "compare times files both keep on each file and directory, and on cpu given" [] {
     let context = $in
     let file = put $context.dir nu-std/a.nu "ls"
     let nufmt = keeping-nufmt $context.dir
+    let cpu = fastest-allowed-cpu
 
-    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1 $cpu
 
     assert equal ($actual.timing.files | get file) [$file]
     assert equal ($actual.directories | get name) [nu-std all]
+    assert equal $actual.directories.0.one_cpu.cpu $cpu
 }
 
 @test
@@ -467,7 +480,7 @@ def "compare times no file and no directory when every file is left out" [] {
     let context = $in
     put $context.dir a.nu "ls"
 
-    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1 null
 
     assert equal $actual.timing { files: [] total: null speedup: null }
     assert equal $actual.directories []
@@ -480,11 +493,27 @@ def "compare gives versions, machine, and binary sizes" [] {
     let nodes = open --raw $LOCK | from json | get nodes
     let size = ls $context.nuten.command | get 0.size
 
-    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1 null
 
     assert equal $actual.versions.nufmt.rev $nodes.nufmt.locked.rev
     assert equal $actual.environment.cpus (sys cpu | length)
     assert equal $actual.sizes { nuten: $size nufmt: $size }
+}
+
+@test
+def "main nufmt times on fastest cpu where taskset is found" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+    let nufmt = keeping-nufmt $context.dir
+    let paths = [$context.dir, $context.nuten.command, $nufmt, $context.oracle]
+        | each { to nuon }
+        | str join ' '
+    let script = $"source ($MAIN | to nuon); main nufmt ($paths) --runs 1 | to nuon"
+
+    let actual = ^$nu.current-exe --no-config-file --commands $script | complete
+
+    assert equal $actual.exit_code 0 $actual.stderr
+    assert equal ($actual.stdout | from nuon | get directories.one_cpu.cpu) [(fastest-allowed-cpu)]
 }
 
 @test

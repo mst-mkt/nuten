@@ -1,6 +1,7 @@
 use std/assert
 use std/testing *
 
+use ../lib/cpus.nu allowed-cpus
 source ../lib/hyperfine.nu
 
 @before-each
@@ -24,6 +25,20 @@ def "medians gives median of each metric hyperfine measured for each command" []
     assert equal ($actual.time_wall_clock | columns) [a b]
     assert ($actual.time_wall_clock.a > 0sec)
     assert ($actual.memory_peak_resident.b > 0b)
+}
+
+@test
+def "medians runs commands on cpu given" [] {
+    let context = $in
+    let ran = $context.dir | path join ran
+    let commands = [[name, words];
+        [a, [sh, -c, $"grep Cpus_allowed_list /proc/self/status > ($ran)"]]
+    ]
+    let cpu = allowed-cpus | last
+
+    medians $commands 1 [] $context.dir --cpu $cpu
+
+    assert equal (open $ran | str trim) $"Cpus_allowed_list:\t($cpu)"
 }
 
 @test

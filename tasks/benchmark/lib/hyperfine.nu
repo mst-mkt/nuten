@@ -3,13 +3,15 @@ export def medians [
     runs: int
     options: list<string>
     subject: path
+    --cpu: int
 ]: nothing -> record {
     let export = mktemp --tmpdir --suffix .json
     let named = $commands
         | each {|command| [--command-name, $command.name, (command-line $command.words)] }
         | flatten
+    let pin = if $cpu == null { [] } else { [taskset, --cpu-list, ($cpu | into string)] }
     let settings = [--warmup, 1, --runs, $runs, --export-json, $export]
-    let result = run-external hyperfine ...$settings ...$options ...$named | complete
+    let result = run-external ...$pin hyperfine ...$settings ...$options ...$named | complete
     let exported = open --raw $export
     rm $export
     if $result.exit_code != 0 {

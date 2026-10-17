@@ -1,5 +1,4 @@
 use comparable.nu screen
-use cpus.nu [allowed-cpus, fastest-allowed-cpu]
 use hyperfine.nu medians
 use provenance.nu [environment, versions]
 use staging.nu stage
@@ -16,19 +15,15 @@ export def compare [
     also: list<path>
     time_limit: duration
     runs: int
+    cpu: oneof<int, nothing>
 ]: nothing -> record {
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
     let corpus = $corpus | path expand
     let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
     let selection = screen $files $formatters ($oracle | path expand) $time_limit
-    let cpus = if (which taskset | is-empty) {
-        null
-    } else {
-        { all: (allowed-cpus), one: (fastest-allowed-cpu) }
-    }
     # One file or directory at a time, since formatters timed side by side would slow each other down.
     let timing = $selection.compared | each {|file| time-file $file $formatters $runs } | summarize
-    let directories = time-directories $selection.compared $corpus $formatters $runs $cpus
+    let directories = time-directories $selection.compared $corpus $formatters $runs $cpu
 
     {
         versions: (versions $REPOSITORY $LOCK)
@@ -72,11 +67,11 @@ def time-directories [
     corpus: path
     formatters: list<record>
     runs: int
-    cpus: oneof<record, nothing>
+    cpu: oneof<int, nothing>
 ]: nothing -> list<record> {
     let staged = stage $files $corpus
     try {
-        let directories = groups $staged | each {|group| time-group $group $formatters $runs $cpus }
+        let directories = groups $staged | each {|group| time-group $group $formatters $runs $cpu }
         rm --recursive $staged
 
         $directories
@@ -96,18 +91,18 @@ def time-group [
     group: record
     formatters: list<record>
     runs: int
-    cpus: oneof<record, nothing>
+    cpu: oneof<int, nothing>
 ]: nothing -> record {
-    let all_cpus = time-directory $group.dir $formatters $runs (pin $cpus.all?)
+    let all_cpus = time-directory $group.dir $formatters $runs
         | select ...$DIRECTORY_METRICS
         | update time_wall_clock { with-speedup }
-    let one_cpu = if $cpus == null {
+    let one_cpu = if $cpu == null {
         null
     } else {
-        time-directory $group.dir $formatters $runs (pin [$cpus.one])
-        | select ...$DIRECTORY_METRICS
+        time-directory $group.dir $formatters $runs --cpu $cpu
+        | one-cpu-metrics
         | update time_wall_clock { with-speedup }
-        | insert cpu $cpus.one
+        | insert cpu $cpu
     }
 
     {
@@ -119,9 +114,16 @@ def time-group [
     }
 }
 
-# Taskset runs before the formatter on all CPUs too, so that it weighs the same on both sides of the gain.
-def pin [cpus: oneof<list<int>, nothing>]: nothing -> list<string> {
-    if $cpus == null { [] } else { [taskset, --cpu-list, ($cpus | str join ',')] }
+# Hyperfine counts instructions on only one kind of core of a hybrid CPU, and reads zero on the other.
+def one-cpu-metrics []: record -> record {
+    let measured = $in
+    let counted = $measured.instructions?
+        | default { nuten: 0, nufmt: 0 }
+        | values
+        | all { $in > 0 }
+    let metrics = if $counted { [...$DIRECTORY_METRICS, instructions] } else { $DIRECTORY_METRICS }
+
+    $measured | select ...$metrics
 }
 
 def parallel-gain [
@@ -139,13 +141,13 @@ def time-directory [
     dir: path
     formatters: list<record>
     runs: int
-    prefix: list<string>
+    --cpu: int
 ]: nothing -> record {
     cd $dir
     let commands = $formatters
-        | each {|formatter| { name: $formatter.name, words: [...$prefix ...(do $formatter.directory $dir)] } }
+        | each {|formatter| { name: $formatter.name, words: (do $formatter.directory $dir) } }
 
-    medians $commands $runs [--ignore-failure=1] $dir
+    medians $commands $runs [--ignore-failure=1] $dir --cpu $cpu
 }
 
 def sizes [formatters: list<record>]: nothing -> record {
