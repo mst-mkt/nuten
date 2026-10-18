@@ -59,7 +59,9 @@ jobs:
         run: git -c user.name="$GIT_NAME" -c user.email="$GIT_EMAIL" commit --all --message "$TITLE"
       - name: Push changes
         if: ${{ steps.diff.outputs.changed }}
-        run: git push --force "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY" "HEAD:refs/heads/$BRANCH"
+        run: |
+          gh auth setup-git
+          git push --force origin "HEAD:refs/heads/$BRANCH"
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Create or update pull request
