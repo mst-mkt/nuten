@@ -4,6 +4,9 @@ title: Installation
 
 # Installation
 
+> [!NOTE]
+> More installation methods are coming.
+
 ## Cargo
 
 ```nushell
