@@ -17,7 +17,7 @@ hero:
       text: はじめる
       link: /ja/guide/installation
     - theme: alt
-      text: Playground で試す
+      text: Playground
       link: https://nuten.keito.dev/playground/
 features:
   - icon: "lucide:rocket"

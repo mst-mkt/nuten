@@ -17,7 +17,7 @@ hero:
       text: Get Started
       link: /guide/installation
     - theme: alt
-      text: Try in Playground
+      text: Playground
       link: https://nuten.keito.dev/playground/
 features:
   - icon: "lucide:zap"
