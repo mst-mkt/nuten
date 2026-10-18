@@ -127,6 +127,14 @@ nix profile install github:mst-mkt/nuten
 
 :::
 
+## ベンチマーク
+
+```benchmark
+overview grid
+```
+
+詳しい結果と計測の方法は [性能](/ja/about/performance) を参照してください。
+
 ## エディタとツール
 
 CLI から普段使っているツールまで、同じフォーマッタで整形できます。

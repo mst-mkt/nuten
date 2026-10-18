@@ -127,6 +127,14 @@ Throws random input at Nuten to make sure it never crashes or loses code.
 
 :::
 
+## Benchmark
+
+```benchmark
+overview grid
+```
+
+See [Performance](/about/performance) for more results and how they are measured.
+
 ## Editors and tools
 
 The same formatter, from the CLI to the tools you already use.
