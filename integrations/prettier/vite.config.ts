@@ -16,6 +16,11 @@ export default defineConfig({
         command: "vp pack",
         dependsOn: ["@nuten/format#build"],
       },
+      "publish:jsr": {
+        command: "vp dlx jsr publish",
+        dependsOn: [{ task: "publish:jsr", from: "dependencies" }],
+        cache: false,
+      },
       test: {
         command: "vp test run",
         dependsOn: ["build"],

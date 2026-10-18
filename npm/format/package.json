@@ -34,6 +34,9 @@
       "default": "./dist/default.js"
     }
   },
+  "scripts": {
+    "prepack": "vp run build"
+  },
   "devDependencies": {
     "@types/node": "22.20.5",
     "workerd": "1.20261006.1"

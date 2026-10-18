@@ -36,6 +36,11 @@ export default defineConfig({
         command: "vp pack",
         dependsOn: ["build:wasm"],
       },
+      "publish:jsr": {
+        command: "vp dlx jsr publish",
+        dependsOn: ["build:wasm"],
+        cache: false,
+      },
       test: {
         command: "vp test run",
         dependsOn: ["build"],
