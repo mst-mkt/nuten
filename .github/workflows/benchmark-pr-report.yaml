@@ -1,4 +1,4 @@
-name: benchmark
+name: benchmark-pr-report
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ on:
       - nix/dev/corpus.nix
       - tasks/benchmark/**
       - scripts/benchmark-comment.nu
-      - .github/workflows/benchmark.yaml
+      - .github/workflows/benchmark-pr-report.yaml
 
 permissions:
   contents: read

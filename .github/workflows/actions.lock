@@ -3,7 +3,7 @@
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.3'
 workflows:
-    '.github/workflows/benchmark.yaml':
+    '.github/workflows/benchmark-pr-report.yaml':
         - 'actions/checkout@v7.0.1'
         - 'cachix/install-nix-action@v31.11.1'
     '.github/workflows/cache.yaml':
