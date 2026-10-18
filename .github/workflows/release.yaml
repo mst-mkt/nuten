@@ -43,7 +43,7 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: Find group
         id: group
         run: |
@@ -145,7 +145,7 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: pnpm install
         run: pnpm install --frozen-lockfile
       - name: pnpm publish
@@ -170,7 +170,7 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: pnpm install
         run: pnpm install --frozen-lockfile
       - name: vp run --recursive publish:jsr
@@ -196,7 +196,7 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: pnpm install
         run: pnpm install --frozen-lockfile
       - name: vp run nuten-vscode#package
