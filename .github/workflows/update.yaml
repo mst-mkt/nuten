@@ -49,6 +49,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Create pull request
         if: ${{ steps.diff.outputs.changed }}
-        run: gh pr view "$BRANCH" || gh pr create --head "$BRANCH" --title "$TITLE" --body ""
+        run: |
+          if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" -eq 0 ]; then
+            gh pr create --head "$BRANCH" --title "$TITLE" --body ""
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
