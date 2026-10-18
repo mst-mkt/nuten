@@ -1,0 +1,57 @@
+name: Formatting bug
+description: Report code that Nuten formats wrongly or cannot format
+labels: [bug]
+body:
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: The smallest input that shows the bug.
+      render: nushell
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: What Nuten produced, such as the formatted code or an error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+      description: What you expected Nuten to produce.
+    validations:
+      required: true
+
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings
+      description: Any settings that differ from the defaults, such as the config file or the dprint or Prettier settings.
+
+  - type: input
+    id: run
+    attributes:
+      label: How you ran Nuten
+      description: The command, or the editor or tool you ran Nuten from, if not the CLI.
+      placeholder: nuten format a.nu
+
+  - type: input
+    id: nuten-version
+    attributes:
+      label: Nuten version
+      description: The output of `nuten --version`, or the version of the plugin or extension.
+      placeholder: nuten 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: nushell-version
+    attributes:
+      label: Nushell version
+      description: The output of `version | get version`, when the bug is about how Nushell reads the code.
+      placeholder: 0.116.0

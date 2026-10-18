@@ -1,0 +1,25 @@
+name: Feature or integration
+description: Propose a feature, a setting, or an integration with an editor or a tool
+labels: [feature]
+body:
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you would like Nuten to do, or which editor or tool you would like it to work with.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: The problem it solves, or how you would use it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use now, or other approaches you have considered.

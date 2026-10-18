@@ -1,0 +1,9 @@
+name: Other
+description: Report something the other forms do not cover, such as a problem in the documentation
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/mst-mkt/nuten/security/advisories/new
+    about: Report it privately, not in a public issue.
+  - name: Documentation
+    url: https://nuten.keito.dev
+    about: See how to install, configure, and integrate Nuten.

@@ -1,0 +1,60 @@
+name: CLI or integration bug
+description: Report a bug in the CLI, the language server, or an integration
+labels: [bug]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - CLI
+        - Language server
+        - VS Code extension
+        - Zed extension
+        - dprint plugin
+        - Prettier plugin
+        - JavaScript package
+        - treefmt module
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest steps that show the bug, with the files and settings they need.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened, such as an error message or a log.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: input
+    id: nuten-version
+    attributes:
+      label: Nuten version
+      description: The output of `nuten --version`, or the version of the plugin or extension.
+      placeholder: nuten 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: The OS, and the version of the editor or tool if relevant.
+      placeholder: macOS 26, VS Code 1.110
