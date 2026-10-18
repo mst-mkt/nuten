@@ -1,0 +1,232 @@
+name: release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag to release, such as v0.1.0 or vscode/v0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  NIX_CONFIG: |
+    extra-substituters = https://nuten.cachix.org
+    extra-trusted-public-keys = nuten.cachix.org-1:UQhrCY0F6u/dOjkl0oySJqXRlG0gbYXl8o7AQ4bmcDs=
+  TAG: ${{ inputs.tag }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  draft:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      group: ${{ steps.group.outputs.group }}
+    defaults:
+      run:
+        shell: nix shell --no-update-lock-file ./nix/dev#nushell --command bash -eo pipefail {0}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31.11.1
+      - name: Find group
+        id: group
+        run: |
+          group=$(nu tasks/release/main.nu group "$TAG")
+          echo "group=$group" >> "$GITHUB_OUTPUT"
+      - name: Check for release
+        id: release
+        run: gh release view "$TAG" > /dev/null 2>&1 || echo "missing=true" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Create draft release
+        if: ${{ steps.release.outputs.missing }}
+        run: nu tasks/release/main.nu notes "$TAG" | gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file -
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  cli:
+    needs: draft
+    if: ${{ needs.draft.outputs.group == 'nuten' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      TARGET: ${{ matrix.target }}
+      NAME: nuten-${{ inputs.tag }}-${{ matrix.target }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - name: Install musl tools
+        if: ${{ endsWith(matrix.target, '-musl') }}
+        run: sudo apt-get update && sudo apt-get install --yes musl-tools
+      - name: Install Rust
+        run: rustup toolchain install && rustup target add "$TARGET"
+      - name: cargo build
+        run: cargo build --release --locked --package nuten --target "$TARGET"
+      - name: Package
+        if: ${{ runner.os != 'Windows' }}
+        run: |
+          mkdir "$NAME"
+          cp LICENSE README.md "target/$TARGET/release/nuten" "$NAME/"
+          tar --create --gzip --file "$NAME.tar.gz" "$NAME"
+          shasum --algorithm 256 "$NAME.tar.gz" > "$NAME.tar.gz.sha256"
+      - name: Package (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: |
+          mkdir "$NAME"
+          cp LICENSE README.md "target/$TARGET/release/nuten.exe" "$NAME/"
+          7z a "$NAME.zip" "$NAME" > /dev/null
+          sha256sum "$NAME.zip" > "$NAME.zip.sha256"
+      - uses: actions/attest@v4.2.2
+        with:
+          subject-path: ${{ env.NAME }}.*
+      - name: Upload
+        run: gh release upload "$TAG" "$NAME".* --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  npm:
+    needs: [draft, cli]
+    if: ${{ needs.draft.outputs.group == 'nuten' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: nix develop --no-update-lock-file ./nix/dev --command bash -eo pipefail {0}
+    steps:
+      - name: Free disk space
+        shell: bash
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31.11.1
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      - name: pnpm publish
+        run: pnpm --recursive publish --access public --no-git-checks
+
+  jsr:
+    needs: [draft, cli]
+    if: ${{ needs.draft.outputs.group == 'nuten' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: nix develop --no-update-lock-file ./nix/dev --command bash -eo pipefail {0}
+    steps:
+      - name: Free disk space
+        shell: bash
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31.11.1
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      - name: vp run --recursive publish:jsr
+        run: vp run --recursive publish:jsr
+
+  vscode:
+    needs: draft
+    if: ${{ needs.draft.outputs.group == 'vscode' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+    defaults:
+      run:
+        shell: nix develop --no-update-lock-file ./nix/dev --command bash -eo pipefail {0}
+    steps:
+      - name: Free disk space
+        shell: bash
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31.11.1
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      - name: vp run nuten-vscode#package
+        run: vp run nuten-vscode#package
+      - name: Find VSIX
+        run: echo "VSIX=$GITHUB_WORKSPACE/$(ls integrations/vscode/dist/*.vsix)" >> "$GITHUB_ENV"
+      - name: Upload
+        run: gh release upload "$TAG" "$VSIX" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: azure/login@v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      - name: vsce publish
+        run: pnpm --dir integrations/vscode exec vsce publish --azure-credential --skip-duplicate --packagePath "$VSIX"
+      - name: ovsx publish
+        run: pnpm --dir integrations/vscode exec ovsx publish --trusted-publishing --skip-duplicate "$VSIX"
+
+  undraft:
+    needs: [draft, cli, npm, jsr, vscode]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Publish release
+        run: gh release edit "$TAG" --draft=false --latest="$LATEST"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ needs.draft.outputs.group == 'nuten' }}

@@ -1,0 +1,77 @@
+name: release-prepare
+
+on:
+  workflow_dispatch:
+    inputs:
+      group:
+        description: The group to release
+        required: true
+        type: choice
+        options: [nuten, vscode, zed]
+      part:
+        description: The part of the version to bump
+        required: true
+        type: choice
+        options: [patch, minor, major]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.group }}
+  cancel-in-progress: false
+
+env:
+  NIX_CONFIG: |
+    extra-substituters = https://nuten.cachix.org
+    extra-trusted-public-keys = nuten.cachix.org-1:UQhrCY0F6u/dOjkl0oySJqXRlG0gbYXl8o7AQ4bmcDs=
+  GROUP: ${{ inputs.group }}
+  PART: ${{ inputs.part }}
+  BRANCH: release/${{ inputs.group }}
+  GIT_NAME: github-actions[bot]
+  GIT_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+
+jobs:
+  prepare:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: nix develop --no-update-lock-file ./nix/dev --command bash -eo pipefail {0}
+    steps:
+      - name: Free disk space
+        shell: bash
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31.11.1
+      - name: Prepare release
+        run: |
+          tag=$(nu --commands 'source tasks/release/main.nu; main prepare $env.GROUP $env.PART | get tag')
+          nu tasks/release/main.nu notes "$tag" > "$RUNNER_TEMP/notes.md"
+          echo "TITLE=chore(release): $tag" >> "$GITHUB_ENV"
+      - name: Commit changes
+        run: |
+          git add --all
+          git -c user.name="$GIT_NAME" -c user.email="$GIT_EMAIL" commit --message "$TITLE"
+      - name: Push changes
+        run: |
+          gh auth setup-git
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Create or update pull request
+        run: |
+          if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" -gt 0 ]; then
+            gh pr edit "$BRANCH" --title "$TITLE" --body-file "$RUNNER_TEMP/notes.md"
+          else
+            gh pr create --head "$BRANCH" --title "$TITLE" --body-file "$RUNNER_TEMP/notes.md"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}

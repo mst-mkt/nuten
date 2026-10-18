@@ -27,10 +27,26 @@ workflows:
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.1'
         - 'cachix/install-nix-action@v31.11.1'
+    '.github/workflows/release-prepare.yaml':
+        - 'actions/checkout@v7.0.1'
+        - 'cachix/install-nix-action@v31.11.1'
+    '.github/workflows/release-tag.yaml':
+        - 'actions/checkout@v7.0.1'
+        - 'cachix/install-nix-action@v31.11.1'
+    '.github/workflows/release.yaml':
+        - 'actions/attest@v4.2.2'
+        - 'actions/checkout@v7.0.1'
+        - 'azure/login@v3.1.0'
+        - 'cachix/install-nix-action@v31.11.1'
     '.github/workflows/update.yaml':
         - 'actions/checkout@v7.0.1'
         - 'cachix/install-nix-action@v31.11.1'
 dependencies:
+    'actions/attest@v4.2.2':
+        ref: 'v4.2.2'
+        commit: 'sha1-1e69f48acb82d1966a394da916b4c1698aa569d6'
+        owner_id: 44036562
+        repo_id: 760701061
     'actions/cache@v6.1.0':
         ref: 'v6.1.0'
         commit: 'sha1-55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
@@ -46,6 +62,11 @@ dependencies:
         commit: 'sha1-043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
         owner_id: 44036562
         repo_id: 192625955
+    'azure/login@v3.1.0':
+        ref: 'v3.1.0'
+        commit: 'sha1-a641126d1b8aa4d1fa005f4f92df94a3a4c4c906'
+        owner_id: 6844498
+        repo_id: 210798615
     'cachix/cachix-action@v17':
         ref: 'v17'
         commit: 'sha1-38b082610b782e7e93e209c35fd730d399dee866'

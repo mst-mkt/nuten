@@ -1,0 +1,66 @@
+name: release-tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  NIX_CONFIG: |
+    extra-substituters = https://nuten.cachix.org
+    extra-trusted-public-keys = nuten.cachix.org-1:UQhrCY0F6u/dOjkl0oySJqXRlG0gbYXl8o7AQ4bmcDs=
+  GIT_COMMITTER_NAME: github-actions[bot]
+  GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+
+jobs:
+  tag:
+    if: ${{ github.event.pull_request.merged && startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    defaults:
+      run:
+        shell: nix shell --no-update-lock-file ./nix/dev#nushell --command bash -eo pipefail {0}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31.11.1
+      - name: Tag version
+        id: tag
+        run: |
+          tag=$(nu --commands 'source tasks/release/main.nu; main tag ($env.HEAD_REF | str replace "release/" "") | to text')
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+      - name: Push tag
+        if: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh auth setup-git
+          git push origin "refs/tags/$TAG"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+
+  release:
+    needs: tag
+    if: ${{ needs.tag.outputs.tag }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    uses: ./.github/workflows/release.yaml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
