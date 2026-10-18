@@ -29,6 +29,7 @@ let
     "nix"
     "oracle"
     "benchmark"
+    "release"
     "lsp"
     "vscode"
     "zed"
