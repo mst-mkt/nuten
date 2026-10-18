@@ -13,12 +13,17 @@
     "nu",
     "nushell"
   ],
+  "homepage": "https://nuten.keito.dev",
+  "bugs": {
+    "url": "https://github.com/mst-mkt/nuten/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/mst-mkt/nuten",
     "directory": "integrations/vscode"
   },
+  "qna": false,
   "publisher": "mst-mkt",
   "files": [
     "dist/extension.cjs",
