@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "integrations/dprint", "npm/*", "tasks/*"]
-exclude = ["tasks/benchmark", "tasks/fuzz"]
+exclude = ["tasks/benchmark", "tasks/fuzz", "tasks/release"]
 
 [workspace.package]
 version = "0.0.0"

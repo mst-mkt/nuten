@@ -1,0 +1,43 @@
+[
+    {
+        name: nuten
+        tag: 'v{version}'
+        paths: [Cargo.toml, Cargo.lock, crates, npm, integrations/prettier]
+        changelog: CHANGELOG.md
+        versions: [
+            { file: Cargo.toml, field: [workspace, package, version] }
+            { file: npm/format/package.json, field: [version] }
+            { file: npm/format/jsr.json, field: [version] }
+            { file: npm/highlight/package.json, field: [version] }
+            { file: integrations/prettier/package.json, field: [version] }
+            { file: integrations/prettier/jsr.json, field: [version] }
+            {
+                file: integrations/prettier/jsr.json
+                field: [imports, '@nuten/format']
+                value: 'jsr:@nuten/format@{version}'
+            }
+        ]
+        locks: [Cargo.lock]
+    }
+    {
+        name: vscode
+        tag: 'vscode/v{version}'
+        paths: [integrations/vscode]
+        changelog: integrations/vscode/CHANGELOG.md
+        versions: [
+            { file: integrations/vscode/package.json, field: [version] }
+        ]
+        locks: []
+    }
+    {
+        name: zed
+        tag: 'zed/v{version}'
+        paths: [integrations/zed]
+        changelog: integrations/zed/CHANGELOG.md
+        versions: [
+            { file: integrations/zed/extension.toml, field: [version] }
+            { file: integrations/zed/Cargo.toml, field: [package, version] }
+        ]
+        locks: [integrations/zed/Cargo.lock]
+    }
+]
