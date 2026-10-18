@@ -6,6 +6,9 @@ workflows:
     '.github/workflows/benchmark-pr-report.yaml':
         - 'actions/checkout@v7.0.1'
         - 'cachix/install-nix-action@v31.11.1'
+    '.github/workflows/benchmark-results-update.yaml':
+        - 'actions/checkout@v7.0.1'
+        - 'cachix/install-nix-action@v31.11.1'
     '.github/workflows/cache.yaml':
         - 'actions/checkout@v7.0.1'
         - 'cachix/cachix-action@v17'

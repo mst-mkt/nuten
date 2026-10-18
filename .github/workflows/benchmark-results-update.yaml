@@ -1,0 +1,76 @@
+name: benchmark-results-update
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-results-update
+  cancel-in-progress: false
+
+env:
+  NIX_CONFIG: |
+    extra-substituters = https://nuten.cachix.org
+    extra-trusted-public-keys = nuten.cachix.org-1:UQhrCY0F6u/dOjkl0oySJqXRlG0gbYXl8o7AQ4bmcDs=
+  BRANCH: update/benchmark-results
+  TITLE: "add(assets): update the benchmark results"
+  GIT_NAME: github-actions[bot]
+  GIT_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31.11.1
+      - name: nix build
+        run: |
+          nuten=$(nix build --no-link --print-out-paths --no-update-lock-file .)
+          nufmt=$(nix build --no-link --print-out-paths --no-update-lock-file ./nix/dev#nufmt)
+          echo "NUTEN=$nuten/bin/nuten" >> "$GITHUB_ENV"
+          echo "NUFMT=$nufmt/bin/nufmt" >> "$GITHUB_ENV"
+      - name: Build the oracle
+        run: nix develop --no-update-lock-file ./nix/dev --command cargo build --release --package nuten-oracle
+      - name: Measure
+        run: |
+          nix develop --no-update-lock-file ./nix/dev --command nu --commands 'source tasks/benchmark/main.nu;
+          main nufmt $env.NUTEN_CORPUS $env.NUTEN $env.NUFMT target/release/nuten-oracle --runs 10 | to json | save --force assets/benchmark/compare.json'
+      - name: Draw
+        run: |
+          nix develop --no-update-lock-file ./nix/dev --command nu scripts/benchmark-svg.nu assets/benchmark/compare.json assets/benchmark
+          nix develop --no-update-lock-file ./nix/dev --command treefmt assets/benchmark
+      - name: Check for changes
+        id: diff
+        run: git diff --quiet || echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Commit changes
+        if: ${{ steps.diff.outputs.changed }}
+        run: git -c user.name="$GIT_NAME" -c user.email="$GIT_EMAIL" commit --all --message "$TITLE"
+      - name: Push changes
+        if: ${{ steps.diff.outputs.changed }}
+        run: git push --force "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY" "HEAD:refs/heads/$BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Create or update pull request
+        if: ${{ steps.diff.outputs.changed }}
+        run: |
+          body="Measured in $RUN_URL."
+          if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" -gt 0 ]; then
+            gh pr edit "$BRANCH" --title "$TITLE" --body "$body"
+          else
+            gh pr create --head "$BRANCH" --title "$TITLE" --body "$body"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
