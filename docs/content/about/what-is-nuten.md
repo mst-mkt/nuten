@@ -30,8 +30,8 @@ Finally, it aims to fit right into everyday development, and offers [installatio
 
 Nuten is not meant to replace nufmt. It is another option among Nushell formatters.
 
-nufmt is the official formatter, developed by the Nushell team. It uses nu-parser, the same parser as Nushell itself, so it never reads code differently from Nushell.
+nufmt is the official formatter, developed by the Nushell team. It uses nu-parser, the same parser as Nushell itself, so it never reads code differently from Nushell. Even so, the code it outputs can still parse into a different AST from the original, which changes what the code means. See [Files left out](/about/performance#files-left-out) for how often this happens in real-world scripts.
 
 Nuten has its own parser, separate from Nushell's, so a chance remains that it reads some code differently from Nushell, and it may lag behind new syntax. To make up for that, it relies on its design and tests to avoid breaking code. Compared with nufmt, it is faster, with lower memory usage and a smaller binary size. It also offers features an official project might not adopt right away, such as integrations with specific tools and extras around formatting.
 
-If you value matching how Nushell parses code or using the official tool, nufmt may suit you better. If you value speed or integrations with editors and tools, Nuten may be the better fit.
+If you value matching how Nushell parses code or using the official tool, nufmt may suit you better. If you value speed or integrations with editors and tools, Nuten may be the better fit. If nufmt breaks your code, give Nuten a try.
