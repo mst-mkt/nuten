@@ -10,10 +10,6 @@ A formatter for Nushell. Robust, fast, and lightweight.
 
 </div>
 
-Nuten is not an official Nushell project.
-The official formatter is [nufmt](https://github.com/nushell/nufmt).
-The documentation [introduces Nuten](https://nuten.keito.dev/about/what-is-nuten), including how it differs from nufmt.
-
 ## Installation
 
 ```nushell
@@ -62,6 +58,13 @@ More results and how they are measured are on the [performance page](https://nut
   - [GitHub Actions](https://nuten.keito.dev/guide/integrations/ci#github-actions) and [GitLab CI](https://nuten.keito.dev/guide/integrations/ci#gitlab-ci) reporters
 - Libraries
   - [JavaScript](https://nuten.keito.dev/guide/integrations/javascript) package built into Wasm
+
+## Related projects
+
+- [nufmt](https://github.com/nushell/nufmt), the official formatter
+- [topiary-nushell](https://github.com/blindFS/topiary-nushell), a formatter built on Topiary and now archived
+
+[Differences from nufmt](https://nuten.keito.dev/about/what-is-nuten#differences-from-nufmt) are covered in the documentation.
 
 ## Contributing
 
