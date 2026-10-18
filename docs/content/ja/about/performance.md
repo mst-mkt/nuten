@@ -73,5 +73,6 @@ conditions
 ベンチマークは [`tasks/benchmark`](https://github.com/mst-mkt/nuten/tree/main/tasks/benchmark) にあります。`nix/dev` の devShell に hyperfine, valgrind, corpus が揃っていて、nufmt は `nix build ./nix/dev#nufmt` でビルドできます。devShell の Nushell で次を実行すると計測できます。
 
 ```nushell
-nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle --runs 10 | to json | save -f compare.json
+source tasks/benchmark/main.nu
+main nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle --runs 10 | to json | save -f compare.json
 ```

@@ -73,5 +73,6 @@ conditions
 The benchmark is in [`tasks/benchmark`](https://github.com/mst-mkt/nuten/tree/main/tasks/benchmark). The `nix/dev` devShell provides hyperfine, valgrind, and the corpus, and `nix build ./nix/dev#nufmt` builds nufmt. To measure, run the following from Nushell in the devShell.
 
 ```nushell
-nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle --runs 10 | to json | save -f compare.json
+source tasks/benchmark/main.nu
+main nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle --runs 10 | to json | save -f compare.json
 ```

@@ -29,7 +29,8 @@ Compares `nuten` with nufmt on the files both format without breaking.
 It times them under hyperfine, and counts the instructions on each file under valgrind.
 
 ```nushell
-nu tasks/benchmark/main.nu nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle | to json | save -f compare.json
+source tasks/benchmark/main.nu
+main nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle | to json | save -f compare.json
 ```
 
 ```
