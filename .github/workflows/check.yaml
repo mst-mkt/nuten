@@ -51,6 +51,9 @@ jobs:
       - name: vp run lint:ts
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: nix develop --no-update-lock-file ./nix/dev --command vp run lint:ts
+      - name: Check release versions
+        if: ${{ !cancelled() }}
+        run: nix develop --no-update-lock-file ./nix/dev --command nu tasks/release/main.nu check
 
   test:
     strategy:
