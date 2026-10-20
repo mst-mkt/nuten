@@ -89,7 +89,7 @@ Specifies where commas go between the items of lists, records, and the like.
 **Type** `string[]` \
 **Default** `["*.nu", "*.nuon"]`
 
-Specifies the files to format, as glob patterns. A file given directly is formatted even if it does not match.
+Specifies the files to format, as glob patterns. The glob syntax follows [the glob expressions of EditorConfig](https://spec.editorconfig.org/#glob-expressions). A file given directly is formatted even if it does not match.
 
 Patterns are relative to the directory of the config file. A pattern without `/` matches file names at any depth.
 
@@ -98,7 +98,7 @@ Patterns are relative to the directory of the config file. A pattern without `/`
 **Type** `string[]` \
 **Default** `[]`
 
-Specifies the files and directories to leave out, as glob patterns. This applies to files given directly too.
+Specifies the files and directories to leave out, as glob patterns. The glob syntax follows [the glob expressions of EditorConfig](https://spec.editorconfig.org/#glob-expressions). This applies to files given directly too.
 
 Patterns are relative to the directory of the config file. A pattern without `/` matches file and directory names at any depth.
 
