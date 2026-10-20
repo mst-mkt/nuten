@@ -51,41 +51,40 @@ impl Glob {
     /// `path` is relative to the directory of the `.editorconfig`, with `/` between names.
     pub(crate) fn matches(&self, path: &str) -> bool {
         let chars: Vec<char> = path.chars().collect();
-        // A place gets its row once reached, since most places of a long path never are.
-        let mut reached: Vec<Vec<bool>> = vec![Vec::new(); chars.len() + 1];
-        let mut pending: Vec<Vec<usize>> = vec![Vec::new(); chars.len() + 1];
-        pending[0].push(0);
-        for at in 0..=chars.len() {
-            while let Some(state) = pending[at].pop() {
-                for (step, next) in &self.states[state] {
-                    for to in ends_after(step, &chars, at) {
-                        let row = &mut reached[to];
-                        if row.is_empty() {
-                            *row = vec![false; self.states.len()];
-                        }
-                        if !row[*next] {
-                            row[*next] = true;
-                            pending[to].push(*next);
-                        }
+        // One bit per pair of a place and a state, since a long path makes many places.
+        let words = self.states.len().div_ceil(64);
+        let slot = |at: usize, state: usize| (at * words + state / 64, 1_u64 << (state % 64));
+        let mut reached = vec![0_u64; (chars.len() + 1) * words];
+        let mut pending = vec![(0, 0)];
+        while let Some((at, state)) = pending.pop() {
+            for (step, next) in &self.states[state] {
+                for to in ends_after(step, &chars, at) {
+                    let (word, bit) = slot(to, *next);
+                    if reached[word] & bit == 0 {
+                        reached[word] |= bit;
+                        pending.push((to, *next));
                     }
                 }
             }
         }
-        reached[chars.len()].get(self.accept) == Some(&true)
+        let (word, bit) = slot(chars.len(), self.accept);
+        reached[word] & bit != 0
     }
 }
 
-fn ends_after(step: &Step, chars: &[char], at: usize) -> Vec<usize> {
+fn ends_after<'a>(
+    step: &'a Step,
+    chars: &'a [char],
+    at: usize,
+) -> impl Iterator<Item = usize> + 'a {
     let single = |fits: &dyn Fn(char) -> bool| {
         chars
             .get(at)
             .is_some_and(|&char| fits(char))
             .then_some(at + 1)
-            .into_iter()
-            .collect()
     };
-    match step {
-        Step::Empty => vec![at],
+    let end = match step {
+        Step::Empty => Some(at),
         Step::Char(expected) => single(&|char| char == *expected),
         Step::AnyInName => single(&|char| char != '/'),
         Step::Any => single(&|_| true),
@@ -98,14 +97,22 @@ fn ends_after(step: &Step, chars: &[char], at: usize) -> Vec<usize> {
                 .any(|&(low, high)| (low..=high).contains(&char));
             char != '/' && within != *negated
         }),
-        &Step::NumberRange {
+        Step::NumberRange {
+            ..
+        } => None,
+    };
+    let number_ends = match *step {
+        Step::NumberRange {
             min,
             max,
-        } => integer_ends(&chars[at..])
-            .filter(|(number, _)| (min..=max).contains(number))
-            .map(|(_, length)| at + length)
-            .collect(),
-    }
+        } => Some(
+            integer_ends(&chars[at..])
+                .filter(move |(number, _)| (min..=max).contains(number))
+                .map(move |(_, length)| at + length),
+        ),
+        _ => None,
+    };
+    end.into_iter().chain(number_ends.into_iter().flatten())
 }
 
 fn integer_ends(chars: &[char]) -> impl Iterator<Item = (i64, usize)> + '_ {
@@ -696,6 +703,19 @@ mod tests {
         assert_eq!(matching(r"\*.nu", &["*.nu", "a.nu"]), ["*.nu"]);
         assert_eq!(matching(r"a\{b,c}", &["a{b,c}", "ab"]), ["a{b,c}"]);
         assert_eq!(matching(r"a\", &[r"a\", "a"]), [r"a\"]);
+    }
+
+    #[test]
+    fn long_section_matches_only_path_it_spells() {
+        let name = "a".repeat(100);
+        let (shorter, longer) = (&name[1..], format!("{name}a"));
+        let changed = format!("{}b{}", &name[..64], &name[65..]);
+        let paths = [name.as_str(), shorter, &longer, &changed];
+        assert_eq!(matching(&name, &paths), [name.as_str()]);
+        assert_eq!(
+            matching(&format!("{}*", &name[..70]), &paths),
+            [name.as_str(), shorter, &longer]
+        );
     }
 
     #[test]
