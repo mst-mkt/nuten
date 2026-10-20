@@ -318,7 +318,6 @@ dependencies = [
 name = "nuten-config"
 version = "0.0.0"
 dependencies = [
- "globset",
  "insta",
  "jsonc-parser",
  "nuten-format",

@@ -21,7 +21,6 @@ nuten-parser = { path = "crates/nuten_parser" }
 nuten-syntax = { path = "crates/nuten_syntax" }
 
 dprint-core = { version = "0.70.0", default-features = false }
-globset = "0.4.20"
 ignore = "0.4.33"
 insta = { version = "1.48.0", features = ["glob"] }
 jsonc-parser = "0.33.2"

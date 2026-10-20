@@ -1,5 +1,3 @@
-mod glob;
-
 use std::{
     collections::HashMap,
     io,
@@ -8,10 +6,10 @@ use std::{
     sync::Arc,
 };
 
-use self::glob::Glob;
 use crate::{
     IndentStyle, LineEnding, LookupError,
     find::{holds_vcs_dir, join_into},
+    glob::Glob,
     lookup::read_regular_file,
     settings::FormatChange,
 };

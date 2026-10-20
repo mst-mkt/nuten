@@ -25,8 +25,27 @@ enum Step {
     },
 }
 
+/// What is read as a character, since nothing closes or follows it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Unclosed {
+    Class,
+    Group,
+    Escape,
+}
+
 impl Glob {
     pub(crate) fn new(section: &str) -> Glob {
+        Glob::read(section).0
+    }
+
+    pub(crate) fn closed(section: &str) -> Result<Glob, Unclosed> {
+        match Glob::read(section) {
+            (glob, None) => Ok(glob),
+            (_, Some(unclosed)) => Err(unclosed),
+        }
+    }
+
+    fn read(section: &str) -> (Glob, Option<Unclosed>) {
         let anchored = section.contains('/');
         let section = section.strip_prefix('/').unwrap_or(section);
         let chars: Vec<char> = section.chars().collect();
@@ -37,18 +56,19 @@ impl Glob {
         if !anchored {
             automaton.any_dirs();
         }
-        Reader {
+        let (automaton, unclosed) = Reader {
             braces: braces(&chars),
             chars: &chars,
             groups: Vec::new(),
             after_slash: true,
+            unclosed: None,
             automaton,
         }
-        .read()
-        .finish()
+        .read();
+        (automaton.finish(), unclosed)
     }
 
-    /// `path` is relative to the directory of the `.editorconfig`, with `/` between names.
+    /// `path` has `/` between names.
     pub(crate) fn matches(&self, path: &str) -> bool {
         let chars: Vec<char> = path.chars().collect();
         // One bit per pair of a place and a state, since a long path makes many places.
@@ -279,6 +299,7 @@ struct Reader<'a> {
     braces: Vec<Option<Brace>>,
     groups: Vec<OpenGroup>,
     after_slash: bool,
+    unclosed: Option<Unclosed>,
     automaton: Automaton,
 }
 
@@ -293,12 +314,16 @@ struct Fork {
 }
 
 impl Reader<'_> {
-    fn read(mut self) -> Automaton {
+    fn read(mut self) -> (Automaton, Option<Unclosed>) {
         let mut at = 0;
         while at < self.chars.len() {
             at = self.step(at);
         }
-        self.automaton
+        (self.automaton, self.unclosed)
+    }
+
+    fn note_unclosed(&mut self, unclosed: Unclosed) {
+        self.unclosed.get_or_insert(unclosed);
     }
 
     fn step(&mut self, at: usize) -> usize {
@@ -331,6 +356,11 @@ impl Reader<'_> {
                     open,
                 }),
             ) if top == Some(open) => self.close(at),
+            ('{', None) => {
+                self.note_unclosed(Unclosed::Group);
+                self.char('{');
+                at + 1
+            },
             (char, _) => {
                 self.char(char);
                 at + 1
@@ -344,7 +374,13 @@ impl Reader<'_> {
     }
 
     fn escaped(&mut self, at: usize) -> usize {
-        self.char(self.chars.get(at + 1).copied().unwrap_or('\\'));
+        let escaped = if let Some(&escaped) = self.chars.get(at + 1) {
+            escaped
+        } else {
+            self.note_unclosed(Unclosed::Escape);
+            '\\'
+        };
+        self.char(escaped);
         at + 2
     }
 
@@ -366,7 +402,12 @@ impl Reader<'_> {
 
     fn class_or_bracket(&mut self, at: usize) -> usize {
         let bound = self.group_end(at);
-        let (step, next) = class(&self.chars[..bound], at).unwrap_or((Step::Char('['), at + 1));
+        let (step, next) = if let Some(class) = class(&self.chars[..bound], at) {
+            class
+        } else {
+            self.note_unclosed(Unclosed::Class);
+            (Step::Char('['), at + 1)
+        };
         self.automaton.push(step);
         next
     }

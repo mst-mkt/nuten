@@ -1,6 +1,7 @@
 mod editorconfig;
 mod escape;
 mod find;
+mod glob;
 mod json;
 mod lookup;
 mod nuon;

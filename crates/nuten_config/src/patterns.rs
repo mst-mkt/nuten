@@ -1,17 +1,26 @@
-use std::{fmt, path::Path, sync::Arc};
+use std::{
+    borrow::Cow,
+    fmt,
+    path::{Component, Path},
+    sync::Arc,
+};
 
-use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
+use crate::glob::{Glob, Unclosed};
 
+/// One pointer, since every file carries a config holding two of these.
 #[derive(Debug, Clone)]
-pub struct Patterns {
-    written: Arc<[String]>,
-    anchored: Arc<GlobSet>,
-    names: Arc<GlobSet>,
+pub struct Patterns(Arc<Globs>);
+
+#[derive(Debug)]
+struct Globs {
+    written: Box<[String]>,
+    anchored: Box<[Glob]>,
+    names: Box<[Glob]>,
 }
 
 impl PartialEq for Patterns {
     fn eq(&self, other: &Self) -> bool {
-        self.written == other.written
+        self.0.written == other.0.written
     }
 }
 
@@ -81,46 +90,46 @@ impl Patterns {
             .into_iter()
             .flatten()
             .partition(|parsed| parsed.anchored);
-        Ok(Patterns {
+        Ok(Patterns(Arc::new(Globs {
             written: written.into(),
-            anchored: set(anchored),
-            names: set(names),
-        })
+            anchored: globs(anchored),
+            names: globs(names),
+        })))
     }
 
     pub fn is_empty(&self) -> bool {
-        self.written.is_empty()
+        self.0.written.is_empty()
     }
 
     pub fn has_anchored(&self) -> bool {
-        !self.anchored.is_empty()
+        !self.0.anchored.is_empty()
     }
 
     pub fn matches_file(&self, place: Place<'_>) -> bool {
-        self.names.is_match(place.name)
+        matches_any(&self.0.names, place.name)
             || place
                 .relative
-                .is_some_and(|relative| self.anchored.is_match(relative))
+                .is_some_and(|relative| matches_any(&self.0.anchored, relative))
     }
 
     pub fn matches_file_or_ancestor(&self, place: Place<'_>) -> bool {
         let Some(relative) = place.relative else {
-            return self.names.is_match(place.name);
+            return matches_any(&self.0.names, place.name);
         };
         relative
             .ancestors()
             .filter(|path| !path.as_os_str().is_empty())
             .any(|path| {
-                self.anchored.is_match(path)
+                matches_any(&self.0.anchored, path)
                     || path
                         .file_name()
-                        .is_some_and(|name| self.names.is_match(name))
+                        .is_some_and(|name| matches_any(&self.0.names, Path::new(name)))
             })
     }
 }
 
 struct Parsed {
-    glob: globset::Glob,
+    glob: Glob,
     anchored: bool,
 }
 
@@ -147,12 +156,13 @@ fn parse(pattern: &str) -> Result<Parsed, PatternProblem> {
     {
         return Err(PatternProblem::NoName);
     }
-    // Not escaping as the platform does, so that one config file reads the same on each.
-    let glob = GlobBuilder::new(relative)
-        .literal_separator(true)
-        .backslash_escape(true)
-        .build()
-        .map_err(|error| PatternProblem::Invalid(error.kind().to_string()))?;
+    // Rejected when left open, unlike in editorconfig, since a typo would silently match nothing.
+    let glob = if anchored {
+        Glob::closed(&format!("/{relative}"))
+    } else {
+        Glob::closed(relative)
+    }
+    .map_err(|unclosed| PatternProblem::Invalid(unclosed_problem(unclosed).to_string()))?;
     Ok(Parsed {
         glob,
         anchored,
@@ -169,12 +179,36 @@ fn is_parent_dir(part: &str) -> bool {
     })
 }
 
-fn set(parsed: Vec<Parsed>) -> Arc<GlobSet> {
-    let mut builder = GlobSetBuilder::new();
-    for parsed in parsed {
-        builder.add(parsed.glob);
+fn unclosed_problem(unclosed: Unclosed) -> &'static str {
+    match unclosed {
+        Unclosed::Class => "unclosed character class; missing ']'",
+        Unclosed::Group => "unclosed alternate group; missing '}'",
+        Unclosed::Escape => "dangling '\\'",
     }
-    Arc::new(builder.build().expect("globs that each build make a set"))
+}
+
+fn globs(parsed: Vec<Parsed>) -> Box<[Glob]> {
+    parsed.into_iter().map(|parsed| parsed.glob).collect()
+}
+
+fn matches_any(globs: &[Glob], path: &Path) -> bool {
+    let path = with_slashes(path);
+    globs.iter().any(|glob| glob.matches(&path))
+}
+
+fn with_slashes(path: &Path) -> Cow<'_, str> {
+    if cfg!(windows) {
+        let names: Vec<_> = path
+            .components()
+            .filter_map(|component| match component {
+                Component::Normal(name) => Some(name.to_string_lossy()),
+                _ => None,
+            })
+            .collect();
+        Cow::Owned(names.join("/"))
+    } else {
+        path.to_string_lossy()
+    }
 }
 
 #[cfg(test)]
@@ -263,6 +297,14 @@ mod tests {
             ["/r/a.nu", "/r/a.nush"]
         );
         assert_eq!(matching_files("[ab].nu", &files), ["/r/a.nu", "/r/b.nu"]);
+    }
+
+    #[test]
+    fn braces_without_comma_match_as_characters() {
+        assert_eq!(
+            matching_files("a{b}.nu", &["/r/a{b}.nu", "/r/ab.nu"]),
+            ["/r/a{b}.nu"]
+        );
     }
 
     #[test]
@@ -361,6 +403,26 @@ mod tests {
                 ),
             ]
         );
+    }
+
+    #[test]
+    fn pattern_left_open_is_reported() {
+        for (pattern, problem) in [
+            ("a{", "unclosed alternate group; missing '}'"),
+            ("a\\", "dangling '\\'"),
+            ("[]", "unclosed character class; missing ']'"),
+            ("[a/b]", "unclosed character class; missing ']'"),
+            ("[!]", "unclosed character class; missing ']'"),
+            ("{[a,b]}.nu", "unclosed character class; missing ']'"),
+            ("[a{", "unclosed character class; missing ']'"),
+            ("{[a", "unclosed alternate group; missing '}'"),
+        ] {
+            assert_eq!(
+                Patterns::new([pattern]).unwrap_err(),
+                [(0, PatternProblem::Invalid(problem.to_string()))],
+                "{pattern}"
+            );
+        }
     }
 
     #[test]
