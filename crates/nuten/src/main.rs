@@ -1,5 +1,6 @@
 mod diff;
 mod files;
+mod gitignore;
 mod overwrite;
 mod parallel;
 mod problem;

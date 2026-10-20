@@ -1,4 +1,8 @@
-use std::{fs, path::Path, process::Output};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Output,
+};
 
 use crate::support::{
     BLOCK, FORMATTED, TempDir, UNFORMATTED, assert_succeeds, format_in, io_error_line,
@@ -121,6 +125,67 @@ fn format_takes_no_gitignore_above_git_repository() {
     assert_eq!(read(&path), FORMATTED);
 }
 
+#[cfg(unix)]
+#[test]
+fn format_takes_files_of_git_repository_though_it_cannot_read_gitignore_above_it() {
+    let dir = TempDir::new();
+    if unreadable(&dir, ".gitignore").is_none() {
+        return;
+    }
+    dir.dir("d/.git");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_takes_files_under_inner_git_repository_though_it_cannot_read_outer_ignore_files() {
+    let dir = TempDir::new();
+    let (Some(_), Some(_)) = (
+        unreadable(&dir, ".gitignore"),
+        unreadable(&dir, ".git/info/exclude"),
+    ) else {
+        return;
+    };
+    dir.dir("d/.git");
+    let [path] = write_unformatted(&dir, ["d/e/a.nu"]);
+    let output = format_in(&dir, &["d/e"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_takes_files_of_inner_git_repository_given_though_it_cannot_read_outer_ignore_files() {
+    let dir = TempDir::new();
+    let (Some(_), Some(_)) = (
+        unreadable(&dir, ".gitignore"),
+        unreadable(&dir, ".git/info/exclude"),
+    ) else {
+        return;
+    };
+    dir.dir("d/.git");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_takes_files_outside_git_repository_though_it_cannot_read_gitignore_there() {
+    let dir = TempDir::new();
+    if unreadable(&dir, "d/e/.gitignore").is_none() {
+        return;
+    }
+    let [path] = write_unformatted(&dir, ["d/e/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
 #[test]
 fn format_skips_files_gitignore_ignores_when_dot_git_is_file() {
     let dir = TempDir::new();
@@ -184,6 +249,215 @@ fn format_skips_files_dot_ignore_ignores_outside_git_repository() {
 }
 
 #[test]
+fn format_skips_files_gitignore_ignores_in_jujutsu_repository() {
+    let dir = TempDir::new();
+    dir.dir("d/.jj");
+    dir.file("d/.gitignore", "a.nu\n");
+    let [ignored, taken] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_takes_no_gitignore_of_repository_enclosing_another() {
+    let dir = TempDir::new();
+    dir.dir("d/.git");
+    dir.file("d/.gitignore", "a.nu\n");
+    dir.dir("d/e/.git");
+    let [path] = write_unformatted(&dir, ["d/e/a.nu"]);
+    let output = format_in(&dir, &["d/e"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_skips_files_git_exclude_of_main_worktree_ignores_in_linked_worktree() {
+    let dir = TempDir::new();
+    dir.file("main/.git/info/exclude", "a.nu\n");
+    dir.file("main/.git/worktrees/w/commondir", "../..\n");
+    dir.file("w/.git", "gitdir: ../main/.git/worktrees/w\n");
+    let [ignored, taken] = write_unformatted(&dir, ["w/a.nu", "w/b.nu"]);
+    let output = format_in(&dir, &["w"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_reads_directory_in_place_of_gitignore_as_ignoring_nothing() {
+    let dir = TempDir::new();
+    dir.dir("d/.git");
+    dir.dir("d/.gitignore");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_takes_files_dot_ignore_negates_though_gitignore_ignores_them() {
+    let dir = TempDir::new();
+    dir.dir("d/.git");
+    dir.file("d/.gitignore", "*.nu\n");
+    dir.file("d/.ignore", "!a.nu\n");
+    let [taken, ignored] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&taken), FORMATTED);
+    assert_eq!(read(&ignored), UNFORMATTED);
+}
+
+#[test]
+fn format_takes_files_gitignore_negates_though_git_exclude_ignores_them() {
+    let dir = TempDir::new();
+    dir.file("d/.git/info/exclude", "*.nu\n");
+    dir.file("d/.gitignore", "!a.nu\n");
+    let [taken, ignored] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&taken), FORMATTED);
+    assert_eq!(read(&ignored), UNFORMATTED);
+}
+
+#[test]
+fn format_takes_files_git_exclude_negates_though_global_excludes_file_ignores_them() {
+    let dir = TempDir::new();
+    dir.file("config/git/ignore", "*.nu\n");
+    dir.file("d/.git/info/exclude", "!a.nu\n");
+    let [taken, ignored] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds(&output);
+    assert_eq!(read(&taken), FORMATTED);
+    assert_eq!(read(&ignored), UNFORMATTED);
+}
+
+#[test]
+fn format_takes_files_inner_ignore_file_negates_though_outer_one_ignores_them() {
+    let dir = TempDir::new();
+    dir.dir("d/.git");
+    dir.file("d/.gitignore", "*.nu\n");
+    dir.file("d/e/.gitignore", "!a.nu\n");
+    dir.file("d/.ignore", "x*.nu\n");
+    dir.file("d/e/.ignore", "!xa.nu\n");
+    let taken = write_unformatted(&dir, ["d/e/a.nu", "d/e/xa.nu"]);
+    let ignored = write_unformatted(&dir, ["d/e/b.nu", "d/e/xb.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    for path in &taken {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+    for path in &ignored {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_reads_global_excludes_file_of_git_from_repository_root() {
+    let dir = TempDir::new();
+    dir.file("config/git/ignore", "/gen/\n");
+    dir.dir("d/.git");
+    let [ignored, taken] = write_unformatted(&dir, ["d/gen/a.nu", "d/e/gen/a.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_takes_no_global_excludes_file_of_git_outside_git_repository() {
+    let dir = TempDir::new();
+    dir.file("config/git/ignore", "a.nu\n");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
+fn format_reads_global_excludes_file_from_git_config_global_over_system() {
+    let dir = TempDir::new();
+    dir.file("system", "[core]\n\texcludesFile = system-ignore\n");
+    dir.file("system-ignore", "b.nu\n");
+    dir.file("global", "[core]\n\texcludesFile = global-ignore\n");
+    dir.file("global-ignore", "a.nu\n");
+    dir.dir("d/.git");
+    let [ignored, taken] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("GIT_CONFIG_SYSTEM", dir.path("system"))
+        .env("GIT_CONFIG_GLOBAL", dir.path("global"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_reads_global_excludes_file_at_path_relative_to_home_directory() {
+    let dir = TempDir::new();
+    dir.file("global", "[core]\n\texcludesFile = ~/ignore\n");
+    dir.file("home/ignore", "a.nu\n");
+    dir.dir("d/.git");
+    let [ignored, taken] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("GIT_CONFIG_GLOBAL", dir.path("global"))
+        .env("HOME", dir.path("home"))
+        .env("USERPROFILE", dir.path("home"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[test]
+fn format_reads_no_system_git_config_when_git_config_nosystem_is_set() {
+    let dir = TempDir::new();
+    dir.file("system", "[core]\n\texcludesFile = system-ignore\n");
+    dir.file("system-ignore", "a.nu\n");
+    dir.dir("d/.git");
+    let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("GIT_CONFIG_SYSTEM", dir.path("system"))
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds(&output);
+    assert_eq!(read(&path), UNFORMATTED);
+    let output = nuten_command()
+        .args(["format", "d"])
+        .env("GIT_CONFIG_SYSTEM", dir.path("system"))
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .current_dir(&dir.0)
+        .output()
+        .unwrap();
+    assert_succeeds(&output);
+    assert_eq!(read(&path), FORMATTED);
+}
+
+#[test]
 fn format_formats_ignored_file_given_directly() {
     let dir = TempDir::new();
     dir.dir(".git");
@@ -207,20 +481,108 @@ fn format_walks_directory_given_directly_though_ignored_or_version_control_direc
     }
 }
 
+/// Nothing when the test runs as root, which reads the file anyway.
+#[cfg(unix)]
+fn unreadable(dir: &TempDir, name: &str) -> Option<(PathBuf, String)> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let path = dir.file(name, "a.nu\n");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).unwrap();
+    let error = fs::read(&path).err()?;
+    let line = io_error_line(&path, &error);
+    Some((path, line))
+}
+
+/// Unreadable even to root, since a `.git` file not in UTF-8 names no git directory.
+fn unreadable_dot_git(dir: &TempDir, name: &str) -> (PathBuf, String) {
+    let path = dir.path(name);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(&path, b"\xff\n").unwrap();
+    let error = fs::read_to_string(&path).unwrap_err();
+    let line = io_error_line(&path, &error);
+    (path, line)
+}
+
+/// A git config naming the global excludes file by a path with NUL, which no platform can read.
+fn unreadable_global_excludes_file(dir: &TempDir) -> (PathBuf, PathBuf, String) {
+    let config = dir.path("gitconfig");
+    fs::write(&config, b"[core]\n\texcludesFile = a\0b\n").unwrap();
+    let excludes = PathBuf::from("a\0b");
+    let error = fs::read(&excludes).unwrap_err();
+    let line = io_error_line(&excludes, &error);
+    (config, excludes, line)
+}
+
 #[test]
-fn format_reports_ignore_file_line_it_cannot_read_and_leaves_files_under_it_alone() {
+fn format_reads_braces_in_ignore_file_as_characters() {
     let dir = TempDir::new();
-    let gitignore = dir.file("d/e/.gitignore", "gen/\na{b\n");
+    dir.file("d/.ignore", "a{b,c}.nu\n");
+    let [ignored] = write_unformatted(&dir, ["d/a{b,c}.nu"]);
+    let taken = write_unformatted(&dir, ["d/ab.nu", "d/ac.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    for path in &taken {
+        assert_eq!(read(path), FORMATTED, "{}", path.display());
+    }
+}
+
+#[test]
+fn format_reads_lines_of_ignore_file_after_line_not_in_utf8() {
+    let dir = TempDir::new();
+    let ignore = dir.path("d/.ignore");
+    fs::create_dir_all(dir.path("d")).unwrap();
+    fs::write(&ignore, b"\xff\na.nu\n").unwrap();
+    let [ignored, taken] = write_unformatted(&dir, ["d/a.nu", "d/b.nu"]);
+    let output = format_in(&dir, &["d"]);
+    assert_succeeds(&output);
+    assert_eq!(read(&ignored), UNFORMATTED);
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_ignore_file_it_cannot_read_and_leaves_files_under_it_alone() {
+    let dir = TempDir::new();
     let skipped = write_unformatted(&dir, ["d/e/a.nu", "d/e/f/a.nu"]);
     let [taken] = write_unformatted(&dir, ["d/a.nu"]);
+    let Some((_, line)) = unreadable(&dir, "d/e/.ignore") else {
+        return;
+    };
     let output = format_in(&dir, &["d"]);
     assert_eq!(output.status.code(), Some(2));
-    let problems = problems(&output);
-    assert_eq!(problems.lines().count(), 1, "{problems}");
-    assert!(
-        problems.starts_with(&format!("{}:2: ", gitignore.display())),
-        "{problems}"
-    );
+    assert_eq!(problems(&output), line);
+    for path in &skipped {
+        assert_eq!(read(path), UNFORMATTED, "{}", path.display());
+    }
+    assert_eq!(read(&taken), FORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_reports_each_file_for_ignores_it_cannot_read_in_one_directory() {
+    let dir = TempDir::new();
+    let (Some((_, dot_ignore)), Some((_, gitignore))) = (
+        unreadable(&dir, "d/.ignore"),
+        unreadable(&dir, "d/.gitignore"),
+    ) else {
+        return;
+    };
+    let (_, dot_git) = unreadable_dot_git(&dir, "d/.git");
+    let output = format_in(&dir, &["d"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(problems(&output), dot_ignore + &gitignore + &dot_git);
+}
+
+#[test]
+fn format_reports_dot_git_file_it_cannot_read_and_leaves_files_under_it_alone() {
+    let dir = TempDir::new();
+    let skipped = write_unformatted(&dir, ["d/e/a.nu", "d/e/f/a.nu"]);
+    let [taken] = write_unformatted(&dir, ["d/a.nu"]);
+    let (_, line) = unreadable_dot_git(&dir, "d/e/.git");
+    let output = format_in(&dir, &["d"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(problems(&output), line);
     for path in &skipped {
         assert_eq!(read(path), UNFORMATTED, "{}", path.display());
     }
@@ -228,76 +590,58 @@ fn format_reports_ignore_file_line_it_cannot_read_and_leaves_files_under_it_alon
 }
 
 #[test]
-fn format_leaves_directory_given_alone_when_its_ignore_file_has_line_it_cannot_read() {
+fn format_leaves_directory_alone_when_it_cannot_read_dot_git_file_above_it() {
     let dir = TempDir::new();
-    let ignore = dir.file("d/.ignore", "a{b\n");
+    let [skipped] = write_unformatted(&dir, ["d/e/a.nu"]);
+    let (_, line) = unreadable_dot_git(&dir, "d/.git");
+    let output = format_in(&dir, &["d/e"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(problems(&output), line);
+    assert_eq!(read(&skipped), UNFORMATTED);
+}
+
+#[cfg(unix)]
+#[test]
+fn format_leaves_directory_given_alone_when_it_cannot_read_its_ignore_file() {
+    let dir = TempDir::new();
     let [skipped, taken] = write_unformatted(&dir, ["d/a.nu", "b.nu"]);
+    let Some((_, line)) = unreadable(&dir, "d/.ignore") else {
+        return;
+    };
     let output = format_in(&dir, &["d", "b.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    let problems = problems(&output);
-    assert_eq!(problems.lines().count(), 1, "{problems}");
-    assert!(
-        problems.starts_with(&format!("{}:1: ", ignore.display())),
-        "{problems}"
-    );
+    assert_eq!(problems(&output), line);
     assert_eq!(read(&skipped), UNFORMATTED);
     assert_eq!(read(&taken), FORMATTED);
 }
 
+#[cfg(unix)]
 #[test]
-fn format_reports_each_ignore_file_line_it_cannot_read() {
+fn format_leaves_directory_alone_when_it_cannot_read_ignore_file_above_it() {
     let dir = TempDir::new();
-    let ignore = dir.file("d/.ignore", "a{b\nc\nd{e\n");
-    let output = format_in(&dir, &["d"]);
-    assert_eq!(output.status.code(), Some(2));
-    let problems = problems(&output);
-    let lines: Vec<_> = problems.lines().collect();
-    assert_eq!(lines.len(), 2, "{problems}");
-    assert!(
-        lines[0].starts_with(&format!("{}:1: ", ignore.display())),
-        "{problems}"
-    );
-    assert!(
-        lines[1].starts_with(&format!("{}:3: ", ignore.display())),
-        "{problems}"
-    );
-}
-
-#[test]
-fn format_leaves_directory_alone_when_ignore_file_above_it_has_line_it_cannot_read() {
-    let dir = TempDir::new();
-    let ignore = dir.file("d/.ignore", "a{b\n");
     let [skipped] = write_unformatted(&dir, ["d/e/a.nu"]);
+    let Some((_, line)) = unreadable(&dir, "d/.ignore") else {
+        return;
+    };
     let output = format_in(&dir, &["d/e"]);
     assert_eq!(output.status.code(), Some(2));
-    let problems = problems(&output);
-    assert_eq!(problems.lines().count(), 1, "{problems}");
-    assert!(
-        problems.starts_with(&format!("{}:1: ", ignore.display())),
-        "{problems}"
-    );
+    assert_eq!(problems(&output), line);
     assert_eq!(read(&skipped), UNFORMATTED);
 }
 
 #[test]
-fn format_leaves_directories_alone_when_global_excludes_file_of_git_has_line_it_cannot_read() {
+fn format_leaves_directories_alone_when_it_cannot_read_global_excludes_file_of_git() {
     let dir = TempDir::new();
-    let excludes = dir.file("config/git/ignore", "a{b\n");
-    let config_home = dir.path("config");
     let [skipped, taken] = write_unformatted(&dir, ["d/a.nu", "b.nu"]);
+    let (config, _, line) = unreadable_global_excludes_file(&dir);
     let output = nuten_command()
         .args(["format", "d", "b.nu"])
-        .env("XDG_CONFIG_HOME", config_home)
+        .env("GIT_CONFIG_GLOBAL", config)
         .current_dir(&dir.0)
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    let problems = problems(&output);
-    assert_eq!(problems.lines().count(), 1, "{problems}");
-    assert!(
-        problems.starts_with(&format!("{}:1: ", excludes.display())),
-        "{problems}"
-    );
+    assert_eq!(problems(&output), line);
     assert_eq!(read(&skipped), UNFORMATTED);
     assert_eq!(read(&taken), FORMATTED);
 }
@@ -305,21 +649,19 @@ fn format_leaves_directories_alone_when_global_excludes_file_of_git_has_line_it_
 #[test]
 fn format_reports_problem_of_directory_once_when_given_twice() {
     let dir = TempDir::new();
-    let ignore = dir.file("d/.ignore", "a{b\n");
+    let (_, line) = unreadable_dot_git(&dir, "d/.git");
     let output = format_in(&dir, &["d", "d"]);
     assert_eq!(output.status.code(), Some(2));
-    let problems = problems(&output);
-    assert_eq!(problems.lines().count(), 1, "{problems}");
-    assert!(
-        problems.starts_with(&format!("{}:1: ", ignore.display())),
-        "{problems}"
-    );
+    assert_eq!(problems(&output), line);
 }
 
+#[cfg(unix)]
 #[test]
 fn format_reports_problem_of_ignore_file_once_when_above_one_directory_and_in_another() {
     let dir = TempDir::new();
-    dir.file("d/.ignore", "a{b\n");
+    if unreadable(&dir, "d/.ignore").is_none() {
+        return;
+    }
     dir.dir("d/e");
     for paths in [["d", "d/e"], ["d/e", "d"]] {
         let output = format_in(&dir, &paths);
@@ -534,10 +876,11 @@ fn format_reports_problems_of_walking_and_of_formatting_in_order_of_paths_given(
     let dir = TempDir::new();
     dir.file("z.nu", "ls ||");
     dir.file("y.nu", "ls ||");
-    let ignore = dir.file("d/.ignore", "a{b\n").display().to_string();
+    let (dot_git, _) = unreadable_dot_git(&dir, "d/.git");
+    let dot_git = dot_git.display().to_string();
     for (paths, expected) in [
-        (["z.nu", "d", "y.nu"], ["z.nu", &ignore, "y.nu"]),
-        (["y.nu", "z.nu", "d"], ["y.nu", "z.nu", &ignore]),
+        (["z.nu", "d", "y.nu"], ["z.nu", &dot_git, "y.nu"]),
+        (["y.nu", "z.nu", "d"], ["y.nu", "z.nu", &dot_git]),
     ] {
         let output = format_in(&dir, &paths);
         assert_eq!(output.status.code(), Some(2));
@@ -550,14 +893,15 @@ fn format_reports_problems_of_walking_and_of_formatting_in_order_of_paths_given(
 fn format_reports_problems_met_while_walking_directory_among_its_files() {
     let dir = TempDir::new();
     dir.file("d/a.nu", "ls ||");
-    let ignore = dir.file("d/b/.ignore", "a{b\n").display().to_string();
+    let (dot_git, _) = unreadable_dot_git(&dir, "d/b/.git");
+    let dot_git = dot_git.display().to_string();
     dir.file("d/b/x.nu", "ls ||");
     dir.file("d/c.nu", "ls ||");
     let output = format_in(&dir, &["d"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
         reported_paths(&output),
-        ["d/a.nu", &ignore, "d/c.nu"],
+        ["d/a.nu", &dot_git, "d/c.nu"],
         "{}",
         problems(&output)
     );
@@ -583,17 +927,18 @@ fn format_reports_path_it_cannot_resolve_where_it_is_given() {
 #[test]
 fn format_reports_wrong_config_file_once_where_first_path_it_configures_is_given() {
     let dir = TempDir::new();
-    let ignore = dir.file("d/.ignore", "a{b\n").display().to_string();
+    let (dot_git, _) = unreadable_dot_git(&dir, "d/.git");
+    let dot_git = dot_git.display().to_string();
     let nuon = dir.file("e/nuten.nuon", "{a: 1}").display().to_string();
     let paths = write_unformatted(&dir, ["e/a.nu", "e/b.nu"]);
     for (args, expected) in [
         (
             &["d", "e/a.nu", "e/b.nu"][..],
-            &[ignore.as_str(), &nuon][..],
+            &[dot_git.as_str(), &nuon][..],
         ),
-        (&["e/b.nu", "d", "e/a.nu"], &[&nuon, &ignore]),
-        (&["e", "d"], &[&nuon, &ignore]),
-        (&["d", "e"], &[&ignore, &nuon]),
+        (&["e/b.nu", "d", "e/a.nu"], &[&nuon, &dot_git]),
+        (&["e", "d"], &[&nuon, &dot_git]),
+        (&["d", "e"], &[&dot_git, &nuon]),
         (&["e/a.nu", "e"], &[&nuon]),
     ] {
         let output = format_in(&dir, args);
@@ -609,14 +954,15 @@ fn format_reports_wrong_config_file_once_where_first_path_it_configures_is_given
 #[test]
 fn format_reports_problem_of_global_excludes_file_once_at_first_directory_respecting_it() {
     let dir = TempDir::new();
-    let excludes = dir.file("config/git/ignore", "a{b\n").display().to_string();
+    let (config, excludes, _) = unreadable_global_excludes_file(&dir);
+    let excludes = excludes.display().to_string();
     dir.file("z.nu", "ls ||");
     dir.file("off/nuten.nuon", "{respect_gitignore: false}");
     dir.file("off/y.nu", "ls ||");
     let skipped = write_unformatted(&dir, ["on1/a.nu", "on2/a.nu"]);
     let output = nuten_command()
         .args(["format", "z.nu", "off", "on1", "on2"])
-        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .env("GIT_CONFIG_GLOBAL", config)
         .current_dir(&dir.0)
         .output()
         .unwrap();
@@ -649,13 +995,15 @@ fn format_formats_ignored_files_when_respect_gitignore_is_off() {
     assert_eq!(read(&vcs), UNFORMATTED);
 }
 
+#[cfg(unix)]
 #[test]
 fn format_reads_no_ignore_file_when_respect_gitignore_is_off() {
     let dir = TempDir::new();
     dir.file("d/nuten.nuon", "{respect_gitignore: false}");
-    dir.file("d/.ignore", "a{b\n");
-    dir.file("config/git/ignore", "a{b\n");
     let [path] = write_unformatted(&dir, ["d/a.nu"]);
+    if unreadable(&dir, "d/.ignore").is_none() || unreadable(&dir, "config/git/ignore").is_none() {
+        return;
+    }
     let output = nuten_command()
         .args(["format", "d"])
         .env("XDG_CONFIG_HOME", dir.path("config"))
@@ -699,12 +1047,12 @@ fn format_takes_respect_gitignore_from_config_file_where_symlinked_directory_lea
 #[test]
 fn format_reads_no_global_excludes_file_of_git_when_respect_gitignore_is_off() {
     let dir = TempDir::new();
-    dir.file("config/git/ignore", "a{b\n");
     dir.file("off/nuten.nuon", "{respect_gitignore: false}");
     let [on, off] = write_unformatted(&dir, ["on/a.nu", "off/a.nu"]);
+    let (config, _, _) = unreadable_global_excludes_file(&dir);
     let output = nuten_command()
         .args(["format", "on", "off"])
-        .env("XDG_CONFIG_HOME", dir.path("config"))
+        .env("GIT_CONFIG_GLOBAL", config)
         .current_dir(&dir.0)
         .output()
         .unwrap();

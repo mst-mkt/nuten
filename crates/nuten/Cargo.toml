@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-ignore = { workspace = true }
+gix-ignore = { workspace = true }
 nuten-config = { workspace = true }
 nuten-format = { workspace = true }
 nuten-line-index = { workspace = true }
