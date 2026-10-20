@@ -128,7 +128,7 @@ fn verdict(patterns: &IgnorePatterns, path: &[u8], is_dir: bool) -> Option<bool>
 fn read(path: &Path) -> Result<Option<IgnorePatterns>, UnreadFile> {
     match fs::read(path) {
         Ok(bytes) => Ok(Some(parse(&bytes, path))),
-        Err(error) if is_absent(&error) => Ok(None),
+        Err(error) if is_absent(path, &error) => Ok(None),
         Err(error) => Err(UnreadFile {
             path: path.to_path_buf(),
             error,
@@ -137,11 +137,11 @@ fn read(path: &Path) -> Result<Option<IgnorePatterns>, UnreadFile> {
 }
 
 /// A directory in place of the file ignores nothing too, as in git.
-fn is_absent(error: &io::Error) -> bool {
+fn is_absent(path: &Path, error: &io::Error) -> bool {
     matches!(
         error.kind(),
         io::ErrorKind::NotFound | io::ErrorKind::NotADirectory | io::ErrorKind::IsADirectory
-    )
+    ) || path.is_dir()
 }
 
 fn parse(bytes: &[u8], source: &Path) -> IgnorePatterns {
@@ -179,7 +179,7 @@ fn git_dir(dot_git: &Path) -> Result<PathBuf, UnreadFile> {
     let commondir = git_dir.join("commondir");
     match fs::read_to_string(&commondir) {
         Ok(common) => Ok(git_dir.join(common.trim_end_matches(['\n', '\r']))),
-        Err(error) if is_absent(&error) => Ok(git_dir),
+        Err(error) if is_absent(&commondir, &error) => Ok(git_dir),
         Err(error) => Err(UnreadFile {
             path: commondir,
             error,
