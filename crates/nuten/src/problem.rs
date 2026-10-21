@@ -6,6 +6,8 @@ use std::{
 use nuten_config::LookupError;
 use nuten_line_index::LineColumn;
 
+use crate::picture::pictured;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Problem {
     pub(crate) path: Option<PathBuf>,
@@ -65,7 +67,7 @@ impl From<LookupError> for Problem {
 impl fmt::Display for Problem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(path) = &self.path {
-            write!(f, "{}", path.display())?;
+            f.write_str(&pictured(&path.display().to_string()))?;
             if let Some(position) = self.position {
                 write!(f, ":{}", position.line)?;
                 if let Some(column) = position.column {
@@ -74,7 +76,8 @@ impl fmt::Display for Problem {
             }
             write!(f, ": ")?;
         }
-        write!(f, "{}", self.message)
+        // Pictured too, since a message can quote a path or a config file.
+        f.write_str(&pictured(&self.message))
     }
 }
 
@@ -102,6 +105,14 @@ mod tests {
         assert_eq!(Problem::in_file(path, "x").to_string(), "a.nu: x");
         assert_eq!(Problem::at(path, line, "x").to_string(), "a.nu:2: x");
         assert_eq!(Problem::at(path, column, "x").to_string(), "a.nu:2:3: x");
+    }
+
+    #[test]
+    fn problem_shows_control_characters_of_path_and_message_as_pictures() {
+        assert_eq!(
+            Problem::in_file(Path::new("a\u{1b}[2J.nu"), "b\u{1b}[0m\nc").to_string(),
+            "a␛[2J.nu: b␛[0m␊c"
+        );
     }
 
     #[test]

@@ -2,6 +2,7 @@ use std::{iter, ops::Range, path::Path};
 
 use crate::{
     diff::{Change, Difference, Hunk, changes},
+    picture::pictured,
     style::{Style, Tone},
 };
 
@@ -10,12 +11,7 @@ const COMPARED_CHARS: usize = 10_000;
 
 pub(crate) fn view(path: &Path, difference: &Difference<'_>, style: Style) -> String {
     // Lossy for names that are not UTF-8, as the list of `--list-different` is.
-    let path: String = path
-        .display()
-        .to_string()
-        .chars()
-        .map(char_picture)
-        .collect();
+    let path = pictured(&path.display().to_string());
     let body = match &difference.hunks {
         Some(hunks) => hunks_body(&path, hunks, difference, style),
         None => endings_body(&path, difference, style),
@@ -248,32 +244,16 @@ fn char_text(ch: char, changed: bool, in_line_break: bool, draws_spaces: bool) -
     match (changed, ch) {
         (false, _) if in_line_break => (String::new(), Weight::Normal),
         (true, '\n') => ("⏎".to_string(), Weight::Faint),
-        (_, ch) if ch.is_whitespace() && draws_spaces => {
-            (space_picture(ch).to_string(), Weight::Faint)
-        },
-        (true, ch) => (char_picture(ch).to_string(), Weight::Strong),
-        (false, ch) => (char_picture(ch).to_string(), Weight::Normal),
+        (_, ' ') if draws_spaces => ("·".to_string(), Weight::Faint),
+        (_, '\t') if draws_spaces => ("→".to_string(), Weight::Faint),
+        (_, ch) if ch.is_whitespace() && draws_spaces => (char_picture(ch), Weight::Faint),
+        (true, ch) => (char_picture(ch), Weight::Strong),
+        (false, ch) => (char_picture(ch), Weight::Normal),
     }
 }
 
-fn space_picture(ch: char) -> char {
-    match ch {
-        ' ' => '·',
-        '\t' => '→',
-        ch => char_picture(ch),
-    }
-}
-
-/// Not raw, since a control character would move the cursor or color the terminal.
-fn char_picture(ch: char) -> char {
-    match ch {
-        '\t' => ch,
-        '\u{7f}' => '␡',
-        ch if ch < ' ' => {
-            char::from_u32(0x2400 + u32::from(ch)).expect("control pictures are characters")
-        },
-        ch => ch,
-    }
+fn char_picture(ch: char) -> String {
+    pictured(ch.encode_utf8(&mut [0; 4]))
 }
 
 fn gutter(tone: Tone, style: Style) -> String {
@@ -531,6 +511,17 @@ mod tests {
                 "╰─",
             ])
         );
+    }
+
+    #[test]
+    fn view_draws_other_space_of_changed_line_faint_by_its_picture() {
+        let text = view(
+            Path::new("a.nu"),
+            &Difference::new("ls|x\u{b}\n", "ls | x\u{b}\n"),
+            Style::COLORED,
+        );
+        assert!(text.contains("\u{1b}[2m\u{1b}[31m␋\u{1b}[0m"), "{text:?}");
+        assert!(text.contains("\u{1b}[2m\u{1b}[32m␋\u{1b}[0m"), "{text:?}");
     }
 
     #[test]

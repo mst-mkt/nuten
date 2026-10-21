@@ -5,6 +5,7 @@ mod gitignore;
 mod output;
 mod overwrite;
 mod parallel;
+mod picture;
 mod problem;
 mod reporter;
 mod run;

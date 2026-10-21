@@ -217,6 +217,19 @@ fn format_leaves_error_mark_plain_when_no_color_is_set_though_clicolor_force_is_
     assert!(stderr.starts_with("error: bad.nu:1:4: "), "{stderr}");
 }
 
+/// Windows takes no control character in a file name.
+#[cfg(unix)]
+#[test]
+fn format_shows_escape_in_name_of_file_with_problem_as_picture() {
+    let dir = TempDir::new();
+    dir.file("a\u{1b}[2J.nu", "ls || x\n");
+    let output = format_in(&dir, &["a\u{1b}[2J.nu"]);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr(&output);
+    assert!(!stderr.contains('\u{1b}'), "{stderr:?}");
+    assert!(problems(&output).starts_with("a␛[2J.nu:1:4: "), "{stderr}");
+}
+
 #[test]
 fn format_reports_syntax_error_position_and_continues() {
     let dir = TempDir::new();

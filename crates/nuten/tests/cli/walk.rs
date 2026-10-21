@@ -504,13 +504,14 @@ fn unreadable_dot_git(dir: &TempDir, name: &str) -> (PathBuf, String) {
 }
 
 /// A git config naming the global excludes file by a path with NUL, which no platform can read.
-fn unreadable_global_excludes_file(dir: &TempDir) -> (PathBuf, PathBuf, String) {
+/// The path comes pictured, as a problem shows it.
+fn unreadable_global_excludes_file(dir: &TempDir) -> (PathBuf, &'static str, String) {
     let config = dir.path("gitconfig");
     fs::write(&config, b"[core]\n\texcludesFile = a\0b\n").unwrap();
-    let excludes = PathBuf::from("a\0b");
-    let error = fs::read(&excludes).unwrap_err();
-    let line = io_error_line(&excludes, &error);
-    (config, excludes, line)
+    let error = fs::read("a\0b").unwrap_err();
+    let shown = "a␀b";
+    let line = io_error_line(Path::new(shown), &error);
+    (config, shown, line)
 }
 
 #[test]
@@ -955,7 +956,6 @@ fn format_reports_wrong_config_file_once_where_first_path_it_configures_is_given
 fn format_reports_problem_of_global_excludes_file_once_at_first_directory_respecting_it() {
     let dir = TempDir::new();
     let (config, excludes, _) = unreadable_global_excludes_file(&dir);
-    let excludes = excludes.display().to_string();
     dir.file("z.nu", "ls ||");
     dir.file("off/nuten.nuon", "{respect_gitignore: false}");
     dir.file("off/y.nu", "ls ||");
@@ -969,7 +969,7 @@ fn format_reports_problem_of_global_excludes_file_once_at_first_directory_respec
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
         reported_paths(&output),
-        ["z.nu", "off/y.nu", &excludes],
+        ["z.nu", "off/y.nu", excludes],
         "{}",
         problems(&output)
     );
