@@ -514,6 +514,19 @@ mod tests {
     }
 
     #[test]
+    fn view_names_c1_and_bidi_controls_by_code_point_and_marks_each_as_one_character() {
+        assert_eq!(
+            bracketed("ls|\u{202e}x\u{85}\n", "ls | \u{9b}x\u{85}\n"),
+            joined(&[
+                "╭─ a.nu:1",
+                "│ ▍ ls|[<U+202E>]x<U+0085>",
+                "│ ▍ ls·|·[<U+009B>]x<U+0085>",
+                "╰─"
+            ])
+        );
+    }
+
+    #[test]
     fn view_draws_other_space_of_changed_line_faint_by_its_picture() {
         let text = view(
             Path::new("a.nu"),
