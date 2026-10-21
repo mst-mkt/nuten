@@ -168,7 +168,7 @@ impl Mode {
         clippy::match_same_arms,
         reason = "one arm per way nu calls lex, to check each against nu on its own"
     )]
-    fn special(self) -> &'static [(u8, SyntaxKind)] {
+    const fn special(self) -> &'static [(u8, SyntaxKind)] {
         match self {
             Mode::Block => &[],
             Mode::Paren => &[],
@@ -218,11 +218,23 @@ impl Mode {
     }
 
     pub(crate) fn special_kind(self, byte: u8) -> Option<SyntaxKind> {
-        self.special()
-            .iter()
-            .find_map(|&(special, kind)| (special == byte).then_some(kind))
+        SPECIAL_KINDS[self as usize][usize::from(byte)]
     }
 }
+
+static SPECIAL_KINDS: [[Option<SyntaxKind>; 256]; Mode::ALL.len()] = {
+    let mut kinds = [[None; 256]; Mode::ALL.len()];
+    let mut modes = Mode::ALL;
+    while let [mode, rest @ ..] = modes {
+        modes = rest;
+        let mut special = mode.special();
+        while let [(byte, kind), rest @ ..] = special {
+            kinds[*mode as usize][*byte as usize] = Some(*kind);
+            special = rest;
+        }
+    }
+    kinds
+};
 
 /// Lexes all of `src` in block mode, and keeps where its brackets close for lexing parts again.
 pub(crate) fn lex_file(src: &str) -> (Lexed, ClosedBrackets) {
@@ -1624,6 +1636,19 @@ mod tests {
                     ],
                     "{mode:?} {src:?}"
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn special_kind_is_the_kind_special_lists() {
+        for &mode in Mode::ALL {
+            for byte in u8::MIN..=u8::MAX {
+                let listed = mode
+                    .special()
+                    .iter()
+                    .find_map(|&(special, kind)| (special == byte).then_some(kind));
+                assert_eq!(mode.special_kind(byte), listed, "{mode:?} {byte:?}");
             }
         }
     }
