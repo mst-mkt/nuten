@@ -6,6 +6,7 @@ use rowan::{TextRange, TextSize};
 use super::{
     builtin, interpolation, is_pipe,
     parameters::{Declared, Item, Param},
+    shell_operator,
 };
 use crate::{
     lexer::{self, ClosedBrackets, Mode, Token},
@@ -856,14 +857,19 @@ fn statements_holding<'a>(
             too_deep = true;
             continue;
         }
-        let tokens = if depth == 0 {
-            significant_tokens(file_tokens.iter().copied(), mode)
+        let (tokens, params_end) = if depth == 0 {
+            (significant_tokens(file_tokens.iter().copied(), mode), None)
         } else {
-            significant_tokens(lexer::tokens(src, closed, range, mode), mode)
+            let lexed: Vec<_> = lexer::tokens(src, closed, range, mode).collect();
+            let params_end = (mode == Mode::Block)
+                .then(|| closure_params_end(src, &lexed))
+                .flatten();
+            (significant_tokens(lexed.into_iter(), mode), params_end)
         };
-        statements.extend(
-            statements_of(src, &tokens, mode).filter(|statement| statement.contains(&word)),
-        );
+        let body = &tokens[tokens
+            .partition_point(|token| params_end.is_some_and(|end| token.range.start() < end))..];
+        statements
+            .extend(statements_of(src, body, mode).filter(|statement| statement.contains(&word)));
         pending.extend(
             tokens
                 .iter()
@@ -882,6 +888,27 @@ fn significant_tokens(tokens: impl Iterator<Item = Token>, mode: Mode) -> Vec<To
                 || (token.kind == SyntaxKind::Newline && mode.skips_newline()))
         })
         .collect()
+}
+
+/// `tokens` keep comments, since one before the `|` leaves the parser reading no parameters.
+fn closure_params_end(src: &str, tokens: &[Token]) -> Option<TextSize> {
+    let mut items = tokens
+        .iter()
+        .filter(|token| token.kind != SyntaxKind::Whitespace);
+    let open = match items.next()? {
+        newline if newline.kind == SyntaxKind::Newline => items.next()?,
+        first => first,
+    };
+    if open.kind != SyntaxKind::Pipe {
+        return None;
+    }
+    items
+        .find(|token| {
+            matches!(token.kind, SyntaxKind::Semicolon | SyntaxKind::Pipe)
+                || shell_operator(&src[token.range]).is_some()
+        })
+        .filter(|token| token.kind == SyntaxKind::Pipe)
+        .map(|token| token.range.end())
 }
 
 /// A pipe ends one too, since an `alias` may follow it.
@@ -1911,6 +1938,42 @@ mod tests {
             ["f"]
         );
         assert_eq!(*alias_heads("ls --g=(do { alias g = ^g }),x"), ["g"]);
+    }
+
+    #[test]
+    fn alias_heads_omit_closure_parameters() {
+        assert!(alias_heads("{|x\nalias a| a [b] }").is_empty());
+        assert!(alias_heads("{\n|x\nexport alias a| a [b] }").is_empty());
+        assert!(alias_heads("ls | {|x\nalias a| a [b] }").is_empty());
+    }
+
+    #[test]
+    fn alias_heads_come_from_closure_body() {
+        assert_eq!(*alias_heads("{|x| alias a = ^a }"), ["a"]);
+        assert_eq!(*alias_heads("{||\nalias b = ^b }"), ["b"]);
+        assert_eq!(*alias_heads("{|x|\nalias c = ^c }"), ["c"]);
+    }
+
+    #[test]
+    fn alias_heads_come_from_unclosed_closure_parameters() {
+        assert_eq!(*alias_heads("{|x\nalias a = ^a }"), ["a"]);
+        assert_eq!(*alias_heads("{|x; alias b| }"), ["b"]);
+        assert_eq!(*alias_heads("{|x\nalias d; y| }"), ["d"]);
+        assert_eq!(*alias_heads("{|x &&\nalias c| }"), ["c"]);
+    }
+
+    #[test]
+    fn alias_heads_come_from_pipe_after_comment_in_block() {
+        assert_eq!(*alias_heads("{ # c\n| x\nalias a = ^a\n}"), ["a"]);
+        assert_eq!(*alias_heads("{ # c\n|x\nalias b| ^b }"), ["b"]);
+    }
+
+    #[test]
+    fn hidden_words_omit_closure_parameters() {
+        assert_eq!(
+            hidden_words("{|x\nhide a| a [b] }").as_deref(),
+            Some(&[][..])
+        );
     }
 
     #[test]
