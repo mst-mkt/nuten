@@ -1,10 +1,12 @@
-use nuten_doc::{Build, empty_line, expand_parent, soft_line_break_or_space, space, text};
+use nuten_doc::{
+    Build, empty_line, expand_parent, hard_line_break, soft_line_break_or_space, space, text,
+};
 use nuten_syntax::{
     NodeOrToken, SyntaxElement, SyntaxKind,
     ast::{self, AstNode, Block, Bracketed, ClosureParams, Node},
 };
 
-use super::{Child, Formatter, children, kept::Kept, without_separators};
+use super::{Child, Formatter, children, ends_with_pipe, kept::Kept, without_separators};
 
 impl Formatter<'_> {
     pub(super) fn block(&mut self, block: &Block) {
@@ -73,7 +75,17 @@ impl Formatter<'_> {
             this.extend(lead);
             this.statements(body, false);
         });
-        self.extend([soft_line_break_or_space(), close]);
+        // Nu needs a line break after a `|` that ends the block.
+        let before_close = if body
+            .last()
+            .and_then(|last| last.element.as_node())
+            .is_some_and(|statement| ends_with_pipe(statement.syntax()))
+        {
+            hard_line_break()
+        } else {
+            soft_line_break_or_space()
+        };
+        self.extend([before_close, close]);
     }
 
     /// A space stays between two `|` with nothing between them, since `||` is lexed as one token.
