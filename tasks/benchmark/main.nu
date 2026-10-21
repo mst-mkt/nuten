@@ -32,6 +32,7 @@ def "main nufmt" [
     oracle: path # The nuten-oracle binary, which asks nu whether formatting keeps the AST
     ...also: path # More files to compare, such as the one nufmt benchmarks itself on
     --time-limit: duration = 100sec # How long a formatter may take on one file before it is cut off, a hundredfold under valgrind
+    --max-size: filesize = 512KiB # How large a file may be for the oracle to check that formatting keeps its AST
     --runs: int = 5 # How many times each formatter is timed on each file
 ]: nothing -> record {
     if $runs < 1 {
@@ -39,7 +40,9 @@ def "main nufmt" [
     }
     require [timeout, hyperfine, valgrind, taskset]
 
-    nufmt compare $corpus $nuten $nufmt $oracle $also $time_limit $runs (fastest-allowed-cpu)
+    nufmt compare $corpus $nuten $nufmt $oracle $also $time_limit $max_size $runs (
+        fastest-allowed-cpu
+    )
 }
 
 # The picked inputs of base as NUON, with paths relative to the corpus.

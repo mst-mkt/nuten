@@ -4,33 +4,37 @@ export def screen [
     formatters: list<record>
     oracle: path
     limit: duration
+    max_size: filesize
 ]: nothing -> record {
     $files
-    | par-each {|file| verdict $file $formatters $oracle $limit }
+    | par-each {|file| verdict $file $formatters $oracle $limit $max_size }
     | sort-by file
     | report
 }
 
+# Nu takes gigabytes of memory to write the AST of a megabyte file, so the AST of a file over max_size goes unchecked.
 def verdict [
     file: path
     formatters: list<record>
     oracle: path
     limit: duration
+    max_size: filesize
 ]: nothing -> record {
     let source = open --raw $file
     if ($source | describe) != string {
-        return { file: $file, unreadable: true, problems: [] }
+        return { file: $file, unreadable: true, unverified: false, problems: [] }
     }
+    let unverified = ($source | str length --utf-8-bytes | into filesize) > $max_size
     let problems = $formatters
         | each {|formatter|
-              let reason = problem $file $source $formatter $oracle $limit
+              let reason = problem $file $source $formatter $oracle $limit --skip-ast=$unverified
               if $reason != null {
                   { formatter: $formatter.name, reason: $reason }
               }
           }
         | compact
 
-    { file: $file, unreadable: false, problems: $problems }
+    { file: $file, unreadable: false, unverified: $unverified, problems: $problems }
 }
 
 def problem [
@@ -39,6 +43,7 @@ def problem [
     formatter: record
     oracle: path
     limit: duration
+    --skip-ast
 ]: nothing -> oneof<string, nothing> {
     cd ($file | path dirname)
     let seconds = $limit / 1sec
@@ -52,6 +57,9 @@ def problem [
             return "rejects a file nu rejects"
         }
         _ => { return fails }
+    }
+    if $skip_ast {
+        return null
     }
     let output = mktemp --tmpdir --suffix .nu
     $formatted.stdout | save --force $output
@@ -82,6 +90,7 @@ def report []: list<record> -> record {
         compared: ($verdicts | where not $it.unreadable and ($it.problems | is-empty) | get file)
         excluded: ($verdicts | excluded)
         unreadable: ($verdicts | where unreadable | get file)
+        unverified: ($verdicts | where unverified | get file)
     }
 }
 

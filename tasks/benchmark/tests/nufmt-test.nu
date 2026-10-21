@@ -546,7 +546,7 @@ def "compare takes files under corpus and those also given" [] {
     let inside = put $corpus sub/a.nu "ls"
     let after = put $context.dir b.nu "ls"
 
-    let actual = compare $corpus $context.nuten.command $context.failing_nufmt $context.oracle [$after] 100sec 1 null
+    let actual = compare $corpus $context.nuten.command $context.failing_nufmt $context.oracle [$after] 100sec 512KiB 1 null
 
     assert equal $actual.timing.files []
     assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [$after sub/a.nu] }]
@@ -557,7 +557,7 @@ def "compare takes file given twice once" [] {
     let context = $in
     let file = put $context.dir a.nu "ls"
 
-    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [$file] 100sec 1 null
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [$file] 100sec 512KiB 1 null
 
     assert equal $actual.files 1
     assert equal $actual.excluded [{ formatter: nufmt reason: fails files: [a.nu] }]
@@ -574,7 +574,7 @@ def "compare takes relative paths from where it runs" [] {
 
     let actual = do {
         cd $context.dir
-        compare corpus ./nuten $"./($nufmt)" ./oracle [b.nu] 100sec 1 null
+        compare corpus ./nuten $"./($nufmt)" ./oracle [b.nu] 100sec 512KiB 1 null
     }
 
     assert equal ($actual.timing.files | get file) [$after nu-std/a.nu]
@@ -588,7 +588,7 @@ def "compare times files both keep on each file and directory, and directories o
     let nufmt = keeping-nufmt $context.dir
     let cpu = fastest-allowed-cpu
 
-    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1 $cpu
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 512KiB 1 $cpu
 
     assert equal ($actual.timing.files | get file) [nu-std/a.nu]
     assert ($actual.timing.files.0.instructions.nuten > 0)
@@ -605,7 +605,7 @@ def "compare times each file on cpu given" [] {
     chmod +x $nufmt
     let cpu = allowed-cpus | last
 
-    compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1 $cpu
+    compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 512KiB 1 $cpu
 
     assert ($"Cpus_allowed_list:\t($cpu)" in (open ($context.dir | path join ran) | lines))
 }
@@ -615,7 +615,7 @@ def "compare times no file and no directory when every file is left out" [] {
     let context = $in
     put $context.dir a.nu "ls"
 
-    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1 null
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 512KiB 1 null
 
     assert equal $actual.timing { files: [] total: null speedup: null }
     assert equal $actual.directories []
@@ -628,7 +628,7 @@ def "compare gives versions, machine, and binary sizes" [] {
     let nodes = open --raw $LOCK | from json | get nodes
     let size = ls $context.nuten.command | get 0.size
 
-    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1 null
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 512KiB 1 null
 
     assert equal $actual.versions.nufmt.rev $nodes.nufmt.locked.rev
     assert equal $actual.versions.nushell.rev $nodes.nushell.locked.rev
@@ -644,7 +644,7 @@ def "compare gives schema, time it started, and runs" [] {
     chmod +x $telling
     let before = date now
 
-    let actual = compare $context.dir $context.nuten.command $telling $context.oracle [] 100sec 3 null
+    let actual = compare $context.dir $context.nuten.command $telling $context.oracle [] 100sec 512KiB 3 null
 
     let ran_at = open ($context.dir | path join ran-at) | lines | first | into int | into datetime
     assert equal $actual.schema 1
@@ -659,7 +659,7 @@ def "compare gives instructions of each file on its row" [] {
     put $context.dir b.nu "ls"
     let nufmt = keeping-nufmt $context.dir
 
-    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1 null
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 512KiB 1 null
 
     let files = $actual.timing.files
     assert equal ($files | get file) [a.nu b.nu]
@@ -672,7 +672,7 @@ def "compare gives size of each file" [] {
     put $context.dir a.nu "ls|length"
     let nufmt = keeping-nufmt $context.dir
 
-    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1 null
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 512KiB 1 null
 
     assert equal ($actual.timing.files | select file size) [{ file: a.nu size: 9b }]
 }
@@ -684,7 +684,7 @@ def "compare gives size of file symlink points to" [] {
     ^ln -s a.txt ($context.dir | path join a.nu)
     let nufmt = keeping-nufmt $context.dir
 
-    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 1 null
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 512KiB 1 null
 
     assert equal ($actual.timing.files | select file size) [{ file: a.nu size: 9b }]
 }
@@ -698,7 +698,7 @@ def "compare gives valgrind more time than formatter alone" [] {
     let nufmt = put $context.dir nufmt $"#!/bin/sh\n($script)"
     chmod +x $nufmt
 
-    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 1sec 1 null
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 1sec 512KiB 1 null
 
     assert equal ($actual.timing.files | get file) [a.nu]
 }
@@ -708,9 +708,21 @@ def "compare gives unreadable file relative to corpus" [] {
     let context = $in
     put $context.dir sub/a.nu (0x[ff fe])
 
-    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 1 null
+    let actual = compare $context.dir $context.nuten.command $context.failing_nufmt $context.oracle [] 100sec 512KiB 1 null
 
     assert equal $actual.unreadable [sub/a.nu]
+}
+
+@test
+def "compare gives unverified file relative to corpus" [] {
+    let context = $in
+    put $context.dir sub/a.nu "ls|length"
+    put $context.dir b.nu "ls"
+    let nufmt = keeping-nufmt $context.dir
+
+    let actual = compare $context.dir $context.nuten.command $nufmt $context.oracle [] 100sec 8b 1 null
+
+    assert equal $actual.unverified [sub/a.nu]
 }
 
 @test
@@ -741,6 +753,25 @@ def "main nufmt times directories on fastest allowed cpu" [] {
 
     assert equal $actual.exit_code 0 $actual.stderr
     assert equal ($actual.stdout | from nuon | get directories.one_cpu.cpu) [(fastest-allowed-cpu)]
+}
+
+@test
+def "main nufmt leaves small file verified by default and unverified beyond max size given" [] {
+    let context = $in
+    put $context.dir a.nu "ls"
+    let nufmt = keeping-nufmt $context.dir
+    let paths = [$context.dir, $context.nuten.command, $nufmt, $context.oracle]
+        | each { to nuon }
+        | str join ' '
+    let unverified = {|flags|
+        let script = $"source ($MAIN | to nuon); main nufmt ($paths) --runs 1 ($flags) | to nuon"
+        let ran = ^$nu.current-exe --no-config-file --commands $script | complete
+        assert equal $ran.exit_code 0 $ran.stderr
+        $ran.stdout | from nuon | get unverified
+    }
+
+    assert equal (do $unverified "") []
+    assert equal (do $unverified "--max-size 1b") [a.nu]
 }
 
 @test

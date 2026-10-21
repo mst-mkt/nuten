@@ -43,6 +43,7 @@ main nufmt $env.NUTEN_CORPUS path/to/nuten path/to/nufmt path/to/nuten-oracle | 
     files
     excluded: [{ formatter, reason, files }]
     unreadable: [file]
+    unverified: [file]
     timing: {
         files: [{ file, size, time_wall_clock, memory_peak_resident, instructions }]
         total: { time_wall_clock, instructions }

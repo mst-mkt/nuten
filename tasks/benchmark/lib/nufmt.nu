@@ -19,6 +19,7 @@ export def compare [
     oracle: path
     also: list<path>
     time_limit: duration
+    max_size: filesize
     runs: int
     cpu: oneof<int, nothing>
 ]: nothing -> record {
@@ -26,7 +27,7 @@ export def compare [
     let formatters = formatters ($nuten | path expand) ($nufmt | path expand)
     let corpus = $corpus | path expand
     let files = [...(glob ($corpus | path join '**/*.nu')), ...($also | path expand)] | uniq
-    let selection = screen $files $formatters ($oracle | path expand) $time_limit
+    let selection = screen $files $formatters ($oracle | path expand) $time_limit $max_size
     let instructions = instructions-of-files $selection.compared $formatters (
         $time_limit * $VALGRIND_SLOWDOWN
     )
@@ -51,6 +52,7 @@ export def compare [
         files: ($files | length)
         excluded: ($selection.excluded | each { update files { each { relative $corpus } } })
         unreadable: ($selection.unreadable | each { relative $corpus })
+        unverified: ($selection.unverified | each { relative $corpus })
         timing: ($timing | update files { each { update file { relative $corpus } } })
         directories: $directories
         sizes: (sizes $formatters)
