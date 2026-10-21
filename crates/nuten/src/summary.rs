@@ -1,4 +1,4 @@
-use crate::{Mode, style::Style};
+use crate::{cli::Mode, style::Style};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct Counts {
@@ -59,7 +59,10 @@ pub(crate) fn summary(counts: &Counts, mode: Mode, style: Style) -> Option<Strin
 #[cfg(test)]
 mod tests {
     use super::{Counts, summary};
-    use crate::{Mode, Reporter, style::Style};
+    use crate::{
+        cli::{Mode, Reporter},
+        style::Style,
+    };
 
     fn plain(counts: Counts, mode: Mode) -> Option<String> {
         summary(&counts, mode, Style::PLAIN)
