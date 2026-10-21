@@ -211,6 +211,20 @@ fn format_reporter_gitlab_lists_no_issue_when_nothing_would_change() {
 }
 
 #[test]
+fn format_reporter_gitlab_lists_issue_for_each_problem_when_no_file_would_change() {
+    let dir = TempDir::new();
+    dir.file("a.nu", FORMATTED);
+    dir.file("bad.nu", "ls\nls ||");
+    let output = format_in(&dir, &["--reporter", "gitlab", "a.nu", "bad.nu"]);
+    assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
+    let locations: Vec<_> = issues(&stdout(&output)).iter().map(location).collect();
+    assert_eq!(
+        locations,
+        [json!(["nuten/problem", "major", "bad.nu", 2, 2])]
+    );
+}
+
+#[test]
 fn format_reporter_gitlab_keeps_fingerprint_of_change_while_other_lines_move() {
     let dir = TempDir::new();
     let path = dir.file("a.nu", "ls|x\n");

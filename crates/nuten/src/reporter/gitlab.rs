@@ -12,9 +12,15 @@ const FORMAT_CHECK: &str = "nuten/format";
 
 const PROBLEM_CHECK: &str = "nuten/problem";
 
-pub(crate) fn report(issues: impl Iterator<Item = String>) -> String {
-    let issues: Vec<_> = issues.collect();
-    format!("[{}]\n", issues.join(","))
+/// The issue at `index` of the report, which is a JSON array.
+pub(crate) fn entry(index: usize, issue: &str) -> String {
+    let lead = if index == 0 { "[" } else { "," };
+    format!("{lead}{issue}")
+}
+
+/// Closes a report of `count` issues, which `entry` has opened unless there are none.
+pub(crate) fn end(count: usize) -> &'static str {
+    if count == 0 { "[]\n" } else { "]\n" }
 }
 
 /// Its fingerprint reads the old text, not the lines, so that it stays while other lines move.
@@ -162,18 +168,17 @@ mod tests {
 
     use serde_json::{Value, json};
 
-    use super::{fingerprint, path_bytes, path_in_project, path_text, problem_issue, report};
+    use super::{end, entry, fingerprint, path_bytes, path_in_project, path_text, problem_issue};
     use crate::problem::{Position, Problem};
 
     #[test]
-    fn report_is_empty_list_without_issues() {
-        assert_eq!(report([].into_iter()), "[]\n");
+    fn end_alone_is_empty_list() {
+        assert_eq!(end(0), "[]\n");
     }
 
     #[test]
-    fn report_lists_each_issue() {
-        let issues = ["{}".to_string(), "{}".to_string()];
-        assert_eq!(report(issues.into_iter()), "[{},{}]\n");
+    fn entries_and_end_list_each_issue() {
+        assert_eq!(entry(0, "{}") + &entry(1, "{}") + end(2), "[{},{}]\n");
     }
 
     #[test]

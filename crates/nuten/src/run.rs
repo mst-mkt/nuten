@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     hash::Hash,
-    io,
+    io::{self, Write},
     panic::{self, RefUnwindSafe, UnwindSafe},
     path::{Path, PathBuf},
     process::ExitCode,
@@ -14,7 +14,7 @@ use nuten_line_index::located;
 use crate::{
     cli::{self, Format, Mode},
     files::{self, Candidate, Entry},
-    output::{self, Changed, finish, print, write_stderr},
+    output::{self, Changed, Output, finish, print, write_stderr},
     overwrite::{Contents, Failure, OnDisk, overwrite},
     parallel,
     problem::Problem,
@@ -25,8 +25,8 @@ use crate::{
 const STDIN_NAME: &str = "<stdin>";
 
 #[derive(Debug)]
-struct Report {
-    changed: Vec<Changed>,
+struct Report<W> {
+    output: Output<W>,
     problems: Vec<Problem>,
     counts: Counts,
 }
@@ -34,7 +34,7 @@ struct Report {
 pub(crate) fn format(args: &Format) -> ExitCode {
     let mode = cli::mode(args);
     if let Some(problem) = cli::argument_problem(args) {
-        return finish(&[], vec![problem], mode);
+        return finish(Output::new(mode, io::stdout()), vec![problem]);
     }
     if cli::reads_stdin(args) {
         let filepath = args.stdin_filepath.as_deref();
@@ -47,7 +47,7 @@ pub(crate) fn format(args: &Format) -> ExitCode {
         .transpose()
     {
         Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
-        Err(errors) => finish(&[], problems_of(errors), mode),
+        Err(errors) => finish(Output::new(mode, io::stdout()), problems_of(errors)),
     }
 }
 
@@ -72,32 +72,40 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
         Ok((src, formatted))
     });
     let style = Style::stdout();
-    let (changed, problems) = match formatted {
+    let mut output = Output::new(mode, io::stdout());
+    let problems = match formatted {
         Ok((_, formatted)) if mode == Mode::Write => return print(&formatted),
         Ok((src, formatted)) => {
-            let changed = (formatted != src).then(|| Changed {
-                path: name.to_path_buf(),
-                detail: output::detail(name, &src, &formatted, mode, style),
-            });
-            (changed.into_iter().collect(), Vec::new())
+            if formatted != src {
+                output.add(&Changed {
+                    path: name.to_path_buf(),
+                    detail: output::detail(name, &src, &formatted, mode, style),
+                });
+            }
+            Vec::new()
         },
-        Err(problems) => (Vec::new(), problems),
+        Err(problems) => problems,
     };
-    finish(&changed, problems, mode)
+    finish(output, problems)
 }
 
 fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
     let style = Style::stdout();
     let report = report(paths, given, mode, style);
     let problems = unique(report.problems.iter()).cloned().collect();
-    let code = finish(&report.changed, problems, mode);
+    let code = finish(report.output, problems);
     if let Some(summary) = summary(&report.counts, mode, Style::stderr()) {
         write_stderr(&summary);
     }
     code
 }
 
-fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode, style: Style) -> Report {
+fn report(
+    paths: &[PathBuf],
+    given: Option<&Config>,
+    mode: Mode,
+    style: Style,
+) -> Report<io::Stdout> {
     let dirs = files::dirs(paths);
     let dir_lookups: HashMap<_, _> = dirs
         .iter()
@@ -124,11 +132,14 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode, style: Style) -
         .values()
         .chain(jobs.iter().flatten().map(|(_, lookup)| lookup))
         .any(Lookup::is_wrong);
+    let mut report = Report::new(Output::new(mode, io::stdout()), excluded_count);
     let mode = formats.then_some(mode);
-    let outcomes = format_all(&jobs, |candidate, lookup| {
-        outcome(candidate, lookup, mode, style)
-    });
-    report_of(outcomes, excluded_count)
+    format_all(
+        &jobs,
+        |candidate, lookup| outcome(candidate, lookup, mode, style),
+        |outcome| report.add(outcome),
+    );
+    report
 }
 
 type Job = Result<(Candidate, Lookup), Problem>;
@@ -202,12 +213,14 @@ enum Outcome {
 fn format_all(
     jobs: &[Job],
     outcome_of: impl Fn(&Candidate, &Lookup) -> Outcome + Sync + RefUnwindSafe,
-) -> Vec<Outcome> {
-    parallel::map(jobs, |job| match job {
+    each: impl FnMut(Outcome),
+) {
+    let outcome = |job: &Job| match job {
         Ok((candidate, lookup)) => catch_panic(&candidate.path, || outcome_of(candidate, lookup))
             .unwrap_or_else(Outcome::Failed),
         Err(problem) => Outcome::Unattached(vec![problem.clone()]),
-    })
+    };
+    parallel::map(jobs, outcome, each);
 }
 
 /// Takes `style`, since the detail of each file builds in parallel.
@@ -231,44 +244,40 @@ fn outcome(candidate: &Candidate, lookup: &Lookup, mode: Option<Mode>, style: St
     }
 }
 
-fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
-    let count =
-        |kind: fn(&Outcome) -> bool| outcomes.iter().filter(|outcome| kind(outcome)).count();
-    let details = || {
-        outcomes.iter().filter_map(|outcome| match outcome {
-            Outcome::Changed(changed) => changed.detail.as_ref(),
-            _ => None,
-        })
-    };
-    let counts = Counts {
-        changed: count(|outcome| matches!(outcome, Outcome::Changed(_))),
-        unchanged: count(|outcome| matches!(outcome, Outcome::Unchanged)),
-        failed: count(|outcome| matches!(outcome, Outcome::Failed(_))),
-        skipped: count(|outcome| matches!(outcome, Outcome::Skipped(_))),
-        excluded,
-        changed_lines: details().map(|detail| detail.changed_lines).sum(),
-        whitespace_only_lines: details().map(|detail| detail.whitespace_only_lines).sum(),
-    };
-    let (changed, problems): (Vec<_>, Vec<_>) = outcomes
-        .into_iter()
-        .filter_map(|outcome| match outcome {
-            Outcome::Changed(changed) => Some(Ok(changed)),
-            Outcome::Unchanged => None,
-            Outcome::Skipped(problems)
-            | Outcome::Failed(problems)
-            | Outcome::Unattached(problems) => Some(Err(problems)),
-        })
-        .partition(Result::is_ok);
-    let changed = changed.into_iter().filter_map(Result::ok).collect();
-    let problems = problems
-        .into_iter()
-        .filter_map(Result::err)
-        .flatten()
-        .collect();
-    Report {
-        changed,
-        problems,
-        counts,
+impl<W: Write> Report<W> {
+    fn new(output: Output<W>, excluded: usize) -> Self {
+        Self {
+            output,
+            problems: Vec::new(),
+            counts: Counts {
+                excluded,
+                ..Counts::default()
+            },
+        }
+    }
+
+    fn add(&mut self, outcome: Outcome) {
+        let counts = &mut self.counts;
+        match outcome {
+            Outcome::Changed(changed) => {
+                counts.changed += 1;
+                if let Some(detail) = &changed.detail {
+                    counts.changed_lines += detail.changed_lines;
+                    counts.whitespace_only_lines += detail.whitespace_only_lines;
+                }
+                self.output.add(&changed);
+            },
+            Outcome::Unchanged => counts.unchanged += 1,
+            Outcome::Skipped(problems) => {
+                counts.skipped += 1;
+                self.problems.extend(problems);
+            },
+            Outcome::Failed(problems) => {
+                counts.failed += 1;
+                self.problems.extend(problems);
+            },
+            Outcome::Unattached(problems) => self.problems.extend(problems),
+        }
     }
 }
 
@@ -361,20 +370,22 @@ fn unique<T: Copy + Eq + Hash>(items: impl Iterator<Item = T>) -> impl Iterator<
 #[cfg(test)]
 mod tests {
     use std::{
-        io,
+        io::{self, Write},
         path::{Path, PathBuf},
     };
 
     use nuten_config::{FormatConfig, Lookup};
 
     use super::{
-        Outcome, Problem, catch_panic, format_all, format_text, overwrite_problem, report_of,
+        Outcome, Problem, Report, catch_panic, format_all, format_text, overwrite_problem,
     };
     use crate::{
+        cli::{Mode, Reporter},
         files::Candidate,
-        output::Changed,
+        output::{Changed, Output},
         overwrite::{Contents, Failure},
         problem::Position,
+        summary::Counts,
     };
 
     #[test]
@@ -419,10 +430,15 @@ mod tests {
             Ok((candidate, Lookup::Wrong(Vec::new())))
         };
         let jobs = [job("a.nu"), job("b.nu"), job("c.nu")];
-        let outcomes = format_all(&jobs, |candidate, _| {
-            assert_ne!(candidate.path, Path::new("b.nu"), "bug");
-            Outcome::Unchanged
-        });
+        let mut outcomes = Vec::new();
+        format_all(
+            &jobs,
+            |candidate, _| {
+                assert_ne!(candidate.path, Path::new("b.nu"), "bug");
+                Outcome::Unchanged
+            },
+            |outcome| outcomes.push(outcome),
+        );
         let [
             Outcome::Unchanged,
             Outcome::Failed(problems),
@@ -474,18 +490,60 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Default)]
+    struct Flushed {
+        written: Vec<u8>,
+        flushed: Vec<u8>,
+    }
+
+    impl Write for Flushed {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.written.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.flushed.append(&mut self.written);
+            Ok(())
+        }
+    }
+
+    fn report_to<W: Write>(mode: Mode, writer: W) -> Report<W> {
+        Report::new(Output::new(mode, writer), 0)
+    }
+
     #[test]
-    fn report_of_sums_lines_of_each_view() {
+    fn report_add_sums_lines_of_each_view() {
         let one = Changed::sample("a").detail.unwrap();
-        let outcomes = vec![
+        let mut report = report_to(Mode::Check, Vec::new());
+        for outcome in [
             Outcome::Changed(Changed::sample("a")),
             Outcome::Unchanged,
             Outcome::Changed(Changed::sample("b")),
-        ];
-        let counts = report_of(outcomes, 0).counts;
+        ] {
+            report.add(outcome);
+        }
+        let counts = report.counts;
         assert_eq!(
             (counts.changed_lines, counts.whitespace_only_lines),
             (2 * one.changed_lines, 2 * one.whitespace_only_lines)
         );
+    }
+
+    #[test]
+    fn report_add_counts_no_file_for_problem_of_no_file() {
+        let mut report = report_to(Mode::Check, Vec::new());
+        report.add(Outcome::Unattached(vec![Problem::new("e")]));
+        assert_eq!(report.counts, Counts::default());
+        assert_eq!(report.problems, [Problem::new("e")]);
+    }
+
+    #[test]
+    fn report_add_flushes_each_change_before_the_end() {
+        let mut report = report_to(Mode::Report(Reporter::Gitlab), Flushed::default());
+        report.add(Outcome::Changed(Changed::sample("a")));
+        assert_eq!(report.output.writer().flushed, b"[a\n");
+        report.add(Outcome::Changed(Changed::sample("b")));
+        assert_eq!(report.output.writer().flushed, b"[a\n,b\n");
     }
 }
