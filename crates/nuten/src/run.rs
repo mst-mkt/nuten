@@ -3,7 +3,7 @@ use std::{
     fs,
     hash::Hash,
     io,
-    panic::{self, UnwindSafe},
+    panic::{self, RefUnwindSafe, UnwindSafe},
     path::{Path, PathBuf},
     process::ExitCode,
 };
@@ -65,7 +65,7 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
             .format_of_text(filepath)
             .map_err(|error| vec![error.into()])?;
         let formatted = match format {
-            Some(format) => format_text(name, &src, &format)?,
+            Some(format) => catch_panic(name, || format_text(name, &src, &format))??,
             // Written back as it is, since the caller takes stdout for what the file is to hold.
             None => src.clone(),
         };
@@ -124,7 +124,10 @@ fn report(paths: &[PathBuf], given: Option<&Config>, mode: Mode, style: Style) -
         .values()
         .chain(jobs.iter().flatten().map(|(_, lookup)| lookup))
         .any(Lookup::is_wrong);
-    let outcomes = format_all(&jobs, formats.then_some(mode), style);
+    let mode = formats.then_some(mode);
+    let outcomes = format_all(&jobs, |candidate, lookup| {
+        outcome(candidate, lookup, mode, style)
+    });
     report_of(outcomes, excluded_count)
 }
 
@@ -196,31 +199,36 @@ enum Outcome {
     Unattached(Vec<Problem>),
 }
 
-/// Takes `style`, since the detail of each file builds here in parallel.
-fn format_all(jobs: &[Job], mode: Option<Mode>, style: Style) -> Vec<Outcome> {
-    parallel::map(jobs, |job| {
-        let (candidate, lookup) = match job {
-            Ok(found) => found,
-            Err(problem) => return Outcome::Unattached(vec![problem.clone()]),
-        };
-        match (lookup, mode) {
-            (Lookup::Found(config), Some(mode)) => {
-                let format = match &candidate.canonical {
-                    Ok(file) => config.format_of(file),
-                    // Reading the file reports why it cannot be resolved.
-                    Err(_) => config.format_without_file(),
-                };
-                match format_file(&candidate.path, &format, mode, style) {
-                    Ok(Some(changed)) => Outcome::Changed(changed),
-                    Ok(None) => Outcome::Unchanged,
-                    Err(problems) => Outcome::Failed(problems),
-                }
-            },
-            (Lookup::Found(_), None) => Outcome::Skipped(Vec::new()),
-            (Lookup::Unresolved(error), _) => Outcome::Failed(vec![error.clone().into()]),
-            (Lookup::Wrong(errors), _) => Outcome::Skipped(problems_of(errors.clone())),
-        }
+fn format_all(
+    jobs: &[Job],
+    outcome_of: impl Fn(&Candidate, &Lookup) -> Outcome + Sync + RefUnwindSafe,
+) -> Vec<Outcome> {
+    parallel::map(jobs, |job| match job {
+        Ok((candidate, lookup)) => catch_panic(&candidate.path, || outcome_of(candidate, lookup))
+            .unwrap_or_else(Outcome::Failed),
+        Err(problem) => Outcome::Unattached(vec![problem.clone()]),
     })
+}
+
+/// Takes `style`, since the detail of each file builds in parallel.
+fn outcome(candidate: &Candidate, lookup: &Lookup, mode: Option<Mode>, style: Style) -> Outcome {
+    match (lookup, mode) {
+        (Lookup::Found(config), Some(mode)) => {
+            let format = match &candidate.canonical {
+                Ok(file) => config.format_of(file),
+                // Reading the file reports why it cannot be resolved.
+                Err(_) => config.format_without_file(),
+            };
+            match format_file(&candidate.path, &format, mode, style) {
+                Ok(Some(changed)) => Outcome::Changed(changed),
+                Ok(None) => Outcome::Unchanged,
+                Err(problems) => Outcome::Failed(problems),
+            }
+        },
+        (Lookup::Found(_), None) => Outcome::Skipped(Vec::new()),
+        (Lookup::Unresolved(error), _) => Outcome::Failed(vec![error.clone().into()]),
+        (Lookup::Wrong(errors), _) => Outcome::Skipped(problems_of(errors.clone())),
+    }
 }
 
 fn report_of(outcomes: Vec<Outcome>, excluded: usize) -> Report {
@@ -321,20 +329,18 @@ fn overwrite_problem(path: &Path, failure: &Failure) -> Problem {
 }
 
 fn format_text(path: &Path, src: &str, config: &FormatConfig) -> Result<String, Vec<Problem>> {
-    catch_panic(path, || {
-        nuten_format::format(src, config).map_err(|errors| {
-            located(
-                src,
-                errors
-                    .errors
-                    .iter()
-                    .map(|error| (error.range.start().into(), error.kind)),
-            )
-            .into_iter()
-            .map(|(line_column, kind)| Problem::at(path, line_column.into(), kind))
-            .collect()
-        })
-    })?
+    nuten_format::format(src, config).map_err(|errors| {
+        located(
+            src,
+            errors
+                .errors
+                .iter()
+                .map(|error| (error.range.start().into(), error.kind)),
+        )
+        .into_iter()
+        .map(|(line_column, kind)| Problem::at(path, line_column.into(), kind))
+        .collect()
+    })
 }
 
 /// Not left to end the run, which would lose the report of the other files.
@@ -359,10 +365,13 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use nuten_config::FormatConfig;
+    use nuten_config::{FormatConfig, Lookup};
 
-    use super::{Outcome, Problem, catch_panic, format_text, overwrite_problem, report_of};
+    use super::{
+        Outcome, Problem, catch_panic, format_all, format_text, overwrite_problem, report_of,
+    };
     use crate::{
+        files::Candidate,
         output::Changed,
         overwrite::{Contents, Failure},
         problem::Position,
@@ -397,6 +406,38 @@ mod tests {
     #[test]
     fn catch_panic_passes_on_value_of_f() {
         assert_eq!(catch_panic(Path::new("dir/a.nu"), || 1), Ok(1));
+    }
+
+    #[test]
+    fn format_all_fails_only_file_that_panics() {
+        let job = |path: &str| {
+            let candidate = Candidate {
+                path: PathBuf::from(path),
+                canonical: Ok(PathBuf::from(path)),
+                given: true,
+            };
+            Ok((candidate, Lookup::Wrong(Vec::new())))
+        };
+        let jobs = [job("a.nu"), job("b.nu"), job("c.nu")];
+        let outcomes = format_all(&jobs, |candidate, _| {
+            assert_ne!(candidate.path, Path::new("b.nu"), "bug");
+            Outcome::Unchanged
+        });
+        let [
+            Outcome::Unchanged,
+            Outcome::Failed(problems),
+            Outcome::Unchanged,
+        ] = outcomes.as_slice()
+        else {
+            panic!("{outcomes:?}");
+        };
+        assert_eq!(
+            *problems,
+            [Problem::in_file(
+                Path::new("b.nu"),
+                "nuten panicked while formatting"
+            )]
+        );
     }
 
     #[test]
