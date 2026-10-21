@@ -66,13 +66,8 @@ pub(crate) fn detail(
     })
 }
 
-pub(crate) fn finish(
-    changed: &[Changed],
-    problems: Vec<Problem>,
-    mode: Mode,
-    style: Style,
-) -> ExitCode {
-    let written = write_stdout(&stdout_text(changed, &problems, mode, style));
+pub(crate) fn finish(changed: &[Changed], problems: Vec<Problem>, mode: Mode) -> ExitCode {
+    let written = write_stdout(&stdout_text(changed, &problems, mode));
     let problems: Vec<_> = problems.into_iter().chain(written.err()).collect();
     if !problems.is_empty() {
         fail(&problems)
@@ -112,10 +107,10 @@ fn write_stdout(text: &str) -> Result<(), Problem> {
 }
 
 /// A reporter writes problems too, since what reads it reads only stdout.
-fn stdout_text(changed: &[Changed], problems: &[Problem], mode: Mode, style: Style) -> String {
+fn stdout_text(changed: &[Changed], problems: &[Problem], mode: Mode) -> String {
     match mode {
         Mode::Write => String::new(),
-        Mode::Check => views_text(changed, style),
+        Mode::Check => detail_texts(changed).collect(),
         Mode::List => listing(changed.iter().map(|changed| changed.path.as_path())),
         Mode::Report(Reporter::Github) => {
             detail_texts(changed).collect::<String>()
@@ -138,41 +133,10 @@ fn detail_texts(changed: &[Changed]) -> impl Iterator<Item = &str> {
         .filter_map(|changed| Some(changed.detail.as_ref()?.text.as_str()))
 }
 
-fn views_text(changed: &[Changed], style: Style) -> String {
-    if changed.is_empty() {
-        return String::new();
-    }
-    heading(changed.len(), style) + &detail_texts(changed).collect::<String>()
-}
-
-fn heading(count: usize, style: Style) -> String {
-    let files = if count == 1 { "file" } else { "files" };
-    style.bold(&format!("{count} {files} would be reformatted:")) + "\n\n"
-}
-
 fn listing<'a>(paths: impl IntoIterator<Item = &'a Path>) -> String {
     // Lossy for names that are not UTF-8, as the lists of other formatters are.
     paths
         .into_iter()
         .map(|path| path.display().to_string() + "\n")
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Changed, views_text};
-    use crate::style::Style;
-
-    #[test]
-    fn views_text_heads_views_with_count_in_bold() {
-        assert_eq!(
-            views_text(&[Changed::sample("a")], Style::COLORED),
-            "\u{1b}[1m1 file would be reformatted:\u{1b}[0m\n\na\n"
-        );
-        assert_eq!(
-            views_text(&[Changed::sample("a"), Changed::sample("b")], Style::PLAIN),
-            "2 files would be reformatted:\n\na\nb\n"
-        );
-        assert_eq!(views_text(&[], Style::PLAIN), "");
-    }
 }

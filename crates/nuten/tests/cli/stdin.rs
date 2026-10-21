@@ -99,13 +99,7 @@ fn format_check_on_stdin_exits_with_1_and_shows_what_would_change() {
     let dir = TempDir::new();
     let unnamed = format_stdin_in(&dir, &["--check", "-"], UNFORMATTED.as_bytes());
     assert_eq!(unnamed.status.code(), Some(1), "{}", stderr(&unnamed));
-    assert_eq!(
-        stdout(&unnamed),
-        format!(
-            "1 file would be reformatted:\n\n{}",
-            view_of_unformatted("<stdin>")
-        )
-    );
+    assert_eq!(stdout(&unnamed), view_of_unformatted("<stdin>"));
     assert_eq!(stderr(&unnamed), "");
 }
 
@@ -115,13 +109,7 @@ fn format_check_on_stdin_shows_change_under_stdin_filepath() {
     let args = ["--check", "--stdin-filepath", "a.nu", "-"];
     let output = format_stdin_in(&dir, &args, UNFORMATTED.as_bytes());
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
-    assert_eq!(
-        stdout(&output),
-        format!(
-            "1 file would be reformatted:\n\n{}",
-            view_of_unformatted("a.nu")
-        )
-    );
+    assert_eq!(stdout(&output), view_of_unformatted("a.nu"));
 }
 
 #[test]

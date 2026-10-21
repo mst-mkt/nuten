@@ -20,10 +20,7 @@ fn format_check_shows_files_it_would_change_in_order_given_and_changes_none() {
         view_of_unformatted(&format!("d{MAIN_SEPARATOR}a.nu")),
         view_of_unformatted(&format!("d{MAIN_SEPARATOR}c.nuon")),
     ];
-    assert_eq!(
-        stdout(&output),
-        format!("3 files would be reformatted:\n\n{}", views.concat())
-    );
+    assert_eq!(stdout(&output), views.concat());
     assert_eq!(read(&z), UNFORMATTED);
     assert_eq!(read(&a), UNFORMATTED);
     assert_eq!(read(&c), UNFORMATTED);
@@ -48,13 +45,7 @@ fn format_check_exits_with_2_on_problem_though_files_would_change() {
     let [path] = write_unformatted(&dir, ["a.nu"]);
     let output = format_in(&dir, &["--check", "bad.nu", "a.nu"]);
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        stdout(&output),
-        format!(
-            "1 file would be reformatted:\n\n{}",
-            view_of_unformatted("a.nu")
-        )
-    );
+    assert_eq!(stdout(&output), view_of_unformatted("a.nu"));
     assert!(
         problems(&output).starts_with("bad.nu:1:4: "),
         "{}",
@@ -124,8 +115,5 @@ fn format_check_shows_view_in_color_when_clicolor_force_is_set() {
         .output()
         .unwrap();
     let stdout = stdout(&output);
-    assert!(
-        stdout.starts_with("\u{1b}[1m1 file would be reformatted:\u{1b}[0m\n\n\u{1b}[2m╭─ "),
-        "{stdout:?}"
-    );
+    assert!(stdout.starts_with("\u{1b}[2m╭─ "), "{stdout:?}");
 }

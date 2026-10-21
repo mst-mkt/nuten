@@ -34,7 +34,7 @@ struct Report {
 pub(crate) fn format(args: &Format) -> ExitCode {
     let mode = cli::mode(args);
     if let Some(problem) = cli::argument_problem(args) {
-        return finish(&[], vec![problem], mode, Style::stdout());
+        return finish(&[], vec![problem], mode);
     }
     if cli::reads_stdin(args) {
         let filepath = args.stdin_filepath.as_deref();
@@ -47,7 +47,7 @@ pub(crate) fn format(args: &Format) -> ExitCode {
         .transpose()
     {
         Ok(given) => format_paths(&args.paths, given.as_ref(), mode),
-        Err(errors) => finish(&[], problems_of(errors), mode, Style::stdout()),
+        Err(errors) => finish(&[], problems_of(errors), mode),
     }
 }
 
@@ -83,14 +83,14 @@ fn format_stdin(filepath: Option<&Path>, config_file: Option<&Path>, mode: Mode)
         },
         Err(problems) => (Vec::new(), problems),
     };
-    finish(&changed, problems, mode, style)
+    finish(&changed, problems, mode)
 }
 
 fn format_paths(paths: &[PathBuf], given: Option<&Config>, mode: Mode) -> ExitCode {
     let style = Style::stdout();
     let report = report(paths, given, mode, style);
     let problems = unique(report.problems.iter()).cloned().collect();
-    let code = finish(&report.changed, problems, mode, style);
+    let code = finish(&report.changed, problems, mode);
     if let Some(summary) = summary(&report.counts, mode, Style::stderr()) {
         write_stderr(&summary);
     }

@@ -45,8 +45,6 @@ nuten format --check
 ファイルを変更せず、差分を stdout に出します。
 
 ```ansi
-[1m2 files would be reformatted:[0m
-
 [2m╭─ [0m[1mmain.nu:2[0m
 [2m│ [0m  [2mdef greet [name] {[0m
 [2m│ [0m[31m▍ [0m[2m[31m··[0m[31m$"hello[0m[2m[31m·[0m[31m($name)"[0m
