@@ -50,10 +50,10 @@ Root@0..152
           LBrace@125..126 "{"
           ClosureParams@126..134
             Pipe@126..127 "|"
-            Param@127..131
+            Param@127..128
               Word@127..128 "x"
-              Whitespace@128..129 " "
-              OutGt@129..131 "o>"
+            Whitespace@128..129 " "
+            OutGt@129..131 "o>"
             Whitespace@131..132 " "
             Param@132..133
               Word@132..133 "y"
@@ -68,10 +68,10 @@ Root@0..152
           LBrace@139..140 "{"
           ClosureParams@140..147
             Pipe@140..141 "|"
-            Param@141..145
+            Param@141..142
               Word@141..142 "x"
-              Whitespace@142..143 " "
-              ErrGt@143..145 "e>"
+            Whitespace@142..143 " "
+            ErrGt@143..145 "e>"
             Whitespace@145..146 " "
             Pipe@146..147 "|"
           Whitespace@147..148 " "

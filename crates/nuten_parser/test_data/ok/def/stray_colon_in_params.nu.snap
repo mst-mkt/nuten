@@ -46,11 +46,11 @@ Root@0..52
         Whitespace@37..38 " "
         Signature@38..44
           LBracket@38..39 "["
-          Param@39..43
+          Param@39..41
             Word@39..40 "z"
             Colon@40..41 ":"
-            Whitespace@41..42 " "
-            Semicolon@42..43 ";"
+          Whitespace@41..42 " "
+          Semicolon@42..43 ";"
           RBracket@43..44 "]"
         Whitespace@44..45 " "
         Block@45..51

@@ -1,0 +1,46 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/err/def/comma_after_pipe_in_params.nu
+---
+Root@0..42
+  Pipeline@0..23
+    PipelineElement@0..23
+      Def@0..23
+        Word@0..6 "extern"
+        Whitespace@6..7 " "
+        Word@7..8 "a"
+        Whitespace@8..9 " "
+        Signature@9..23
+          LBracket@9..10 "["
+          Param@10..13
+            Word@10..13 "--d"
+          Whitespace@13..14 " "
+          Pipe@14..15 "|"
+          Whitespace@15..16 " "
+          Comma@16..17 ","
+          Whitespace@17..18 " "
+          Error@18..22
+            Word@18..22 "(-s)"
+          RBracket@22..23 "]"
+  Newline@23..24 "\n"
+  Pipeline@24..41
+    PipelineElement@24..41
+      Def@24..41
+        Word@24..30 "extern"
+        Whitespace@30..31 " "
+        Word@31..32 "b"
+        Whitespace@32..33 " "
+        Signature@33..41
+          LBracket@33..34 "["
+          Param@34..40
+            Word@34..35 "d"
+            Colon@35..36 ":"
+            Whitespace@36..37 " "
+            Pipe@37..38 "|"
+            Whitespace@38..39 " "
+            Error@39..40
+              Comma@39..40 ","
+          RBracket@40..41 "]"
+  Newline@41..42 "\n"
+error 18..22 "(-s)": SignatureSeparator
+error 39..40 ",": SignatureSeparator

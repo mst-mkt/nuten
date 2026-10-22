@@ -88,24 +88,28 @@ fn step(
         (_, Expect::AfterComma) if kind != SyntaxKind::Error && starts_short_flag(text) => {
             (Action::Reject, expect)
         },
-        // A line break belongs to the parameter only while it goes on.
-        (SyntaxKind::Newline, _) if in_param && !goes_on(p, expect) => (Action::EndParam, expect),
-        (SyntaxKind::Newline, _) => (Action::Bump, expect),
+        // Nu ignores line breaks, `|`, `;`, and redirections.
+        // A parameter holds each only while the parameter goes on.
+        _ if !kind.is_item() && in_param && !goes_on(p, expect) => (Action::EndParam, expect),
+        _ if !kind.is_item() => (Action::Bump, expect),
         (_, Expect::Type) => (Action::ReadType, Expect::AfterType),
         (_, Expect::Default) => (Action::Bump, Expect::Param),
         (SyntaxKind::Word, _) if in_param && is_short_flag(text) => {
             (Action::BumpAsShortFlag, expect)
         },
-        // Nu ignores `|`, `;`, and redirections, which stay where they are.
-        _ if kind.is_item() && !starts_short_flag(text) => (Action::StartParam, Expect::Param),
+        _ if !starts_short_flag(text) => (Action::StartParam, Expect::Param),
         _ => (Action::Bump, expect),
     })
 }
 
 fn goes_on(p: &Parser<'_>, expect: Expect) -> bool {
-    let next = p
-        .remaining_tokens()
-        .find(|(token, _)| !token.kind.is_trivia() && token.kind != SyntaxKind::Newline);
+    let next = p.remaining_tokens().find(|(token, _)| {
+        token.kind.is_item()
+            || matches!(
+                token.kind,
+                SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma
+            )
+    });
     match expect {
         Expect::Type | Expect::Default => next.is_some(),
         _ => next.is_some_and(|(token, text)| {

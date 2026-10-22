@@ -1,0 +1,150 @@
+---
+source: crates/nuten_parser/tests/parse.rs
+input_file: crates/nuten_parser/test_data/ok/def/shell_operators_in_params_go_on_or_end.nu
+---
+Root@0..166
+  Pipeline@0..19
+    PipelineElement@0..19
+      Def@0..19
+        Word@0..6 "extern"
+        Whitespace@6..7 " "
+        Word@7..8 "a"
+        Whitespace@8..9 " "
+        Signature@9..19
+          LBracket@9..10 "["
+          Param@10..11
+            Word@10..11 "d"
+          Newline@11..12 "\n"
+          Pipe@12..13 "|"
+          Whitespace@13..14 " "
+          Param@14..18
+            Word@14..18 "save"
+          RBracket@18..19 "]"
+  Newline@19..20 "\n"
+  Pipeline@20..38
+    PipelineElement@20..38
+      Def@20..38
+        Word@20..26 "extern"
+        Whitespace@26..27 " "
+        Word@27..28 "b"
+        Whitespace@28..29 " "
+        Signature@29..38
+          LBracket@29..30 "["
+          Param@30..31
+            Word@30..31 "d"
+          Newline@31..32 "\n"
+          Pipe@32..33 "|"
+          Whitespace@33..34 " "
+          Comma@34..35 ","
+          Whitespace@35..36 " "
+          Param@36..37
+            Word@36..37 "e"
+          RBracket@37..38 "]"
+  Newline@38..39 "\n"
+  Pipeline@39..58
+    PipelineElement@39..58
+      Def@39..58
+        Word@39..45 "extern"
+        Whitespace@45..46 " "
+        Word@46..47 "c"
+        Whitespace@47..48 " "
+        Signature@48..58
+          LBracket@48..49 "["
+          Param@49..57
+            Word@49..50 "d"
+            Colon@50..51 ":"
+            Whitespace@51..52 " "
+            Pipe@52..53 "|"
+            Whitespace@53..54 " "
+            Word@54..57 "int"
+          RBracket@57..58 "]"
+  Newline@58..59 "\n"
+  Pipeline@59..78
+    PipelineElement@59..78
+      Def@59..78
+        Word@59..65 "extern"
+        Whitespace@65..66 " "
+        Word@66..67 "d"
+        Whitespace@67..68 " "
+        Signature@68..78
+          LBracket@68..69 "["
+          Param@69..77
+            Word@69..70 "d"
+            Colon@70..71 ":"
+            Newline@71..72 "\n"
+            Pipe@72..73 "|"
+            Whitespace@73..74 " "
+            Word@74..77 "int"
+          RBracket@77..78 "]"
+  Newline@78..79 "\n"
+  Pipeline@79..97
+    PipelineElement@79..97
+      Def@79..97
+        Word@79..85 "extern"
+        Whitespace@85..86 " "
+        Word@86..87 "e"
+        Whitespace@87..88 " "
+        Signature@88..97
+          LBracket@88..89 "["
+          Param@89..96
+            Word@89..90 "d"
+            Whitespace@90..91 " "
+            Eq@91..92 "="
+            Whitespace@92..93 " "
+            Pipe@93..94 "|"
+            Whitespace@94..95 " "
+            Word@95..96 "1"
+          RBracket@96..97 "]"
+  Newline@97..98 "\n"
+  Pipeline@98..119
+    PipelineElement@98..119
+      Def@98..119
+        Word@98..104 "extern"
+        Whitespace@104..105 " "
+        Word@105..106 "f"
+        Whitespace@106..107 " "
+        Signature@107..119
+          LBracket@107..108 "["
+          Param@108..118
+            Word@108..111 "--d"
+            Whitespace@111..112 " "
+            Pipe@112..113 "|"
+            Whitespace@113..114 " "
+            ShortFlag@114..118 "(-s)"
+          RBracket@118..119 "]"
+  Newline@119..120 "\n"
+  Pipeline@120..141
+    PipelineElement@120..141
+      Def@120..141
+        Word@120..126 "extern"
+        Whitespace@126..127 " "
+        Word@127..128 "g"
+        Whitespace@128..129 " "
+        Signature@129..141
+          LBracket@129..130 "["
+          Param@130..140
+            Word@130..133 "--d"
+            Newline@133..134 "\n"
+            Pipe@134..135 "|"
+            Whitespace@135..136 " "
+            ShortFlag@136..140 "(-s)"
+          RBracket@140..141 "]"
+  Newline@141..142 "\n"
+  Pipeline@142..165
+    PipelineElement@142..165
+      Def@142..165
+        Word@142..148 "extern"
+        Whitespace@148..149 " "
+        Word@149..150 "h"
+        Whitespace@150..151 " "
+        Signature@151..165
+          LBracket@151..152 "["
+          Param@152..164
+            Word@152..153 "d"
+            Colon@153..154 ":"
+            Whitespace@154..155 " "
+            ErrGtPipe@155..160 "err>|"
+            Whitespace@160..161 " "
+            Word@161..164 "int"
+          RBracket@164..165 "]"
+  Newline@165..166 "\n"

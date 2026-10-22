@@ -12,15 +12,15 @@ Root@0..25
         Whitespace@5..6 " "
         Signature@6..17
           LBracket@6..7 "["
-          Param@7..10
+          Param@7..8
             Word@7..8 "x"
-            Whitespace@8..9 " "
-            Pipe@9..10 "|"
+          Whitespace@8..9 " "
+          Pipe@9..10 "|"
           Whitespace@10..11 " "
-          Param@11..14
+          Param@11..12
             Word@11..12 "y"
-            Whitespace@12..13 " "
-            Semicolon@13..14 ";"
+          Whitespace@12..13 " "
+          Semicolon@13..14 ";"
           Whitespace@14..15 " "
           Param@15..16
             Word@15..16 "z"
