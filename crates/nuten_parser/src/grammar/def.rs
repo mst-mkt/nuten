@@ -94,10 +94,13 @@ fn bracketed_io_types<'a>(p: &Parser<'a>) -> Option<Bracketed<'a>> {
     pairs_up(bracketed.inner()).then_some(bracketed)
 }
 
+/// Lexed as io types, a `#` after a `,` starts a comment that runs past the word.
 /// A `,` alone would print as nothing, and leave the `:` with no types after it.
 fn bare_types_pair_up(p: &Parser<'_>, range: TextRange) -> bool {
     let lexed = p.lexed_range(range, Mode::IoTypes);
-    lexed.remaining_kinds().any(SyntaxKind::is_item) && pairs_up(&lexed)
+    !lexed.has_glued_comment()
+        && lexed.remaining_kinds().any(SyntaxKind::is_item)
+        && pairs_up(&lexed)
 }
 
 /// Nu lexes a `,` as whitespace there.

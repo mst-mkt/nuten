@@ -295,6 +295,16 @@ impl<'a> Parser<'a> {
         self.tokens[self.pos..].iter().map(|token| token.kind)
     }
 
+    pub(crate) fn has_glued_comment(&self) -> bool {
+        self.tokens
+            .iter()
+            .filter(|token| token.kind == SyntaxKind::Comment)
+            .any(|comment| {
+                let before = usize::from(comment.range.start()).checked_sub(1);
+                !lexer::starts_comment_after(before.map(|at| self.src.as_bytes()[at]))
+            })
+    }
+
     pub(crate) fn remaining_tokens(&self) -> impl Iterator<Item = (Token, &'a str)> + Clone {
         self.tokens[self.pos..]
             .iter()
@@ -421,7 +431,7 @@ impl<'a> Parser<'a> {
             Some(token),
             "bump_bracketed at another token"
         );
-        if has_glued_comment(self.src, &inner.tokens) {
+        if inner.has_glued_comment() {
             self.bump();
             return 0;
         }
@@ -731,17 +741,6 @@ impl<'a> Parser<'a> {
         self.errors += 1;
         self.events.push(Event::Error(Box::new(error)));
     }
-}
-
-/// `tokens` is the inside of a bracketed word of `src`.
-fn has_glued_comment(src: &str, tokens: &[Token]) -> bool {
-    tokens
-        .iter()
-        .filter(|token| token.kind == SyntaxKind::Comment)
-        .any(|comment| {
-            let before = usize::from(comment.range.start()).checked_sub(1);
-            !lexer::starts_comment_after(before.map(|at| src.as_bytes()[at]))
-        })
 }
 
 fn bracket_parts(range: TextRange) -> (TextRange, TextRange, TextRange) {
