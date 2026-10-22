@@ -12,12 +12,12 @@ Root@0..91
         Whitespace@5..6 " "
         Signature@6..29
           LBracket@6..7 "["
-          Param@7..18
+          Param@7..17
             Word@7..8 "c"
             Colon@8..9 ":"
             Whitespace@9..10 " "
             Word@10..17 "closure"
-            Comma@17..18 ","
+          Comma@17..18 ","
           Whitespace@18..19 " "
           Param@19..28
             Word@19..20 "r"

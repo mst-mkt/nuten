@@ -17,11 +17,11 @@ Root@0..49
               Whitespace@7..8 " "
               Signature@8..14
                 LBracket@8..9 "["
-                Param@9..12
+                Param@9..10
                   Word@9..10 "x"
-                  Comma@10..11 ","
-                  Error@11..12
-                    Comma@11..12 ","
+                Comma@10..11 ","
+                Error@11..12
+                  Comma@11..12 ","
                 Param@12..13
                   Word@12..13 "y"
                 RBracket@13..14 "]"

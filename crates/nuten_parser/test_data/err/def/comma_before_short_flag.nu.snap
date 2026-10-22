@@ -12,12 +12,12 @@ Root@0..77
         Whitespace@5..6 " "
         Signature@6..20
           LBracket@6..7 "["
-          Param@7..19
+          Param@7..13
             Word@7..13 "--flag"
-            Comma@13..14 ","
-            Whitespace@14..15 " "
-            Error@15..19
-              Word@15..19 "(-f)"
+          Comma@13..14 ","
+          Whitespace@14..15 " "
+          Error@15..19
+            Word@15..19 "(-f)"
           RBracket@19..20 "]"
         Whitespace@20..21 " "
         Block@21..27
@@ -39,12 +39,12 @@ Root@0..77
         Whitespace@33..34 " "
         Signature@34..43
           LBracket@34..35 "["
-          Param@35..42
+          Param@35..36
             Word@35..36 "x"
-            Comma@36..37 ","
-            Whitespace@37..38 " "
-            Error@38..42
-              Word@38..42 "(-f)"
+          Comma@36..37 ","
+          Whitespace@37..38 " "
+          Error@38..42
+            Word@38..42 "(-f)"
           RBracket@42..43 "]"
         Whitespace@43..44 " "
         Block@44..50
@@ -66,15 +66,15 @@ Root@0..77
         Whitespace@56..57 " "
         Signature@57..69
           LBracket@57..58 "["
-          Param@58..68
+          Param@58..63
             Word@58..59 "x"
             Whitespace@59..60 " "
             Eq@60..61 "="
             Whitespace@61..62 " "
             Word@62..63 "1"
-            Comma@63..64 ","
-            Error@64..68
-              Word@64..68 "(-g)"
+          Comma@63..64 ","
+          Error@64..68
+            Word@64..68 "(-g)"
           RBracket@68..69 "]"
         Whitespace@69..70 " "
         Block@70..76

@@ -76,6 +76,9 @@ fn step(
         (SyntaxKind::Eq, Expect::Param | Expect::AfterType) if not_last() => {
             (Action::Bump, Expect::Default)
         },
+        (SyntaxKind::Comma, Expect::Param | Expect::AfterType) if in_param => {
+            (Action::EndParam, Expect::AfterComma)
+        },
         (SyntaxKind::Comma, Expect::Param | Expect::AfterType) => {
             (Action::Bump, Expect::AfterComma)
         },
@@ -106,10 +109,7 @@ fn goes_on(p: &Parser<'_>, expect: Expect) -> bool {
     match expect {
         Expect::Type | Expect::Default => next.is_some(),
         _ => next.is_some_and(|(token, text)| {
-            matches!(
-                token.kind,
-                SyntaxKind::Colon | SyntaxKind::Eq | SyntaxKind::Comma
-            ) || starts_short_flag(text)
+            matches!(token.kind, SyntaxKind::Colon | SyntaxKind::Eq) || starts_short_flag(text)
         }),
     }
 }

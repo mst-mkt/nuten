@@ -12,21 +12,21 @@ Root@0..128
         Whitespace@14..15 " "
         Signature@15..70
           LBracket@15..16 "["
-          Param@16..24
+          Param@16..23
             Word@16..17 "x"
             Colon@17..18 ":"
             Whitespace@18..19 " "
             Word@19..23 "list"
-            Comma@23..24 ","
+          Comma@23..24 ","
           Whitespace@24..25 " "
-          Param@25..35
+          Param@25..34
             Word@25..26 "y"
             Colon@26..27 ":"
             Whitespace@27..28 " "
             Word@28..34 "string"
-            Comma@34..35 ","
+          Comma@34..35 ","
           Whitespace@35..36 " "
-          Param@36..61
+          Param@36..60
             Word@36..46 "--flag(-f)"
             Colon@46..47 ":"
             Whitespace@47..48 " "
@@ -35,7 +35,7 @@ Root@0..128
               LAngle@52..53 "<"
               Word@53..59 "string"
               RAngle@59..60 ">"
-            Comma@60..61 ","
+          Comma@60..61 ","
           Whitespace@61..62 " "
           Param@62..69
             Word@62..69 "...rest"

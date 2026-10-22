@@ -12,9 +12,9 @@ Root@0..65
           LBrace@3..4 "{"
           ClosureParams@4..8
             Pipe@4..5 "|"
-            Param@5..7
+            Param@5..6
               Word@5..6 "x"
-              Comma@6..7 ","
+            Comma@6..7 ","
             Pipe@7..8 "|"
           Whitespace@8..9 " "
           Pipeline@9..11

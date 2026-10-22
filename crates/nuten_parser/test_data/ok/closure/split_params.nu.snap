@@ -37,9 +37,9 @@ Root@0..57
           LBrace@23..24 "{"
           ClosureParams@24..30
             Pipe@24..25 "|"
-            Param@25..27
+            Param@25..26
               Word@25..26 "x"
-              Comma@26..27 ","
+            Comma@26..27 ","
             Newline@27..28 "\n"
             Param@28..29
               Word@28..29 "y"
@@ -59,14 +59,14 @@ Root@0..57
           LBrace@38..39 "{"
           ClosureParams@39..52
             Pipe@39..40 "|"
-            Param@40..49
+            Param@40..47
               Word@40..41 "x"
               Newline@41..42 "\n"
               Colon@42..43 ":"
               Whitespace@43..44 " "
               Word@44..47 "int"
-              Newline@47..48 "\n"
-              Comma@48..49 ","
+            Newline@47..48 "\n"
+            Comma@48..49 ","
             Whitespace@49..50 " "
             Param@50..51
               Word@50..51 "y"

@@ -12,13 +12,13 @@ Root@0..46
         Whitespace@10..11 " "
         Signature@11..24
           LBracket@11..12 "["
-          Param@12..18
+          Param@12..17
             Word@12..13 "n"
             Whitespace@13..14 " "
             Eq@14..15 "="
             Whitespace@15..16 " "
             Word@16..17 "1"
-            Comma@17..18 ","
+          Comma@17..18 ","
           Whitespace@18..19 " "
           Param@19..23
             Word@19..23 "...r"

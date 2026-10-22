@@ -47,9 +47,9 @@ Root@0..59
           Whitespace@36..37 " "
           ClosureParams@37..43
             Pipe@37..38 "|"
-            Param@38..40
+            Param@38..39
               Word@38..39 "x"
-              Comma@39..40 ","
+            Comma@39..40 ","
             Whitespace@40..41 " "
             Param@41..42
               Word@41..42 "y"

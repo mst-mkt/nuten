@@ -12,11 +12,11 @@ Root@0..75
           LBrace@3..4 "{"
           ClosureParams@4..28
             Pipe@4..5 "|"
-            Param@5..7
+            Param@5..6
               Word@5..6 "x"
-              Comma@6..7 ","
+            Comma@6..7 ","
             Whitespace@7..8 " "
-            Param@8..19
+            Param@8..18
               Word@8..9 "y"
               Colon@9..10 ":"
               Whitespace@10..11 " "
@@ -25,7 +25,7 @@ Root@0..75
               Eq@15..16 "="
               Whitespace@16..17 " "
               Word@17..18 "2"
-              Comma@18..19 ","
+            Comma@18..19 ","
             Whitespace@19..20 " "
             Param@20..27
               Word@20..27 "...rest"

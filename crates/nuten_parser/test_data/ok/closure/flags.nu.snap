@@ -12,11 +12,11 @@ Root@0..60
           LBrace@3..4 "{"
           ClosureParams@4..35
             Pipe@4..5 "|"
-            Param@5..17
+            Param@5..16
               Word@5..11 "--flag"
               Whitespace@11..12 " "
               ShortFlag@12..16 "(-f)"
-              Comma@16..17 ","
+            Comma@16..17 ","
             Whitespace@17..18 " "
             Param@18..34
               Word@18..29 "--other(-o)"

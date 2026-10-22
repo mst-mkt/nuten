@@ -12,10 +12,10 @@ Root@0..16
         Whitespace@5..6 "\r"
         Signature@6..15
           LBracket@6..7 "["
-          Param@7..14
+          Param@7..10
             Word@7..10 "%\u{c}#"
-            Comma@10..11 ","
-            Error@11..14 "(-\r"
+          Comma@10..11 ","
+          Error@11..14 "(-\r"
           RBracket@14..15 "]"
   Newline@15..16 "\n"
 error 11..12 "(": Lex(Unclosed)

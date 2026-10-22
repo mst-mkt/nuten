@@ -12,11 +12,11 @@ Root@0..115
         Whitespace@5..6 " "
         Signature@6..12
           LBracket@6..7 "["
-          Param@7..10
+          Param@7..8
             Word@7..8 "x"
-            Comma@8..9 ","
-            Error@9..10
-              Comma@9..10 ","
+          Comma@8..9 ","
+          Error@9..10
+            Comma@9..10 ","
           Param@10..11
             Word@10..11 "y"
           RBracket@11..12 "]"
@@ -97,16 +97,16 @@ Root@0..115
         Whitespace@70..71 " "
         Signature@71..85
           LBracket@71..72 "["
-          Param@72..80
+          Param@72..77
             Word@72..73 "x"
             Whitespace@73..74 " "
             Eq@74..75 "="
             Whitespace@75..76 " "
             Word@76..77 "1"
-            Comma@77..78 ","
-            Whitespace@78..79 " "
-            Error@79..80
-              Colon@79..80 ":"
+          Comma@77..78 ","
+          Whitespace@78..79 " "
+          Error@79..80
+            Colon@79..80 ":"
           Whitespace@80..81 " "
           Param@81..84
             Word@81..84 "int"
@@ -131,12 +131,12 @@ Root@0..115
         Whitespace@98..99 " "
         Signature@99..107
           LBracket@99..100 "["
-          Param@100..104
+          Param@100..101
             Word@100..101 "x"
-            Comma@101..102 ","
-            Whitespace@102..103 " "
-            Error@103..104
-              Eq@103..104 "="
+          Comma@101..102 ","
+          Whitespace@102..103 " "
+          Error@103..104
+            Eq@103..104 "="
           Whitespace@104..105 " "
           Param@105..106
             Word@105..106 "2"
