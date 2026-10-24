@@ -1,7 +1,7 @@
 mod difference;
 mod myers;
 
-use std::ops::Range;
+use std::{hash::Hash, ops::Range};
 
 pub(crate) use self::{
     difference::Difference,
@@ -16,7 +16,7 @@ pub(crate) struct Hunk {
     pub(crate) changes: Vec<Change>,
 }
 
-pub(crate) fn hunks<T: Eq>(old: &[T], new: &[T]) -> Vec<Hunk> {
+pub(crate) fn hunks<T: Eq + Hash>(old: &[T], new: &[T]) -> Vec<Hunk> {
     let changes = changes(old, new);
     let breaks = changes
         .windows(2)

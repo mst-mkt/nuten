@@ -1,6 +1,10 @@
 //! Not the plain Myers search, which keeps every round and takes memory quadratic in the edits.
 
-use std::ops::{Index, IndexMut, Range};
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    ops::{Index, IndexMut, Range},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Change {
@@ -11,18 +15,45 @@ pub(crate) struct Change {
 /// Not unbounded, since a file changed on every line would cost seconds.
 const COST_LIMIT: usize = 256;
 
-pub(crate) fn changes<T: Eq>(old: &[T], new: &[T]) -> Vec<Change> {
+pub(crate) fn changes<T: Eq + Hash>(old: &[T], new: &[T]) -> Vec<Change> {
     changes_up_to(old, new, COST_LIMIT)
 }
 
-fn changes_up_to<T: Eq>(old: &[T], new: &[T], cost_limit: usize) -> Vec<Change> {
+fn changes_up_to<T: Eq + Hash>(old: &[T], new: &[T], cost_limit: usize) -> Vec<Change> {
     let cost_limit = cost_limit.min(old.len() + new.len());
+    if old.len() + new.len() <= 2 * cost_limit {
+        return searched(old, new, cost_limit, None);
+    }
+    let mut ids = HashMap::new();
+    let old = numbered(old, &mut ids);
+    let new = numbered(new, &mut ids);
+    let unshared = Unshared::new(&old, &new, ids.len());
+    searched(&old, &new, cost_limit, Some(unshared))
+}
+
+fn numbered<'a, T: Eq + Hash>(items: &'a [T], ids: &mut HashMap<&'a T, usize>) -> Vec<usize> {
+    items
+        .iter()
+        .map(|item| {
+            let next = ids.len();
+            *ids.entry(item).or_insert(next)
+        })
+        .collect()
+}
+
+fn searched<T: Eq>(
+    old: &[T],
+    new: &[T],
+    cost_limit: usize,
+    unshared: Option<Unshared>,
+) -> Vec<Change> {
     let mut search = Search {
         old,
         new,
         forward: Reach::new(cost_limit + 1),
         backward: Reach::new(cost_limit + 1),
         cost_limit,
+        unshared,
         changes: Vec::new(),
     };
     search.split(0..old.len(), 0..new.len());
@@ -35,6 +66,7 @@ struct Search<'a, T> {
     forward: Reach,
     backward: Reach,
     cost_limit: usize,
+    unshared: Option<Unshared>,
     changes: Vec<Change>,
 }
 
@@ -95,6 +127,11 @@ impl<T: Eq> Search<'_, T> {
         let delta = n - m;
         let odd = delta % 2 != 0;
         let at = |x: isize, y: isize| (old.start + unsigned(x), new.start + unsigned(y));
+        // Not searching back when unshared items cost more than the searches can meet within.
+        let can_meet = self
+            .unshared
+            .as_ref()
+            .is_none_or(|unshared| unshared.within(&old, &new) <= 2 * self.cost_limit);
         self.forward[1] = 0;
         self.backward[1] = 0;
         let mut furthest: Option<((isize, isize), _)> = None;
@@ -103,7 +140,7 @@ impl<T: Eq> Search<'_, T> {
                 let x = self.forward.step(d, k);
                 let x = x + self.ahead(&old, &new, x, x - k);
                 self.forward[k] = x;
-                if odd && (delta - k).abs() < d && x + self.backward[delta - k] >= n {
+                if can_meet && odd && (delta - k).abs() < d && x + self.backward[delta - k] >= n {
                     return Some(at(x, x - k));
                 }
                 // Not the lowest diagonal on a tie, which splits past lines both texts keep.
@@ -112,6 +149,9 @@ impl<T: Eq> Search<'_, T> {
                 if d > 0 && inside && furthest.is_none_or(|(_, best)| rank > best) {
                     furthest = Some(((x, x - k), rank));
                 }
+            }
+            if !can_meet {
+                continue;
             }
             for k in (-d..=d).step_by(2) {
                 let x = self.backward.step(d, k);
@@ -145,6 +185,36 @@ impl<T: Eq> Search<'_, T> {
         old_rest.zip(new_rest).map_or(0, |(old_rest, new_rest)| {
             signed(shared_count(old_rest.iter().rev(), new_rest.iter().rev()))
         })
+    }
+}
+
+/// How many items before each position the other text lacks.
+struct Unshared {
+    old: Vec<usize>,
+    new: Vec<usize>,
+}
+
+impl Unshared {
+    fn new(old: &[usize], new: &[usize], kinds: usize) -> Unshared {
+        let counts = |text: &[usize], other: &[usize]| {
+            let mut in_other = vec![false; kinds];
+            for &id in other {
+                in_other[id] = true;
+            }
+            let counts = text.iter().scan(0, |count, &id| {
+                *count += usize::from(!in_other[id]);
+                Some(*count)
+            });
+            [0].into_iter().chain(counts).collect()
+        };
+        Unshared {
+            old: counts(old, new),
+            new: counts(new, old),
+        }
+    }
+
+    fn within(&self, old: &Range<usize>, new: &Range<usize>) -> usize {
+        self.old[old.end] - self.old[old.start] + self.new[new.end] - self.new[new.start]
     }
 }
 
@@ -201,7 +271,7 @@ fn unsigned(value: isize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{Change, changes, changes_up_to};
+    use super::{Change, Unshared, changes, changes_up_to, searched};
 
     fn all_sequences(kinds: u8, max_len: usize) -> Vec<Vec<u8>> {
         (0..max_len).fold(vec![vec![]], |all, _| {
@@ -282,6 +352,33 @@ mod tests {
             for cost_limit in [0, 1, 2, usize::MAX] {
                 let changes = changes_up_to(&old, &new, cost_limit);
                 assert_eq!(applied(&old, &new, &changes), new, "{old:?} {new:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn unshared_counts_items_other_text_lacks_within_ranges() {
+        let unshared = Unshared::new(&[0, 1, 1], &[1, 2], 3);
+        assert_eq!(unshared.within(&(0..3), &(0..2)), 2);
+        assert_eq!(unshared.within(&(1..3), &(0..1)), 0);
+    }
+
+    #[test]
+    fn changes_match_search_without_numbering_or_skipping() {
+        let longer = [
+            (
+                vec![1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0],
+                vec![0, 0, 0, 0, 2, 2, 2, 2, 0, 2],
+            ),
+            (vec![0, 0, 0, 0, 1], vec![1, 2, 2, 1, 2, 2]),
+        ];
+        for (old, new) in all_pairs(3, 5).into_iter().chain(longer) {
+            for cost_limit in [0, 1, 2, 3] {
+                assert_eq!(
+                    changes_up_to(&old, &new, cost_limit),
+                    searched(&old, &new, cost_limit, None),
+                    "{old:?} {new:?} {cost_limit}"
+                );
             }
         }
     }
