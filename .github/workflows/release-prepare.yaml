@@ -50,7 +50,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: Prepare release
         run: |
           tag=$(nu --commands 'source tasks/release/main.nu; main prepare $env.GROUP $env.PART | get tag')
