@@ -849,8 +849,9 @@ fn statements_holding<'a>(
     let mut pending = vec![(TextRange::up_to(TextSize::of(src)), Mode::Block, 0)];
     let mut statements = Vec::new();
     let mut too_deep = false;
+    let finder = memchr::memmem::Finder::new(word);
     while let Some((range, mode, depth)) = pending.pop() {
-        if !src[range].contains(word) {
+        if finder.find(src[range].as_bytes()).is_none() {
             continue;
         }
         if depth > MAX_DEPTH {

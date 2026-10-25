@@ -373,9 +373,9 @@ impl<'a> Lexer<'a> {
     }
 
     fn comment(&mut self) -> SyntaxKind {
-        let rest = &self.src[self.pos..];
-        self.pos += rest.find('\n').map_or(rest.len(), |newline| {
-            newline - usize::from(rest[..newline].ends_with('\r'))
+        let rest = self.rest();
+        self.pos += memchr::memchr(b'\n', rest).map_or(rest.len(), |newline| {
+            newline - usize::from(rest[..newline].ends_with(b"\r"))
         });
         SyntaxKind::Comment
     }
@@ -505,18 +505,14 @@ impl<'a> Lexer<'a> {
     }
 
     fn comment_in_item(&mut self, top_level: bool) {
-        let len = self
-            .rest()
-            .iter()
-            .take_while(|&&b| {
-                if top_level {
-                    !self.mode.is_terminator(b)
-                } else {
-                    !matches!(b, b'\n' | b'\r')
-                }
-            })
-            .count();
-        self.pos += len;
+        let rest = self.rest();
+        self.pos += if top_level {
+            rest.iter()
+                .take_while(|&&b| !self.mode.is_terminator(b))
+                .count()
+        } else {
+            memchr::memchr2(b'\n', b'\r', rest).unwrap_or(rest.len())
+        };
     }
 
     /// Called after the opening quote, whose opener starts at `start`, on the `$` if interpolated.
@@ -526,6 +522,11 @@ impl<'a> Lexer<'a> {
         let mut nested = Vec::new();
         let mut outer_paren = None;
         loop {
+            // The match steps over a `\` or `(` this quote ignores.
+            if nested.is_empty() {
+                let rest = self.rest();
+                self.pos += memchr::memchr3(quote, b'\\', b'(', rest).unwrap_or(rest.len());
+            }
             let closer = nested.last().copied().unwrap_or(quote);
             match (closer, self.rest()) {
                 (_, []) => break,

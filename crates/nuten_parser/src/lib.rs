@@ -152,7 +152,7 @@ pub fn tokens_hiding_line_end<'a>(
     root: &SyntaxNode,
 ) -> impl Iterator<Item = SyntaxToken> + 'a {
     // Most files hold no such `#`, and the text tells that sooner than the tree.
-    (0..src.len())
+    memchr::memchr_iter(b'#', src.as_bytes())
         .any(|at| lexer::opens_comment_in_word(src.as_bytes(), at))
         .then(|| root.descendants_with_tokens())
         .into_iter()

@@ -475,6 +475,7 @@ name = "nuten-parser"
 version = "0.0.0"
 dependencies = [
  "insta",
+ "memchr",
  "nuten-syntax",
  "rowan",
 ]
