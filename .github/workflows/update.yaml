@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: Update root flake (./flake.lock)
         run: nix flake update
       - name: Update dev flake (./nix/dev/flake.lock)

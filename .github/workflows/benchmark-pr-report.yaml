@@ -51,7 +51,7 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           path: base
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: nix build
         run: |
           base=$(nix build --no-link --print-out-paths --no-update-lock-file ./base)

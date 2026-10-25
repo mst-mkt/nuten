@@ -34,7 +34,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.1
+      - uses: cachix/install-nix-action@v31.11.2
       - name: nix build
         run: |
           nuten=$(nix build --no-link --print-out-paths --no-update-lock-file .)
